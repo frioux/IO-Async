@@ -18,8 +18,7 @@ package IO::SelectNotifier;
 
 use strict;
 
-use Common::Exception;
-use Common::Socket; # for the exception type
+use Carp;
 
 =head1 Name
 
@@ -80,7 +79,8 @@ A hash containing the following keys
 
 =item C<sock>
 
-The C<Common::Socket> object to wrap
+The socket object to wrap. Must implement C<fileno> and C<accept> methods
+in way that C<IO::Socket> does.
 
 =item C<listener>
 
@@ -111,8 +111,8 @@ sub new
    my ( %params ) = @_;
 
    my $sock = $params{sock};
-   unless( ref( $sock ) && $sock->isa( "Common::Socket" ) ) {
-      throw Common::Exception( "Expected sock to be a Common::Socket" );
+   unless( ref( $sock ) and $sock->can( "fileno" ) and $sock->can( "accept" ) ) {
+      croak 'Expected that $sock can fileno() and accept()';
    }
 
    my $self = bless {
