@@ -1,0 +1,11 @@
+.*\.~\d~
+.*\.bak
+.*\.swp
+.*\.tar(\.gz)?
+\.bzr
+\.bzrignore
+blib
+.*\.deb
+Makefile$
+Makefile\.old
+MANIFEST\.SKIP
