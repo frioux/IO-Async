@@ -234,10 +234,20 @@ sub post_select
       }
    }
    catch Common::Socket::ClosedException with {   
-      $sock->close;
-      undef $sock;
-      delete $self->{sock};
+      $self->socket_closed;
    };
+}
+
+sub socket_closed
+{
+   my $self = shift;
+
+   my $sock = $self->{sock};
+   return unless( defined $sock );
+
+   $sock->close;
+   undef $sock;
+   delete $self->{sock};
 }
 
 # Keep perl happy; keep Britain tidy
