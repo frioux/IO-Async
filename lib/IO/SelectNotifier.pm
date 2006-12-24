@@ -21,8 +21,6 @@ use strict;
 use Common::Exception;
 use Common::Socket; # for the exception type
 
-use Error qw(:try);
-
 =head1 Name
 
 C<IO::SelectNotifier> - a class which implements event callbacks for a
@@ -57,9 +55,8 @@ methods may be called on the listener:
  $listener->writeready();
 
 None of these methods will be passed any arguments; the object itself should
-track any data it requires. If either of the readyness methods throws an
-exception of C<Common::Socket::ClosedException> class, then it will be caught
-by the C<post_select()> method, and the socket internally marked as closed
+track any data it requires. If either of the readyness methods calls the
+C<socket_closed()> method, then the socket is internally marked as closed
 within the object. After this happens, it will no longer register bits in the
 bitvectors in C<pre_select()>.
 
@@ -224,18 +221,13 @@ sub post_select
 
    my $listener = $self->{listener};
 
-   try {
-      if( vec( $readvec, $fileno, 1 ) ) {
-         $listener->readready;
-      }
-
-      if( vec( $writevec, $fileno, 1 ) ) {
-         $listener->writeready;
-      }
+   if( vec( $readvec, $fileno, 1 ) ) {
+      $listener->readready;
    }
-   catch Common::Socket::ClosedException with {   
-      $self->socket_closed;
-   };
+
+   if( vec( $writevec, $fileno, 1 ) ) {
+      $listener->writeready;
+   }
 }
 
 sub socket_closed
