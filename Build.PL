@@ -10,6 +10,9 @@ my $build = Module::Build->new
    requires => {
                  'Error' => '0.15'
                },
+   build_requires => {
+                 'Test::Exception' => 0,
+               },
    license => 'perl',
   );
   
