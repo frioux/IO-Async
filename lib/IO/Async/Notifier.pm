@@ -11,12 +11,12 @@ our $VERSION = '0.01';
 
 use Carp;
 
-=head1 Name
+=head1 NAME
 
 C<IO::Async::Notifier> - a class which implements event callbacks for a
 non-blocking file descriptor
 
-=head1 Overview
+=head1 DESCRIPTION
 
 This module provides a base class for implementing non-blocking IO on file
 descriptors. The object provides a pair of methods, C<pre_select()> and
@@ -52,38 +52,11 @@ bitvectors in C<pre_select()>.
 
 =cut
 
-=head1 Constructors
+=head1 CONSTRUCTOR
 
 =cut
 
-=head2 C<< B<sub> IO::Async::Notifier->new( I<%params> ) >>
-
-=over 4
-
-=over 8
-
-=item C<I<%params>>
-
-A hash containing the following keys
-
-=over 8
-
-=item C<sock>
-
-The socket object to wrap. Must implement C<fileno> and C<accept> methods
-in way that C<IO::Socket> does.
-
-=item C<listener>
-
-An object reference to notify on events, or the string C<'self'>
-
-=back
-
-=item Returns
-
-An instance of C<IO::Async::Notifier>
-
-=back
+=head2 $ioan = IO::Async::Notifier->new( sock => $sock, listener => $listener )
 
 This function returns a new instance of a C<IO::Async::Notifier> object.
 The transceiver wraps a connected socket and a receiver.
@@ -91,6 +64,17 @@ The transceiver wraps a connected socket and a receiver.
 If the string C<'self'> is passed instead, then the object will call
 notification events on itself. This will be useful in implementing subclasses,
 which internally implement the notification methods.
+
+=over 8
+
+=item $sock
+
+The socket object to wrap. Must implement C<fileno> and C<accept> methods
+in way that C<IO::Socket> does.
+
+=item $listener
+
+An object reference to notify on events, or the string C<'self'>
 
 =back
 
@@ -118,35 +102,27 @@ sub new
    return $self;
 }
 
-=head2 C<< B<sub> $self->pre_select( I<\$readvec>, I<\$writevec>, I<\$exceptvec>, I<\$timeout> ) >>
-
-=over 4
-
-=over 8
-
-=item C<I<\$readvec>>
-
-=item C<I<\$writevec>>
-
-=item C<I<\$exceptvec>>
-
-Scalar references to the reading, writing and exception bitvectors
-
-=item C<I<\$timeout>>
-
-Scalar reference to the timeout value
-
-=item Returns
-
-Nothing
-
-=back
+=head2 $ioan->pre_select( \$readvec, \$writevec, \$exceptvec, \$timeout )
 
 This method prepares the bitvectors for a C<select()> call, setting the bits
 that this notifier is interested in. It will always set the bit in the read
 vector, but will only set it in the write vector if the listener declares an
 interest in it by returning a true value from its C<want_writeready()> method.
 Neither the exception vector nor the timeout are affected.
+
+=over 8
+
+=item \$readvec
+
+=item \$writevec
+
+=item \$exceptvec
+
+Scalar references to the reading, writing and exception bitvectors
+
+=item \$timeout
+
+Scalar reference to the timeout value
 
 =back
 
@@ -172,28 +148,20 @@ sub pre_select
    }
 }
 
-=head2 C<< B<sub> $self->post_select( I<$readvec>, I<$writevec>, I<$exceptvec> ) >>
-
-=over 4
-
-=over 8
-
-=item C<I<$readvec>>
-
-=item C<I<$writevec>>
-
-=item C<I<$exceptvec>>
-
-Scalars containing the read-ready, write-ready and exception bitvectors
-
-=item Returns
-
-Nothing
-
-=back
+=head2 $ioan->post_select( $readvec, $writevec, $exceptvec )
 
 This method checks the returned bitvectors from a C<select()> call, and calls
 any of the notification methods on the listener that are appropriate.
+
+=over 8
+
+=item $readvec
+
+=item $writevec
+
+=item $exceptvec
+
+Scalars containing the read-ready, write-ready and exception bitvectors
 
 =back
 
@@ -235,3 +203,23 @@ sub socket_closed
 
 # Keep perl happy; keep Britain tidy
 1;
+
+__END__
+
+=head1 SEE ALSO
+
+=over 4
+
+=item *
+
+L<IO::Socket> - Object interface to socket communications
+
+=item *
+
+L<IO::Select> - OO interface to select system call
+
+=back
+
+=head1 AUTHOR
+
+Paul Evans E<lt>leonerd@leonerd.org.ukE<gt>
