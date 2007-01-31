@@ -10,16 +10,16 @@ use Listener;
 
 use IO::Socket::UNIX;
 
-use IO::SelectNotifier;
+use IO::Async::Notifier;
 
 my $listener = Listener->new();
 
-dies_ok( sub { IO::SelectNotifier->new( sock => "Hello" ) },
+dies_ok( sub { IO::Async::Notifier->new( sock => "Hello" ) },
          'Not a socket' );
 
 ( my $sock, undef ) = IO::Socket::UNIX->socketpair( AF_UNIX, SOCK_STREAM, PF_UNSPEC ) or
    die "Cannot create socket pair - $!";
 
-my $iosn = IO::SelectNotifier->new( sock => $sock, listener => $listener );
-ok( defined $iosn, '$iosn defined' );
-is( ref $iosn, "IO::SelectNotifier", 'ref $iosn is IO::SelectNotifier' );
+my $ioan = IO::Async::Notifier->new( sock => $sock, listener => $listener );
+ok( defined $ioan, '$ioan defined' );
+is( ref $ioan, "IO::Async::Notifier", 'ref $ioan is IO::Async::Notifier' );

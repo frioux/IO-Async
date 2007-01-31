@@ -3,7 +3,7 @@
 #
 #  (C) Paul Evans, 2006 -- leonerd@leonerd.org.uk
 
-package IO::SelectNotifier;
+package IO::Async::Notifier;
 
 use strict;
 
@@ -13,7 +13,7 @@ use Carp;
 
 =head1 Name
 
-C<IO::SelectNotifier> - a class which implements event callbacks for a
+C<IO::Async::Notifier> - a class which implements event callbacks for a
 non-blocking file descriptor
 
 =head1 Overview
@@ -32,7 +32,7 @@ the bits in the vectors from the C<select()> syscall.
 
 =head2 Listener
 
-Each C<IO::SelectNotifier> object stores a reference to a listener object.
+Each C<IO::Async::Notifier> object stores a reference to a listener object.
 This object will be informed of read- or write-readyness by the
 C<post_select()> method, and will be queried on whether it is interested in
 write-readyness by the C<pre_select()> method. To do this, the following
@@ -56,7 +56,7 @@ bitvectors in C<pre_select()>.
 
 =cut
 
-=head2 C<< B<sub> IO::SelectNotifier->new( I<%params> ) >>
+=head2 C<< B<sub> IO::Async::Notifier->new( I<%params> ) >>
 
 =over 4
 
@@ -81,11 +81,11 @@ An object reference to notify on events, or the string C<'self'>
 
 =item Returns
 
-An instance of C<IO::SelectNotifier>
+An instance of C<IO::Async::Notifier>
 
 =back
 
-This function returns a new instance of a C<IO::SelectNotifier> object.
+This function returns a new instance of a C<IO::Async::Notifier> object.
 The transceiver wraps a connected socket and a receiver.
 
 If the string C<'self'> is passed instead, then the object will call

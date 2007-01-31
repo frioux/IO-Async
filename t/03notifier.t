@@ -13,7 +13,7 @@ use Fcntl;
 use POSIX qw( EAGAIN );
 use IO::Socket::UNIX;
 
-use IO::SelectNotifier;
+use IO::Async::Notifier;
 
 sub select_no_timeout($$$)
 {
@@ -36,7 +36,7 @@ our $writeready = 0;
 
 my $listener = Listener->new();
 
-my $iosn = IO::SelectNotifier->new( sock => $S1, listener => $listener );
+my $ioan = IO::Async::Notifier->new( sock => $S1, listener => $listener );
 
 #### Pre-select;
 
@@ -48,7 +48,7 @@ my $timeout;
 
 # Idle;
 
-$iosn->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
+$ioan->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
 
 is( $rvec, $testvec, '$rvec idling' );
 is( $wvec, '', '$wvec idling' );
@@ -60,7 +60,7 @@ is( $timeout, undef, '$timeout idling' );
 ( $rvec, $wvec, $evec ) = ('') x 3;
 undef $timeout;
 $want_writeready = 1;
-$iosn->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
+$ioan->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
 
 is( $rvec, $testvec, '$rvec sendwaiting' );
 is( $wvec, $testvec, '$wvec sendwaiting' );
@@ -76,7 +76,7 @@ $S2->syswrite( "some data" );
 ( $rvec, $wvec, $evec ) = ('') x 3;
 undef $timeout;
 $want_writeready = 0;
-$iosn->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
+$ioan->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
 
 is( $rvec, $testvec, '$rvec receivewaiting' );
 is( $wvec, '', '$wvec receivewaiting' );
@@ -87,7 +87,7 @@ select_no_timeout( $rvec, $wvec, $evec );
 
 is( $readready, 0, '$readready receivewaiting before post_select' );
 
-$iosn->post_select( $rvec, $wvec, $evec );
+$ioan->post_select( $rvec, $wvec, $evec );
 
 is( $readready, 1, '$readready receivewaiting after post_select' );
 
@@ -101,7 +101,7 @@ ok( defined $n, 'sysread()' );
 ( $rvec, $wvec, $evec ) = ('') x 3;
 undef $timeout;
 $want_writeready = 1;
-$iosn->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
+$ioan->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
 
 is( $rvec, $testvec, '$rvec sendready' );
 is( $wvec, $testvec, '$wvec sendready' );
@@ -112,6 +112,6 @@ select_no_timeout( $rvec, $wvec, $evec );
 
 is( $writeready, 0, '$writeready sendready before post_select' );
 
-$iosn->post_select( $rvec, $wvec, $evec );
+$ioan->post_select( $rvec, $wvec, $evec );
 
 is( $writeready, 1, '$writeready sendready after post_select' );
