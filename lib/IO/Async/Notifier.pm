@@ -189,6 +189,14 @@ sub post_select
    }
 }
 
+=head2 $ioan->socket_closed()
+
+This method marks that the socket has been closed. After this has been called,
+the object will no longer mark any bits in the C<pre_select()> call, nor
+respond to any set bits in the C<post_select()> call.
+
+=cut
+
 sub socket_closed
 {
    my $self = shift;
