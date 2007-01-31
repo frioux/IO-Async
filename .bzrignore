@@ -6,3 +6,5 @@ MANIFEST
 MANIFEST.bak
 *.deb
 *.tar.gz
+Build
+_build

@@ -9,3 +9,5 @@ blib
 Makefile$
 Makefile\.old
 MANIFEST\.SKIP
+Build$
+_build
