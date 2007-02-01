@@ -102,6 +102,10 @@ sub new
    return $self;
 }
 
+=head1 METHODS
+
+=cut
+
 =head2 $ioan->pre_select( \$readvec, \$writevec, \$exceptvec, \$timeout )
 
 This method prepares the bitvectors for a C<select()> call, setting the bits
