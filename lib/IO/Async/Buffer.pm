@@ -33,15 +33,15 @@ signaled to indicate the data is available.
 =head2 Receivers
 
 Each C<IO::Async::Buffer> object stores a reference to a receiver
-object.  This is any object that supports a C<< ->incomingData() >> method.
+object.  This is any object that supports a C<< ->incoming_data() >> method.
 When data arrives in the incoming data buffer, the transceiver calls this
 method on its receiver to indicate the data is available. It is called in the
 following manner:
 
- $again = $receiver->incomingData( \$buffer, $socketclosed )
+ $again = $receiver->incoming_data( \$buffer, $socketclosed )
 
 A reference to the incoming data buffer is passed, which is a plain perl
-string. The C<incomingData()> method should inspect and remove any data it
+string. The C<incoming_data()> method should inspect and remove any data it
 likes, but is not required to remove all, or indeed any of the data. Any data
 remaining in the buffer will be preserved for the next call, the next time more
 data is received from the socket.
@@ -54,7 +54,7 @@ will be called again. This makes it easy to implement code that handles
 multiple incoming records at the same time. See the examples at the end of
 this documentation for more detail.
 
-The second argument to the C<incomingData()> method is a scalar indicating
+The second argument to the C<incoming_data()> method is a scalar indicating
 whether the socket has been closed. Normally it is false, but will become true
 once the socket closes. A reference to the buffer is passed to the method in
 the usual way, so it may inspect data contained in it. Once the method returns
@@ -82,7 +82,7 @@ C<syswrite> methods in the way that C<IO::Socket> does.
 =item $receiver
 
 An object reference to notify on incoming data. This object reference should
-support a C<< ->incomingData() >> method.
+support a C<< ->incoming_data() >> method.
 
 =back
 
@@ -96,8 +96,8 @@ sub new
    my $self = $class->SUPER::new( %params, listener => 'self' );
 
    my $receiver = $params{receiver};
-   unless( ref( $receiver ) && $receiver->can( "incomingData" ) ) {
-      croak 'Expected that $receiver can incomingData()';
+   unless( ref( $receiver ) && $receiver->can( "incoming_data" ) ) {
+      croak 'Expected that $receiver can incoming_data()';
    }
 
    $self->{receiver} = $receiver;
@@ -158,7 +158,7 @@ sub readready
    $self->{recvbuff} .= $data if( !$sockclosed );
    my $receiver = $self->{receiver};
    while( length( $self->{recvbuff} ) > 0 || $sockclosed ) {
-      my $again = $receiver->incomingData( \$self->{recvbuff}, $sockclosed );
+      my $again = $receiver->incoming_data( \$self->{recvbuff}, $sockclosed );
       last if !$again;
    }
 
@@ -196,12 +196,12 @@ __END__
 
 =head1 EXAMPLES
 
-=head2 A line-based C<incomingData()> method
+=head2 A line-based C<incoming_data()> method
 
-The following C<incomingData()> method accepts incoming 'C<\n>'-terminated
+The following C<incoming_data()> method accepts incoming 'C<\n>'-terminated
 lines and prints them to the program's C<STDOUT> stream.
 
- sub incomingData
+ sub incoming_data
  {
     my $self = shift;
     my ( $buffref, $socketclosed ) = @_;

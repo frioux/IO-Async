@@ -6,7 +6,7 @@ sub new
    return bless {}, $class;
 }
 
-sub incomingData
+sub incoming_data
 {
    my $self = shift;
    my ( $buffref, $buffclosed ) = @_;
