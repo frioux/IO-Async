@@ -69,8 +69,8 @@ which internally implement the notification methods.
 
 =item $sock
 
-The socket object to wrap. Must implement C<fileno> and C<accept> methods
-in way that C<IO::Socket> does.
+The socket object to wrap. Must implement C<fileno> method in way that
+C<IO::Socket> does.
 
 =item $listener
 
@@ -86,8 +86,8 @@ sub new
    my ( %params ) = @_;
 
    my $sock = $params{sock};
-   unless( ref( $sock ) and $sock->can( "fileno" ) and $sock->can( "accept" ) ) {
-      croak 'Expected that $sock can fileno() and accept()';
+   unless( ref( $sock ) and $sock->can( "fileno" ) ) {
+      croak 'Expected that $sock can fileno()';
    }
 
    my $self = bless {
