@@ -11,12 +11,12 @@ use base qw( IO::Async::Notifier );
 
 use Carp;
 
-=head1 Name
+=head1 NAME
 
-C<Common::AsyncTransceiver> - a class which implements asynchronous sending
+C<IO::Async::Buffer> - a class which implements asynchronous sending
 and receiving data buffers around a connected socket
 
-=head1 Overview
+=head1 DESCRIPTION
 
 This module provides a class for implementing asynchronous communications
 buffers behind connected sockets. It provides buffering for both incoming and
@@ -32,7 +32,7 @@ signaled to indicate the data is available.
 
 =head2 Receivers
 
-Each C<Common::AsyncTransceiver> object stores a reference to a receiver
+Each C<IO::Async::Buffer> object stores a reference to a receiver
 object.  This is any object that supports a C<< ->incomingData() >> method.
 When data arrives in the incoming data buffer, the transceiver calls this
 method on its receiver to indicate the data is available. It is called in the
@@ -63,41 +63,26 @@ more data can arrive.
 
 =cut
 
-=head1 Constructors
+=head1 CONSTRUCTOR
 
 =cut
 
-=head2 C<< B<sub> Common::AsyncTransceiver->new( I<%params> ) >>
+=head2 $ioab = IO::Async::Buffer->new( sock => $sock, receiver => $receiver )
 
-=over 4
-
-=over 8
-
-=item C<I<%params>>
-
-A hash containing the following keys
+This function returns a new instance of a C<IO::Async::Buffer> object.
+The transceiver wraps a connected socket and a receiver.
 
 =over 8
 
-=item C<sock>
+=item $sock
 
-The C<Common::Socket> object to wrap
+The socket object to wrap. Must implement C<fileno>, C<sysread> and
+C<syswrite> methods in the way that C<IO::Socket> does.
 
-=item C<receiver>
+=item $receiver
 
 An object reference to notify on incoming data. This object reference should
 support a C<< ->incomingData() >> method.
-
-=back
-
-=item Returns
-
-An instance of C<Common::AsyncTransceiver>
-
-=back
-
-This function returns a new instance of a C<Common::AsyncTransceiver> object.
-The transceiver wraps a connected socket and a receiver.
 
 =back
 
@@ -122,28 +107,20 @@ sub new
    return $self;
 }
 
-=head1 Methods
+=head1 METHODS
 
 =cut
 
-=head2 C<< B<sub> $self->send( I<$data> ) >>
-
-=over 4
-
-=over 8
-
-=item C<I<$data>>
-
-A scalar containing data to send
-
-=item Returns
-
-Nothing
-
-=back
+=head2 $ioab->send( $data )
 
 This method adds data to the outgoing data queue. The data is not yet sent to
 the socket; this will be done later in the C<post_select()> method.
+
+=over 8
+
+=item $data
+
+A scalar containing data to send
 
 =back
 
@@ -217,7 +194,7 @@ sub writeready
 
 __END__
 
-=head1 Examples
+=head1 EXAMPLES
 
 =head2 A line-based C<incomingData()> method
 
@@ -241,3 +218,21 @@ is ready (i.e. a whole line), and to remove it from the buffer. If no data is
 available then C<0> is returned, to indicate it should not be tried again. If
 a line was successfully extracted, then C<1> is returned, to indicate it
 should try again in case more lines exist in the buffer.
+
+=head1 SEE ALSO
+
+=over 4
+
+=item *
+
+L<IO::Socket> - Object interface to socket communications
+
+=item *
+
+L<IO::Select> - OO interface to select system call
+
+=back
+
+=head1 AUTHOR
+
+Paul Evans E<lt>leonerd@leonerd.org.ukE<gt>
