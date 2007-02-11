@@ -72,6 +72,10 @@ more data can arrive.
 This function returns a new instance of a C<IO::Async::Buffer> object.
 The transceiver wraps a connected socket and a receiver.
 
+If the string C<'self'> is passed instead, then the object will call
+notification events on itself. This will be useful in implementing subclasses,
+which internally implements the notification method.
+
 =over 8
 
 =item $sock
@@ -81,8 +85,8 @@ C<syswrite> methods in the way that C<IO::Socket> does.
 
 =item $receiver
 
-An object reference to notify on incoming data. This object reference should
-support a C<< ->incoming_data() >> method.
+An object reference to notify on incoming data, or the string C<'self'>.
+This object reference should support a C<< ->incoming_data() >> method.
 
 =back
 
@@ -96,6 +100,8 @@ sub new
    my $self = $class->SUPER::new( %params, listener => 'self' );
 
    my $receiver = $params{receiver};
+   $receiver = $self if( $receiver eq "self" );
+
    unless( ref( $receiver ) && $receiver->can( "incoming_data" ) ) {
       croak 'Expected that $receiver can incoming_data()';
    }
