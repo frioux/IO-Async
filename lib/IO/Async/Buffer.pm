@@ -7,6 +7,8 @@ package IO::Async::Buffer;
 
 use strict;
 
+our $VERSION = '0.01';
+
 use base qw( IO::Async::Notifier );
 
 use Carp;
