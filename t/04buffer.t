@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 35;
+use Test::More tests => 37;
 use Test::Exception;
 
 use lib qw( t );
@@ -43,7 +43,7 @@ sub read_data($)
    die "Cannot sysread() - $!";
 }
 
-our $received = "";
+our @received;
 our $closed = 0;
 
 my $recv = Receiver->new();
@@ -83,7 +83,7 @@ is( $timeout, undef, '$timeout sendwaiting' );
 
 # Before;
 
-is( $received,        "", '$received before sending buffer' );
+is( scalar @received, 0,  '@received before sending buffer' );
 is( $closed,          0,  '$closed before sending buffer' );
 is( read_data( $S2 ), "", 'data before sending buffer' );
 
@@ -93,7 +93,7 @@ select_no_timeout( $rvec, $wvec, $evec );
 
 $buff->post_select( $rvec, $wvec, $evec );
 
-is( $received,        "",          '$received after sending buffer' );
+is( scalar @received, 0,           '@received after sending buffer' );
 is( $closed,          0,           '$closed after sending buffer' );
 is( read_data( $S2 ), "message\n", 'data after sending buffer' );
 
@@ -129,10 +129,11 @@ is( $rvec, $testvec, '$rvec receiving after select' );
 
 $buff->post_select( $rvec, $wvec, $evec );
 
-is( $received, "reply\n", '$received receiving after select' );
-is( $closed,   0, '$closed receiving after select' );
+is( scalar @received, 1,         'scalar @received receiving after select' );
+is( $received[0],     "reply\n", '$received[0] receiving after select' );
+is( $closed,          0,         '$closed receiving after select' );
 
-$received = "";
+@received = ();
 
 #### Buffer chaining;
 
@@ -144,8 +145,8 @@ $buff->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
 select_no_timeout( $rvec, $wvec, $evec );
 $buff->post_select( $rvec, $wvec, $evec );
 
-is( $received, "", '$received sendpartial 1' );
-is( $closed,   0, '$closed sendpartial 1' );
+is( scalar @received, 0, 'scalar @received sendpartial 1' );
+is( $closed,          0, '$closed sendpartial 1' );
 
 # Finish buffer;
 
@@ -155,8 +156,11 @@ $buff->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
 select_no_timeout( $rvec, $wvec, $evec );
 $buff->post_select( $rvec, $wvec, $evec );
 
-is( $received, "return\n", '$received sendpartial 2' );
-is( $closed,   0, '$closed sendpartial 2' );
+is( scalar @received, 1,          'scalar @received receiving after select' );
+is( $received[0],     "return\n", '$received[0] sendpartial 2' );
+is( $closed,          0,          '$closed sendpartial 2' );
+
+@received = ();
 
 #### Close;
 
@@ -170,8 +174,8 @@ $buff->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
 select_no_timeout( $rvec, $wvec, $evec );
 $buff->post_select( $rvec, $wvec, $evec );
 
-is( $received, undef, '$received after close' );
-is( $closed,   1,     '$closed after close' );
+is( scalar @received, 0, 'scalar @received receiving after select' );
+is( $closed,          1, '$closed after close' );
 
 # Idle;
 

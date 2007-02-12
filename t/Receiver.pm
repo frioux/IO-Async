@@ -18,7 +18,7 @@ sub incoming_data
    }
 
    return 0 unless( $$buffref =~ s/^(.*\n)// );
-   $main::received = $1;
+   push @main::received, $1;
    return 1;
 }
 
