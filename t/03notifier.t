@@ -31,12 +31,11 @@ $S1->blocking( 0 );
 $S2->blocking( 0 );
 
 our $readready = 0;
-our $want_writeready = 0;
 our $writeready = 0;
 
 my $listener = Listener->new();
 
-my $ioan = IO::Async::Notifier->new( sock => $S1, listener => $listener );
+my $ioan = IO::Async::Notifier->new( sock => $S1, listener => $listener, want_writeready => 0 );
 
 #### Pre-select;
 
@@ -59,7 +58,7 @@ is( $timeout, undef, '$timeout idling' );
 
 ( $rvec, $wvec, $evec ) = ('') x 3;
 undef $timeout;
-$want_writeready = 1;
+$ioan->want_writeready( 1 );
 $ioan->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
 
 is( $rvec, $testvec, '$rvec sendwaiting' );
@@ -75,7 +74,7 @@ $S2->syswrite( "some data" );
 
 ( $rvec, $wvec, $evec ) = ('') x 3;
 undef $timeout;
-$want_writeready = 0;
+$ioan->want_writeready( 0 );
 $ioan->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
 
 is( $rvec, $testvec, '$rvec receivewaiting' );
@@ -100,7 +99,7 @@ ok( defined $n, 'sysread()' );
 
 ( $rvec, $wvec, $evec ) = ('') x 3;
 undef $timeout;
-$want_writeready = 1;
+$ioan->want_writeready( 1 );
 $ioan->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
 
 is( $rvec, $testvec, '$rvec sendready' );

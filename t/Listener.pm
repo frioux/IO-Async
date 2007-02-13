@@ -6,11 +6,6 @@ sub new
    return bless {}, $class;
 }
 
-sub want_writeready
-{
-   return $main::want_writeready;
-}
-
 sub readready
 {
    $main::readready = 1;

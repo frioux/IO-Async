@@ -25,20 +25,16 @@ to co-exist with other modules which use the same interface.
 
 The relevant bit in the read-ready bitvector is always set by the
 C<pre_select()> method, but the corresponding bit in write-ready vector is
-only set if the object's listener object states an interest in write-readyness
-by its C<want_writeready()> method. The C<post_select()> will call any of the
-listener object's C<readready()> or C<writeready()> methods as indicated by
-the bits in the vectors from the C<select()> syscall.
+set depending on the state of the C<'want_writeready'> property. The
+C<post_select()> will call any of the listener object's C<readready()> or
+C<writeready()> methods as indicated by the bits in the vectors from the
+C<select()> syscall.
 
 =head2 Listener
 
 Each C<IO::Async::Notifier> object stores a reference to a listener object.
 This object will be informed of read- or write-readyness by the
-C<post_select()> method, and will be queried on whether it is interested in
-write-readyness by the C<pre_select()> method. To do this, the following
-methods may be called on the listener:
-
- $want = $listener->want_writeready();
+C<post_select()> method by the following methods on the listener:
 
  $listener->readready();
 
@@ -92,6 +88,7 @@ sub new
 
    my $self = bless {
       sock => $sock,
+      want_writeready => $params{want_writeready} || 0,
    }, $class;
 
    my $listener = $params{listener};
@@ -106,13 +103,31 @@ sub new
 
 =cut
 
+=head2 $value = $ioan->want_writeready
+
+=head2 $oldvalue = $ioan->want_writeready( $newvalue )
+
+This is the accessor for the C<want_writeready> property, which defines
+whether the object will register interest in the write-ready bitvector in a
+C<select()> call.
+
+=cut
+
+sub want_writeready
+{
+   my $self = shift;
+   my $old = $self->{want_writeready};
+   $self->{want_writeready} = $_[0] if @_;
+   return $old;
+}
+
 =head2 $ioan->pre_select( \$readvec, \$writevec, \$exceptvec, \$timeout )
 
 This method prepares the bitvectors for a C<select()> call, setting the bits
 that this notifier is interested in. It will always set the bit in the read
-vector, but will only set it in the write vector if the listener declares an
-interest in it by returning a true value from its C<want_writeready()> method.
-Neither the exception vector nor the timeout are affected.
+vector, but will only set it in the write vector if the object's
+C<want_writeready()> property is true. Neither the exception vector nor the
+timeout are affected.
 
 =over 8
 
@@ -143,13 +158,9 @@ sub pre_select
    my $fileno = $sock->fileno;
    return unless( defined $fileno );
 
-   my $listener = $self->{listener};
-
    vec( $$readref,  $fileno, 1 ) = 1;
 
-   if( $listener->can( "want_writeready" ) ) {
-      vec( $$writeref, $fileno, 1 ) = 1 if( $listener->want_writeready );
-   }
+   vec( $$writeref, $fileno, 1 ) = 1 if( $self->want_writeready );
 }
 
 =head2 $ioan->post_select( $readvec, $writevec, $exceptvec )

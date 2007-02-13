@@ -140,13 +140,8 @@ sub send
    my ( $data ) = @_;
 
    $self->{sendbuff} .= $data;
-}
 
-# protected
-sub want_writeready
-{
-   my $self = shift;
-   return ( length $self->{sendbuff} > 0 ) ? 1 : 0;
+   $self->want_writeready( 1 );
 }
 
 # protected
@@ -194,6 +189,10 @@ sub writeready
    }
    else {
       substr( $self->{sendbuff}, 0, $len ) = "";
+
+      if( length( $self->{sendbuff} ) == 0 ) {
+         $self->want_writeready( 0 );
+      }
    }
 }
 
