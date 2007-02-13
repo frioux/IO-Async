@@ -11,6 +11,10 @@ our $VERSION = '0.01';
 
 use Carp;
 
+# We need to be careful about what sort of polling-loop code we
+# unconditionally "use" here.
+use IO::Poll qw( POLLIN POLLOUT );
+
 =head1 NAME
 
 C<IO::Async::Notifier> - a class which implements event callbacks for a
@@ -19,16 +23,23 @@ non-blocking file descriptor
 =head1 DESCRIPTION
 
 This module provides a base class for implementing non-blocking IO on file
-descriptors. The object provides a pair of methods, C<pre_select()> and
-C<post_select()>, to make integration with C<select()>-based code simple, and
-to co-exist with other modules which use the same interface.
+descriptors. The object provides ways to integrate with existing asynchronous
+IO handling code simple.
 
-The relevant bit in the read-ready bitvector is always set by the
+For C<select()>-based code, a pair of methods C<pre_select()> and
+C<post_select()> can be called immediately before and after a C<select()>
+call. The relevant bit in the read-ready bitvector is always set by the
 C<pre_select()> method, but the corresponding bit in write-ready vector is
 set depending on the state of the C<'want_writeready'> property. The
-C<post_select()> will call any of the listener object's C<readready()> or
-C<writeready()> methods as indicated by the bits in the vectors from the
-C<select()> syscall.
+C<post_select()> will invoke the listener object's C<readready()> or
+C<writeready()> methods.
+
+For C<IO::Poll>-based code, a pair of methods C<pre_poll()> and C<post_poll()>
+can be called immediately before and after the C<poll()> method on an
+C<IO::Poll> object. The C<pre_poll()> method registers the appropriate mask
+bits on the C<IO::Poll> object, and the C<post_poll()> method inspects the
+result and invokes the C<readready()> or C<writeready()> methods on the
+listener.
 
 =head2 Listener
 
@@ -44,7 +55,7 @@ None of these methods will be passed any arguments; the object itself should
 track any data it requires. If either of the readyness methods calls the
 C<socket_closed()> method, then the socket is internally marked as closed
 within the object. After this happens, it will no longer register bits in the
-bitvectors in C<pre_select()>.
+bitvectors in C<pre_select()>, and will remove the mask in C<pre_poll()>.
 
 =cut
 
@@ -109,7 +120,8 @@ sub new
 
 This is the accessor for the C<want_writeready> property, which defines
 whether the object will register interest in the write-ready bitvector in a
-C<select()> call.
+C<select()> call, or whether to register the C<POLLOUT> bit in a C<IO::Poll>
+mask.
 
 =cut
 
@@ -200,6 +212,71 @@ sub post_select
    }
 
    if( vec( $writevec, $fileno, 1 ) ) {
+      $listener->writeready;
+   }
+}
+
+=head2 $ioan->pre_poll( $poll, \$timeout )
+
+This method adds the appropriate mask bits to an C<IO::Poll> object.
+
+=over 8
+
+=item $poll
+
+Reference to the C<IO::Poll> object
+
+=item \$timeout
+
+Scalar reference to the timeout value
+
+=back
+
+=cut
+
+sub pre_poll
+{
+   my $self = shift;
+   my ( $poll, $timeref ) = @_;
+
+   my $sock = $self->{sock};
+   return unless( defined $sock );
+
+   $poll->mask( $sock, POLLIN | ( $self->want_writeready ? POLLOUT : 0 ) );
+}
+
+=head2 $ioan->post_poll( $poll )
+
+This method checks the returned event list from a C<IO::Poll::poll()> call,
+and calls any of the notification methods on the listener that are
+appropriate.
+
+=over 8
+
+=item $poll
+
+Reference to the C<IO::Poll> object
+
+=back
+
+=cut
+
+sub post_poll
+{
+   my $self = shift;
+   my ( $poll ) = @_;
+
+   my $sock = $self->{sock};
+
+   my $events = $poll->events( $sock ) or return;
+
+   my $listener = $self->{listener};
+
+   if( $events & POLLIN ) {
+      $listener->readready;
+   }
+
+   if( $events & POLLOUT ) {
       $listener->writeready;
    }
 }
