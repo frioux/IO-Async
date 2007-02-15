@@ -79,7 +79,7 @@ more data can arrive.
 
 =cut
 
-=head2 $ioab = IO::Async::Buffer->new( %params )
+=head2 $buffer = IO::Async::Buffer->new( %params )
 
 This function returns a new instance of a C<IO::Async::Buffer> object.
 The C<%params> hash takes the following keys:
@@ -129,7 +129,7 @@ sub new
 
 =cut
 
-=head2 $ioab->send( $data )
+=head2 $buffer->send( $data )
 
 This method adds data to the outgoing data queue. The data is not yet sent to
 the handle; this will be done later in the C<write_ready()> method.

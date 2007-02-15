@@ -51,7 +51,7 @@ the handle is internally marked as closed within the object.
 
 =cut
 
-=head2 $ioan = IO::Async::Notifier->new( %params )
+=head2 $notifier = IO::Async::Notifier->new( %params )
 
 This function returns a new instance of a C<IO::Async::Notifier> object.
 The C<%params> hash takes the following keys:
@@ -121,7 +121,7 @@ sub new
 
 =cut
 
-=head2 $handle = $ioan->handle
+=head2 $handle = $notifier->handle
 
 This accessor returns the underlying IO handle.
 
@@ -133,7 +133,7 @@ sub handle
    return $self->{handle};
 }
 
-=head2 $fileno = $ioan->fileno
+=head2 $fileno = $notifier->fileno
 
 This accessor returns the file descriptor number of the underlying IO handle.
 
@@ -160,9 +160,9 @@ sub __memberof_set
    }
 }
 
-=head2 $value = $ioan->want_writeready
+=head2 $value = $notifier->want_writeready
 
-=head2 $oldvalue = $ioan->want_writeready( $newvalue )
+=head2 $oldvalue = $notifier->want_writeready( $newvalue )
 
 This is the accessor for the C<want_writeready> property, which defines
 whether the object will register interest in the write-ready bitvector in a
@@ -205,7 +205,7 @@ sub write_ready
    $callback->() if defined $callback;
 }
 
-=head2 $ioan->handle_closed()
+=head2 $notifier->handle_closed()
 
 This method marks that the handle has been closed. After this has been called,
 the object will no longer mark any bits in the C<pre_select()> call, nor
