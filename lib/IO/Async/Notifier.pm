@@ -11,10 +11,6 @@ our $VERSION = '0.01';
 
 use Carp;
 
-# We need to be careful about what sort of polling-loop code we
-# unconditionally "use" here.
-use IO::Poll qw( POLLIN POLLOUT );
-
 =head1 NAME
 
 C<IO::Async::Notifier> - a class which implements event callbacks for a
@@ -24,22 +20,8 @@ non-blocking file descriptor
 
 This module provides a base class for implementing non-blocking IO on file
 descriptors. The object provides ways to integrate with existing asynchronous
-IO handling code simple.
-
-For C<select()>-based code, a pair of methods C<pre_select()> and
-C<post_select()> can be called immediately before and after a C<select()>
-call. The relevant bit in the read-ready bitvector is always set by the
-C<pre_select()> method, but the corresponding bit in write-ready vector is
-set depending on the state of the C<'want_writeready'> property. The
-C<post_select()> will invoke the listener object's C<readready()> or
-C<writeready()> methods.
-
-For C<IO::Poll>-based code, a pair of methods C<pre_poll()> and C<post_poll()>
-can be called immediately before and after the C<poll()> method on an
-C<IO::Poll> object. The C<pre_poll()> method registers the appropriate mask
-bits on the C<IO::Poll> object, and the C<post_poll()> method inspects the
-result and invokes the C<readready()> or C<writeready()> methods on the
-listener.
+IO handling code, by way of the various C<IO::Async::Set::*> collection
+classes.
 
 =head2 Listener
 
@@ -114,6 +96,31 @@ sub new
 
 =cut
 
+=head2 $sock = $ioan->sock
+
+This accessor returns the underlying IO socket.
+
+=cut
+
+sub sock
+{
+   my $self = shift;
+   return $self->{sock};
+}
+
+=head2 $fileno = $ioan->fileno
+
+This accessor returns the file descriptor number of the underlying IO socket.
+
+=cut
+
+sub fileno
+{
+   my $self = shift;
+   my $sock = $self->sock or return undef;
+   return $sock->fileno;
+}
+
 =head2 $value = $ioan->want_writeready
 
 =head2 $oldvalue = $ioan->want_writeready( $newvalue )
@@ -133,152 +140,20 @@ sub want_writeready
    return $old;
 }
 
-=head2 $ioan->pre_select( \$readvec, \$writevec, \$exceptvec, \$timeout )
-
-This method prepares the bitvectors for a C<select()> call, setting the bits
-that this notifier is interested in. It will always set the bit in the read
-vector, but will only set it in the write vector if the object's
-C<want_writeready()> property is true. Neither the exception vector nor the
-timeout are affected.
-
-=over 8
-
-=item \$readvec
-
-=item \$writevec
-
-=item \$exceptvec
-
-Scalar references to the reading, writing and exception bitvectors
-
-=item \$timeout
-
-Scalar reference to the timeout value
-
-=back
-
-=cut
-
-sub pre_select
+# For ::Sets to call
+sub read_ready
 {
    my $self = shift;
-   my ( $readref, $writeref, $exceptref, $timeref ) = @_;
-
-   my $sock = $self->{sock};
-   return unless( defined $sock );
-
-   my $fileno = $sock->fileno;
-   return unless( defined $fileno );
-
-   vec( $$readref,  $fileno, 1 ) = 1;
-
-   vec( $$writeref, $fileno, 1 ) = 1 if( $self->want_writeready );
-}
-
-=head2 $ioan->post_select( $readvec, $writevec, $exceptvec )
-
-This method checks the returned bitvectors from a C<select()> call, and calls
-any of the notification methods on the listener that are appropriate.
-
-=over 8
-
-=item $readvec
-
-=item $writevec
-
-=item $exceptvec
-
-Scalars containing the read-ready, write-ready and exception bitvectors
-
-=back
-
-=cut
-
-sub post_select
-{
-   my $self = shift;
-   my ( $readvec, $writevec, $exceptvec ) = @_;
-
-   my $sock = $self->{sock};
-   return unless( defined $sock );
-
-   my $fileno = $sock->fileno;
-   return unless( defined $fileno );
-
    my $listener = $self->{listener};
-
-   if( vec( $readvec, $fileno, 1 ) ) {
-      $listener->readready;
-   }
-
-   if( vec( $writevec, $fileno, 1 ) ) {
-      $listener->writeready;
-   }
+   $listener->readready;
 }
 
-=head2 $ioan->pre_poll( $poll, \$timeout )
-
-This method adds the appropriate mask bits to an C<IO::Poll> object.
-
-=over 8
-
-=item $poll
-
-Reference to the C<IO::Poll> object
-
-=item \$timeout
-
-Scalar reference to the timeout value
-
-=back
-
-=cut
-
-sub pre_poll
+# For ::Sets to call
+sub write_ready
 {
    my $self = shift;
-   my ( $poll, $timeref ) = @_;
-
-   my $sock = $self->{sock};
-   return unless( defined $sock );
-
-   $poll->mask( $sock, POLLIN | ( $self->want_writeready ? POLLOUT : 0 ) );
-}
-
-=head2 $ioan->post_poll( $poll )
-
-This method checks the returned event list from a C<IO::Poll::poll()> call,
-and calls any of the notification methods on the listener that are
-appropriate.
-
-=over 8
-
-=item $poll
-
-Reference to the C<IO::Poll> object
-
-=back
-
-=cut
-
-sub post_poll
-{
-   my $self = shift;
-   my ( $poll ) = @_;
-
-   my $sock = $self->{sock};
-
-   my $events = $poll->events( $sock ) or return;
-
    my $listener = $self->{listener};
-
-   if( $events & POLLIN ) {
-      $listener->readready;
-   }
-
-   if( $events & POLLOUT ) {
-      $listener->writeready;
-   }
+   $listener->writeready;
 }
 
 =head2 $ioan->socket_closed()
@@ -313,10 +188,6 @@ __END__
 =item *
 
 L<IO::Socket> - Object interface to socket communications
-
-=item *
-
-L<IO::Select> - OO interface to select system call
 
 =back
 

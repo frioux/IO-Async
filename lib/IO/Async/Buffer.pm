@@ -22,9 +22,8 @@ and receiving data buffers around a connected socket
 
 This module provides a class for implementing asynchronous communications
 buffers behind connected sockets. It provides buffering for both incoming and
-outgoing data, which are transferred to or from the actual socket during a
-C<select()> loop. The object is built on the C<IO::Async::Notifier> to allow
-easy integration into a C<select()> loop.
+outgoing data, which are transferred to or from the actual socket as
+appropriate.
 
 Data can be added to the outgoing buffer at any time using the C<send()>
 method, and will be flushed whenever the underlying socket is notified as
@@ -122,7 +121,7 @@ sub new
 =head2 $ioab->send( $data )
 
 This method adds data to the outgoing data queue. The data is not yet sent to
-the socket; this will be done later in the C<post_select()> method.
+the socket; this will be done later in the C<write_ready()> method.
 
 =over 8
 
@@ -235,8 +234,6 @@ should try again in case more lines exist in the buffer.
 L<IO::Socket> - Object interface to socket communications
 
 =item *
-
-L<IO::Select> - OO interface to select system call
 
 =back
 
