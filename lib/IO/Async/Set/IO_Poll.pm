@@ -30,7 +30,7 @@ be called immediately after the C<poll()> method on the contained C<IO::Poll>
 object. The appropriate mask bits are maintained on the C<IO::Poll> object
 when notifiers are added or removed from the set, or when they change their
 C<want_writeready> status. The C<post_poll()> method inspects the result bits
-and invokes the C<readready()> or C<writeready()> methods on the notifiers.
+and invokes the C<read_ready()> or C<write_ready()> methods on the notifiers.
 
 =cut
 

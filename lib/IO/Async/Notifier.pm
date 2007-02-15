@@ -29,9 +29,9 @@ Each C<IO::Async::Notifier> object stores a reference to a listener object.
 This object will be informed of read- or write-readyness by the
 C<post_select()> method by the following methods on the listener:
 
- $listener->readready();
+ $listener->read_ready();
 
- $listener->writeready();
+ $listener->write_ready();
 
 None of these methods will be passed any arguments; the object itself should
 track any data it requires. If either of the readyness methods calls the
@@ -169,7 +169,7 @@ sub read_ready
 {
    my $self = shift;
    my $listener = $self->{listener};
-   $listener->readready;
+   $listener->read_ready;
 }
 
 # For ::Sets to call
@@ -177,7 +177,7 @@ sub write_ready
 {
    my $self = shift;
    my $listener = $self->{listener};
-   $listener->writeready;
+   $listener->write_ready;
 }
 
 =head2 $ioan->socket_closed()

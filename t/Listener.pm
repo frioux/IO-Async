@@ -6,12 +6,12 @@ sub new
    return bless {}, $class;
 }
 
-sub readready
+sub read_ready
 {
    $main::readready = 1;
 }
 
-sub writeready
+sub write_ready
 {
    $main::writeready = 1;
 }

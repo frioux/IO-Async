@@ -144,7 +144,7 @@ sub send
 }
 
 # protected
-sub readready
+sub read_ready
 {
    my $self = shift;
 
@@ -168,7 +168,7 @@ sub readready
 }
 
 # protected
-sub writeready
+sub write_ready
 {
    my $self = shift;
 
