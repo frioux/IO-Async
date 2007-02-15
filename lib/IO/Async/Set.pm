@@ -56,7 +56,7 @@ sub add
 
    my $fileno = $notifier->fileno;
 
-   defined $fileno or carp "Can only add a notifier bound to a socket with a fileno";
+   defined $fileno or croak "Can only add a notifier bound to a socket with a fileno";
 
    $self->{notifiers}->{$fileno} = $notifier;
 
@@ -76,7 +76,7 @@ sub remove
 
    my $fileno = $notifier->fileno;
 
-   defined $fileno or carp "Cannot remove a notifier that has no fileno";
+   defined $fileno or croak "Cannot remove a notifier that has no fileno";
 
    exists $self->{notifiers}->{$fileno} or croak "Notifier does not exist in collection";
 
