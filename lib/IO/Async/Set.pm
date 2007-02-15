@@ -56,7 +56,7 @@ sub add
 
    my $fileno = $notifier->fileno;
 
-   defined $fileno or croak "Can only add a notifier bound to a socket with a fileno";
+   defined $fileno or croak "Can only add a notifier bound to a handle with a fileno";
 
    if( defined $notifier->__memberof_set ) {
       croak "Cannot add a notifier that is already a member of a set";

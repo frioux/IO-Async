@@ -20,20 +20,20 @@ use IO::Async::Set::IO_Poll;
 my $listener = Listener->new();
 my $receiver = Receiver->new();
 
-dies_ok( sub { IO::Async::Notifier->new( sock => "Hello" ) },
+dies_ok( sub { IO::Async::Notifier->new( handle => "Hello" ) },
          'Not a socket' );
 
 ( my $sock, undef ) = IO::Socket::UNIX->socketpair( AF_UNIX, SOCK_STREAM, PF_UNSPEC ) or
    die "Cannot create socket pair - $!";
 
-my $ioan = IO::Async::Notifier->new( sock => $sock, listener => $listener );
+my $ioan = IO::Async::Notifier->new( handle => $sock, listener => $listener );
 ok( defined $ioan, '$ioan defined' );
 is( ref $ioan, "IO::Async::Notifier", 'ref $ioan is IO::Async::Notifier' );
 
-dies_ok( sub { IO::Async::Buffer->new( sock => $sock, receiver => "Hello" ) },
+dies_ok( sub { IO::Async::Buffer->new( handle => $sock, receiver => "Hello" ) },
          'Not a receiver' );
 
-my $ioab = IO::Async::Buffer->new( sock => $sock, receiver => $receiver );
+my $ioab = IO::Async::Buffer->new( handle => $sock, receiver => $receiver );
 ok( defined $ioab, '$ioab defined' );
 is( ref $ioab, "IO::Async::Buffer", 'ref $ioab is IO::Async::Buffer' );
 

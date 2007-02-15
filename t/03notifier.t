@@ -24,9 +24,9 @@ our $writeready = 0;
 
 my $listener = Listener->new();
 
-my $ioan = IO::Async::Notifier->new( sock => $S1, listener => $listener, want_writeready => 0 );
+my $ioan = IO::Async::Notifier->new( handle => $S1, listener => $listener, want_writeready => 0 );
 
-is( $ioan->sock, $S1, '->sock returns S1' );
+is( $ioan->handle, $S1, '->handle returns S1' );
 
 is( $ioan->fileno, fileno($S1), '->fileno returns fileno(S1)' );
 

@@ -97,7 +97,7 @@ sub post_poll
    foreach my $fileno ( keys %$notifiers ) {
       my $notifier = $notifiers->{$fileno};
 
-      my $events = $poll->events( $notifier->sock ) or next;
+      my $events = $poll->events( $notifier->handle ) or next;
 
       if( $events & POLLIN ) {
          $notifier->read_ready;
@@ -119,7 +119,7 @@ sub remove
 
    $self->SUPER::remove( $notifier );
 
-   $poll->remove( $notifier->sock );
+   $poll->remove( $notifier->handle );
 }
 
 # override
@@ -131,7 +131,7 @@ sub __notifier_want_writeready
 
    my $poll = $self->{poll};
 
-   $poll->mask( $notifier->sock, POLLIN | ( $want_writeready ? POLLOUT : 0 ) );
+   $poll->mask( $notifier->handle, POLLIN | ( $want_writeready ? POLLOUT : 0 ) );
 }
 
 # Keep perl happy; keep Britain tidy

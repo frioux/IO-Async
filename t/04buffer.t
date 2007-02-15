@@ -38,7 +38,7 @@ our $closed = 0;
 
 my $recv = Receiver->new();
 
-my $buff = IO::Async::Buffer->new( sock => $S1, receiver => $recv );
+my $buff = IO::Async::Buffer->new( handle => $S1, receiver => $recv );
 
 # Sending
 

@@ -35,7 +35,7 @@ C<post_select()> method by the following methods on the listener:
 
 None of these methods will be passed any arguments; the object itself should
 track any data it requires. If either of the readyness methods calls the
-C<socket_closed()> method, then the socket is internally marked as closed
+C<handle_closed()> method, then the handle is internally marked as closed
 within the object. After this happens, it will no longer register bits in the
 bitvectors in C<pre_select()>, and will remove the mask in C<pre_poll()>.
 
@@ -45,10 +45,10 @@ bitvectors in C<pre_select()>, and will remove the mask in C<pre_poll()>.
 
 =cut
 
-=head2 $ioan = IO::Async::Notifier->new( sock => $sock, listener => $listener )
+=head2 $ioan = IO::Async::Notifier->new( handle => $handle, listener => $listener )
 
 This function returns a new instance of a C<IO::Async::Notifier> object.
-The transceiver wraps a connected socket and a receiver.
+The transceiver wraps a connected handle and a receiver.
 
 If the string C<'self'> is passed instead, then the object will call
 notification events on itself. This will be useful in implementing subclasses,
@@ -56,10 +56,10 @@ which internally implement the notification methods.
 
 =over 8
 
-=item $sock
+=item $handle
 
-The socket object to wrap. Must implement C<fileno> method in way that
-C<IO::Socket> does.
+The handle object to wrap. Must implement C<fileno> method in way that
+C<IO::Handle> does.
 
 =item $listener
 
@@ -74,13 +74,13 @@ sub new
    my $class = shift;
    my ( %params ) = @_;
 
-   my $sock = $params{sock};
-   unless( ref( $sock ) and $sock->can( "fileno" ) ) {
-      croak 'Expected that $sock can fileno()';
+   my $handle = $params{handle};
+   unless( ref( $handle ) and $handle->can( "fileno" ) ) {
+      croak 'Expected that $handle can fileno()';
    }
 
    my $self = bless {
-      sock => $sock,
+      handle => $handle,
       want_writeready => $params{want_writeready} || 0,
    }, $class;
 
@@ -96,29 +96,29 @@ sub new
 
 =cut
 
-=head2 $sock = $ioan->sock
+=head2 $handle = $ioan->handle
 
-This accessor returns the underlying IO socket.
+This accessor returns the underlying IO handle.
 
 =cut
 
-sub sock
+sub handle
 {
    my $self = shift;
-   return $self->{sock};
+   return $self->{handle};
 }
 
 =head2 $fileno = $ioan->fileno
 
-This accessor returns the file descriptor number of the underlying IO socket.
+This accessor returns the file descriptor number of the underlying IO handle.
 
 =cut
 
 sub fileno
 {
    my $self = shift;
-   my $sock = $self->sock or return undef;
-   return $sock->fileno;
+   my $handle = $self->handle or return undef;
+   return $handle->fileno;
 }
 
 # For ::Sets to call
@@ -180,24 +180,24 @@ sub write_ready
    $listener->write_ready;
 }
 
-=head2 $ioan->socket_closed()
+=head2 $ioan->handle_closed()
 
-This method marks that the socket has been closed. After this has been called,
+This method marks that the handle has been closed. After this has been called,
 the object will no longer mark any bits in the C<pre_select()> call, nor
 respond to any set bits in the C<post_select()> call.
 
 =cut
 
-sub socket_closed
+sub handle_closed
 {
    my $self = shift;
 
-   my $sock = $self->{sock};
-   return unless( defined $sock );
+   my $handle = $self->{handle};
+   return unless( defined $handle );
 
-   $sock->close;
-   undef $sock;
-   delete $self->{sock};
+   $handle->close;
+   undef $handle;
+   delete $self->{handle};
 }
 
 # Keep perl happy; keep Britain tidy
@@ -211,7 +211,7 @@ __END__
 
 =item *
 
-L<IO::Socket> - Object interface to socket communications
+L<IO::Handle> - Supply object methods for I/O handles
 
 =back
 

@@ -24,7 +24,7 @@ our $readready = 0;
 our $writeready = 0;
 
 my $listener = Listener->new();
-my $notifier = IO::Async::Notifier->new( sock => $S1, listener => $listener );
+my $notifier = IO::Async::Notifier->new( handle => $S1, listener => $listener );
 
 my $set = IO::Async::Set::Select->new();
 
