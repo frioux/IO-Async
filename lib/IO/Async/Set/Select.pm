@@ -28,8 +28,8 @@ C<pre_select()> and C<post_select()> can be called immediately before and
 after a C<select()> call. The relevant bit in the read-ready bitvector is
 always set by the C<pre_select()> method, but the corresponding bit in
 write-ready vector is set depending on the state of the C<'want_writeready'>
-property. The C<post_select()> method will invoke the listener object
-C<read_ready()> or C<write_ready()> methods as appropriate.
+property. The C<post_select()> method will invoke the C<read_ready()> or
+C<write_ready()> methods or callbacks as appropriate.
 
 =cut
 
@@ -101,7 +101,7 @@ sub pre_select
 =head2 $set->post_select( $readvec, $writevec, $exceptvec )
 
 This method checks the returned bitvectors from a C<select()> call, and calls
-any of the notification methods on the listeners that are appropriate.
+any of the notification methods or callbacks that are appropriate.
 
 =over 8
 

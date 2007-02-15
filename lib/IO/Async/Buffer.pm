@@ -98,7 +98,7 @@ sub new
    my $class = shift;
    my ( %params ) = @_;
 
-   my $self = $class->SUPER::new( %params, listener => 'self' );
+   my $self = $class->SUPER::new( %params );
 
    my $receiver = $params{receiver};
    $receiver = $self if( $receiver eq "self" );

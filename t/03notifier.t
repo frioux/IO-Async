@@ -6,7 +6,6 @@ use Test::More tests => 9;
 use Test::Exception;
 
 use lib qw( t );
-use Listener;
 
 use IO::Socket::UNIX;
 
@@ -19,12 +18,13 @@ use IO::Async::Notifier;
 $S1->blocking( 0 );
 $S2->blocking( 0 );
 
-our $readready = 0;
-our $writeready = 0;
+my $readready = 0;
+my $writeready = 0;
 
-my $listener = Listener->new();
-
-my $ioan = IO::Async::Notifier->new( handle => $S1, listener => $listener, want_writeready => 0 );
+my $ioan = IO::Async::Notifier->new( handle => $S1, want_writeready => 0,
+   read_ready  => sub { $readready = 1 },
+   write_ready => sub { $writeready = 1 },
+);
 
 is( $ioan->handle, $S1, '->handle returns S1' );
 

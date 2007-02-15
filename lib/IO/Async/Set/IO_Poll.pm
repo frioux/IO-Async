@@ -74,8 +74,7 @@ sub new
 =head2 $ioan->post_poll( $poll )
 
 This method checks the returned event list from a C<IO::Poll::poll()> call,
-and calls any of the notification methods on the listener that are
-appropriate.
+and calls any of the notification methods or callbacks that are appropriate.
 
 =over 8
 

@@ -23,21 +23,27 @@ descriptors. The object provides ways to integrate with existing asynchronous
 IO handling code, by way of the various C<IO::Async::Set::*> collection
 classes.
 
-=head2 Listener
+This object may be used in one of two ways; with callback functions, or as a
+base class.
 
-Each C<IO::Async::Notifier> object stores a reference to a listener object.
-This object will be informed of read- or write-readyness by the
-C<post_select()> method by the following methods on the listener:
+=over 4
 
- $listener->read_ready();
+=item Callbacks
 
- $listener->write_ready();
+If the C<read_ready> or C<write_ready> keys are supplied in the constructor,
+they should contain CODE references to callback functions to be called when
+the underlying IO handle becomes readable or writable.
 
-None of these methods will be passed any arguments; the object itself should
-track any data it requires. If either of the readyness methods calls the
-C<handle_closed()> method, then the handle is internally marked as closed
-within the object. After this happens, it will no longer register bits in the
-bitvectors in C<pre_select()>, and will remove the mask in C<pre_poll()>.
+=item Base Class
+
+If a subclass is built, then it can override the C<read_ready> or
+C<write_ready> methods of the base to perform its work. In this case, it
+should not call the C<SUPER::> versions of those methods.
+
+=back
+
+If either of the readyness methods calls the C<handle_closed()> method, then
+the handle is internally marked as closed within the object.
 
 =cut
 
@@ -45,27 +51,32 @@ bitvectors in C<pre_select()>, and will remove the mask in C<pre_poll()>.
 
 =cut
 
-=head2 $ioan = IO::Async::Notifier->new( handle => $handle, listener => $listener )
+=head2 $ioan = IO::Async::Notifier->new( %params )
 
 This function returns a new instance of a C<IO::Async::Notifier> object.
-The transceiver wraps a connected handle and a receiver.
-
-If the string C<'self'> is passed instead, then the object will call
-notification events on itself. This will be useful in implementing subclasses,
-which internally implement the notification methods.
+The C<%params> hash takes the following keys:
 
 =over 8
 
-=item $handle
+=item handle => $handle
 
 The handle object to wrap. Must implement C<fileno> method in way that
 C<IO::Handle> does.
 
-=item $listener
+=item read_ready => CODE
 
-An object reference to notify on events, or the string C<'self'>
+=item write_ready => CODE
+
+CODE references to handlers for when the handle becomes read-ready or
+write-ready. If these are not supplied, subclass methods will be called
+instead.
 
 =back
+
+It is required that either a C<read_ready> callback reference is passed, or
+that the object is actually a subclass that overrides the C<read_ready>
+method. It is optional whether either is true for C<write_ready>; if neither
+is supplied then write-readiness notifications will be ignored.
 
 =cut
 
@@ -84,10 +95,24 @@ sub new
       want_writeready => $params{want_writeready} || 0,
    }, $class;
 
-   my $listener = $params{listener};
-   $listener = $self if( $listener eq "self" );
+   if( $params{read_ready} ) {
+      $self->{read_ready} = $params{read_ready};
+   }
+   else {
+      # No callback was passed. But don't worry; perhaps we're really a
+      # subclass that overrides it
+      if( $self->can( 'read_ready' ) == \&read_ready ) {
+         croak 'Expected either a read_ready callback or to be a subclass that can ->read_ready';
+      }
 
-   $self->{listener} = $listener;
+      # Don't need to store anything - if an overridden method exists, we know
+      # our own won't be called
+   }
+
+   if( $params{write_ready} ) {
+      $self->{write_ready} = $params{write_ready};
+   }
+   # No problem if it doesn't exist
 
    return $self;
 }
@@ -168,16 +193,16 @@ sub want_writeready
 sub read_ready
 {
    my $self = shift;
-   my $listener = $self->{listener};
-   $listener->read_ready;
+   my $callback = $self->{read_ready};
+   $callback->();
 }
 
 # For ::Sets to call
 sub write_ready
 {
    my $self = shift;
-   my $listener = $self->{listener};
-   $listener->write_ready;
+   my $callback = $self->{write_ready};
+   $callback->() if defined $callback;
 }
 
 =head2 $ioan->handle_closed()

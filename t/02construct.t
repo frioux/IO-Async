@@ -2,11 +2,10 @@
 
 use strict;
 
-use Test::More tests => 10;
+use Test::More tests => 11;
 use Test::Exception;
 
 use lib qw( t );
-use Listener;
 use Receiver;
 
 use IO::Socket::UNIX;
@@ -17,7 +16,6 @@ use IO::Async::Buffer;
 use IO::Async::Set::Select;
 use IO::Async::Set::IO_Poll;
 
-my $listener = Listener->new();
 my $receiver = Receiver->new();
 
 dies_ok( sub { IO::Async::Notifier->new( handle => "Hello" ) },
@@ -26,7 +24,10 @@ dies_ok( sub { IO::Async::Notifier->new( handle => "Hello" ) },
 ( my $sock, undef ) = IO::Socket::UNIX->socketpair( AF_UNIX, SOCK_STREAM, PF_UNSPEC ) or
    die "Cannot create socket pair - $!";
 
-my $ioan = IO::Async::Notifier->new( handle => $sock, listener => $listener );
+dies_ok( sub { IO::Async::Notifier->new( handle => $sock ) },
+         'No read_ready' );
+
+my $ioan = IO::Async::Notifier->new( handle => $sock, read_ready => sub { } );
 ok( defined $ioan, '$ioan defined' );
 is( ref $ioan, "IO::Async::Notifier", 'ref $ioan is IO::Async::Notifier' );
 

@@ -6,7 +6,6 @@ use Test::More tests => 14;
 use Test::Exception;
 
 use lib qw( t );
-use Listener;
 
 use IO::Socket::UNIX;
 use IO::Async::Notifier;
@@ -22,11 +21,13 @@ use IO::Async::Set::IO_Poll;
 $S1->blocking( 0 );
 $S2->blocking( 0 );
 
-our $readready = 0;
-our $writeready = 0;
+my $readready = 0;
+my $writeready = 0;
 
-my $listener = Listener->new();
-my $notifier = IO::Async::Notifier->new( handle => $S1, listener => $listener );
+my $notifier = IO::Async::Notifier->new( handle => $S1,
+   read_ready  => sub { $readready = 1 },
+   write_ready => sub { $writeready = 1 },
+);
 
 my $poll = IO::Poll->new();
 
