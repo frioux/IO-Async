@@ -5,9 +5,6 @@ use strict;
 use Test::More tests => 19;
 use Test::Exception;
 
-use lib qw( t );
-use Receiver;
-
 use POSIX qw( EAGAIN );
 use IO::Socket::UNIX;
 
@@ -33,12 +30,25 @@ sub read_data($)
    die "Cannot sysread() - $!";
 }
 
-our @received;
-our $closed = 0;
+my @received;
+my $closed = 0;
 
-my $recv = Receiver->new();
+sub incoming_data
+{
+   my ( $buffref, $buffclosed ) = @_;
 
-my $buff = IO::Async::Buffer->new( handle => $S1, receiver => $recv );
+   if( $buffclosed ) {
+      $closed = $buffclosed;
+      @received = ();
+      return 0;
+   }
+
+   return 0 unless( $$buffref =~ s/^(.*\n)// );
+   push @received, $1;
+   return 1;
+}
+
+my $buff = IO::Async::Buffer->new( handle => $S1, incoming_data => \&incoming_data );
 
 # First corner case - byte at a time
 

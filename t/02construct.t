@@ -5,9 +5,6 @@ use strict;
 use Test::More tests => 11;
 use Test::Exception;
 
-use lib qw( t );
-use Receiver;
-
 use IO::Socket::UNIX;
 
 use IO::Async::Notifier;
@@ -15,8 +12,6 @@ use IO::Async::Buffer;
 
 use IO::Async::Set::Select;
 use IO::Async::Set::IO_Poll;
-
-my $receiver = Receiver->new();
 
 dies_ok( sub { IO::Async::Notifier->new( handle => "Hello" ) },
          'Not a socket' );
@@ -31,10 +26,10 @@ my $ioan = IO::Async::Notifier->new( handle => $sock, read_ready => sub { } );
 ok( defined $ioan, '$ioan defined' );
 is( ref $ioan, "IO::Async::Notifier", 'ref $ioan is IO::Async::Notifier' );
 
-dies_ok( sub { IO::Async::Buffer->new( handle => $sock, receiver => "Hello" ) },
-         'Not a receiver' );
+dies_ok( sub { IO::Async::Buffer->new( handle => $sock ) },
+         'No incoming_data' );
 
-my $ioab = IO::Async::Buffer->new( handle => $sock, receiver => $receiver );
+my $ioab = IO::Async::Buffer->new( handle => $sock, incoming_data => sub { } );
 ok( defined $ioab, '$ioab defined' );
 is( ref $ioab, "IO::Async::Buffer", 'ref $ioab is IO::Async::Buffer' );
 

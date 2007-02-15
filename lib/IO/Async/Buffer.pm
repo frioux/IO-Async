@@ -28,24 +28,35 @@ appropriate.
 Data can be added to the outgoing buffer at any time using the C<send()>
 method, and will be flushed whenever the underlying handle is notified as
 being write-ready. Whenever the handle is notified as being read-ready, the
-data is read in from the handle, and the transceiver object's receiver is
-signaled to indicate the data is available.
+data is read in from the handle, and the C<incoming_data> code is called to
+indicate the data is available.
 
-=head2 Receivers
+This object may be used in one of two ways; with a callback function, or as a
+base class.
 
-Each C<IO::Async::Buffer> object stores a reference to a receiver
-object.  This is any object that supports a C<< ->incoming_data() >> method.
-When data arrives in the incoming data buffer, the transceiver calls this
-method on its receiver to indicate the data is available. It is called in the
-following manner:
+=over 4
 
- $again = $receiver->incoming_data( \$buffer, $handleclosed )
+=item Callbacks
+
+If the C<incoming_data> key is supplied to the constructor, it should contain
+a CODE reference to a function that will be called in the following manner:
+
+ $again = $callback->( \$buffer, $handleclosed )
+
+=item Base Class
+
+If a subclass is built, then it can provide an C<incoming_data> method, which
+will be called in the following manner:
+
+ $again = $self->incoming_data( \$buffer, $handleclosed )
+
+=back
 
 A reference to the incoming data buffer is passed, which is a plain perl
-string. The C<incoming_data()> method should inspect and remove any data it
-likes, but is not required to remove all, or indeed any of the data. Any data
-remaining in the buffer will be preserved for the next call, the next time more
-data is received from the handle.
+string. The code should inspect and remove any data it likes, but is not
+required to remove all, or indeed any of the data. Any data remaining in the
+buffer will be preserved for the next call, the next time more data is
+received from the handle.
 
 In this way, it is easy to implement code that reads records of some form when
 completed, but ignores partially-received records, until all the data is
@@ -68,28 +79,27 @@ more data can arrive.
 
 =cut
 
-=head2 $ioab = IO::Async::Buffer->new( handle => $handle, receiver => $receiver )
+=head2 $ioab = IO::Async::Buffer->new( %params )
 
 This function returns a new instance of a C<IO::Async::Buffer> object.
-The transceiver wraps a connected handle and a receiver.
-
-If the string C<'self'> is passed instead, then the object will call
-notification events on itself. This will be useful in implementing subclasses,
-which internally implements the notification method.
+The C<%params> hash takes the following keys:
 
 =over 8
 
-=item $handle
+=item handle => $handle
 
 The handle object to wrap. Must implement C<fileno>, C<sysread> and
 C<syswrite> methods in the way that C<IO::Handle> does.
 
-=item $receiver
+=item incoming_data => CODE
 
-An object reference to notify on incoming data, or the string C<'self'>.
-This object reference should support a C<< ->incoming_data() >> method.
+A CODE reference for when more data is available in the internal receiving 
+buffer. 
 
 =back
+
+It is required that either an C<incoming_data> callback reference is passed,
+or that the object provides an C<incoming_data> method.
 
 =cut
 
@@ -100,14 +110,15 @@ sub new
 
    my $self = $class->SUPER::new( %params );
 
-   my $receiver = $params{receiver};
-   $receiver = $self if( $receiver eq "self" );
-
-   unless( ref( $receiver ) && $receiver->can( "incoming_data" ) ) {
-      croak 'Expected that $receiver can incoming_data()';
+   if( $params{incoming_data} ) {
+      $self->{incoming_data} = $params{incoming_data};
+   }
+   else {
+      unless( $self->can( 'incoming_data' ) ) {
+         croak 'Expected either an incoming_data callback or to be able to ->incoming_data';
+      }
    }
 
-   $self->{receiver} = $receiver;
    $self->{sendbuff} = "";
    $self->{recvbuff} = "";
 
@@ -158,9 +169,17 @@ sub read_ready
    my $handleclosed = ( $len == 0 );
 
    $self->{recvbuff} .= $data if( !$handleclosed );
-   my $receiver = $self->{receiver};
+   my $callback = $self->{incoming_data};
    while( length( $self->{recvbuff} ) > 0 || $handleclosed ) {
-      my $again = $receiver->incoming_data( \$self->{recvbuff}, $handleclosed );
+      my $again;
+
+      if( defined $callback ) {
+         $again = $callback->( \$self->{recvbuff}, $handleclosed );
+      }
+      else {
+         $again = $self->incoming_data( \$self->{recvbuff}, $handleclosed );
+      }
+
       last if !$again;
    }
 
