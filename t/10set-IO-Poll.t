@@ -5,8 +5,6 @@ use strict;
 use Test::More tests => 14;
 use Test::Exception;
 
-use lib qw( t );
-
 use IO::Socket::UNIX;
 use IO::Async::Notifier;
 
