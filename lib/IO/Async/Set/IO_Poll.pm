@@ -9,6 +9,8 @@ use strict;
 
 our $VERSION = '0.01';
 
+use base qw( IO::Async::Set );
+
 use Carp;
 
 use IO::Poll qw( POLLIN POLLOUT );
@@ -20,9 +22,8 @@ C<IO::Async::Notifier> objects by using an C<IO::Poll> object.
 
 =head1 DESCRIPTION
 
-This module provides a class to store a set of C<IO::Async::Notifier> objects.
-The read-ready and write-ready tests are performed with the help of an
-C<IO::Poll> object.
+This subclass of C<IO::Async::Notifier> uses an C<IO::Poll> object to perform
+read-ready and write-ready tests.
 
 To integrate with existing code that uses an C<IO::Poll>, a pair of methods
 C<pre_poll()> and C<post_poll()> can be called immediately before and after 
@@ -57,12 +58,11 @@ sub new
    my $class = shift;
    my ( %args ) = @_;
 
-   my $poll = $args{poll};
+   my $poll = delete $args{poll};
 
-   my $self = bless {
-      notifiers => {}, # {fileno} = notifier
-      poll      => $poll,
-   }, $class;
+   my $self = $class->__new( %args );
+
+   $self->{poll} = $poll;
 
    return $self;
 }
@@ -141,27 +141,6 @@ sub post_poll
          $notifier->write_ready;
       }
    }
-}
-
-=head2 $set->add( $notifier )
-
-This method adds another notifier object to the stored collection. The object
-may be a C<IO::Async::Notifier>, or any subclass of it.
-
-=cut
-
-sub add
-{
-   my $self = shift;
-   my ( $notifier ) = @_;
-
-   my $fileno = $notifier->fileno;
-
-   defined $fileno or carp "Can only add a notifier bound to a socket with a fileno";
-
-   $self->{notifiers}->{$fileno} = $notifier;
-
-   return;
 }
 
 # Keep perl happy; keep Britain tidy

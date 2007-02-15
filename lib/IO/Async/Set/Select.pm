@@ -9,6 +9,8 @@ use strict;
 
 our $VERSION = '0.01';
 
+use base qw( IO::Async::Set );
+
 use Carp;
 
 =head1 NAME
@@ -18,9 +20,8 @@ C<IO::Async::Notifier> objects by using the C<select()> syscall.
 
 =head1 DESCRIPTION
 
-This module provides a class to store a set of C<IO::Async::Notifier> objects.
-The read-ready and write-ready tests are performed by using the C<select()>
-syscall.
+This subclass of C<IO::Async::Notifier> uses the C<select()> syscall to
+perform read-ready and write-ready tests.
 
 To integrate with an existing C<select()>-based event loop, a pair of methods
 C<pre_select()> and C<post_select()> can be called immediately before and
@@ -46,12 +47,7 @@ It takes no special arguments.
 sub new
 {
    my $class = shift;
-
-   my $self = bless {
-      notifiers => {}, # {fileno} = notifier
-   }, $class;
-
-   return $self;
+   return $class->__new( @_ );
 }
 
 =head1 METHODS
@@ -138,27 +134,6 @@ sub post_select
          $notifier->write_ready;
       }
    }
-}
-
-=head2 $set->add( $notifier )
-
-This method adds another notifier object to the stored collection. The object
-may be a C<IO::Async::Notifier>, or any subclass of it.
-
-=cut
-
-sub add
-{
-   my $self = shift;
-   my ( $notifier ) = @_;
-
-   my $fileno = $notifier->fileno;
-
-   defined $fileno or carp "Can only add a notifier bound to a socket with a fileno";
-
-   $self->{notifiers}->{$fileno} = $notifier;
-
-   return;
 }
 
 # Keep perl happy; keep Britain tidy
