@@ -25,12 +25,12 @@ C<IO::Async::Notifier> objects by using an C<IO::Poll> object.
 This subclass of C<IO::Async::Notifier> uses an C<IO::Poll> object to perform
 read-ready and write-ready tests.
 
-To integrate with existing code that uses an C<IO::Poll>, a pair of methods
-C<pre_poll()> and C<post_poll()> can be called immediately before and after 
-the C<poll()> method on an C<IO::Poll> object. The C<pre_poll()> method 
-registers the appropriate mask bits on the C<IO::Poll> object, and the 
-C<post_poll()> method inspects the result and invokes the C<readready()> or 
-C<writeready()> methods on the notifiers.
+To integrate with existing code that uses an C<IO::Poll>, a C<post_poll()> can
+be called immediately after the C<poll()> method on the contained C<IO::Poll>
+object. The appropriate mask bits are maintained on the C<IO::Poll> object
+when notifiers are added or removed from the set, or when they change their
+C<want_writeready> status. The C<post_poll()> method inspects the result bits
+and invokes the C<readready()> or C<writeready()> methods on the notifiers.
 
 =cut
 
@@ -70,40 +70,6 @@ sub new
 =head1 METHODS
 
 =cut
-
-=head2 $ioan->pre_poll( $poll, \$timeout )
-
-This method adds the appropriate mask bits to an C<IO::Poll> object.
-
-=over 8
-
-=item $poll
-
-Reference to the C<IO::Poll> object
-
-=item \$timeout
-
-Scalar reference to the timeout value
-
-=back
-
-=cut
-
-sub pre_poll
-{
-   my $self = shift;
-
-   my $notifiers = $self->{notifiers};
-   my $poll      = $self->{poll};
-
-   foreach my $fileno ( keys %$notifiers ) {
-      my $notifier = $notifiers->{$fileno};
-
-      $poll->mask( $notifier->sock, POLLIN | ( $notifier->want_writeready ? POLLOUT : 0 ) );
-   }
-
-   return;
-}
 
 =head2 $ioan->post_poll( $poll )
 
@@ -154,6 +120,18 @@ sub remove
    $self->SUPER::remove( $notifier );
 
    $poll->remove( $notifier->sock );
+}
+
+# override
+# For ::Notifier to call
+sub __notifier_want_writeready
+{
+   my $self = shift;
+   my ( $notifier, $want_writeready ) = @_;
+
+   my $poll = $self->{poll};
+
+   $poll->mask( $notifier->sock, POLLIN | ( $want_writeready ? POLLOUT : 0 ) );
 }
 
 # Keep perl happy; keep Britain tidy

@@ -41,16 +41,15 @@ is( scalar @handles, 0, '@handles empty' );
 
 # Idle
 
+@handles = $poll->handles();
+is( scalar @handles, 0, '@handles idle' );
+
 $set->add( $notifier );
 
 is( $notifier->__memberof_set, $set, '$notifier->__memberof_set == $set' );
 
 dies_ok( sub { $set->add( $notifier ) }, 'adding again produces error' );
 
-@handles = $poll->handles();
-is( scalar @handles, 0, '@handles idle' );
-
-$set->pre_poll();
 my $ready;
 $ready = $poll->poll( 0 );
 
@@ -63,7 +62,6 @@ is( scalar @handles, 1, '@handles idle' );
 
 $S2->print( "data\n" );
 
-$set->pre_poll();
 $ready = $poll->poll( 0 );
 
 is( $ready, 1, '$ready readready' );
@@ -78,7 +76,6 @@ $S1->getline(); # ignore return
 # Write-ready
 $notifier->want_writeready( 1 );
 
-$set->pre_poll();
 $ready = $poll->poll( 0 );
 
 is( $ready, 1, '$ready writeready' );
@@ -92,8 +89,6 @@ is( $writeready, 1, '$writeready after post_poll' );
 $set->remove( $notifier );
 
 is( $notifier->__memberof_set, undef, '$notifier->__memberof_set is undef' );
-
-$set->pre_poll();
 
 @handles = $poll->handles();
 is( scalar @handles, 0, '@handles after removal' );
