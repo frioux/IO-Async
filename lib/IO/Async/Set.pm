@@ -66,6 +66,8 @@ sub add
 
    $notifier->__memberof_set( $self );
 
+   $self->__notifier_want_writeready( $notifier, $notifier->want_writeready );
+
    return;
 }
 
@@ -91,6 +93,14 @@ sub remove
    $notifier->__memberof_set( undef );
 
    return;
+}
+
+# For ::Notifier to call
+sub __notifier_want_writeready
+{
+   my $self = shift;
+   my ( $notifier, $want_writeready ) = @_;
+   # Ignore
 }
 
 # Keep perl happy; keep Britain tidy

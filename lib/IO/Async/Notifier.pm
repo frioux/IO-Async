@@ -149,9 +149,19 @@ mask.
 sub want_writeready
 {
    my $self = shift;
-   my $old = $self->{want_writeready};
-   $self->{want_writeready} = $_[0] if @_;
-   return $old;
+   if( @_ ) {
+      my $old = $self->{want_writeready};
+      $self->{want_writeready} = $_[0];
+
+      if( $self->{set} ) {
+         $self->{set}->__notifier_want_writeready( $self, $self->{want_writeready} );
+      }
+
+      return $old;
+   }
+   else {
+      return $self->{want_writeready};
+   }
 }
 
 # For ::Sets to call
