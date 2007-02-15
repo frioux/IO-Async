@@ -63,6 +63,28 @@ sub add
    return;
 }
 
+=head2 $set->remove( $notifier )
+
+This method removes a notifier object from the stored collection.
+
+=cut
+
+sub remove
+{
+   my $self = shift;
+   my ( $notifier ) = @_;
+
+   my $fileno = $notifier->fileno;
+
+   defined $fileno or carp "Cannot remove a notifier that has no fileno";
+
+   exists $self->{notifiers}->{$fileno} or croak "Notifier does not exist in collection";
+
+   delete $self->{notifiers}->{$fileno};
+
+   return;
+}
+
 # Keep perl happy; keep Britain tidy
 1;
 

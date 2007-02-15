@@ -88,3 +88,21 @@ is( $readready,  0, '$readready writeready post_select' );
 is( $writeready, 1, '$writeready writeready post_select' );
 
 $readready = 0;
+
+# Removal
+
+$set->remove( $notifier );
+
+$rvec = '';
+$wvec = '';
+$evec = '';
+$timeout = undef;
+
+$set->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
+
+is( $rvec, '', '$rvec idling pre_select' );
+is( $wvec, '', '$wvec idling pre_select' );
+is( $evec, '', '$evec idling pre_select' );
+
+is( $timeout, undef, '$timeout idling pre_select' );
+

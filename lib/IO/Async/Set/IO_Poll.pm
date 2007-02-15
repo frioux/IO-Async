@@ -143,6 +143,19 @@ sub post_poll
    }
 }
 
+# override
+sub remove
+{
+   my $self = shift;
+   my ( $notifier ) = @_;
+
+   my $poll = $self->{poll};
+
+   $self->SUPER::remove( $notifier );
+
+   $poll->remove( $notifier->sock );
+}
+
 # Keep perl happy; keep Britain tidy
 1;
 

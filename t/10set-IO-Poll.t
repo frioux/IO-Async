@@ -81,3 +81,12 @@ is( $ready, 1, '$ready writeready' );
 is( $writeready, 0, '$writeready before post_poll' );
 $set->post_poll();
 is( $writeready, 1, '$writeready after post_poll' );
+
+# Removal
+
+$set->remove( $notifier );
+
+$set->pre_poll();
+
+@handles = $poll->handles();
+is( scalar @handles, 0, '@handles after removal' );
