@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 8;
+use Test::More tests => 9;
 use Test::Exception;
 
 use lib qw( t );
@@ -31,6 +31,8 @@ is( $ioan->sock, $S1, '->sock returns S1' );
 is( $ioan->fileno, fileno($S1), '->fileno returns fileno(S1)' );
 
 is( $ioan->want_writeready, 0, 'wantwriteready 0' );
+
+is( $ioan->__memberof_set, undef, '__memberof_set undef' );
 
 $ioan->want_writeready( 1 );
 is( $ioan->want_writeready, 1, 'wantwriteready 1' );

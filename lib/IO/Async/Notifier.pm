@@ -121,6 +121,20 @@ sub fileno
    return $sock->fileno;
 }
 
+# For ::Sets to call
+sub __memberof_set
+{
+   my $self = shift;
+   if( @_ ) {
+      my $old = $self->{set};
+      $self->{set} = $_[0];
+      return $old;
+   }
+   else {
+      return $self->{set};
+   }
+}
+
 =head2 $value = $ioan->want_writeready
 
 =head2 $oldvalue = $ioan->want_writeready( $newvalue )

@@ -58,7 +58,13 @@ sub add
 
    defined $fileno or croak "Can only add a notifier bound to a socket with a fileno";
 
+   if( defined $notifier->__memberof_set ) {
+      croak "Cannot add a notifier that is already a member of a set";
+   }
+
    $self->{notifiers}->{$fileno} = $notifier;
+
+   $notifier->__memberof_set( $self );
 
    return;
 }
@@ -81,6 +87,8 @@ sub remove
    exists $self->{notifiers}->{$fileno} or croak "Notifier does not exist in collection";
 
    delete $self->{notifiers}->{$fileno};
+
+   $notifier->__memberof_set( undef );
 
    return;
 }

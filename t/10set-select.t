@@ -2,7 +2,8 @@
 
 use strict;
 
-use Test::More tests => 20;
+use Test::More tests => 23;
+use Test::Exception;
 
 use lib qw( t );
 use Listener;
@@ -43,6 +44,10 @@ is( $evec, '', '$evec idling pre_select' );
 is( $timeout, undef, '$timeout idling pre_select' );
 
 $set->add( $notifier );
+
+is( $notifier->__memberof_set, $set, '$notifier->__memberof_set == $set' );
+
+dies_ok( sub { $set->add( $notifier ) }, 'adding again produces error' );
 
 # Read-ready
 $set->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
@@ -92,6 +97,8 @@ $readready = 0;
 # Removal
 
 $set->remove( $notifier );
+
+is( $notifier->__memberof_set, undef, '$notifier->__memberof_set is undef' );
 
 $rvec = '';
 $wvec = '';

@@ -2,7 +2,8 @@
 
 use strict;
 
-use Test::More tests => 11;
+use Test::More tests => 14;
+use Test::Exception;
 
 use lib qw( t );
 use Listener;
@@ -41,6 +42,10 @@ is( scalar @handles, 0, '@handles empty' );
 # Idle
 
 $set->add( $notifier );
+
+is( $notifier->__memberof_set, $set, '$notifier->__memberof_set == $set' );
+
+dies_ok( sub { $set->add( $notifier ) }, 'adding again produces error' );
 
 @handles = $poll->handles();
 is( scalar @handles, 0, '@handles idle' );
@@ -85,6 +90,8 @@ is( $writeready, 1, '$writeready after post_poll' );
 # Removal
 
 $set->remove( $notifier );
+
+is( $notifier->__memberof_set, undef, '$notifier->__memberof_set is undef' );
 
 $set->pre_poll();
 
