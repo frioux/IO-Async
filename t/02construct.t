@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 11;
+use Test::More tests => 14;
 use Test::Exception;
 
 use IO::Socket::UNIX;
@@ -12,6 +12,7 @@ use IO::Async::Buffer;
 
 use IO::Async::Set::Select;
 use IO::Async::Set::IO_Poll;
+use IO::Async::Set::GMainLoop;
 
 dies_ok( sub { IO::Async::Notifier->new( handle => "Hello" ) },
          'Not a socket' );
@@ -40,3 +41,12 @@ is( ref $ioass, "IO::Async::Set::Select", 'ref $ioass is IO::Async::Set::Select'
 my $ioasip = IO::Async::Set::IO_Poll->new();
 ok( defined $ioasip, '$ioasip defined' );
 is( ref $ioasip, "IO::Async::Set::IO_Poll", 'ref $ioasip is IO::Async::Set::IO_Poll' );
+
+dies_ok( sub { IO::Async::Set::GMainLoop->new(); },
+         'No Glib loaded' );
+
+require Glib;
+
+my $ioasgml = IO::Async::Set::GMainLoop->new();
+ok( defined $ioasgml, '$ioasgml defined' );
+is( ref $ioasgml, "IO::Async::Set::GMainLoop", 'ref $ioasgml is IO::Async::Set::GMainLoop' );
