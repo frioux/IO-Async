@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 14;
+use Test::More tests => 13;
 use Test::Exception;
 
 use IO::Socket::UNIX;
@@ -39,9 +39,6 @@ my @handles;
 is( scalar @handles, 0, '@handles empty' );
 
 # Idle
-
-@handles = $poll->handles();
-is( scalar @handles, 0, '@handles idle' );
 
 $set->add( $notifier );
 
