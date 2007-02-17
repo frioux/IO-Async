@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 15;
+use Test::More tests => 16;
 use Test::Exception;
 
 use IO::Socket::UNIX;
@@ -115,3 +115,15 @@ is( $notifier->__memberof_set, undef, '$notifier->__memberof_set is undef' );
 
 @handles = $poll->handles();
 is( scalar @handles, 0, '@handles after removal' );
+
+# Constructor with implied poll object
+
+undef $set;
+$set = IO::Async::Set::IO_Poll->new();
+
+$set->add( $notifier );
+
+$writeready = 0;
+
+$set->loop_once();
+is( $writeready, 1, '$writeready after loop_once with implied IO::Poll' );

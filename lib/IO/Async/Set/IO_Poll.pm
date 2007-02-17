@@ -47,7 +47,8 @@ It takes the following named arguments:
 
 =item C<poll>
 
-The C<IO::Poll> object to use for notification
+The C<IO::Poll> object to use for notification. Optional; if a value is not
+given, a new C<IO::Poll> will be constructed.
 
 =back
 
@@ -59,6 +60,8 @@ sub new
    my ( %args ) = @_;
 
    my $poll = delete $args{poll};
+
+   $poll ||= IO::Poll->new();
 
    my $self = $class->__new( %args );
 
