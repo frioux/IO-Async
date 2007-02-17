@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 13;
+use Test::More tests => 15;
 use Test::Exception;
 
 use IO::Socket::UNIX;
@@ -79,6 +79,33 @@ is( $ready, 1, '$ready writeready' );
 is( $writeready, 0, '$writeready before post_poll' );
 $set->post_poll();
 is( $writeready, 1, '$writeready after post_poll' );
+
+# loop_once
+
+$writeready = 0;
+
+$set->loop_once();
+is( $writeready, 1, '$writeready after loop_once' );
+
+# loop_forever
+
+my $stdout_io = IO::Handle->new_from_fd( fileno(STDOUT), 'w' );
+my $stdout_notifier = IO::Async::Notifier->new( handle => $stdout_io,
+   read_ready => sub { },
+   write_ready => sub { $set->loop_stop() },
+   want_writeready => 1,
+);
+$set->add( $stdout_notifier );
+
+$writeready = 0;
+
+$SIG{ALRM} = sub { die "Test timed out"; };
+alarm( 1 );
+
+$set->loop_forever();
+is( $writeready, 1, '$writeready after loop_forever' );
+
+$set->remove( $stdout_notifier );
 
 # Removal
 

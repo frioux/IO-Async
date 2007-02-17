@@ -108,6 +108,59 @@ sub post_poll
    }
 }
 
+=head2 $set->loop_once( $timeout )
+
+This method calls the C<poll()> method on the stored C<IO::Poll> object,
+passing in the value of C<$timeout>, and then runs the C<post_poll()> method
+on itself.
+
+=cut
+
+sub loop_once
+{
+   my $self = shift;
+   my ( $timeout ) = @_;
+
+   my $poll = $self->{poll};
+   $poll->poll( $timeout );
+
+   $self->post_poll();
+}
+
+=head2 $set->loop_forever()
+
+This method repeatedly calls the C<loop_once> method with no timeout (i.e.
+allowing the C<poll()> method to block indefinitely), until the C<loop_stop>
+method is called from an event callback.
+
+=cut
+
+sub loop_forever
+{
+   my $self = shift;
+
+   $self->{still_looping} = 1;
+
+   while( $self->{still_looping} ) {
+      $self->loop_once( undef );
+   }
+}
+
+=head2 $set->loop_stop()
+
+This method cancels a running C<loop_forever>, and makes that method return.
+It would be called from an event callback triggered by an event that occured
+within the loop.
+
+=cut
+
+sub loop_stop
+{
+   my $self = shift;
+   
+   $self->{still_looping} = 0;
+}
+
 # override
 sub remove
 {
