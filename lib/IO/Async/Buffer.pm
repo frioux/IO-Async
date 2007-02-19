@@ -159,7 +159,7 @@ sub read_ready
 {
    my $self = shift;
 
-   my $handle = $self->{handle};
+   my $handle = $self->handle;
 
    my $data;
    my $len = $handle->sysread( $data, 8192 );
@@ -191,7 +191,7 @@ sub write_ready
 {
    my $self = shift;
 
-   my $handle = $self->{handle};
+   my $handle = $self->handle;
 
    my $len = length( $self->{sendbuff} );
    $len = 8192 if( $len > 8192 );
