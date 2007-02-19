@@ -87,12 +87,12 @@ sub pre_select
 
    my $notifiers = $self->{notifiers};
 
-   foreach my $fileno ( keys %$notifiers ) {
-      my $notifier = $notifiers->{$fileno};
+   foreach my $nkey ( keys %$notifiers ) {
+      my $notifier = $notifiers->{$nkey};
 
-      vec( $$readref, $fileno, 1 ) = 1;
+      vec( $$readref, $notifier->fileno, 1 ) = 1;
 
-      vec( $$writeref, $fileno, 1 ) = 1 if( $notifier->want_writeready );
+      vec( $$writeref, $notifier->fileno, 1 ) = 1 if( $notifier->want_writeready );
    }
 
    return;
@@ -123,14 +123,14 @@ sub post_select
    my ( $readvec, $writevec, $exceptvec ) = @_;
 
    my $notifiers = $self->{notifiers};
-   foreach my $fileno ( keys %$notifiers ) {
-      my $notifier = $notifiers->{$fileno};
+   foreach my $nkey ( keys %$notifiers ) {
+      my $notifier = $notifiers->{$nkey};
 
-      if( vec( $readvec, $fileno, 1 ) ) {
+      if( vec( $readvec, $notifier->fileno, 1 ) ) {
          $notifier->read_ready;
       }
 
-      if( vec( $writevec, $fileno, 1 ) ) {
+      if( vec( $writevec, $notifier->fileno, 1 ) ) {
          $notifier->write_ready;
       }
    }

@@ -32,7 +32,7 @@ sub __new
    my $class = shift;
 
    my $self = bless {
-      notifiers => {}, # {fileno} = notifier
+      notifiers => {}, # {nkey} = notifier
    }, $class;
 
    return $self;
@@ -41,6 +41,20 @@ sub __new
 =head1 METHODS
 
 =cut
+
+# Internal method
+sub _nkey
+{
+   my $self = shift;
+   my ( $notifier ) = @_;
+
+   # We key the notifiers by their fileno
+   my $nkey = $notifier->fileno;
+
+   defined $nkey or croak "Cannot operate on a notifer that is not bound to a handle with a fileno";
+
+   return $nkey;
+}
 
 =head2 $set->add( $notifier )
 
@@ -54,15 +68,13 @@ sub add
    my $self = shift;
    my ( $notifier ) = @_;
 
-   my $fileno = $notifier->fileno;
-
-   defined $fileno or croak "Can only add a notifier bound to a handle with a fileno";
+   my $nkey = $self->_nkey( $notifier );
 
    if( defined $notifier->__memberof_set ) {
       croak "Cannot add a notifier that is already a member of a set";
    }
 
-   $self->{notifiers}->{$fileno} = $notifier;
+   $self->{notifiers}->{$nkey} = $notifier;
 
    $notifier->__memberof_set( $self );
 
@@ -82,13 +94,11 @@ sub remove
    my $self = shift;
    my ( $notifier ) = @_;
 
-   my $fileno = $notifier->fileno;
+   my $nkey = $self->_nkey( $notifier );
 
-   defined $fileno or croak "Cannot remove a notifier that has no fileno";
+   exists $self->{notifiers}->{$nkey} or croak "Notifier does not exist in collection";
 
-   exists $self->{notifiers}->{$fileno} or croak "Notifier does not exist in collection";
-
-   delete $self->{notifiers}->{$fileno};
+   delete $self->{notifiers}->{$nkey};
 
    $notifier->__memberof_set( undef );
 

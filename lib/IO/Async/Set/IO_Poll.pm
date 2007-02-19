@@ -96,8 +96,8 @@ sub post_poll
    my $notifiers = $self->{notifiers};
    my $poll      = $self->{poll};
 
-   foreach my $fileno ( keys %$notifiers ) {
-      my $notifier = $notifiers->{$fileno};
+   foreach my $nkey ( keys %$notifiers ) {
+      my $notifier = $notifiers->{$nkey};
 
       my $events = $poll->events( $notifier->handle ) or next;
 
