@@ -99,13 +99,15 @@ sub post_poll
    foreach my $nkey ( keys %$notifiers ) {
       my $notifier = $notifiers->{$nkey};
 
-      my $events = $poll->events( $notifier->handle ) or next;
+      my $revents = $poll->events( $notifier->read_handle );
 
-      if( $events & POLLIN ) {
+      if( $revents & POLLIN ) {
          $notifier->read_ready;
       }
 
-      if( $events & POLLOUT ) {
+      my $wevents = $poll->events( $notifier->write_handle );
+
+      if( $wevents & POLLOUT ) {
          $notifier->write_ready;
       }
    }
@@ -174,7 +176,13 @@ sub remove
 
    $self->SUPER::remove( $notifier );
 
-   $poll->remove( $notifier->handle );
+   my $rhandle = $notifier->read_handle;
+   my $whandle = $notifier->write_handle;
+
+   $poll->remove( $rhandle );
+   if( defined $whandle and $whandle != $rhandle ) {
+      $poll->remove( $whandle );
+   }
 }
 
 # override
@@ -186,7 +194,28 @@ sub __notifier_want_writeready
 
    my $poll = $self->{poll};
 
-   $poll->mask( $notifier->handle, POLLIN | ( $want_writeready ? POLLOUT : 0 ) );
+   my $rhandle = $notifier->read_handle;
+   my $whandle = $notifier->write_handle;
+
+   # Logic is a little odd here, as we need to deal correctly with the case
+   # where reading and writing are on different handles
+
+   if( $want_writeready ) {
+      if( $rhandle == $whandle ) {
+         $poll->mask( $rhandle, POLLIN | POLLOUT );
+      }
+      else {
+         $poll->mask( $rhandle, POLLIN );
+         $poll->mask( $whandle, POLLOUT );
+      }
+   }
+   else {
+      $poll->mask( $rhandle, POLLIN );
+
+      if( defined $whandle and $whandle != $rhandle ) {
+         $poll->mask( $whandle, 0 );
+      }
+   }
 }
 
 # Keep perl happy; keep Britain tidy

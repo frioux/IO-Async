@@ -58,10 +58,18 @@ The C<%params> hash takes the following keys:
 
 =over 8
 
-=item handle => $handle
+=item read_handle => IO
 
-The handle object to wrap. Must implement C<fileno> method in way that
-C<IO::Handle> does.
+=item write_handle => IO
+
+The reading and writing IO handles. Each must implement the C<fileno> method.
+C<read_handle> must be defined, C<write_handle> is allowed to be C<undef>.
+Primarily used for passing C<STDIN> / C<STDOUT>; see examples below.
+
+=item handle => IO
+
+The IO handle for both reading and writing; instead of passing each separately
+as above. Must implement C<fileno> method in way that C<IO::Handle> does.
 
 =item read_ready => CODE
 
@@ -85,13 +93,37 @@ sub new
    my $class = shift;
    my ( %params ) = @_;
 
-   my $handle = $params{handle};
-   unless( ref( $handle ) and $handle->can( "fileno" ) ) {
-      croak 'Expected that $handle can fileno()';
+   my ( $read_handle, $write_handle );
+
+   if( defined $params{read_handle} or defined $params{write_handle} ) {
+      $read_handle  = $params{read_handle};
+      unless( ref( $read_handle ) and $read_handle->can( "fileno" ) ) {
+         croak 'Expected that read_handle can fileno()';
+      }
+
+      $write_handle = $params{write_handle};
+      if( defined $write_handle ) {
+         unless( ref( $write_handle ) and $write_handle->can( "fileno" ) ) {
+            croak 'Expected that write_handle can fileno()';
+         }
+      }
+   }
+   elsif( defined $params{handle} ) {
+      my $handle = $params{handle};
+      unless( ref( $handle ) and $handle->can( "fileno" ) ) {
+         croak 'Expected that handle can fileno()';
+      }
+
+      $read_handle  = $handle;
+      $write_handle = $handle;
+   }
+   else {
+      croak "Expected either 'handle' or 'read_handle' and 'write_handle' keys";
    }
 
    my $self = bless {
-      handle => $handle,
+      read_handle     => $read_handle,
+      write_handle    => $write_handle,
       want_writeready => $params{want_writeready} || 0,
    }, $class;
 
@@ -121,28 +153,46 @@ sub new
 
 =cut
 
-=head2 $handle = $notifier->handle
+=head2 $handle = $notifier->read_handle
 
-This accessor returns the underlying IO handle.
+=head2 $handle = $notifier->write_handle
+
+These accessors return the underlying IO handles.
 
 =cut
 
-sub handle
+sub read_handle
 {
    my $self = shift;
-   return $self->{handle};
+   return $self->{read_handle};
 }
 
-=head2 $fileno = $notifier->fileno
+sub write_handle
+{
+   my $self = shift;
+   return $self->{write_handle};
+}
 
-This accessor returns the file descriptor number of the underlying IO handle.
+=head2 $fileno = $notifier->read_fileno
+
+=head2 $fileno = $notifier->write_fileno
+
+These accessors return the file descriptor numbers of the underlying IO
+handles.
 
 =cut
 
-sub fileno
+sub read_fileno
 {
    my $self = shift;
-   my $handle = $self->handle or return undef;
+   my $handle = $self->read_handle or return undef;
+   return $handle->fileno;
+}
+
+sub write_fileno
+{
+   my $self = shift;
+   my $handle = $self->write_handle or return undef;
    return $handle->fileno;
 }
 
@@ -175,8 +225,14 @@ sub want_writeready
 {
    my $self = shift;
    if( @_ ) {
+      my ( $new ) = @_;
+
+      if( $new and !defined $self->write_handle ) {
+         croak 'Cannot want_writeready in a Notifier with no write_handle';
+      }
+
       my $old = $self->{want_writeready};
-      $self->{want_writeready} = $_[0];
+      $self->{want_writeready} = $new;
 
       if( $self->{set} ) {
          $self->{set}->__notifier_want_writeready( $self, $self->{want_writeready} );
@@ -229,6 +285,24 @@ sub handle_closed
 1;
 
 __END__
+
+=head1 EXAMPLES
+
+=head2 Wrapping C<STDIN> / C<STDOUT>
+
+The C<read_handle> and C<write_handle> arguments can be passed to the
+constructor in order to build a buffer for the standard input and output
+streams. However, because the C<\*STDIN> and C<\*STDOUT> globreferences are
+not themselves C<IO::Handle> objects, some extra code is required in this
+case:
+
+ use IO::Handle;
+
+ my $notifier = IO::Async::Notifier->new(
+    read_handle  => IO::Handle->new_from_fd(fileno(STDIN),  'r'),
+    write_handle => IO::Handle->new_from_fd(fileno(STDOUT), 'w'),
+    ...
+ );
 
 =head1 SEE ALSO
 

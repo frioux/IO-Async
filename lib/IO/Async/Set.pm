@@ -48,10 +48,11 @@ sub _nkey
    my $self = shift;
    my ( $notifier ) = @_;
 
-   # We key the notifiers by their fileno
-   my $nkey = $notifier->fileno;
+   # We key the notifiers by their reading fileno; because every notifier
+   # needs to have one.
+   my $nkey = $notifier->read_fileno;
 
-   defined $nkey or croak "Cannot operate on a notifer that is not bound to a handle with a fileno";
+   defined $nkey or croak "Cannot operate on a notifer that is not read-bound to a handle with a fileno";
 
    return $nkey;
 }
