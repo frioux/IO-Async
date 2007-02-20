@@ -103,6 +103,9 @@ $SIG{ALRM} = sub { die "Test timed out"; };
 alarm( 1 );
 
 $set->loop_forever();
+
+alarm( 0 );
+
 is( $writeready, 1, '$writeready after loop_forever' );
 
 $set->remove( $stdout_notifier );
