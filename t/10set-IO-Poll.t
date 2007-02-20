@@ -56,7 +56,7 @@ is( scalar @handles, 1, '@handles idle' );
 
 # Read-ready
 
-$S2->print( "data\n" );
+$S2->syswrite( "data\n" );
 
 $ready = $poll->poll( 0 );
 
@@ -84,7 +84,7 @@ is( $writeready, 1, '$writeready after post_poll' );
 
 $writeready = 0;
 
-$set->loop_once();
+$set->loop_once( 0 );
 is( $writeready, 1, '$writeready after loop_once' );
 
 # loop_forever

@@ -49,7 +49,7 @@ ok( ! $context->pending, 'nothing pending idle' );
 
 # Read-ready
 
-$S2->print( "data\n" );
+$S2->syswrite( "data\n" );
 
 ok( $context->pending, 'pending before readready' );
 is( $readready, 0, '$readready before iteration' );
