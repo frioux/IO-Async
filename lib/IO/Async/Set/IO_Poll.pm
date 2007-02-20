@@ -127,7 +127,18 @@ sub loop_once
    my ( $timeout ) = @_;
 
    my $poll = $self->{poll};
-   $poll->poll( $timeout );
+
+   # There is a bug in IO::Poll at least version 0.07, where poll() with no
+   # registered masks returns immediately, rather than waiting for a timeout
+   # This has been reported: 
+   #   http://rt.cpan.org/Ticket/Display.html?id=25049
+   if( $poll->handles ) {
+      $poll->poll( $timeout );
+   }
+   else {
+      # Workaround - we'll use select() to fake a millisecond-accurate sleep
+      select( undef, undef, undef, $timeout );
+   }
 
    $self->post_poll();
 }

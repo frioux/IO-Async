@@ -13,6 +13,7 @@ my $build = Module::Build->new
    build_requires => {
                  'Test::Exception' => 0,
                  'Glib' => '0',
+                 'Time::HiRes' => 0,
                },
    license => 'perl',
   );
