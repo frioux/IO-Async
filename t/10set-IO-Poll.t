@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 16;
+use Test::More tests => 17;
 use Test::Exception;
 
 use IO::Socket::UNIX;
@@ -106,6 +106,15 @@ $set->loop_forever();
 is( $writeready, 1, '$writeready after loop_forever' );
 
 $set->remove( $stdout_notifier );
+
+# HUP
+
+close( $S2 );
+
+$readready = 0;
+$set->loop_once();
+
+is( $readready, 1, '$readready after HUP' );
 
 # Removal
 

@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 14;
+use Test::More tests => 15;
 use Test::Exception;
 
 use IO::Socket::UNIX;
@@ -73,6 +73,15 @@ $notifier->want_writeready( 0 );
 
 ok( ! $context->pending, 'nothing pending after writeready' );
 is( $writeready, 1, '$writeready after iteration' );
+
+# HUP
+
+close( $S2 );
+
+$readready = 0;
+$context->iteration( 0 );
+
+is( $readready, 1, '$readready after HUP' );
 
 # Removal
 
