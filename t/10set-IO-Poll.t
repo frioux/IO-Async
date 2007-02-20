@@ -112,15 +112,16 @@ $set->remove( $stdout_notifier );
 
 # HUP
 
+$notifier->want_writeready( 0 );
 $readready = 0;
-$set->loop_once();
+$set->loop_once( 0 );
 
 is( $readready, 0, '$readready before HUP' );
 
 close( $S2 );
 
 $readready = 0;
-$set->loop_once();
+$set->loop_once( 0 );
 
 is( $readready, 1, '$readready after HUP' );
 
@@ -139,6 +140,7 @@ undef $set;
 $set = IO::Async::Set::IO_Poll->new();
 
 $set->add( $notifier );
+$notifier->want_writeready( 1 );
 
 $writeready = 0;
 
