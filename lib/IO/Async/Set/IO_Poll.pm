@@ -13,7 +13,7 @@ use base qw( IO::Async::Set );
 
 use Carp;
 
-use IO::Poll qw( POLLIN POLLOUT );
+use IO::Poll qw( POLLIN POLLOUT POLLHUP );
 
 =head1 NAME
 
@@ -101,13 +101,16 @@ sub post_poll
 
       my $revents = $poll->events( $notifier->read_handle );
 
-      if( $revents & POLLIN ) {
+      # We have to test separately because kernel doesn't report POLLIN when
+      # a pipe gets closed.
+      if( $revents & (POLLIN|POLLHUP) ) {
          $notifier->read_ready;
       }
 
       my $wevents = $poll->events( $notifier->write_handle );
 
-      if( $wevents & POLLOUT ) {
+      if( $wevents & POLLOUT or
+          ( $notifier->want_writeready and $wevents & POLLHUP ) ) {
          $notifier->write_ready;
       }
    }

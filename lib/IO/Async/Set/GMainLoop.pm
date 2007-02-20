@@ -103,7 +103,7 @@ sub __notifier_want_writeready
    my $sourceids = ( $self->{sourceid}->{$nkey} ||= [] );
 
    if( !defined $sourceids->[0] ) {
-      $sourceids->[0] = Glib::IO->add_watch( $notifier->read_fileno, ['in'], sub { $notifier->read_ready } );
+      $sourceids->[0] = Glib::IO->add_watch( $notifier->read_fileno, ['in', 'hup'], sub { $notifier->read_ready } );
    }
 
    if( !defined $sourceids->[1] and $want_writeready ) {

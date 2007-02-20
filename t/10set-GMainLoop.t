@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 16;
+use Test::More tests => 18;
 use Test::Exception;
 
 use IO::Socket::UNIX;
@@ -95,3 +95,27 @@ $set->remove( $notifier );
 is( $notifier->__memberof_set, undef, '$notifier->__memberof_set is undef' );
 
 ok( ! $context->pending, 'nothing pending after removal' );
+
+# HUP of pipe
+
+pipe( my ( $P1, $P2 ) ) or die "Cannot pipe() - $!";
+my $pipe_io = IO::Handle->new_from_fd( fileno( $P1 ), 'r' );
+my $pipe_notifier = IO::Async::Notifier->new( handle => $pipe_io,
+   read_ready  => sub { $readready = 1 },
+   want_writeready => 0,
+);
+$set->add( $pipe_notifier );
+
+$readready = 0;
+$context->iteration( 0 );
+
+is( $readready, 0, '$readready before pipe HUP' );
+
+close( $P2 );
+
+$readready = 0;
+$context->iteration( 0 );
+
+is( $readready, 1, '$readready after pipe HUP' );
+
+$set->remove( $pipe_notifier );
