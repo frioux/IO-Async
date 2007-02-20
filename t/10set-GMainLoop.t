@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 15;
+use Test::More tests => 16;
 use Test::Exception;
 
 use IO::Socket::UNIX;
@@ -75,6 +75,11 @@ ok( ! $context->pending, 'nothing pending after writeready' );
 is( $writeready, 1, '$writeready after iteration' );
 
 # HUP
+
+$readready = 0;
+$context->iteration( 0 );
+
+is( $readready, 0, '$readready before HUP' );
 
 close( $S2 );
 
