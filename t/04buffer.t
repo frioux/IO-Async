@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 19;
+use Test::More tests => 21;
 use Test::Exception;
 
 use POSIX qw( EAGAIN );
@@ -32,6 +32,7 @@ sub read_data($)
 
 my @received;
 my $closed = 0;
+my $empty = 0;
 
 sub incoming_data
 {
@@ -48,7 +49,11 @@ sub incoming_data
    return 1;
 }
 
-my $buff = IO::Async::Buffer->new( handle => $S1, incoming_data => \&incoming_data );
+my $buff = IO::Async::Buffer->new( 
+   handle => $S1,
+   incoming_data => \&incoming_data,
+   outgoing_empty => sub { $empty = 1 },
+);
 
 # Sending
 
@@ -61,9 +66,12 @@ is( scalar @received, 0,  '@received before sending buffer' );
 is( $closed,          0,  '$closed before sending buffer' );
 is( read_data( $S2 ), "", 'data before sending buffer' );
 
+is( $empty, 0, '$empty before sending buffer' );
+
 $buff->write_ready;
 
 is( $buff->want_writeready, 0, 'want_writeready after write_ready' );
+is( $empty, 1, '$empty after sending buffer' );
 
 is( scalar @received, 0,           '@received before sending buffer' );
 is( $closed,          0,           '$closed before sending buffer' );

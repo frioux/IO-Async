@@ -38,24 +38,29 @@ base class.
 
 =item Callbacks
 
-If the C<incoming_data> key is supplied to the constructor, it should contain
-a CODE reference to a function that will be called in the following manner:
+If the C<incoming_data> or C<outgoing_empty> keys are supplied to the
+constructor, they should contain CODE references to callback functions
+that will be called in the following manner:
 
- $again = $callback->( \$buffer, $handleclosed )
+ $again = $incoming_data->( \$buffer, $handleclosed )
+
+ $outgoing_empty->()
 
 =item Base Class
 
-If a subclass is built, then it can provide an C<incoming_data> method, which
-will be called in the following manner:
+If a subclass is built, then it can override the C<incoming_data> or
+C<outgoing_empty> methods, which will be called in the following manner:
 
  $again = $self->incoming_data( \$buffer, $handleclosed )
 
+ $self->outgoing_empty()
+
 =back
 
-A reference to the incoming data buffer is passed, which is a plain perl
-string. The code should inspect and remove any data it likes, but is not
-required to remove all, or indeed any of the data. Any data remaining in the
-buffer will be preserved for the next call, the next time more data is
+The first argument to the C<incoming_data()> callback is a reference to a
+plain perl string. The code should inspect and remove any data it likes, but
+is not required to remove all, or indeed any of the data. Any data remaining
+in the buffer will be preserved for the next call, the next time more data is
 received from the handle.
 
 In this way, it is easy to implement code that reads records of some form when
@@ -72,6 +77,8 @@ once the handle closes. A reference to the buffer is passed to the method in
 the usual way, so it may inspect data contained in it. Once the method returns
 a false value, it will not be called again, as the handle is now closed and no
 more data can arrive.
+
+The C<outgoing_empty> callback is not passed any arguments.
 
 =cut
 
@@ -94,12 +101,18 @@ C<syswrite> methods in the way that C<IO::Handle> does.
 =item incoming_data => CODE
 
 A CODE reference for when more data is available in the internal receiving 
-buffer. 
+buffer.
+
+=item outgoing_empty => CODE
+
+A CODE reference for when the sending data buffer becomes empty.
 
 =back
 
 It is required that either an C<incoming_data> callback reference is passed,
-or that the object provides an C<incoming_data> method.
+or that the object provides an C<incoming_data> method. It is optional whether
+either is true for C<outgoing_empty>; if neither is supplied then no action
+will be taken when the sending buffer becomes empty.
 
 =cut
 
@@ -117,6 +130,10 @@ sub new
       unless( $self->can( 'incoming_data' ) ) {
          croak 'Expected either an incoming_data callback or to be able to ->incoming_data';
       }
+   }
+
+   if( $params{outgoing_empty} ) {
+      $self->{outgoing_empty} = $params{outgoing_empty};
    }
 
    $self->{sendbuff} = "";
@@ -210,6 +227,13 @@ sub write_ready
 
       if( length( $self->{sendbuff} ) == 0 ) {
          $self->want_writeready( 0 );
+
+         if( defined( my $callback = $self->{outgoing_empty} ) ) {
+            $callback->();
+         }
+         elsif( $self->can( 'outgoing_empty' ) ) {
+            $self->outgoing_empty();
+         }
       }
    }
 }
