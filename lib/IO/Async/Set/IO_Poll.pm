@@ -99,7 +99,10 @@ sub post_poll
    foreach my $nkey ( keys %$notifiers ) {
       my $notifier = $notifiers->{$nkey};
 
-      my $revents = $poll->events( $notifier->read_handle );
+      my $rhandle = $notifier->read_handle;
+      my $whandle = $notifier->write_handle;
+
+      my $revents = $poll->events( $rhandle );
 
       # We have to test separately because kernel doesn't report POLLIN when
       # a pipe gets closed.
@@ -107,7 +110,7 @@ sub post_poll
          $notifier->read_ready;
       }
 
-      my $wevents = $poll->events( $notifier->write_handle );
+      my $wevents = defined $whandle ? $poll->events( $whandle ) : 0;
 
       if( $wevents & POLLOUT or
           ( $notifier->want_writeready and $wevents & POLLHUP ) ) {

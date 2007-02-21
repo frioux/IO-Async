@@ -126,11 +126,14 @@ sub post_select
    foreach my $nkey ( keys %$notifiers ) {
       my $notifier = $notifiers->{$nkey};
 
-      if( vec( $readvec, $notifier->read_fileno, 1 ) ) {
+      my $rfileno = $notifier->read_fileno;
+      my $wfileno = $notifier->write_fileno;
+
+      if( vec( $readvec, $rfileno, 1 ) ) {
          $notifier->read_ready;
       }
 
-      if( vec( $writevec, $notifier->write_fileno, 1 ) ) {
+      if( defined $wfileno and vec( $writevec, $wfileno, 1 ) ) {
          $notifier->write_ready;
       }
    }
