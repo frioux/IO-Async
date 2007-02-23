@@ -97,13 +97,18 @@ sub new
 
    if( defined $params{read_handle} or defined $params{write_handle} ) {
       $read_handle  = $params{read_handle};
-      unless( ref( $read_handle ) and $read_handle->can( "fileno" ) ) {
+
+      # Test if we've got a fileno. We put it in an eval block in case what
+      # we were passed in can't do fileno. We can't just test if 
+      # $read_handle->can( "fileno" ) because this is true for bare
+      # filehandles like \*STDIN, whereas STDIN->fileno still works.
+      unless( defined eval { $read_handle->fileno } ) {
          croak 'Expected that read_handle can fileno()';
       }
 
       $write_handle = $params{write_handle};
       if( defined $write_handle ) {
-         unless( ref( $write_handle ) and $write_handle->can( "fileno" ) ) {
+         unless( defined eval { $write_handle->fileno } ) {
             croak 'Expected that write_handle can fileno()';
          }
       }
@@ -292,15 +297,14 @@ __END__
 
 The C<read_handle> and C<write_handle> arguments can be passed to the
 constructor in order to build a buffer for the standard input and output
-streams. However, because the C<\*STDIN> and C<\*STDOUT> globreferences are
-not themselves C<IO::Handle> objects, some extra code is required in this
-case:
+streams by ensuring the C<IO::Handle> module is loaded, and passing in
+C<\*STDIN> and C<\*STDOUT>.
 
  use IO::Handle;
 
  my $notifier = IO::Async::Notifier->new(
-    read_handle  => IO::Handle->new_from_fd(fileno(STDIN),  'r'),
-    write_handle => IO::Handle->new_from_fd(fileno(STDOUT), 'w'),
+    read_handle  => \*STDIN,
+    write_handle => \*STDOUT,
     ...
  );
 

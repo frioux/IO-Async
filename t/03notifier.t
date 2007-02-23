@@ -65,7 +65,7 @@ is( $ioan->want_writeready, 1, 'wantwriteready STDOUT 1' );
 
 undef $ioan;
 $ioan = IO::Async::Notifier->new(
-   read_handle  => IO::Handle->new_from_fd(fileno(STDIN),  'r'),
+   read_handle  => \*STDIN,
    want_writeready => 0,
    read_ready  => sub {},
 );
