@@ -115,7 +115,7 @@ sub new
    }
    elsif( defined $params{handle} ) {
       my $handle = $params{handle};
-      unless( ref( $handle ) and $handle->can( "fileno" ) ) {
+      unless( defined eval { $handle->fileno } ) {
          croak 'Expected that handle can fileno()';
       }
 
