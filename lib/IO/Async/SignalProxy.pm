@@ -92,8 +92,14 @@ sub new
          push @$signal_queue, $signame;
       };
 
-      no strict 'refs';
-      $sigset_block->addset( &{"POSIX::SIG$signame"} );
+      my $signum;
+      {
+         no strict 'refs';
+         local @_;
+         $signum = &{"POSIX::SIG$signame"};
+      }
+
+      $sigset_block->addset( $signum );
    }
 
    $self->{sigset_block} = $sigset_block;
