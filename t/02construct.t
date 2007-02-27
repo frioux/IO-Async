@@ -2,13 +2,14 @@
 
 use strict;
 
-use Test::More tests => 14;
+use Test::More tests => 16;
 use Test::Exception;
 
 use IO::Socket::UNIX;
 
 use IO::Async::Notifier;
 use IO::Async::Buffer;
+use IO::Async::SignalProxy;
 
 use IO::Async::Set::Select;
 use IO::Async::Set::IO_Poll;
@@ -33,6 +34,10 @@ dies_ok( sub { IO::Async::Buffer->new( handle => $sock ) },
 my $ioab = IO::Async::Buffer->new( handle => $sock, incoming_data => sub { } );
 ok( defined $ioab, '$ioab defined' );
 is( ref $ioab, "IO::Async::Buffer", 'ref $ioab is IO::Async::Buffer' );
+
+my $ioasp = IO::Async::SignalProxy->new();
+ok( defined $ioasp, '$ioasp defined' );
+is( ref $ioasp, "IO::Async::SignalProxy", 'ref $ioasp is IO::Async::SignalProxy' );
 
 my $ioass = IO::Async::Set::Select->new();
 ok( defined $ioass, '$ioass defined' );
