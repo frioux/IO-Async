@@ -2,13 +2,18 @@
 
 use strict;
 
-use Test::More tests => 18;
+use Test::More;
 use Test::Exception;
 
 use IO::Socket::UNIX;
 use IO::Async::Notifier;
 
-use Glib;
+if( defined eval { require Glib } ) {
+   plan tests => 18;
+}
+else {
+   plan skip_all => "No Glib available";
+}
 
 use IO::Async::Set::GMainLoop;
 

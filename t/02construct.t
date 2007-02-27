@@ -50,8 +50,10 @@ is( ref $ioasip, "IO::Async::Set::IO_Poll", 'ref $ioasip is IO::Async::Set::IO_P
 dies_ok( sub { IO::Async::Set::GMainLoop->new(); },
          'No Glib loaded' );
 
-require Glib;
+SKIP: {
+   skip "No Glib available", 2 unless defined eval { require Glib };
 
-my $ioasgml = IO::Async::Set::GMainLoop->new();
-ok( defined $ioasgml, '$ioasgml defined' );
-is( ref $ioasgml, "IO::Async::Set::GMainLoop", 'ref $ioasgml is IO::Async::Set::GMainLoop' );
+   my $ioasgml = IO::Async::Set::GMainLoop->new();
+   ok( defined $ioasgml, '$ioasgml defined' );
+   is( ref $ioasgml, "IO::Async::Set::GMainLoop", 'ref $ioasgml is IO::Async::Set::GMainLoop' );
+}
