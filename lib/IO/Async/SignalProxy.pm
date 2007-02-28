@@ -21,6 +21,17 @@ use IO::Handle;
 C<IO::Async::SignalProxy> - a class to allow handling of POSIX signals with
 C<IO::Async>-based IO
 
+=head1 SYNOPSIS
+
+ use IO::Async::SignalProxy;
+
+ my $sigproxy = IO::Async::SignalProxy->new(
+    signal_HUP => sub { reread_config() },
+ );
+
+ my $set = IO::Async::Set::...
+ $set->add( $sigproxy );
+
 =head1 DESCRIPTION
 
 This module provides a class that allows POSIX signals to be handled safely

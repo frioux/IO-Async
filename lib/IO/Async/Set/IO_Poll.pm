@@ -20,6 +20,39 @@ use IO::Poll qw( POLLIN POLLOUT POLLHUP );
 C<IO::Async::Set::IO_Poll> - a class that maintains a set of
 C<IO::Async::Notifier> objects by using an C<IO::Poll> object.
 
+=head1 SYNOPSIS
+
+ use IO::Async::Set::IO_Poll;
+
+ my $set = IO::Async::Set::IO_Poll->new();
+
+ $set->add( ... );
+
+ $set->loop_forever();
+
+Or
+
+ while(1) {
+    $set->loop_once();
+    ...
+ }
+
+Or
+
+ use IO::Poll;
+ use IO::Async::Set::IO_Poll;
+
+ my $poll = IO::Poll->new();
+ my $set = IO::Async::Set::IO_Poll->new( poll => $poll );
+
+ $set->add( ... );
+
+ while(1) {
+    my $timeout = ...
+    my $ret = $poll->poll( $timeout );
+    $set->post_poll();
+ }
+
 =head1 DESCRIPTION
 
 This subclass of C<IO::Async::Notifier> uses an C<IO::Poll> object to perform

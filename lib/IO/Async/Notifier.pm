@@ -16,6 +16,28 @@ use Carp;
 C<IO::Async::Notifier> - a class which implements event callbacks for a
 non-blocking file descriptor
 
+=head1 SYNOPSIS
+
+ use IO::Socket::INET;
+ use IO::Async::Notifier;
+
+ my $socket = IO::Socket::INET->new( LocalPort => 1234, Listen => 1 );
+
+ my $notifier = IO::Async::Notifer->new(
+    handle => $socket,
+
+    read_ready  => sub {
+       my $new_client = $socket->accept(); 
+       ...
+    },
+ );
+
+ my $set = IO::Async::Set::...
+ $set->add( $notifier );
+
+For most other uses with sockets, pipes or other filehandles that carry a byte
+stream, the C<IO::Async::Buffer> class is likely to be more suitable.
+
 =head1 DESCRIPTION
 
 This module provides a base class for implementing non-blocking IO on file
@@ -64,7 +86,8 @@ The C<%params> hash takes the following keys:
 
 The reading and writing IO handles. Each must implement the C<fileno> method.
 C<read_handle> must be defined, C<write_handle> is allowed to be C<undef>.
-Primarily used for passing C<STDIN> / C<STDOUT>; see examples below.
+Primarily used for passing C<STDIN> / C<STDOUT>; see the SYNOPSIS section of
+C<IO::Async::Buffer> for an example.
 
 =item handle => IO
 
@@ -290,23 +313,6 @@ sub handle_closed
 1;
 
 __END__
-
-=head1 EXAMPLES
-
-=head2 Wrapping C<STDIN> / C<STDOUT>
-
-The C<read_handle> and C<write_handle> arguments can be passed to the
-constructor in order to build a buffer for the standard input and output
-streams by ensuring the C<IO::Handle> module is loaded, and passing in
-C<\*STDIN> and C<\*STDOUT>.
-
- use IO::Handle;
-
- my $notifier = IO::Async::Notifier->new(
-    read_handle  => \*STDIN,
-    write_handle => \*STDOUT,
-    ...
- );
 
 =head1 SEE ALSO
 

@@ -16,6 +16,20 @@ use Carp;
 C<IO::Async::Set> - a class that maintains a set of C<IO::Async::Notifier>
 objects.
 
+=head1 SYNOPSIS
+
+This module would not be used directly; see the subclasses:
+
+=over 4
+
+=item L<IO::Async::Set::Select>
+
+=item L<IO::Async::Set::IO_Perl>
+
+=item L<IO::Async::Set::GMainLoop>
+
+=back
+
 =head1 DESCRIPTION
 
 

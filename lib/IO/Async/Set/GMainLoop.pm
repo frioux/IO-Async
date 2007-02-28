@@ -18,6 +18,17 @@ use Carp;
 C<IO::Async::Set::GMainLoop> - a class that maintains a set of
 C<IO::Async::Notifier> objects by using the C<Glib::MainLoop> object.
 
+=head1 SYNOPSIS
+
+ use IO::Async::Set::GMainLoop;
+
+ my $set = IO::Async::Set::GMainLoop->new();
+
+ $set->add( ... );
+
+ ...
+ # Rest of GLib/Gtk program that uses GLib::MainContext
+
 =head1 DESCRIPTION
 
 This subclass of C<IO::Async::Notifier> uses the C<Glib::MainLoop> to perform

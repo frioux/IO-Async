@@ -18,6 +18,25 @@ use Carp;
 C<IO::Async::Set::Select> - a class that maintains a set of
 C<IO::Async::Notifier> objects by using the C<select()> syscall.
 
+=head1 SYNOPSIS
+
+ use IO::Async::Set::Select;
+
+ my $set = IO::Async::Set::Select->new();
+
+ $set->add( ... );
+
+ while(1) {
+    my ( $rvec, $wvec, $evec ) = ('') x 3;
+    my $timeout;
+
+    $set->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
+    ...
+    my $ret = select( $rvec, $wvec, $evec, $timeout );
+    ...
+    $set->post_select( $rvec, $evec, $wvec );
+ }
+
 =head1 DESCRIPTION
 
 This subclass of C<IO::Async::Notifier> uses the C<select()> syscall to

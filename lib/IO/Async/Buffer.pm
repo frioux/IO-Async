@@ -18,6 +18,59 @@ use Carp;
 C<IO::Async::Buffer> - a class which implements asynchronous sending
 and receiving data buffers around a connected handle
 
+=head1 SYNOPSIS
+
+ use IO::Socket::INET;
+ use IO::Async::Buffer;
+
+ my $socket = IO::Socket::INET->new(
+    PeerHost => "some.other.host",
+    PeerPort => 12345,
+    Blocking => 0,                   # This line is very important
+ );
+
+ my $buffer = IO::Async::Buffer->new(
+    handle => $line_socket,
+
+    incoming_data => sub {
+       return 0 unless( $$_[0] =~ s/^(.*\n)// );
+
+       print "Received a line $1";
+
+       return 1;
+    }
+ );
+
+ $buffer->send( "An initial line here\n" );
+
+ my $set = IO::Async::Set::...
+ $set->add( $buffer );
+
+Or
+
+ my $record_buffer = IO::Async::Buffer->new(
+    handle => ...,
+
+    incoming_data => sub {
+       return 0 unless( length $$_[0] == 16 );
+
+       my $record = substr( $$_[0], 0, 16, "" );
+       print "Received a 16-byte record: $record\n";
+
+       return 1;
+    }
+ );
+
+Or
+
+ use IO::Handle;
+
+ my $buffer = IO::Async::Buffer->new(
+    read_handle  => \*STDIN,
+    write_handle => \*STDOUT,
+    ...
+ );
+
 =head1 DESCRIPTION
 
 This module provides a class for implementing asynchronous communications
