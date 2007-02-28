@@ -1,0 +1,152 @@
+=head1 NAME
+
+C<IO::Async> - a collection of modules that implement asynchronous filehandle
+IO
+
+=head1 SYNOPSIS
+
+ use IO::Socket::INET;
+ use IO::Async::Buffer;
+ use IO::Async::Set::IO_Poll;
+
+ my $socket = IO::Socket::INET->new(
+    PeerHost => "some.other.host",
+    PeerPort => 12345,
+    Blocking => 0,
+ );
+
+ my $buffer = IO::Async::Buffer->new(
+    handle => $line_socket,
+
+    incoming_data => sub {
+       return 0 unless( $$_[0] =~ s/^(.*\n)// );
+
+       print "Received a line $1";
+
+       return 1;
+    }
+ );
+
+ $buffer->send( "An initial line here\n" );
+
+ my $set = IO::Async::Set::IO_Poll->new();
+ 
+ $set->add( $buffer );
+
+ $set->loop_forever();
+
+=head1 DESCRIPTION
+
+This collection of modules allows programs to be written that perform
+asynchronous filehandle IO operations. A typical program using them would
+consist of a single subclass of C<IO::Async::Set> to act as a container for a
+number of C<IO::Async::Notifier> objects (or subclasses thereof). The set
+itself is responsible for checking read- or write-readiness, and informing the
+notifiers of these conditions. The notifiers then perform whatever work is
+required on these conditions, by using subclass methods or callback functions.
+
+=head2 Notifiers
+
+A L<IO::Async::Notifier> object represents a single IO stream that is being
+managed. While in most cases it will represent a single filehandle, such as a
+socket (for example, an C<IO::Socket::INET> connection), it is possible to
+have separate reading and writing handles (most likely for a program's
+C<STDIN> and C<STDOUT> streams. Subclass methods or callback functions are
+then used by the containing C<IO::Async::Set> object, to inform the notifier
+when the handles are read- or write-ready.
+
+The L<IO::Async::Buffer> class is a subclass of C<IO::Async::Notifier> which
+maintains internal incoming and outgoing data buffers. In this way, it
+implements bidirectional buffering of a byte stream, such as a TCP socket. The
+class automatically handles reading of incoming data into the incoming buffer
+whenever it is notified as being read-ready, and writing of the outgoing
+buffer when it is notified as write-ready. Methods or callbacks are used to
+inform when new incoming data is available, or when the outgoing buffer is
+empty.
+
+The L<IO::Async::SignalProxy> object allow for safe signal handling to be
+performed alongside other asynchronous IO tasks, within the (explicit or
+implicit) loop provided by the subclass of C<IO::Async::Set> that is used.
+
+=head2 Sets
+
+The L<IO::Async::Set> object class represents an abstract collection of
+C<IO::Async::Notifier> objects. It performs all of the low-level set
+management tasks, and leaves the actual determination of read- or write-
+readiness of filehandles to a particular subclass for the purpose.
+
+L<IO::Async::Set::IO_Poll> uses an C<IO::Poll> object for this test.
+
+L<IO::Async::Set::Select> provides methods to prepare and test three
+bitvectors for a C<select()> syscall.
+
+L<IO::Async::Set::GMainLoop> acts as a proxy for the C<Glib::MainLoop> of a
+L<Glib>-based program.
+
+=head1 MOTIVATION
+
+The purpose of this distribution is two-fold.
+
+The first reason is to allow programs to be written that perform multiplexed
+asynchronous IO from within one thread. This is a useful programming model
+because it avoids a lot of the problems created by multi-threading or other
+techniques, such as the potential for race conditions or deadlocks. The
+downside to this approach is the extra complexity in dealing with events
+asynchronously, handling incoming data as it arrives, even if it is as-yet
+incomplete. This distribution aims to provide abstractions that minimise the
+effort required here, through such objects as C<IO::Async::Buffer>.
+
+The second reason is to act as a base-layer API, that can be extended while
+still remaining generic. The split between notifiers and sets allows new
+subclasses of notifer to be derived from the C<IO::Async::Notifier> or
+C<IO::Async::Buffer> classes without regard for how they will interact with
+the actual looping constructs emplyed by the containing program. Similarly,
+new subclasses of C<IO::Async::Set> can be developed to interact with existing
+programs written for other styles of asynchronous IO loop, without requiring
+detailed knowledge of the way the notifiers work.
+
+=head1 TODO
+
+This collection of modules is still very much in development. As a result,
+some of the potentially-useful parts or features currently missing are:
+
+=over 4
+
+=item *
+
+A way to perform asynchronous name lookups. This will likely be performed by
+C<fork()>ing a subprocess, and calling the C<getaddrinfo()> or
+C<getnameinfo()> functions from L<Socket6> in this subprocess, using an
+internal socket or pair of pipes to perform communications with the main
+program.
+
+=item *
+
+A C<IO::Async::Set> subclass to perform integration with L<Event>.
+
+=item *
+
+A consideration of whether it is useful and possible to provide integration
+with L<POE>.
+
+=back
+
+=head1 SEE ALSO
+
+=over 4
+
+=item *
+
+L<Event> - Event loop processing
+
+=item *
+
+L<POE> - portable multitasking and networking framework for Perl
+
+=back
+
+=head1 AUTHOR
+
+Paul Evans E<lt>leonerd@leonerd.org.ukE<gt>
+
+=cut

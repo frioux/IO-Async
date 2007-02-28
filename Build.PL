@@ -7,6 +7,7 @@ my $build = Module::Build->new
   (
    module_name => 'IO::Async',
    dist_version_from => 'lib/IO/Async/Notifier.pm',
+   dist_abstract     => "a collection of modules that implement asynchronous filehandle IO",
    requires => {
                  'IO::Poll' => 0,
                },
