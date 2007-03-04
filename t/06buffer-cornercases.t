@@ -56,7 +56,7 @@ foreach( split( m//, "my line here\n" ) ) {
    $S2->syswrite( $_ );
 
    is( scalar @received, 0, 'scalar @received no data yet' );
-   $buff->read_ready;
+   $buff->on_read_ready;
 }
 
 is( scalar @received, 1,                'scalar @received line' );
@@ -68,7 +68,7 @@ is( $received[0],     "my line here\n", '$received[0] line' );
 
 $S2->syswrite( "my\nlines\nhere\n" );
 
-$buff->read_ready;
+$buff->on_read_ready;
 
 is( scalar @received, 3,         'scalar @received line' );
 is( $received[0],     "my\n",    '$recieved[0] line' );

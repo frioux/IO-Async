@@ -63,7 +63,8 @@ be called immediately after the C<poll()> method on the contained C<IO::Poll>
 object. The appropriate mask bits are maintained on the C<IO::Poll> object
 when notifiers are added or removed from the set, or when they change their
 C<want_writeready> status. The C<post_poll()> method inspects the result bits
-and invokes the C<read_ready()> or C<write_ready()> methods on the notifiers.
+and invokes the C<on_read_ready()> or C<on_write_ready()> methods on the
+notifiers.
 
 =cut
 
@@ -140,14 +141,14 @@ sub post_poll
       # We have to test separately because kernel doesn't report POLLIN when
       # a pipe gets closed.
       if( $revents & (POLLIN|POLLHUP) ) {
-         $notifier->read_ready;
+         $notifier->on_read_ready;
       }
 
       my $wevents = defined $whandle ? $poll->events( $whandle ) : 0;
 
       if( $wevents & POLLOUT or
           ( $notifier->want_writeready and $wevents & POLLHUP ) ) {
-         $notifier->write_ready;
+         $notifier->on_write_ready;
       }
    }
 }

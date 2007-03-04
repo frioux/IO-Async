@@ -23,8 +23,8 @@ my $readready = 0;
 my $writeready = 0;
 
 my $notifier = IO::Async::Notifier->new( handle => $S1,
-   read_ready  => sub { $readready = 1 },
-   write_ready => sub { $writeready = 1 },
+   on_read_ready  => sub { $readready = 1 },
+   on_write_ready => sub { $writeready = 1 },
 );
 
 my $poll = IO::Poll->new();
@@ -91,8 +91,8 @@ is( $writeready, 1, '$writeready after loop_once' );
 
 my $stdout_io = IO::Handle->new_from_fd( fileno(STDOUT), 'w' );
 my $stdout_notifier = IO::Async::Notifier->new( handle => $stdout_io,
-   read_ready => sub { },
-   write_ready => sub { $set->loop_stop() },
+   on_read_ready => sub { },
+   on_write_ready => sub { $set->loop_stop() },
    want_writeready => 1,
 );
 $set->add( $stdout_notifier );
@@ -139,7 +139,7 @@ is( scalar @handles, 0, '@handles after removal' );
 pipe( my ( $P1, $P2 ) ) or die "Cannot pipe() - $!";
 my $pipe_io = IO::Handle->new_from_fd( fileno( $P1 ), 'r' );
 my $pipe_notifier = IO::Async::Notifier->new( handle => $pipe_io,
-   read_ready  => sub { $readready = 1 },
+   on_read_ready  => sub { $readready = 1 },
    want_writeready => 0,
 );
 $set->add( $pipe_notifier );

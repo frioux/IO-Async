@@ -202,7 +202,7 @@ sub new
 =head2 $buffer->send( $data )
 
 This method adds data to the outgoing data queue. The data is not yet sent to
-the handle; this will be done later in the C<write_ready()> method.
+the handle; this will be done later in the C<on_write_ready()> method.
 
 =over 8
 
@@ -225,7 +225,7 @@ sub send
 }
 
 # protected
-sub read_ready
+sub on_read_ready
 {
    my $self = shift;
 
@@ -257,7 +257,7 @@ sub read_ready
 }
 
 # protected
-sub write_ready
+sub on_write_ready
 {
    my $self = shift;
 

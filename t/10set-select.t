@@ -21,8 +21,8 @@ my $readready = 0;
 my $writeready = 0;
 
 my $notifier = IO::Async::Notifier->new( handle => $S1,
-   read_ready  => sub { $readready = 1 },
-   write_ready => sub { $writeready = 1 },
+   on_read_ready  => sub { $readready = 1 },
+   on_write_ready => sub { $writeready = 1 },
 );
 
 my $set = IO::Async::Set::Select->new();

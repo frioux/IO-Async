@@ -45,13 +45,13 @@ my $proxy = IO::Async::SignalProxy->new(
 
 # Idle
 
-$proxy->read_ready;
+$proxy->on_read_ready;
 is( $caught, "", '$caught idling' );
 
 # Raise
 kill SIGUSR1, $$;
 
-$proxy->read_ready;
+$proxy->on_read_ready;
 is( $caught, "1", '$caught after raise' );
 
 # Count
@@ -61,7 +61,7 @@ $caught = "";
 kill SIGUSR1, $$;
 kill SIGUSR1, $$;
 
-$proxy->read_ready;
+$proxy->on_read_ready;
 is( $caught, "11", '$caught after double-raise' );
 
 # Ordering
@@ -71,7 +71,7 @@ $caught = "";
 kill SIGUSR1, $$;
 kill SIGUSR2, $$;
 
-$proxy->read_ready;
+$proxy->on_read_ready;
 is( $caught, "12", '$caught after first order test' );
 
 $caught = "";
@@ -79,5 +79,5 @@ $caught = "";
 kill SIGUSR2, $$;
 kill SIGUSR1, $$;
 
-$proxy->read_ready;
+$proxy->on_read_ready;
 is( $caught, "21", '$caught after second order test' );

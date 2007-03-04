@@ -28,8 +28,8 @@ my $readready = 0;
 my $writeready = 0;
 
 my $notifier = IO::Async::Notifier->new( handle => $S1,
-   read_ready  => sub { $readready = 1 },
-   write_ready => sub { $writeready = 1 },
+   on_read_ready  => sub { $readready = 1 },
+   on_write_ready => sub { $writeready = 1 },
 );
 
 my $set = IO::Async::Set::GMainLoop->new();
@@ -106,7 +106,7 @@ ok( ! $context->pending, 'nothing pending after removal' );
 pipe( my ( $P1, $P2 ) ) or die "Cannot pipe() - $!";
 my $pipe_io = IO::Handle->new_from_fd( fileno( $P1 ), 'r' );
 my $pipe_notifier = IO::Async::Notifier->new( handle => $pipe_io,
-   read_ready  => sub { $readready = 1 },
+   on_read_ready  => sub { $readready = 1 },
    want_writeready => 0,
 );
 $set->add( $pipe_notifier );

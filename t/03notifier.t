@@ -22,8 +22,8 @@ my $readready = 0;
 my $writeready = 0;
 
 my $ioan = IO::Async::Notifier->new( handle => $S1, want_writeready => 0,
-   read_ready  => sub { $readready = 1 },
-   write_ready => sub { $writeready = 1 },
+   on_read_ready  => sub { $readready = 1 },
+   on_write_ready => sub { $writeready = 1 },
 );
 
 is( $ioan->read_handle,  $S1, '->read_handle returns S1' );
@@ -40,11 +40,11 @@ $ioan->want_writeready( 1 );
 is( $ioan->want_writeready, 1, 'wantwriteready 1' );
 
 is( $readready, 0, '$readready before call' );
-$ioan->read_ready;
+$ioan->on_read_ready;
 is( $readready, 1, '$readready after call' );
 
 is( $writeready, 0, '$writeready before call' );
-$ioan->write_ready;
+$ioan->on_write_ready;
 is( $writeready, 1, '$writeready after call' );
 
 undef $ioan;
@@ -52,8 +52,8 @@ $ioan = IO::Async::Notifier->new(
    read_handle  => IO::Handle->new_from_fd(fileno(STDIN),  'r'),
    write_handle => IO::Handle->new_from_fd(fileno(STDOUT), 'w'),
    want_writeready => 0,
-   read_ready  => sub {},
-   write_ready => sub {},
+   on_read_ready  => sub {},
+   on_write_ready => sub {},
 );
 
 ok( defined $ioan, 'defined $ioan around STDIN/STDOUT' );
@@ -67,7 +67,7 @@ undef $ioan;
 $ioan = IO::Async::Notifier->new(
    read_handle  => \*STDIN,
    want_writeready => 0,
-   read_ready  => sub {},
+   on_read_ready  => sub {},
 );
 
 ok( defined $ioan, 'defined $ioan around STDIN/undef' );

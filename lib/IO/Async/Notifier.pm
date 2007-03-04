@@ -26,7 +26,7 @@ non-blocking file descriptor
  my $notifier = IO::Async::Notifer->new(
     handle => $socket,
 
-    read_ready  => sub {
+    on_read_ready  => sub {
        my $new_client = $socket->accept(); 
        ...
     },
@@ -52,14 +52,14 @@ base class.
 
 =item Callbacks
 
-If the C<read_ready> or C<write_ready> keys are supplied in the constructor,
-they should contain CODE references to callback functions to be called when
-the underlying IO handle becomes readable or writable.
+If the C<on_read_ready> or C<on_write_ready> keys are supplied in the
+constructor, they should contain CODE references to callback functions to be
+called when the underlying IO handle becomes readable or writable.
 
 =item Base Class
 
-If a subclass is built, then it can override the C<read_ready> or
-C<write_ready> methods of the base to perform its work. In this case, it
+If a subclass is built, then it can override the C<on_read_ready> or
+C<on_write_ready> methods of the base to perform its work. In this case, it
 should not call the C<SUPER::> versions of those methods.
 
 =back
@@ -94,9 +94,9 @@ C<IO::Async::Buffer> for an example.
 The IO handle for both reading and writing; instead of passing each separately
 as above. Must implement C<fileno> method in way that C<IO::Handle> does.
 
-=item read_ready => CODE
+=item on_read_ready => CODE
 
-=item write_ready => CODE
+=item on_write_ready => CODE
 
 CODE references to handlers for when the handle becomes read-ready or
 write-ready. If these are not supplied, subclass methods will be called
@@ -104,10 +104,10 @@ instead.
 
 =back
 
-It is required that either a C<read_ready> callback reference is passed, or
-that the object is actually a subclass that overrides the C<read_ready>
-method. It is optional whether either is true for C<write_ready>; if neither
-is supplied then write-readiness notifications will be ignored.
+It is required that either a C<on_read_ready> callback reference is passed, or
+that the object is actually a subclass that overrides the C<on_read_ready>
+method. It is optional whether either is true for C<on_write_ready>; if
+neither is supplied then write-readiness notifications will be ignored.
 
 =cut
 
@@ -155,22 +155,22 @@ sub new
       want_writeready => $params{want_writeready} || 0,
    }, $class;
 
-   if( $params{read_ready} ) {
-      $self->{read_ready} = $params{read_ready};
+   if( $params{on_read_ready} ) {
+      $self->{on_read_ready} = $params{on_read_ready};
    }
    else {
       # No callback was passed. But don't worry; perhaps we're really a
       # subclass that overrides it
-      if( $self->can( 'read_ready' ) == \&read_ready ) {
-         croak 'Expected either a read_ready callback or to be a subclass that can ->read_ready';
+      if( $self->can( 'on_read_ready' ) == \&on_read_ready ) {
+         croak 'Expected either a on_read_ready callback or to be a subclass that can ->on_read_ready';
       }
 
       # Don't need to store anything - if an overridden method exists, we know
       # our own won't be called
    }
 
-   if( $params{write_ready} ) {
-      $self->{write_ready} = $params{write_ready};
+   if( $params{on_write_ready} ) {
+      $self->{on_write_ready} = $params{on_write_ready};
    }
    # No problem if it doesn't exist
 
@@ -274,18 +274,18 @@ sub want_writeready
 }
 
 # For ::Sets to call
-sub read_ready
+sub on_read_ready
 {
    my $self = shift;
-   my $callback = $self->{read_ready};
+   my $callback = $self->{on_read_ready};
    $callback->();
 }
 
 # For ::Sets to call
-sub write_ready
+sub on_write_ready
 {
    my $self = shift;
-   my $callback = $self->{write_ready};
+   my $callback = $self->{on_write_ready};
    $callback->() if defined $callback;
 }
 

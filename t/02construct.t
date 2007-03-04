@@ -22,9 +22,9 @@ dies_ok( sub { IO::Async::Notifier->new( handle => "Hello" ) },
    die "Cannot create socket pair - $!";
 
 dies_ok( sub { IO::Async::Notifier->new( handle => $sock ) },
-         'No read_ready' );
+         'No on_read_ready' );
 
-my $ioan = IO::Async::Notifier->new( handle => $sock, read_ready => sub { } );
+my $ioan = IO::Async::Notifier->new( handle => $sock, on_read_ready => sub { } );
 ok( defined $ioan, '$ioan defined' );
 is( ref $ioan, "IO::Async::Notifier", 'ref $ioan is IO::Async::Notifier' );
 

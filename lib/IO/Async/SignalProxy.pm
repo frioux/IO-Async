@@ -131,7 +131,7 @@ sub DESTROY
 }
 
 # protected
-sub read_ready
+sub on_read_ready
 {
    my $self = shift;
 
@@ -195,8 +195,8 @@ The purpose of this object class is to safely call the required signal-
 handling callback code as part of the usual IO::Async::Set loop. This is done 
 by keeping a queue of incoming signal names in the array referenced by 
 $self->{signal_queue}. The object installs its own signal handler which pushes
-the signal name to this array, and the read_ready method then replays them out
-again.
+the signal name to this array, and the on_read_ready method then replays them
+out again.
 
 In order to safely interact with any sort of file-based asynchronous IO (such
 as a select() or poll() system call), the object keeps both ends of a pipe.
@@ -207,7 +207,7 @@ emptyness of the signal queue array is maintained identically to the emptyness
 of the pipe. The value of the bytes in the pipe does not matter; only their
 presence is important.
 
-The read_ready method uses POSIX::sigprocmask() to mask off all the signals
+The on_read_ready method uses POSIX::sigprocmask() to mask off all the signals
 that the object is handling, so that it can atomically read the pipe and empty
 the signal queue array, without a danger of a race condition if another signal
 arrives while it is doing this. The only race condition that remains is the
@@ -220,16 +220,16 @@ the critical stage:
       }
 
 In this case, no bad effects will happen. There will simply be two bytes
-written into the pipe, rather than the usual one. The read_ready handler will
-attempt a sysread() of up to 8192 bytes, and there are usually no more than a 
-handful of different signal handlers registered, so this will usually not be a
-problem. In the exceedingly-unlikely event that more than 8192 different user-
-defined signal handlers have in fact been registered, and every one of them is
-fired at the same time, and every one races with all the others in the way
-indicated above, then all that will happen is that the pipe will remain non-
-empty while the signal queue array is empty. In this case, the read_ready
-handler will be fired again, read up-to 8192 more bytes, then find the queue
-to be empty, and return again.
+written into the pipe, rather than the usual one. The on_read_ready handler
+will attempt a sysread() of up to 8192 bytes, and there are usually no more
+than a handful of different signal handlers registered, so this will usually
+not be a problem. In the exceedingly-unlikely event that more than 8192
+different user-defined signal handlers have in fact been registered, and every
+one of them is fired at the same time, and every one races with all the others
+in the way indicated above, then all that will happen is that the pipe will
+remain non-empty while the signal queue array is empty. In this case, the
+on_read_ready handler will be fired again, read up-to 8192 more bytes, then
+find the queue to be empty, and return again.
 
 =head1 SEE ALSO
 
