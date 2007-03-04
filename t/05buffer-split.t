@@ -39,7 +39,7 @@ sub read_data($)
 }
 
 my $incoming_buffer = "";
-sub incoming_data
+sub on_incoming_data
 {
    my ( $buffref, $buffclosed ) = @_;
 
@@ -52,7 +52,7 @@ sub incoming_data
 my $buff = IO::Async::Buffer->new(
    read_handle  => $S[1],
    write_handle => $S[2],
-   incoming_data => \&incoming_data,
+   on_incoming_data => \&on_incoming_data,
 );
 
 # Sending

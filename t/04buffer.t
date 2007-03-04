@@ -34,7 +34,7 @@ my @received;
 my $closed = 0;
 my $empty = 0;
 
-sub incoming_data
+sub on_incoming_data
 {
    my ( $buffref, $buffclosed ) = @_;
 
@@ -51,8 +51,8 @@ sub incoming_data
 
 my $buff = IO::Async::Buffer->new( 
    handle => $S1,
-   incoming_data => \&incoming_data,
-   outgoing_empty => sub { $empty = 1 },
+   on_incoming_data => \&on_incoming_data,
+   on_outgoing_empty => sub { $empty = 1 },
 );
 
 # Sending

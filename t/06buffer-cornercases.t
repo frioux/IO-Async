@@ -33,7 +33,7 @@ sub read_data($)
 my @received;
 my $closed = 0;
 
-sub incoming_data
+sub on_incoming_data
 {
    my ( $buffref, $buffclosed ) = @_;
 
@@ -48,7 +48,10 @@ sub incoming_data
    return 1;
 }
 
-my $buff = IO::Async::Buffer->new( handle => $S1, incoming_data => \&incoming_data );
+my $buff = IO::Async::Buffer->new(
+   handle => $S1,
+   on_incoming_data => \&on_incoming_data
+);
 
 # First corner case - byte at a time
 

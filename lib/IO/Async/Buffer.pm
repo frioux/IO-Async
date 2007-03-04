@@ -32,7 +32,7 @@ and receiving data buffers around a connected handle
  my $buffer = IO::Async::Buffer->new(
     handle => $line_socket,
 
-    incoming_data => sub {
+    on_incoming_data => sub {
        return 0 unless( $$_[0] =~ s/^(.*\n)// );
 
        print "Received a line $1";
@@ -51,7 +51,7 @@ Or
  my $record_buffer = IO::Async::Buffer->new(
     handle => ...,
 
-    incoming_data => sub {
+    on_incoming_data => sub {
        return 0 unless( length $$_[0] == 16 );
 
        my $record = substr( $$_[0], 0, 16, "" );
@@ -81,7 +81,7 @@ appropriate.
 Data can be added to the outgoing buffer at any time using the C<send()>
 method, and will be flushed whenever the underlying handle is notified as
 being write-ready. Whenever the handle is notified as being read-ready, the
-data is read in from the handle, and the C<incoming_data> code is called to
+data is read in from the handle, and the C<on_incoming_data> code is called to
 indicate the data is available.
 
 This object may be used in one of two ways; with a callback function, or as a
@@ -91,26 +91,26 @@ base class.
 
 =item Callbacks
 
-If the C<incoming_data> or C<outgoing_empty> keys are supplied to the
+If the C<on_incoming_data> or C<on_outgoing_empty> keys are supplied to the
 constructor, they should contain CODE references to callback functions
 that will be called in the following manner:
 
- $again = $incoming_data->( \$buffer, $handleclosed )
+ $again = $on_incoming_data->( \$buffer, $handleclosed )
 
- $outgoing_empty->()
+ $on_outgoing_empty->()
 
 =item Base Class
 
-If a subclass is built, then it can override the C<incoming_data> or
-C<outgoing_empty> methods, which will be called in the following manner:
+If a subclass is built, then it can override the C<on_incoming_data> or
+C<on_outgoing_empty> methods, which will be called in the following manner:
 
- $again = $self->incoming_data( \$buffer, $handleclosed )
+ $again = $self->on_incoming_data( \$buffer, $handleclosed )
 
- $self->outgoing_empty()
+ $self->on_outgoing_empty()
 
 =back
 
-The first argument to the C<incoming_data()> callback is a reference to a
+The first argument to the C<on_incoming_data()> callback is a reference to a
 plain perl string. The code should inspect and remove any data it likes, but
 is not required to remove all, or indeed any of the data. Any data remaining
 in the buffer will be preserved for the next call, the next time more data is
@@ -124,14 +124,14 @@ will be called again. This makes it easy to implement code that handles
 multiple incoming records at the same time. See the examples at the end of
 this documentation for more detail.
 
-The second argument to the C<incoming_data()> method is a scalar indicating
+The second argument to the C<on_incoming_data()> method is a scalar indicating
 whether the handle has been closed. Normally it is false, but will become true
 once the handle closes. A reference to the buffer is passed to the method in
 the usual way, so it may inspect data contained in it. Once the method returns
 a false value, it will not be called again, as the handle is now closed and no
 more data can arrive.
 
-The C<outgoing_empty> callback is not passed any arguments.
+The C<on_outgoing_empty> callback is not passed any arguments.
 
 =cut
 
@@ -151,21 +151,21 @@ The C<%params> hash takes the following keys:
 The handle object to wrap. Must implement C<fileno>, C<sysread> and
 C<syswrite> methods in the way that C<IO::Handle> does.
 
-=item incoming_data => CODE
+=item on_incoming_data => CODE
 
 A CODE reference for when more data is available in the internal receiving 
 buffer.
 
-=item outgoing_empty => CODE
+=item on_outgoing_empty => CODE
 
 A CODE reference for when the sending data buffer becomes empty.
 
 =back
 
-It is required that either an C<incoming_data> callback reference is passed,
-or that the object provides an C<incoming_data> method. It is optional whether
-either is true for C<outgoing_empty>; if neither is supplied then no action
-will be taken when the sending buffer becomes empty.
+It is required that either an C<on_incoming_data> callback reference is
+passed, or that the object provides an C<on_incoming_data> method. It is
+optional whether either is true for C<on_outgoing_empty>; if neither is
+supplied then no action will be taken when the sending buffer becomes empty.
 
 =cut
 
@@ -176,17 +176,17 @@ sub new
 
    my $self = $class->SUPER::new( %params );
 
-   if( $params{incoming_data} ) {
-      $self->{incoming_data} = $params{incoming_data};
+   if( $params{on_incoming_data} ) {
+      $self->{on_incoming_data} = $params{on_incoming_data};
    }
    else {
-      unless( $self->can( 'incoming_data' ) ) {
-         croak 'Expected either an incoming_data callback or to be able to ->incoming_data';
+      unless( $self->can( 'on_incoming_data' ) ) {
+         croak 'Expected either an on_incoming_data callback or to be able to ->on_incoming_data';
       }
    }
 
-   if( $params{outgoing_empty} ) {
-      $self->{outgoing_empty} = $params{outgoing_empty};
+   if( $params{on_outgoing_empty} ) {
+      $self->{on_outgoing_empty} = $params{on_outgoing_empty};
    }
 
    $self->{sendbuff} = "";
@@ -239,7 +239,7 @@ sub on_read_ready
    my $handleclosed = ( $len == 0 );
 
    $self->{recvbuff} .= $data if( !$handleclosed );
-   my $callback = $self->{incoming_data};
+   my $callback = $self->{on_incoming_data};
    while( length( $self->{recvbuff} ) > 0 || $handleclosed ) {
       my $again;
 
@@ -247,7 +247,7 @@ sub on_read_ready
          $again = $callback->( \$self->{recvbuff}, $handleclosed );
       }
       else {
-         $again = $self->incoming_data( \$self->{recvbuff}, $handleclosed );
+         $again = $self->on_incoming_data( \$self->{recvbuff}, $handleclosed );
       }
 
       last if !$again;
@@ -281,11 +281,11 @@ sub on_write_ready
       if( length( $self->{sendbuff} ) == 0 ) {
          $self->want_writeready( 0 );
 
-         if( defined( my $callback = $self->{outgoing_empty} ) ) {
+         if( defined( my $callback = $self->{on_outgoing_empty} ) ) {
             $callback->();
          }
-         elsif( $self->can( 'outgoing_empty' ) ) {
-            $self->outgoing_empty();
+         elsif( $self->can( 'on_outgoing_empty' ) ) {
+            $self->on_outgoing_empty();
          }
       }
    }
@@ -298,12 +298,12 @@ __END__
 
 =head1 EXAMPLES
 
-=head2 A line-based C<incoming_data()> method
+=head2 A line-based C<on_incoming_data()> method
 
-The following C<incoming_data()> method accepts incoming 'C<\n>'-terminated
+The following C<on_incoming_data()> method accepts incoming 'C<\n>'-terminated
 lines and prints them to the program's C<STDOUT> stream.
 
- sub incoming_data
+ sub on_incoming_data
  {
     my $self = shift;
     my ( $buffref, $handleclosed ) = @_;
