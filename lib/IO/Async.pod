@@ -51,7 +51,7 @@ A L<IO::Async::Notifier> object represents a single IO stream that is being
 managed. While in most cases it will represent a single filehandle, such as a
 socket (for example, an C<IO::Socket::INET> connection), it is possible to
 have separate reading and writing handles (most likely for a program's
-C<STDIN> and C<STDOUT> streams. Subclass methods or callback functions are
+C<STDIN> and C<STDOUT> streams). Subclass methods or callback functions are
 then used by the containing C<IO::Async::Set> object, to inform the notifier
 when the handles are read- or write-ready.
 
