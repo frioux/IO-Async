@@ -33,7 +33,9 @@ and receiving data buffers around a connected handle
     handle => $line_socket,
 
     on_incoming_data => sub {
-       return 0 unless( $$_[1] =~ s/^(.*\n)// );
+       my ( $self, $buffref, $closed ) = @_;
+
+       return 0 unless( $$buffref =~ s/^(.*\n)// );
 
        print "Received a line $1";
 
@@ -52,9 +54,11 @@ Or
     handle => ...,
 
     on_incoming_data => sub {
-       return 0 unless( length $$_[1] == 16 );
+       my ( $self, $buffref, $closed ) = @_;
 
-       my $record = substr( $$_[1], 0, 16, "" );
+       return 0 unless( length $$buffref == 16 );
+
+       my $record = substr( $$buffref, 0, 16, "" );
        print "Received a 16-byte record: $record\n";
 
        return 1;
