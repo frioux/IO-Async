@@ -54,13 +54,21 @@ base class.
 
 If the C<on_read_ready> or C<on_write_ready> keys are supplied in the
 constructor, they should contain CODE references to callback functions to be
-called when the underlying IO handle becomes readable or writable.
+called when the underlying IO handle becomes readable or writable:
+
+ $on_read_ready->( $self )
+
+ $on_write_ready->( $self )
 
 =item Base Class
 
 If a subclass is built, then it can override the C<on_read_ready> or
 C<on_write_ready> methods of the base to perform its work. In this case, it
 should not call the C<SUPER::> versions of those methods.
+
+ $self->on_read_ready()
+
+ $self->on_write_ready()
 
 =back
 
