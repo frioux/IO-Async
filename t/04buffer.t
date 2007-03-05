@@ -36,6 +36,7 @@ my $empty = 0;
 
 sub on_incoming_data
 {
+   my $self = shift;
    my ( $buffref, $buffclosed ) = @_;
 
    if( $buffclosed ) {

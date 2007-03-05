@@ -33,7 +33,7 @@ and receiving data buffers around a connected handle
     handle => $line_socket,
 
     on_incoming_data => sub {
-       return 0 unless( $$_[0] =~ s/^(.*\n)// );
+       return 0 unless( $$_[1] =~ s/^(.*\n)// );
 
        print "Received a line $1";
 
@@ -52,9 +52,9 @@ Or
     handle => ...,
 
     on_incoming_data => sub {
-       return 0 unless( length $$_[0] == 16 );
+       return 0 unless( length $$_[1] == 16 );
 
-       my $record = substr( $$_[0], 0, 16, "" );
+       my $record = substr( $$_[1], 0, 16, "" );
        print "Received a 16-byte record: $record\n";
 
        return 1;
@@ -95,9 +95,12 @@ If the C<on_incoming_data> or C<on_outgoing_empty> keys are supplied to the
 constructor, they should contain CODE references to callback functions
 that will be called in the following manner:
 
- $again = $on_incoming_data->( \$buffer, $handleclosed )
+ $again = $on_incoming_data->( $self, \$buffer, $handleclosed )
 
- $on_outgoing_empty->()
+ $on_outgoing_empty->( $self )
+
+A reference to the calling C<IO::Async::Buffer> object is passed as the first
+argument, so that the callback can access it.
 
 =item Base Class
 
@@ -244,7 +247,7 @@ sub on_read_ready
       my $again;
 
       if( defined $callback ) {
-         $again = $callback->( \$self->{recvbuff}, $handleclosed );
+         $again = $callback->( $self, \$self->{recvbuff}, $handleclosed );
       }
       else {
          $again = $self->on_incoming_data( \$self->{recvbuff}, $handleclosed );
@@ -282,7 +285,7 @@ sub on_write_ready
          $self->want_writeready( 0 );
 
          if( defined( my $callback = $self->{on_outgoing_empty} ) ) {
-            $callback->();
+            $callback->( $self );
          }
          elsif( $self->can( 'on_outgoing_empty' ) ) {
             $self->on_outgoing_empty();

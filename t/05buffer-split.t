@@ -41,6 +41,7 @@ sub read_data($)
 my $incoming_buffer = "";
 sub on_incoming_data
 {
+   my $self = shift;
    my ( $buffref, $buffclosed ) = @_;
 
    $incoming_buffer .= $$buffref;
