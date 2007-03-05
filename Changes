@@ -1,0 +1,19 @@
+Revision history for IO-Async
+
+0.02    INCOMPATIBLE CHANGES:
+         * Event methods/callback functions now called "on_*" to distinguish
+           them
+         * Callback functions now pass $self as first argument to simplify
+           called code
+
+        CHANGES:
+         * Improved POD in Notifier.pm and Buffer.pm
+
+        BUGFIXES:
+         * GMainLoop.pm - return 1 from callbacks so that glib doesn't remove
+           our IO sources
+         * GMainLoop.pm - make sure re-asserting want_writeready actually adds
+           the IO source again
+
+0.01    First version, released on an unsuspecting world.
+
