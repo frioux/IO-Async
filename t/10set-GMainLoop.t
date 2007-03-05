@@ -28,8 +28,8 @@ my $readready = 0;
 my $writeready = 0;
 
 my $notifier = IO::Async::Notifier->new( handle => $S1,
-   on_read_ready  => sub { $readready = 1 },
-   on_write_ready => sub { $writeready = 1 },
+   on_read_ready  => sub { $readready = 1; return 0 },
+   on_write_ready => sub { $writeready = 1; return 0 },
 );
 
 my $set = IO::Async::Set::GMainLoop->new();

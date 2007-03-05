@@ -117,7 +117,11 @@ sub __notifier_want_writeready
       $sourceids->[0] = Glib::IO->add_watch(
          $notifier->read_fileno,
          ['in', 'hup'],
-         sub { $notifier->on_read_ready }
+         sub {
+            $notifier->on_read_ready;
+            # Must yield true value or else GLib will remove this IO source
+            return 1;
+         }
       );
    }
 
@@ -125,7 +129,11 @@ sub __notifier_want_writeready
       $sourceids->[1] = Glib::IO->add_watch(
          $notifier->write_fileno,
          ['out'],
-         sub { $notifier->on_write_ready }
+         sub {
+            $notifier->on_write_ready;
+            # Must yield true value or else GLib will remove this IO source
+            return 1;
+         }
       );
    }
    elsif( defined $sourceids->[1] and !$want_writeready ) {
