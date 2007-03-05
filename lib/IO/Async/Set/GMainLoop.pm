@@ -138,6 +138,7 @@ sub __notifier_want_writeready
    }
    elsif( defined $sourceids->[1] and !$want_writeready ) {
       Glib::Source->remove( $sourceids->[1] );
+      undef $sourceids->[1];
    }
 }
 
