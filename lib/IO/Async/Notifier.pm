@@ -278,7 +278,7 @@ sub on_read_ready
 {
    my $self = shift;
    my $callback = $self->{on_read_ready};
-   $callback->();
+   $callback->( $self );
 }
 
 # For ::Sets to call
@@ -286,7 +286,7 @@ sub on_write_ready
 {
    my $self = shift;
    my $callback = $self->{on_write_ready};
-   $callback->() if defined $callback;
+   $callback->( $self ) if defined $callback;
 }
 
 =head2 $notifier->handle_closed()
