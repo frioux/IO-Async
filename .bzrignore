@@ -8,3 +8,4 @@ MANIFEST.bak
 *.tar.gz
 Build
 _build
+META.yml
