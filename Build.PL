@@ -12,6 +12,7 @@ my $build = Module::Build->new
                  'IO::Poll' => 0,
                },
    build_requires => {
+                 'Test::More' => 0,
                  'Test::Exception' => 0,
                  'Time::HiRes' => 0,
                },
