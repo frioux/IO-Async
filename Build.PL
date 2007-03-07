@@ -13,10 +13,15 @@ my $build = Module::Build->new
                },
    build_requires => {
                  'Test::Exception' => 0,
-                 'Glib' => '0',
                  'Time::HiRes' => 0,
                },
    license => 'perl',
   );
+
+# We'd like to build_recommend Glib, only we can't. So we'll hack it out of
+# an eval'ed require instead
+eval { require Glib; 1 } or
+   warn "** You don't have Glib installed.\n" .
+        "** This is OK, but you would get extra testing if it were\n";
   
 $build->create_build_script;
