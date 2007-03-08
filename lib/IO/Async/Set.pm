@@ -83,11 +83,23 @@ sub add
    my $self = shift;
    my ( $notifier ) = @_;
 
-   my $nkey = $self->_nkey( $notifier );
+   if( defined $notifier->parent ) {
+      croak "Cannot add a child notifier directly - add its parent";
+   }
 
    if( defined $notifier->__memberof_set ) {
       croak "Cannot add a notifier that is already a member of a set";
    }
+
+   $self->_add_noparentcheck( $notifier );
+}
+
+sub _add_noparentcheck
+{
+   my $self = shift;
+   my ( $notifier ) = @_;
+
+   my $nkey = $self->_nkey( $notifier );
 
    $self->{notifiers}->{$nkey} = $notifier;
 
@@ -95,7 +107,7 @@ sub add
 
    $self->__notifier_want_writeready( $notifier, $notifier->want_writeready );
 
-   $self->add( $_ ) for $notifier->children;
+   $self->_add_noparentcheck( $_ ) for $notifier->children;
 
    return;
 }
