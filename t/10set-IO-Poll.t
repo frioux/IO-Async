@@ -47,7 +47,7 @@ is( $notifier->__memberof_set, $set, '$notifier->__memberof_set == $set' );
 dies_ok( sub { $set->add( $notifier ) }, 'adding again produces error' );
 
 my $ready;
-$ready = $poll->poll( 0 );
+$ready = $poll->poll( 0.1 );
 
 is( $ready, 0, '$ready idle' );
 
@@ -58,7 +58,11 @@ is( scalar @handles, 1, '@handles idle' );
 
 $S2->syswrite( "data\n" );
 
-$ready = $poll->poll( 0 );
+# We should still wait a little while even thought we expect to be ready
+# immediately, because talking to ourself with 0 poll timeout is a race
+# condition - we can still race with the kernel.
+
+$ready = $poll->poll( 0.1 );
 
 is( $ready, 1, '$ready readready' );
 
@@ -72,7 +76,7 @@ $S1->getline(); # ignore return
 # Write-ready
 $notifier->want_writeready( 1 );
 
-$ready = $poll->poll( 0 );
+$ready = $poll->poll( 0.1 );
 
 is( $ready, 1, '$ready writeready' );
 
@@ -84,7 +88,7 @@ is( $writeready, 1, '$writeready after post_poll' );
 
 $writeready = 0;
 
-$ready = $set->loop_once( 0 );
+$ready = $set->loop_once( 0.1 );
 
 is( $ready, 1, '$ready after loop_once' );
 is( $writeready, 1, '$writeready after loop_once' );
@@ -116,7 +120,7 @@ $set->remove( $stdout_notifier );
 
 $notifier->want_writeready( 0 );
 $readready = 0;
-$ready = $set->loop_once( 0 );
+$ready = $set->loop_once( 0.1 );
 
 is( $ready, 0, '$ready before HUP' );
 is( $readready, 0, '$readready before HUP' );
@@ -124,7 +128,7 @@ is( $readready, 0, '$readready before HUP' );
 close( $S2 );
 
 $readready = 0;
-$ready = $set->loop_once( 0 );
+$ready = $set->loop_once( 0.1 );
 
 is( $ready, 1, '$ready after HUP' );
 is( $readready, 1, '$readready after HUP' );
@@ -149,7 +153,7 @@ my $pipe_notifier = IO::Async::Notifier->new( handle => $pipe_io,
 $set->add( $pipe_notifier );
 
 $readready = 0;
-$ready = $set->loop_once( 0 );
+$ready = $set->loop_once( 0.1 );
 
 is( $ready, 0, '$ready before pipe HUP' );
 is( $readready, 0, '$readready before pipe HUP' );
@@ -157,7 +161,7 @@ is( $readready, 0, '$readready before pipe HUP' );
 close( $P2 );
 
 $readready = 0;
-$ready = $set->loop_once( 0 );
+$ready = $set->loop_once( 0.1 );
 
 is( $ready, 1, '$ready after pipe HUP' );
 is( $readready, 1, '$readready after pipe HUP' );
@@ -174,6 +178,6 @@ $notifier->want_writeready( 1 );
 
 $writeready = 0;
 
-$ready = $set->loop_once();
+$ready = $set->loop_once( 0.1 );
 is( $ready, 1, '$ready after loop_once with implied IO::Poll' );
 is( $writeready, 1, '$writeready after loop_once with implied IO::Poll' );
