@@ -123,6 +123,18 @@ sub remove
    my $self = shift;
    my ( $notifier ) = @_;
 
+   if( defined $notifier->parent ) {
+      croak "Cannot remove a child notifier directly - remove its parent";
+   }
+
+   $self->_remove_noparentcheck( $notifier );
+}
+
+sub _remove_noparentcheck
+{
+   my $self = shift;
+   my ( $notifier ) = @_;
+
    my $nkey = $self->_nkey( $notifier );
 
    exists $self->{notifiers}->{$nkey} or croak "Notifier does not exist in collection";
@@ -133,7 +145,7 @@ sub remove
 
    $self->_notifier_removed( $notifier );
 
-   $self->remove( $_ ) for $notifier->children;
+   $self->_remove_noparentcheck( $_ ) for $notifier->children;
 
    return;
 }

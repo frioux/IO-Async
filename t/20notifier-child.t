@@ -61,6 +61,9 @@ $parent->add_child( $child );
 @handles = $poll->handles();
 is( scalar @handles, 2, '@handles with child' );
 
+dies_ok( sub { $set->remove( $child ) },
+         'Directly removing a child from the set fails' );
+
 $set->remove( $parent );
 
 @handles = $poll->handles();
