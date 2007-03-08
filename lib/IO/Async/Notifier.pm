@@ -161,6 +161,8 @@ sub new
       read_handle     => $read_handle,
       write_handle    => $write_handle,
       want_writeready => $params{want_writeready} || 0,
+      children        => [],
+      parent          => undef,
    }, $class;
 
    if( $params{on_read_ready} ) {
@@ -315,6 +317,100 @@ sub handle_closed
    $handle->close;
    undef $handle;
    delete $self->{handle};
+}
+
+=head1 CHILD NOTIFIERS
+
+During the execution of a program, it may be the case that certain IO handles
+cause other handles to be created; for example, new sockets that have been
+C<accept()>ed from a listening socket. To facilitate these, a notifier may
+contain child notifier objects, that are automatically added to or removed
+from the C<IO::Async::Set> that manages their parent.
+
+=cut
+
+=head2 $parent = $notifier->parent()
+
+Returns the parent of the notifier, or C<undef> if does not have one.
+
+=cut
+
+sub parent
+{
+   my $self = shift;
+   return $self->{parent};
+}
+
+=head2 @children = $notifier->children()
+
+Returns a list of the child notifiers contained within this one.
+
+=cut
+
+sub children
+{
+   my $self = shift;
+   return @{ $self->{children} };
+}
+
+=head2 $notifier->add_child( $child )
+
+Adds a child notifier. This notifier will be added to the containing set, if
+the parent has one. Only a notifier that does not currently have a parent and
+is not currently a member of any set may be added as a child. If the child
+itself has grandchildren, these will be recursively added to the containing
+set.
+
+=cut
+
+sub add_child
+{
+   my $self = shift;
+   my ( $child ) = @_;
+
+   croak "Cannot add a child that already has a parent" if defined $child->{parent};
+
+   croak "Cannot add a child that is already a member of a set" if defined $child->{set};
+
+   if( defined( my $set = $self->{set} ) ) {
+      $set->add( $child );
+   }
+
+   push @{ $self->{children} }, $child;
+   $child->{parent} = $self;
+
+   return;
+}
+
+=head2 $notifier->remove_child( $child )
+
+Removes a child notifier. The child will be removed from the containing set,
+if the parent has one. If the child itself has grandchildren, these will be
+recurively removed from the set.
+
+=cut
+
+sub remove_child
+{
+   my $self = shift;
+   my ( $child ) = @_;
+
+   LOOP: {
+      my $childrenref = $self->{children};
+      for my $i ( 0 .. $#$childrenref ) {
+         next unless $childrenref->[$i] == $child;
+         splice @$childrenref, $i, 1, ();
+         last LOOP;
+      }
+
+      croak "Cannot remove child from a parent that doesn't contain it";
+   }
+
+   if( defined( my $set = $self->{set} ) ) {
+      $set->remove( $child );
+   }
+
+   undef $child->{parent};
 }
 
 # Keep perl happy; keep Britain tidy

@@ -95,6 +95,8 @@ sub add
 
    $self->__notifier_want_writeready( $notifier, $notifier->want_writeready );
 
+   $self->add( $_ ) for $notifier->children;
+
    return;
 }
 
@@ -116,6 +118,8 @@ sub remove
    delete $self->{notifiers}->{$nkey};
 
    $notifier->__memberof_set( undef );
+
+   $self->remove( $_ ) for $notifier->children;
 
    return;
 }
