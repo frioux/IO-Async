@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 20;
+use Test::More tests => 26;
 use Test::Exception;
 
 use IO::Socket::UNIX;
@@ -84,7 +84,9 @@ is( $writeready, 1, '$writeready after post_poll' );
 
 $writeready = 0;
 
-$set->loop_once( 0 );
+$ready = $set->loop_once( 0 );
+
+is( $ready, 1, '$ready after loop_once' );
 is( $writeready, 1, '$writeready after loop_once' );
 
 # loop_forever
@@ -114,15 +116,17 @@ $set->remove( $stdout_notifier );
 
 $notifier->want_writeready( 0 );
 $readready = 0;
-$set->loop_once( 0 );
+$ready = $set->loop_once( 0 );
 
+is( $ready, 0, '$ready before HUP' );
 is( $readready, 0, '$readready before HUP' );
 
 close( $S2 );
 
 $readready = 0;
-$set->loop_once( 0 );
+$ready = $set->loop_once( 0 );
 
+is( $ready, 1, '$ready after HUP' );
 is( $readready, 1, '$readready after HUP' );
 
 # Removal
@@ -145,15 +149,17 @@ my $pipe_notifier = IO::Async::Notifier->new( handle => $pipe_io,
 $set->add( $pipe_notifier );
 
 $readready = 0;
-$set->loop_once( 0 );
+$ready = $set->loop_once( 0 );
 
+is( $ready, 0, '$ready before pipe HUP' );
 is( $readready, 0, '$readready before pipe HUP' );
 
 close( $P2 );
 
 $readready = 0;
-$set->loop_once( 0 );
+$ready = $set->loop_once( 0 );
 
+is( $ready, 1, '$ready after pipe HUP' );
 is( $readready, 1, '$readready after pipe HUP' );
 
 $set->remove( $pipe_notifier );
@@ -168,5 +174,6 @@ $notifier->want_writeready( 1 );
 
 $writeready = 0;
 
-$set->loop_once();
+$ready = $set->loop_once();
+is( $ready, 1, '$ready after loop_once with implied IO::Poll' );
 is( $writeready, 1, '$writeready after loop_once with implied IO::Poll' );
