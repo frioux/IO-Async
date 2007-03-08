@@ -131,9 +131,17 @@ sub remove
 
    $notifier->__memberof_set( undef );
 
+   $self->_notifier_removed( $notifier );
+
    $self->remove( $_ ) for $notifier->children;
 
    return;
+}
+
+# Default 'do-nothing' implementation - meant for subclasses to override
+sub _notifier_removed
+{
+   # Ignore
 }
 
 # For ::Notifier to call

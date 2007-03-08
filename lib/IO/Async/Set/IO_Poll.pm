@@ -228,14 +228,12 @@ sub loop_stop
 }
 
 # override
-sub remove
+sub _notifier_removed
 {
    my $self = shift;
    my ( $notifier ) = @_;
 
    my $poll = $self->{poll};
-
-   $self->SUPER::remove( $notifier );
 
    my $rhandle = $notifier->read_handle;
    my $whandle = $notifier->write_handle;

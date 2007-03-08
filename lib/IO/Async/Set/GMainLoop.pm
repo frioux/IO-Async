@@ -82,12 +82,10 @@ the C<IO::Async::Set> base class.
 =cut
 
 # override
-sub remove
+sub _notifier_removed
 {
    my $self = shift;
    my ( $notifier ) = @_;
-
-   $self->SUPER::remove( $notifier );
 
    my $nkey = $self->_nkey( $notifier );
 
