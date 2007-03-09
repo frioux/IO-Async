@@ -7,7 +7,7 @@ package IO::Async::Set::Select;
 
 use strict;
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use base qw( IO::Async::Set );
 
