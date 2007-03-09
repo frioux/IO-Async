@@ -406,11 +406,11 @@ sub remove_child
       croak "Cannot remove child from a parent that doesn't contain it";
    }
 
+   undef $child->{parent};
+
    if( defined( my $set = $self->{set} ) ) {
       $set->remove( $child );
    }
-
-   undef $child->{parent};
 }
 
 # Keep perl happy; keep Britain tidy

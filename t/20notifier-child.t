@@ -75,6 +75,20 @@ is( scalar @children, 1, '@children after removal from set' );
 dies_ok( sub { $set->add( $child ) },
         'Directly adding a child to the set fails' );
 
+$set->add( $parent );
+
+$parent->remove_child( $child );
+
+@handles = $poll->handles();
+is( scalar @handles, 1, '@handles after remove_child' );
+
+@children = $parent->children;
+is( scalar @children, 0, '@children after remove_child' );
+
+$set->remove( $parent );
+
+$parent->add_child( $child );
+
 my $grandchild = IO::Async::Notifier->new( handle => \*STDOUT,
    on_read_ready => sub {},
 );
