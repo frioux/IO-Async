@@ -1,5 +1,16 @@
 Revision history for IO-Async
 
+0.03    CHANGES:
+         * No longer build_requires 'Glib' - print a warning if it's not
+           installed but carry on anyway.
+         * IO_Poll->loop_once() now returns the result from the poll() call
+         * Added concept of nested child notifiers within Notifier object
+
+        BUGFIXES:
+         * Fix to test scripts that call IO_Poll's loop_once() with a timeout
+           of zero. This can cause a kernel race condition, so supply some
+           small non-zero value instead.
+
 0.02    INCOMPATIBLE CHANGES:
          * Event methods/callback functions now called "on_*" to distinguish
            them
