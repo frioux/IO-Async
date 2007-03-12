@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 26;
+use Test::More tests => 30;
 use Test::Exception;
 
 use IO::Socket::UNIX;
@@ -52,7 +52,7 @@ $ready = $poll->poll( 0.1 );
 is( $ready, 0, '$ready idle' );
 
 @handles = $poll->handles();
-is( scalar @handles, 1, '@handles idle' );
+is_deeply( \@handles, [ $S1 ] , '@handles idle' );
 
 # Read-ready
 
@@ -103,6 +103,12 @@ my $stdout_notifier = IO::Async::Notifier->new( handle => $stdout_io,
 );
 $set->add( $stdout_notifier );
 
+@handles = $poll->handles();
+# We can't guarantee the order here, but we can get 'sort' to do that
+is_deeply( [ sort @handles ],
+           [ sort ( $S1, $stdout_io ) ],
+           '@handles after adding stdout_notifier' );
+
 $writeready = 0;
 
 $SIG{ALRM} = sub { die "Test timed out"; };
@@ -115,6 +121,9 @@ alarm( 0 );
 is( $writeready, 1, '$writeready after loop_forever' );
 
 $set->remove( $stdout_notifier );
+
+@handles = $poll->handles();
+is_deeply( \@handles, [ $S1 ], '@handles after removing stdout_notifier' );
 
 # HUP
 
@@ -152,6 +161,9 @@ my $pipe_notifier = IO::Async::Notifier->new( handle => $pipe_io,
 );
 $set->add( $pipe_notifier );
 
+@handles = $poll->handles();
+is_deeply( \@handles, [ $pipe_io ], '@handles after adding pipe_notifier' );
+
 $readready = 0;
 $ready = $set->loop_once( 0.1 );
 
@@ -167,6 +179,9 @@ is( $ready, 1, '$ready after pipe HUP' );
 is( $readready, 1, '$readready after pipe HUP' );
 
 $set->remove( $pipe_notifier );
+
+@handles = $poll->handles();
+is( scalar @handles, 0, '@handles after removing pipe_notifier' );
 
 # Constructor with implied poll object
 
