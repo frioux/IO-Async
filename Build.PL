@@ -17,6 +17,7 @@ my $build = Module::Build->new
                  'Time::HiRes' => 0,
                },
    license => 'perl',
+   create_makefile_pl => 'traditional',
   );
 
 # We'd like to build_recommend Glib, only we can't. So we'll hack it out of
