@@ -2,10 +2,10 @@
 
 use strict;
 
-use Test::More tests => 10;
+use Test::More tests => 13;
 use Test::Exception;
 
-use POSIX qw( SIGUSR1 SIGUSR2 );
+use POSIX qw( SIGUSR1 SIGUSR2 SIGTERM );
 
 use IO::Async::SignalProxy;
 
@@ -81,3 +81,27 @@ kill SIGUSR1, $$;
 
 $proxy->on_read_ready;
 is( $caught, "21", '$caught after second order test' );
+
+# Dynamic attachment
+
+$proxy->attach( TERM => sub { $caught .= "T" } );
+
+$caught = "";
+
+kill SIGTERM, $$;
+
+$proxy->on_read_ready;
+is( $caught, "T", '$caught after dynamic attachment of SIGTERM' );
+
+$proxy->detach( "TERM" );
+$SIG{TERM} = "IGNORE";
+
+$caught = "";
+
+kill SIGTERM, $$;
+
+$proxy->on_read_ready;
+is( $caught, "", '$caught empty after dynamic removal of SIGTERM' );
+
+dies_ok( sub { $proxy->detach( "INT" ); },
+         'Detachment of non-attached signal fails' );

@@ -29,6 +29,8 @@ C<IO::Async>-based IO
     signal_HUP => sub { reread_config() },
  );
 
+ $sigproxy->attach( TERM => sub { print STDERR "I should exit now\n" } );
+
  my $set = IO::Async::Set::...
  $set->add( $sigproxy );
 
@@ -74,46 +76,21 @@ sub new
       read_handle => $reader,
    );
 
+   $self->{pipe_writing_end} = $writer;
+
    $self->{restore_SIG}  = {}; # {$signame} = value
    $self->{callbacks} = {}; # {$signame} = CODE
 
    # This variable is race-sensitive - read the notes in __END__ section
    # before attempting to modify this code.
-   my $signal_queue = $self->{signal_queue} = [];
+   $self->{signal_queue} = [];
 
-   my $sigset_block = POSIX::SigSet->new();
+   $self->{sigset_block} = POSIX::SigSet->new();
 
    # Find all the signal handler callbacks
    foreach my $signame ( map { m/^signal_(.*)$/ ? $1 : () } keys %params ) {
-      $self->{callbacks}->{$signame} = $params{"signal_$signame"};
-
-      exists $SIG{$signame} or croak "Unrecognised signal name $signame";
-
-      # Don't allow anyone to trash an existing signal handler
-      !defined $SIG{$signame} or !ref $SIG{$signame} or croak "Cannot override signal handler for $signame";
-
-      $self->{restore_SIG}->{$signame} = $SIG{$signame};
-
-      $SIG{$signame} = sub {
-         # This signal handler is race-sensitive - read the notes in the
-         # __END__ section before attempting to modify this code.
-         if( !@$signal_queue ) {
-            syswrite( $writer, "\0" );
-         }
-         push @$signal_queue, $signame;
-      };
-
-      my $signum;
-      {
-         no strict 'refs';
-         local @_;
-         $signum = &{"POSIX::SIG$signame"};
-      }
-
-      $sigset_block->addset( $signum );
+      $self->attach( $signame, $params{"signal_$signame"} );
    }
-
-   $self->{sigset_block} = $sigset_block;
 
    return $self;
 }
@@ -124,10 +101,7 @@ sub DESTROY
 
    my $restore_SIG = $self->{restore_SIG};
 
-   # When we saved the original value, we might have got an undef. But %SIG
-   # doesn't like having undef assigned back in, so we need to translate
-
-   $SIG{$_} = $restore_SIG->{$_} || 'DEFAULT' foreach keys %$restore_SIG;
+   $self->detach( $_ ) foreach keys %$restore_SIG;
 }
 
 # protected
@@ -181,6 +155,102 @@ sub on_read_ready
       my $callback = $self->{callbacks}->{$_};
       $callback->();
    }
+}
+
+=head1 METHODS
+
+=cut
+
+=head2 $proxy->attach( $signal, $code )
+
+This method adds a new signal handler to the proxy object, and associates the
+given code reference with it.
+
+=over 8
+
+=item $signal
+
+The name of the signal to attach to. This should be a bare name like C<TERM>.
+
+=item $code
+
+A CODE reference to the handling function.
+
+=back
+
+=cut
+
+sub attach
+{
+   my $self = shift;
+   my ( $signal, $code ) = @_;
+
+   exists $SIG{$signal} or croak "Unrecognised signal name $signal";
+
+   # Don't allow anyone to trash an existing signal handler
+   !defined $SIG{$signal} or !ref $SIG{$signal} or croak "Cannot override signal handler for $signal";
+
+   $self->{callbacks}->{$signal} = $code;
+
+   $self->{restore_SIG}->{$signal} = $SIG{$signal};
+
+   my $writer = $self->{pipe_writing_end};
+   my $signal_queue = $self->{signal_queue};
+
+   # This closure cannot refer to $self because that would keep the reference
+   # count on the object and prevent it from being DESTROYed when it goes out
+   # of scope from the caller
+   $SIG{$signal} = sub {
+      # This signal handler is race-sensitive - read the notes in the
+      # __END__ section before attempting to modify this code.
+
+      if( !@$signal_queue ) {
+         syswrite( $writer, "\0" );
+      }
+      push @$signal_queue, $signal;
+   };
+
+   my $signum;
+   {
+      no strict 'refs';
+      local @_;
+      $signum = &{"POSIX::SIG$signal"};
+   }
+
+   my $sigset_block = $self->{sigset_block};
+   $sigset_block->addset( $signum );
+}
+
+=head2 $proxy->detach( $signal )
+
+This method removes a signal handler from the proxy object. Any signal that
+has previously been C<attach()>ed or was passed into the constructor may be
+detached.
+
+=over 8
+
+=item $signal
+
+The name of the signal to attach to. This should be a bare name like C<TERM>.
+
+=back
+
+=cut
+
+sub detach
+{
+   my $self = shift;
+   my ( $signal ) = @_;
+
+   my $restore_SIG = $self->{restore_SIG};
+
+   exists $restore_SIG->{$signal} or croak "Signal name $signal is not currently attached";
+
+   # When we saved the original value, we might have got an undef. But %SIG
+   # doesn't like having undef assigned back in, so we need to translate
+   $SIG{$signal} = $restore_SIG->{$signal} || 'DEFAULT';
+
+   delete $restore_SIG->{$signal};
 }
 
 # Keep perl happy; keep Britain tidy
