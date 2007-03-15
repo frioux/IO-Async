@@ -109,25 +109,29 @@ is( scalar @received, 1,          'scalar @received receiving after select' );
 is( $received[0],     "return\n", '$received[0] sendpartial 2' );
 is( $closed,          0,          '$closed sendpartial 2' );
 
+package ErrorSocket;
+
+our $errno;
+
+sub new      { return bless [], shift; }
+sub DESTROY  { }
+sub fileno   { 100; }
+sub sysread  { $! = $errno; undef; }
+sub syswrite { $! = $errno; undef; }
+
+package main;
+
 # Spurious reports to no ill effects
 {
    my $warning;
    local $SIG{__WARN__} = sub { $warning .= join( "", @_ ) };
 
-   package MockSocket;
-
-   sub new      { return bless [], shift; }
-   sub DESTROY  { }
-   sub fileno   { 100; } # why not?
-   sub sysread  { $! = POSIX::EAGAIN; undef; }
-   sub syswrite { $! = POSIX::EAGAIN; undef; }
-
-   package main;
-
    my $buff = IO::Async::Buffer->new(
-      handle => MockSocket->new(),
+      handle => ErrorSocket->new(),
       on_incoming_data => sub {},
    );
+
+   $ErrorSocket::errno = EAGAIN;
 
    $warning = "";
    $buff->on_read_ready;
