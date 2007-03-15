@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 21;
+use Test::More tests => 23;
 use Test::Exception;
 
 use POSIX qw( EAGAIN );
@@ -108,6 +108,37 @@ $buff->on_read_ready;
 is( scalar @received, 1,          'scalar @received receiving after select' );
 is( $received[0],     "return\n", '$received[0] sendpartial 2' );
 is( $closed,          0,          '$closed sendpartial 2' );
+
+# Spurious reports to no ill effects
+{
+   my $warning;
+   local $SIG{__WARN__} = sub { $warning .= join( "", @_ ) };
+
+   package MockSocket;
+
+   sub new      { return bless [], shift; }
+   sub DESTROY  { }
+   sub fileno   { 100; } # why not?
+   sub sysread  { $! = POSIX::EAGAIN; undef; }
+   sub syswrite { $! = POSIX::EAGAIN; undef; }
+
+   package main;
+
+   my $buff = IO::Async::Buffer->new(
+      handle => MockSocket->new(),
+      on_incoming_data => sub {},
+   );
+
+   $warning = "";
+   $buff->on_read_ready;
+
+   is( $warning, "", 'Spurious on_read_ready does not print a warning' );
+
+   $warning = "";
+   $buff->on_write_ready;
+
+   is( $warning, "", 'Spurious on_write_ready does not print a warning' );
+}
 
 @received = ();
 

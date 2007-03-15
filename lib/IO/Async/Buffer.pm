@@ -11,6 +11,8 @@ our $VERSION = '0.03';
 
 use base qw( IO::Async::Notifier );
 
+use POSIX qw( EAGAIN EWOULDBLOCK );
+
 use Carp;
 
 =head1 NAME
@@ -253,7 +255,13 @@ sub on_read_ready
    my $data;
    my $len = $handle->sysread( $data, 8192 );
 
-   # TODO: Deal with other types of read error
+   if( !defined $len ) {
+      my $errno = $!;
+
+      return if $errno == EAGAIN or $errno == EWOULDBLOCK;
+
+      # TODO: Deal with other types of read error
+   }
 
    my $handleclosed = ( $len == 0 );
 
@@ -289,7 +297,13 @@ sub on_write_ready
 
    $len = $handle->syswrite( $data );
 
-   # TODO: Deal with other types of write error
+   if( !defined $len ) {
+      my $errno = $!;
+
+      return if $errno == EAGAIN or $errno == EWOULDBLOCK;
+
+      # TODO: Deal with other types of write error
+   }
 
    if( $len == 0 ) {
       $self->handle_closed();
