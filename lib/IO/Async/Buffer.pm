@@ -30,16 +30,22 @@ and receiving data buffers around a connected handle
  );
 
  my $buffer = IO::Async::Buffer->new(
-    handle => $line_socket,
+    handle => $socket,
 
     on_incoming_data => sub {
        my ( $self, $buffref, $closed ) = @_;
 
-       return 0 unless( $$buffref =~ s/^(.*\n)// );
+       if( $$buffref =~ s/^(.*\n)// ) {
+          print "Received a line $1";
 
-       print "Received a line $1";
+          return 1;
+       }
 
-       return 1;
+       if( $closed ) {
+          print "Closed; last partial line is $$buffref\n";
+       }
+
+       return 0;
     }
  );
 
@@ -56,12 +62,18 @@ Or
     on_incoming_data => sub {
        my ( $self, $buffref, $closed ) = @_;
 
-       return 0 unless( length $$buffref == 16 );
+       if( length $$buffref >= 16 ) {
+          my $record = substr( $$buffref, 0, 16, "" );
+          print "Received a 16-byte record: $record\n";
 
-       my $record = substr( $$buffref, 0, 16, "" );
-       print "Received a 16-byte record: $record\n";
+          return 1;
+       }
 
-       return 1;
+       if( $closed and length $$buffref ) {
+          print "Closed: a partial record still exists\n";
+       }
+
+       return 0;
     }
  );
 
@@ -315,10 +327,12 @@ lines and prints them to the program's C<STDOUT> stream.
     my $self = shift;
     my ( $buffref, $handleclosed ) = @_;
 
-    return 0 unless( $$buffref =~ s/^(.*\n)// );
+    if( $$buffref =~ s/^(.*\n)// ) {
+       print "Received a line: $1";
+       return 1;
+    }
 
-    print "Received a line: $1";
-    return 1;
+    return 0;
  }
 
 Because a reference to the buffer itself is passed, it is simple to use a
