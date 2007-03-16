@@ -1,5 +1,10 @@
 Revision history for IO-Async
 
+0.04    CHANGES:
+         * Added dynamic signal attach / detach methods to SignalProxy
+         * Buffer now has on_read_error / on_write_error callbacks for
+           handling IO errors on underlying sysread()/syswrite() calls
+
 0.03    CHANGES:
          * No longer build_requires 'Glib' - print a warning if it's not
            installed but carry on anyway.
