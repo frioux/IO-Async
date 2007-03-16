@@ -2,10 +2,10 @@
 
 use strict;
 
-use Test::More tests => 23;
+use Test::More tests => 25;
 use Test::Exception;
 
-use POSIX qw( EAGAIN );
+use POSIX qw( EAGAIN ECONNRESET );
 use IO::Socket::UNIX;
 
 use IO::Async::Buffer;
@@ -155,3 +155,25 @@ $buff->on_read_ready;
 
 is( scalar @received, 0, 'scalar @received receiving after select' );
 is( $closed,          1, '$closed after close' );
+
+# Socket errors
+$ErrorSocket::errno = ECONNRESET;
+
+my $read_errno;
+my $write_errno;
+
+$buff = IO::Async::Buffer->new(
+   handle => ErrorSocket->new(),
+   on_incoming_data => sub {},
+
+   on_read_error  => sub { ( undef, $read_errno  ) = @_ },
+   on_write_error => sub { ( undef, $write_errno ) = @_ },
+);
+
+$buff->on_read_ready;
+
+cmp_ok( $read_errno, "==", ECONNRESET, 'errno after failed read' );
+
+$buff->on_write_ready;
+
+cmp_ok( $write_errno, "==", ECONNRESET, 'errno after failed write' );
