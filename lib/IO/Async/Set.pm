@@ -38,6 +38,12 @@ C<IO::Async::Notifier> objects or subclasses of them. It handles all of the
 lower-level set manipulation actions, and leaves the actual IO readiness 
 testing/notification to the concrete class that implements it.
 
+It also provides access to an C<IO::Async::SignalProxy> object. Only once such
+object would need to be constructed and added to the set in order to handle
+signals. Accessing the object via the containing set allows for simpler code
+that handles signals, so it does not need to carry extra references to the
+signal proxy object.
+
 =cut
 
 # Internal constructor used by subclasses
@@ -47,6 +53,7 @@ sub __new
 
    my $self = bless {
       notifiers => {}, # {nkey} = notifier
+      sigproxy  => undef,
    }, $class;
 
    return $self;
@@ -162,6 +169,64 @@ sub __notifier_want_writeready
    my $self = shift;
    my ( $notifier, $want_writeready ) = @_;
    # Ignore
+}
+
+=head2 $sigproxy = $set->get_sigproxy
+
+This method returns the associated C<IO::Async::SignalProxy> object for the
+set. If there is not yet such a proxy, a new one is constructed and added to
+the set.
+
+=cut
+
+sub get_sigproxy
+{
+   my $self = shift;
+
+   return $self->{sigproxy} if defined $self->{sigproxy};
+
+   require IO::Async::SignalProxy;
+   my $sigproxy = IO::Async::SignalProxy->new();
+   $self->add( $sigproxy );
+
+   return $self->{sigproxy} = $sigproxy;
+}
+
+=head2 $set->attach_signal( $signal, $code )
+
+This method adds a new signal handler to the associated
+C<IO::Async::SignalProxy> object. It is equivalent to calling the C<attach()>
+method on the object returned from the set's C<get_sigproxy()> method.
+
+=cut
+
+sub attach_signal
+{
+   my $self = shift;
+   my ( $signal, $code ) = @_;
+
+   my $sigproxy = $self->get_sigproxy;
+   $sigproxy->attach( $signal, $code );
+}
+
+=head2 $set->detach_signal( $signal )
+
+This method removes a signal handler from the associated
+C<IO::Async::SignalProxy> object. It is equivalent to calling the C<detach()>
+method on the object returned from the set's C<get_sigproxy()> method.
+
+=cut
+
+sub detach_signal
+{
+   my $self = shift;
+   my ( $signal ) = @_;
+
+   my $sigproxy = $self->get_sigproxy;
+   $sigproxy->detach( $signal );
+
+   # TODO: Consider "refcount" signals and cleanup if zero. How do we know if
+   # anyone else has a reference to the signal proxy though? Tricky...
 }
 
 # Keep perl happy; keep Britain tidy
