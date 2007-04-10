@@ -15,6 +15,8 @@ use Carp;
 
 use IO::Poll qw( POLLIN POLLOUT POLLHUP );
 
+use POSIX qw( EINTR );
+
 =head1 NAME
 
 C<IO::Async::Set::IO_Poll> - a class that maintains a set of
@@ -178,6 +180,18 @@ sub loop_once
    #   http://rt.cpan.org/Ticket/Display.html?id=25049
    if( $poll->handles ) {
       $pollret = $poll->poll( $timeout );
+
+      if( $pollret == -1 and $! == EINTR and defined $self->{sigproxy} ) {
+         # A signal occured and we have a sigproxy. Allow one more poll call
+         # with zero timeout. If it finds something, keep that result. If it
+         # finds nothing, keep -1
+
+         # Preserve $! whatever happens
+         local $!;
+
+         my $secondattempt = $poll->poll( 0 );
+         $pollret = $secondattempt if $secondattempt > 0;
+      }
    }
    else {
       # Workaround - we'll use select() to fake a millisecond-accurate sleep
