@@ -204,6 +204,10 @@ sub attach
       # This signal handler is race-sensitive - read the notes in the
       # __END__ section before attempting to modify this code.
 
+      # Protect the interrupted code against unexpected modifications of $!,
+      # such as the line just after the poll() call in IO::Async::Set::IO_Poll
+      local $!;
+
       if( !@$signal_queue ) {
          syswrite( $writer, "\0" );
       }
