@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 16;
+use Test::More tests => 18;
 use Test::Exception;
 
 use IO::Socket::UNIX;
@@ -14,6 +14,8 @@ use IO::Async::SignalProxy;
 use IO::Async::Set::Select;
 use IO::Async::Set::IO_Poll;
 use IO::Async::Set::GMainLoop;
+
+use IO::Async::ChildManager;
 
 dies_ok( sub { IO::Async::Notifier->new( handle => "Hello" ) },
          'Not a socket' );
@@ -57,3 +59,7 @@ SKIP: {
    ok( defined $ioasgml, '$ioasgml defined' );
    is( ref $ioasgml, "IO::Async::Set::GMainLoop", 'ref $ioasgml is IO::Async::Set::GMainLoop' );
 }
+
+my $ioacm = IO::Async::ChildManager->new();
+ok( defined $ioacm, '$ioacm defined' );
+is( ref $ioacm, "IO::Async::ChildManager", 'ref $ioacm is IO::Async::ChildManager' );
