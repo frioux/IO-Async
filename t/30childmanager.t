@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 10;
+use Test::More tests => 16;
 use Test::Exception;
 
 use IO::Async::ChildManager;
@@ -66,3 +66,37 @@ is( $handled, 1, '$handled after child SIGTERM' );
 
 ok( WIFSIGNALED($exitcode),          'WIFSIGNALED($exitcode) after SIGTERM' );
 is( WTERMSIG($exitcode),    SIGTERM, 'WTERMSIG($exitcode) after SIGTERM' );
+
+# Now lets test the integration with a ::Set
+
+$set->detach_signal( 'CHLD' );
+undef $manager;
+
+dies_ok( sub { $set->watch_child( 1234 => sub { "DUMMY" } ) },
+         'watch_child() before enable_childmanager() fails' );
+
+$set->enable_childmanager;
+
+dies_ok( sub { $set->enable_childmanager; },
+         'enable_childmanager() again fails' );
+
+$kid = fork();
+defined $kid or die "Cannot fork() - $!";
+
+if( $kid == 0 ) {
+   exit( 5 );
+}
+
+$set->watch_child( $kid => sub { ( undef, $exitcode ) = @_; } );
+
+$ready = $set->loop_once( 0.1 );
+
+is( $ready, 1, '$ready after child exit for set' );
+
+ok( WIFEXITED($exitcode),      'WIFEXITED($exitcode) after child exit for set' );
+is( WEXITSTATUS($exitcode), 5, 'WEXITSTATUS($exitcode) after child exit for set' );
+
+$set->disable_childmanager;
+
+dies_ok( sub { $set->disable_childmanager; },
+         'disable_childmanager() again fails' );

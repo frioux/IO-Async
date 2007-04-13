@@ -44,6 +44,14 @@ signals. Accessing the object via the containing set allows for simpler code
 that handles signals, so it does not need to carry extra references to the
 signal proxy object.
 
+It also provides access to an C<IO::Async::ChildManager> object. Before this
+object can be used, it must be enabled using the C<enable_childmanager()>
+method. This must be done before any child processes are C<fork()>ed in order
+to avoid the race condition where the child terminates so quickly that the
+parent receives a C<SIGCHLD> signal before it has returned from the C<fork()>
+call. The process must know to be ready to receive such a signal, before it
+knows the PID of the child process.
+
 =cut
 
 # Internal constructor used by subclasses
@@ -52,8 +60,9 @@ sub __new
    my $class = shift;
 
    my $self = bless {
-      notifiers => {}, # {nkey} = notifier
-      sigproxy  => undef,
+      notifiers    => {}, # {nkey} = notifier
+      sigproxy     => undef,
+      childmanager => undef,
    }, $class;
 
    return $self;
@@ -227,6 +236,81 @@ sub detach_signal
 
    # TODO: Consider "refcount" signals and cleanup if zero. How do we know if
    # anyone else has a reference to the signal proxy though? Tricky...
+}
+
+=head2 $set->enable_childmanager
+
+This method creates a new C<IO::Async::ChildManager> object and attaches the
+C<SIGCHLD> signal to call the manager's C<SIGCHLD()> method. The manager is
+stored in the set and can be obtained using the C<get_childmanager()> method.
+
+=cut
+
+sub enable_childmanager
+{
+   my $self = shift;
+
+   defined $self->{childmanager} and
+      croak "ChildManager already enabled for this set";
+
+   require IO::Async::ChildManager;
+   my $childmanager = IO::Async::ChildManager->new();
+   $self->attach_signal( CHLD => sub { $childmanager->SIGCHLD } );
+
+   $self->{childmanager} = $childmanager;
+}
+
+=head2 $set->disable_childmanager
+
+This method detaches the contained C<IO::Async::ChildManager> from the
+C<SIGCHLD> signal and destroys it. After this method is called, the C<SIGCHLD>
+slot is released.
+
+=cut
+
+sub disable_childmanager
+{
+   my $self = shift;
+
+   defined $self->{childmanager} or
+      croak "ChildManager not enabled for this set";
+
+   $self->detach_signal( 'CHLD' );
+   undef $self->{childmanager};
+}
+
+=head2 $manager = $set->get_childmanager
+
+This method returns the associated C<IO::Async::ChildManager> object for the
+set. If there is not yet such an object (namely; that the
+C<enable_childmanager()> method has not yet been called), an exception is
+thrown.
+
+=cut
+
+sub get_childmanager
+{
+   my $self = shift;
+
+   return $self->{childmanager} if defined $self->{childmanager};
+   croak "ChildManager not enabled in Set";
+}
+
+=head2 $set->watch_child( $pid, $code )
+
+This method adds a new handler for the termination of the given child PID. It
+is equivalent to calling the C<watch()> method on the object returned from the
+set's C<get_childmanager()> method.
+
+=cut
+
+sub watch_child
+{
+   my $self = shift;
+   my ( $kid, $code ) = @_;
+
+   my $childmanager = $self->get_childmanager;
+   $childmanager->watch( $kid, $code );
 }
 
 # Keep perl happy; keep Britain tidy
