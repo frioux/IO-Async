@@ -21,6 +21,19 @@ processes
 
 =head1 SYNOPSIS
 
+Usually this object would be used indirectly, via an C<IO::Async::Set>:
+
+ use IO::Async::Set::...;
+ my $set = IO::Async::Set::...
+
+ $set->enable_childmanager;
+
+ ...
+
+ $set->watch_child( 1234 => sub { print "Child 1234 exited\n" } );
+
+It can also be used directly:
+
  use IO::Async::ChildManager;
 
  my $manager = IO::Async::ChildManager->new();

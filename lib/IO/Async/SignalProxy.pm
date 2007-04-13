@@ -23,6 +23,15 @@ C<IO::Async>-based IO
 
 =head1 SYNOPSIS
 
+Usually this object would be used indirectly, via an C<IO::Async::Set>:
+
+ use IO::Async::Set::...;
+ my $set = IO::Async::Set::...
+
+ $set->attach_signal( HUP => sub { reread_config() } );
+
+It can also be used directly:
+
  use IO::Async::SignalProxy;
 
  my $sigproxy = IO::Async::SignalProxy->new(
