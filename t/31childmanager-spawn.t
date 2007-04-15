@@ -30,6 +30,20 @@ sub on_exit
    ( undef, $exitcode, $dollarbang, $dollarat ) = @_;
 }
 
+sub wait_for_exit
+{
+   my $ready = 0;
+   undef $exitcode;
+
+   while( !defined $exitcode ) {
+      $_ = $set->loop_once( 2 ); # Give code a generous 2 seconds to exit
+      die "Nothing was ready after 2 second wait" if $_ == 0;
+      $ready += $_;
+   }
+
+   $ready;
+}
+
 dies_ok( sub { $manager->spawn( badoption => 1 ); },
          'Bad option to spawn fails' );
 
@@ -44,13 +58,8 @@ $manager->spawn(
    on_exit => \&on_exit,
 );
 
-my $ready = 0;
-
-while( !defined $exitcode ) {
-   $_ = $set->loop_once( 2 ); # Give code a generous 2 seconds to exit
-   die "Nothing was ready after 2 second wait" if $_ == 0;
-   $ready += $_;
-}
+my $ready;
+$ready = wait_for_exit;
 
 is( $ready, 3, '$ready after spawn CODE' );
 
@@ -67,14 +76,7 @@ $manager->spawn(
    on_exit => \&on_exit,
 );
 
-undef $exitcode;
-$ready = 0;
-
-while( !defined $exitcode ) {
-   $_ = $set->loop_once( 2 ); # Give code a generous 2 seconds to exit
-   die "Nothing was ready after 2 second wait" if $_ == 0;
-   $ready += $_;
-}
+$ready = wait_for_exit;
 
 is( $ready, 3, '$ready after spawn CODE with END' );
 
@@ -89,14 +91,7 @@ $manager->spawn(
    on_exit => \&on_exit,
 );
 
-undef $exitcode;
-$ready = 0;
-
-while( !defined $exitcode ) {
-   $_ = $set->loop_once( 2 ); # Give code a generous 2 seconds to exit
-   die "Nothing was ready after 2 second wait" if $_ == 0;
-   $ready += $_;
-}
+$ready = wait_for_exit;
 
 is( $ready, 3, '$ready after spawn CODE with die with END' );
 
@@ -112,14 +107,7 @@ $manager->spawn(
    on_exit => \&on_exit,
 );
 
-undef $exitcode;
-$ready = 0;
-
-while( !defined $exitcode ) {
-   $_ = $set->loop_once( 2 ); # Give code a generous 2 seconds to exit
-   die "Nothing was ready after 2 second wait" if $_ == 0;
-   $ready += $_;
-}
+$ready = wait_for_exit;
 
 is( $ready, 2, '$ready after spawn /bin/true' );
 
@@ -137,14 +125,7 @@ $manager->spawn(
    on_exit => \&on_exit,
 );
 
-undef $exitcode;
-$ready = 0;
-
-while( !defined $exitcode ) {
-   $_ = $set->loop_once( 2 ); # Give code a generous 2 seconds to exit
-   die "Nothing was ready after 2 second wait" if $_ == 0;
-   $ready += $_;
-}
+$ready = wait_for_exit;
 
 is( $ready, 3, '$ready after spawn donotexist' );
 
@@ -159,14 +140,7 @@ $manager->spawn(
    on_exit => \&on_exit,
 );
 
-undef $exitcode;
-$ready = 0;
-
-while( !defined $exitcode ) {
-   $_ = $set->loop_once( 2 ); # Give code a generous 2 seconds to exit
-   die "Nothing was ready after 2 second wait" if $_ == 0;
-   $ready += $_;
-}
+$ready = wait_for_exit;
 
 is( $ready, 2, '$ready after spawn ARRAY' );
 
