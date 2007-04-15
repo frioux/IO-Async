@@ -254,7 +254,7 @@ sub enable_childmanager
       croak "ChildManager already enabled for this set";
 
    require IO::Async::ChildManager;
-   my $childmanager = IO::Async::ChildManager->new();
+   my $childmanager = IO::Async::ChildManager->new( set => $self );
    $self->attach_signal( CHLD => sub { $childmanager->SIGCHLD } );
 
    $self->{childmanager} = $childmanager;
