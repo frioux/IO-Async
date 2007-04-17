@@ -17,6 +17,11 @@ use IO::Poll qw( POLLIN POLLOUT POLLHUP );
 
 use POSIX qw( EINTR );
 
+# IO::Poll version 0.05 contain a bug whereby the ->remove() method doesn't
+# properly clean up all the references to the handles. If the version we're
+# using is in this range, we have to clean it up ourselves.
+use constant IO_POLL_REMOVE_BUG => ( $IO::Poll::VERSION == '0.05' );
+
 =head1 NAME
 
 C<IO::Async::Set::IO_Poll> - a class that maintains a set of
@@ -253,8 +258,16 @@ sub _notifier_removed
    my $whandle = $notifier->write_handle;
 
    $poll->remove( $rhandle );
+
+   # This sort of mangling is usually frowned-upon because it relies on
+   # knowledge of the internals of IO::Poll. But we know those internals
+   # because it is conditional on a specific version number of IO::Poll, so we
+   # can rely on the internal layout for that particular version.
+   delete $poll->[0]{fileno $rhandle} if IO_POLL_REMOVE_BUG;
+
    if( defined $whandle and $whandle != $rhandle ) {
       $poll->remove( $whandle );
+      delete $poll->[0]{fileno $whandle} if IO_POLL_REMOVE_BUG;
    }
 }
 

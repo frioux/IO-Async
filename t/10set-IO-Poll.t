@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 30;
+use Test::More tests => 32;
 use Test::Exception;
 
 use IO::Socket::UNIX;
@@ -151,18 +151,47 @@ is( $notifier->__memberof_set, undef, '$notifier->__memberof_set is undef' );
 @handles = $poll->handles();
 is( scalar @handles, 0, '@handles after removal' );
 
-# HUP of pipe
+# Removal is clean (tests for workaround to bug in IO::Poll version 0.05)
+
+$set->add( $stdout_notifier ); # Just to make the set non-empty
 
 pipe( my ( $P1, $P2 ) ) or die "Cannot pipe() - $!";
-my $pipe_io = IO::Handle->new_from_fd( fileno( $P1 ), 'r' );
-my $pipe_notifier = IO::Async::Notifier->new( handle => $pipe_io,
-   on_read_ready  => sub { $readready = 1 },
-   want_writeready => 0,
-);
-$set->add( $pipe_notifier );
+my ( $N1, $N2 ) = map {
+   IO::Async::Notifier->new( handle => $_,
+      on_read_ready   => sub {},
+      want_writeready => 0,
+   ) } ( $P1, $P2 );
+
+$set->add( $N1 );
+$set->add( $N2 );
+
+$set->remove( $N1 ); $set->remove( $N2 );
+undef $N1;           undef $N2;
+close( $P1 );        close( $P2 );
+undef $P1;           undef $P2;
 
 @handles = $poll->handles();
-is_deeply( \@handles, [ $pipe_io ], '@handles after adding pipe_notifier' );
+is( scalar @handles, 1, '@handles before clean removal test' );
+
+$ready = $set->loop_once( 0 );
+
+is( $ready, 1, '$ready after clean removal test' );
+
+$set->remove( $stdout_notifier );
+
+# HUP of pipe
+
+pipe( ( $P1, $P2 ) ) or die "Cannot pipe() - $!";
+( $N1, $N2 ) = map {
+   IO::Async::Notifier->new( handle => $_,
+      on_read_ready   => sub { $readready = 1; },
+      want_writeready => 0,
+   ) } ( $P1, $P2 );
+
+$set->add( $N1 );
+
+@handles = $poll->handles();
+is_deeply( \@handles, [ $P1 ], '@handles after adding pipe_notifier' );
 
 $readready = 0;
 $ready = $set->loop_once( 0.1 );
@@ -170,6 +199,7 @@ $ready = $set->loop_once( 0.1 );
 is( $ready, 0, '$ready before pipe HUP' );
 is( $readready, 0, '$readready before pipe HUP' );
 
+undef $N2;
 close( $P2 );
 
 $readready = 0;
@@ -178,7 +208,7 @@ $ready = $set->loop_once( 0.1 );
 is( $ready, 1, '$ready after pipe HUP' );
 is( $readready, 1, '$readready after pipe HUP' );
 
-$set->remove( $pipe_notifier );
+$set->remove( $N1 );
 
 @handles = $poll->handles();
 is( scalar @handles, 0, '@handles after removing pipe_notifier' );
