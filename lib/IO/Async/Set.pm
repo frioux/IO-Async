@@ -313,6 +313,23 @@ sub watch_child
    $childmanager->watch( $kid, $code );
 }
 
+=head2 $set->spawn_child( %params )
+
+This method creates a new child process to run a given code block or command.
+It is equivalent to calling the C<spawn()> method on the object returned from
+the set's C<get_childmanager()> method.
+
+=cut
+
+sub spawn_child
+{
+   my $self = shift;
+   my %params = @_;
+
+   my $childmanager = $self->get_childmanager;
+   $childmanager->spawn( %params );
+}
+
 # Keep perl happy; keep Britain tidy
 1;
 
