@@ -38,7 +38,17 @@ Usually this object would be used indirectly, via an C<IO::Async::Set>:
 
  $set->watch_child( 1234 => sub { print "Child 1234 exited\n" } );
 
-It can also be used directly:
+ $set->spawn_child(
+    command => "/usr/bin/something",
+    on_exit => \&exit_handler,
+    setup => [
+       stdout => $pipe,
+    ]
+ );
+
+It can also be used directly. In this case, extra effort must be taken to
+ensure a C<IO::Async::Set> object is available if the C<spawn()> method is
+used:
 
  use IO::Async::ChildManager;
 
@@ -50,6 +60,19 @@ It can also be used directly:
  ...
 
  $manager->watch( 1234 => sub { print "Child 1234 exited\n" } );
+
+ ...
+
+ $manager->associate_set( $set );
+ $manager->spawn( ... );
+
+ # Alternatively
+ 
+ my $manager = IO::Async::ChildManager->new( set => $set );
+ $manager->spawn( ... );
+
+It is therefore usually easiest to just use the convenience methods provided
+by the C<IO::Async::Set> object.
 
 =head1 DESCRIPTION
 
@@ -326,6 +349,18 @@ C<$mode> string should be in the form usually given to the C<open()> function;
 such as '<' or '>>'.
 
 =back
+
+=item fdI<n> => IO
+
+A shortcut for the C<dup> case given above.
+
+=item stdin => ...
+
+=item stdout => ...
+
+=item stderr => ...
+
+Shortcuts for C<fd0>, C<fd1> and C<fd2> respectively.
 
 =back
 
