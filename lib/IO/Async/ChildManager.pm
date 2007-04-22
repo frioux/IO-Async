@@ -15,9 +15,10 @@ use IO::Async::Buffer;
 
 use Carp;
 use Fcntl qw( F_GETFL F_SETFL FD_CLOEXEC );
-use POSIX qw( WNOHANG _exit );
+use POSIX qw( WNOHANG _exit sysconf _SC_OPEN_MAX dup2 );
 
 use constant LENGTH_OF_I => length( pack( "I", 0 ) );
+use constant OPEN_MAX_FD => sysconf(_SC_OPEN_MAX);
 
 =head1 NAME
 
@@ -204,6 +205,11 @@ C<exec()> function.
 A block of code to execute in the child process. It will be called in scalar
 context inside an C<eval> block.
 
+=item setup => ARRAY
+
+A reference to an array which gives file descriptors to set up in the child
+process before running the code or command. See below.
+
 =item on_exit => CODE
 
 A callback function to be called when the child processes exits. It will be
@@ -242,6 +248,7 @@ sub spawn
 
    my $command = delete $params{command};
    my $code    = delete $params{code};
+   my $setup   = delete $params{setup};
    my $on_exit = delete $params{on_exit};
 
    if( %params ) {
@@ -253,6 +260,8 @@ sub spawn
 
    defined $command or defined $code or
       croak "Must pass one of 'command' or 'code' to spawn";
+
+   my @setup = defined $setup ? $self->_check_setup_and_canonicise( $setup ) : ();
 
    pipe( my $readpipe, my $writepipe ) or croak "Cannot pipe() - $!";
 
@@ -282,8 +291,92 @@ sub spawn
    else {
       # Child
       close( $readpipe );
-      $self->_spawn_in_child( $writepipe, $code );
+      $self->_spawn_in_child( $writepipe, $code, \@setup );
    }
+}
+
+=head2 C<setup> array
+
+This array gives a list of file descriptor operations to perform in the child
+process after it has been C<fork()>ed from the parent, before running the code
+or command. It consists of name/value pairs which are ordered; the operations
+are performed in the order given.
+
+=over 8
+
+=item fdI<n> => ARRAY
+
+Gives an operation on file descriptor I<n>. The first element of the array
+defines the operation to be performed:
+
+=over 4
+
+=item [ 'close' ]
+
+The file descriptor will be closed.
+
+=item [ 'dup', $io ]
+
+The file descriptor will be C<dup2()>ed from the given IO handle.
+
+=item [ 'open', $mode, $file ]
+
+The file descriptor will be opened from the named file in the given mode. The
+C<$mode> string should be in the form usually given to the C<open()> function;
+such as '<' or '>>'.
+
+=back
+
+=back
+
+=cut
+
+sub _check_setup_and_canonicise
+{
+   my $self = shift;
+   my ( $setup ) = @_;
+
+   ref $setup eq "ARRAY" or croak "'setup' must be an ARRAY reference";
+
+   my @setup;
+
+   foreach my $i ( 0 .. $#$setup / 2 ) {
+      my ( $key, $value ) = @$setup[$i*2, $i*2 + 1];
+
+      # Rewrite stdin/stdout/stderr
+      $key eq "stdin"  and $key = "fd0";
+      $key eq "stdout" and $key = "fd1";
+      $key eq "stderr" and $key = "fd2";
+
+      if( $key =~ m/^fd(\d+)$/ ) {
+         my $fd = $1;
+         my $ref = ref $value;
+
+         if( !$ref ) {
+            croak "Operation for file descriptor $fd must be a reference";
+         }
+         elsif( $ref eq "ARRAY" ) {
+            # Already OK
+         }
+         elsif( $ref eq "GLOB" ) {
+            $value = [ 'dup', $value ];
+         }
+         else {
+            croak "Unrecognised reference type '$ref' for file descriptor $fd";
+         }
+
+         my $operation = $value->[0];
+         grep { $_ eq $operation } qw( open close dup ) or 
+            croak "Unrecognised operation '$operation' for file descriptor $fd";
+      }
+      else {
+         croak "Unrecognised setup operation '$key'";
+      }
+
+      push @setup, $key => $value;
+   }
+
+   return @setup;
 }
 
 sub _spawn_in_parent
@@ -355,9 +448,72 @@ sub _spawn_in_parent
 sub _spawn_in_child
 {
    my $self = shift;
-   my ( $writepipe, $code ) = @_;
+   my ( $writepipe, $code, $setup ) = @_;
 
-   my $exitvalue = eval { $code->() };
+   my $exitvalue = eval {
+      my %keep_fds = ( 0 => 1, 1 => 1, 2 => 1 ); # Keep STDIN, STDOUT, STDERR
+
+      if( @$setup ) {
+         # The writepipe might be in the way of a setup filedescriptor. If it
+         # is we'll have to dup2() it out of the way then close the original.
+         my ( $max_fd, $writepipe_clashes ) = ( 0, 0 );
+         foreach my $i ( 0 .. $#$setup/2 ) {
+            my $key = $$setup[$i*2];
+            $key =~ m/^fd(\d+)$/ or next;
+            my $fd = $1;
+
+            $max_fd = $fd if $fd > $max_fd;
+            $writepipe_clashes = 1 if $fd == fileno $writepipe;
+         }
+
+         if( $writepipe_clashes ) {
+            $max_fd++;
+
+            dup2( fileno $writepipe, $max_fd ) or die "Cannot dup2(writepipe to $max_fd) - $!";
+            undef $writepipe;
+            open( $writepipe, ">&=$max_fd" ) or die "Cannot fdopen($max_fd) as writepipe - $!";
+         }
+
+         foreach my $i ( 0 .. $#$setup/2 ) {
+            my ( $key, $value ) = @$setup[$i*2, $i*2 + 1];
+
+            if( $key =~ m/^fd(\d+)$/ ) {
+               my $fd = $1;
+               my( $operation, @params ) = @$value;
+
+               $operation eq "close" and do {
+                  delete $keep_fds{$fd};
+                  next;
+               };
+
+               $keep_fds{$fd} = 1;
+
+               $operation eq "dup"   and do {
+                  my $from = fileno $params[0];
+                  dup2( $from, $fd ) or die "Cannot dup2($from to $fd) - $!";
+               };
+               $operation eq "open"  and do {
+                  my ( $mode, $filename ) = @params;
+                  open( my $fh, $mode, $filename ) or die "Cannot open('$mode', '$filename') - $!";
+
+                  my $from = fileno $fh;
+                  dup2( $from, $fd ) or die "Cannot dup2($from to $fd) - $!";
+
+                  close $fh;
+               };
+            }
+         }
+      }
+
+      $keep_fds{fileno $writepipe} = 1;
+
+      foreach ( 0 .. OPEN_MAX_FD ) {
+         next if exists $keep_fds{$_};
+         POSIX::close( $_ );
+      }
+
+      $code->();
+   };
 
    defined $exitvalue or $exitvalue = -1;
 
