@@ -1,5 +1,13 @@
 Revision history for IO-Async
 
+0.05    CHANGES:
+         * Added ChildManager object
+         * Added singleton storage in IO::Async::Set to store a SignalProxy or
+           ChildManager conveniently
+
+        BUGFIXES:
+         * Workaround for a bug in IO::Poll version 0.05
+
 0.04    CHANGES:
          * Added dynamic signal attach / detach methods to SignalProxy
          * Buffer now has on_read_error / on_write_error callbacks for
