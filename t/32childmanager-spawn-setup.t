@@ -82,6 +82,7 @@ my $buffer;
       exitstatus => 1,
       dollarat   => '';
 
+   undef $buffer;
    is( $pipe_r->read( $buffer, 4 ), 4, '$pipe_r->read() after pipe dup to fd1' );
    is( $buffer,                'test', '$buffer after pipe dup to fd1' );
 
@@ -93,6 +94,7 @@ my $buffer;
       exitstatus => 1,
       dollarat   => '';
 
+   undef $buffer;
    is( $pipe_r->read( $buffer, 4 ), 4, '$pipe_r->read() after pipe dup to stdout shortcut' );
    is( $buffer,                'test', '$buffer after pipe dup to stdout shortcut' );
 
@@ -104,6 +106,7 @@ my $buffer;
       exitstatus => 1,
       dollarat   => '';
 
+   undef $buffer;
    is( $pipe_r->read( $buffer, 4 ), 4, '$pipe_r->read() after pipe dup to stdout' );
    is( $buffer,                'test', '$buffer after pipe dup to stdout' );
 
@@ -115,6 +118,7 @@ my $buffer;
       exitstatus => 1,
       dollarat   => '';
 
+   undef $buffer;
    is( $pipe_r->read( $buffer, 4 ), 4, '$pipe_r->read() after pipe dup to fd2' );
    is( $buffer,                'test', '$buffer after pipe dup to fd2' );
 
@@ -126,6 +130,7 @@ my $buffer;
       exitstatus => 1,
       dollarat   => '';
 
+   undef $buffer;
    is( $pipe_r->read( $buffer, 4 ), 4, '$pipe_r->read() after pipe dup to stderr' );
    is( $buffer,                'test', '$buffer after pipe dup to stderr' );
 
@@ -141,6 +146,7 @@ my $buffer;
       exitstatus => 1,
       dollarat   => '';
 
+   undef $buffer;
    is( $pipe_r->read( $buffer, 4 ), 4, '$pipe_r->read() after pipe dup to stderr' );
    is( $buffer,                'test', '$buffer after pipe dup to stderr' );
 
@@ -161,6 +167,7 @@ my $buffer;
       exitstatus => 1,
       dollarat   => '';
 
+   undef $buffer;
    is( $pipe_r->read( $buffer, 4 ), 4, '$pipe_r->read() after writepipe clash' );
    is( $buffer,                'test', '$buffer after writepipe clash' );
 
@@ -175,9 +182,11 @@ my $buffer;
       exitstatus => 1,
       dollarat   => '';
 
+   undef $buffer;
    is( $pipe_r->read( $buffer, 6 ), 6, '$pipe_r->read() after pipe dup to stdout and stderr' );
    is( $buffer,              'output', '$buffer after pipe dup to stdout and stderr' );
 
+   undef $buffer;
    is( $pipe2_r->read( $buffer, 5 ), 5, '$pipe2_r->read() after pipe dup to stdout and stderr' );
    is( $buffer,                'error', '$buffer after pipe dup to stdout and stderr' );
 }
@@ -206,6 +215,7 @@ TEST "stdout close",
 
    open( my $tmpfh, "<", $name ) or die "Cannot open '$name' for reading - $!";
 
+   undef $buffer;
    is( $tmpfh->read( $buffer, 4 ), 4, '$tmpfh->read() after stdout open' );
    is( $buffer,               'test', '$buffer after stdout open' );
 
@@ -219,6 +229,7 @@ TEST "stdout close",
 
    seek( $tmpfh, 0, 0 );
 
+   undef $buffer;
    is( $tmpfh->read( $buffer, 9 ), 9, '$tmpfh->read() after stdout open append' );
    is( $buffer,          'testvalue', '$buffer after stdout open append' );
 }
