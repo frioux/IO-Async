@@ -504,9 +504,9 @@ sub _spawn_in_child
          if( $writepipe_clashes ) {
             $max_fd++;
 
-            dup2( fileno $writepipe, $max_fd ) or die "Cannot dup2(writepipe to $max_fd) - $!";
+            dup2( fileno $writepipe, $max_fd ) or die "Cannot dup2(writepipe to $max_fd) - $!\n";
             undef $writepipe;
-            open( $writepipe, ">&=$max_fd" ) or die "Cannot fdopen($max_fd) as writepipe - $!";
+            open( $writepipe, ">&=$max_fd" ) or die "Cannot fdopen($max_fd) as writepipe - $!\n";
          }
 
          foreach my $i ( 0 .. $#$setup/2 ) {
@@ -525,14 +525,14 @@ sub _spawn_in_child
 
                $operation eq "dup"   and do {
                   my $from = fileno $params[0];
-                  dup2( $from, $fd ) or die "Cannot dup2($from to $fd) - $!";
+                  dup2( $from, $fd ) or die "Cannot dup2($from to $fd) - $!\n";
                };
                $operation eq "open"  and do {
                   my ( $mode, $filename ) = @params;
-                  open( my $fh, $mode, $filename ) or die "Cannot open('$mode', '$filename') - $!";
+                  open( my $fh, $mode, $filename ) or die "Cannot open('$mode', '$filename') - $!\n";
 
                   my $from = fileno $fh;
-                  dup2( $from, $fd ) or die "Cannot dup2($from to $fd) - $!";
+                  dup2( $from, $fd ) or die "Cannot dup2($from to $fd) - $!\n";
 
                   close $fh;
                };
