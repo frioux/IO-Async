@@ -102,19 +102,28 @@ is( $dollarat, "An exception here\n", '$dollarat after spawn CODE with die with 
 
 undef $ENDEXIT;
 
+# We need a command that just exits immediately with 0
+my $true;
+foreach (qw( /bin/true /usr/bin/true )) {
+   $true = $_, last if -x $_;
+}
+
+# Didn't find a likely-looking candidate. We'll fake one using perl itself
+$true = "$^X -e 1" if !defined $true;
+
 $manager->spawn(
-   command => "/bin/true",
+   command => $true,
    on_exit => \&on_exit,
 );
 
 $ready = wait_for_exit;
 
-is( $ready, 2, '$ready after spawn /bin/true' );
+is( $ready, 2, '$ready after spawn '.$true );
 
-ok( WIFEXITED($exitcode),      'WIFEXITED($exitcode) after spawn /bin/true' );
-is( WEXITSTATUS($exitcode), 0, 'WEXITSTATUS($exitcode) after spawn /bin/true' );
-is( $dollarbang+0,          0, '$dollarbang after spawn /bin/true' );
-is( $dollarat,             '', '$dollarat after spawn /bin/true' );
+ok( WIFEXITED($exitcode),      'WIFEXITED($exitcode) after spawn '.$true );
+is( WEXITSTATUS($exitcode), 0, 'WEXITSTATUS($exitcode) after spawn '.$true );
+is( $dollarbang+0,          0, '$dollarbang after spawn '.$true );
+is( $dollarat,             '', '$dollarat after spawn '.$true );
 
 # Just be paranoid in case anyone actually has this
 my $donotexist = "/bin/donotexist";
