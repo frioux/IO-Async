@@ -373,6 +373,8 @@ sub _check_setup_and_canonicise
 
    ref $setup eq "ARRAY" or croak "'setup' must be an ARRAY reference";
 
+   return () if !@$setup;
+
    my @setup;
 
    foreach my $i ( 0 .. $#$setup / 2 ) {
