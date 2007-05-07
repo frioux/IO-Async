@@ -364,6 +364,10 @@ Shortcuts for C<fd0>, C<fd1> and C<fd2> respectively.
 
 =back
 
+=item env => HASH
+
+A reference to a hash to set as the child process's environment.
+
 =cut
 
 sub _check_setup_and_canonicise
@@ -405,6 +409,9 @@ sub _check_setup_and_canonicise
          my $operation = $value->[0];
          grep { $_ eq $operation } qw( open close dup ) or 
             croak "Unrecognised operation '$operation' for file descriptor $fd";
+      }
+      elsif( $key eq "env" ) {
+         ref $value eq "HASH" or croak "Expected HASH reference for 'env' setup key";
       }
       else {
          croak "Unrecognised setup operation '$key'";
@@ -538,6 +545,9 @@ sub _spawn_in_child
 
                   close $fh;
                };
+            }
+            elsif( $key eq "env" ) {
+               %ENV = %$value;
             }
          }
       }

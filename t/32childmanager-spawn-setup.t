@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 75;
+use Test::More tests => 83;
 use Test::Exception;
 
 use IO::Async::ChildManager;
@@ -270,3 +270,21 @@ TEST "stdout close",
    is( $ret, 9,              '$tmpfh->read() after stdout open append' );
    is( $buffer, 'testvalue', '$buffer after stdout open append' );
 }
+
+$ENV{TESTKEY} = "parent value";
+
+TEST "environment is preserved",
+   setup => [],
+   code => sub { return $ENV{TESTKEY} eq "parent value" ? 0 : 1 },
+
+   ready      => 3,
+   exitstatus => 0,
+   dollarat   => '';
+
+TEST "environment is overwritten",
+   setup => [ env => { TESTKEY => "child value" } ],
+   code => sub { return $ENV{TESTKEY} eq "child value" ? 0 : 1 },
+
+   ready      => 3,
+   exitstatus => 0,
+   dollarat   => '';
