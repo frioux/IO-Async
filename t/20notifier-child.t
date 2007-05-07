@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More no_plan => 1;
+use Test::More tests => 20;
 use Test::Exception;
 
 use IO::Socket::UNIX;
