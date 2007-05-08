@@ -1,5 +1,19 @@
 Revision history for IO-Async
 
+0.06    CHANGES:
+         * Allow 'env' setup key to ChildManager->spawn() to change the
+           child's %ENV
+         * Updated the way some of the ->spawn() tests are conducted. There
+           seems to be massive failures reported on cpantesters against 0.05.
+           These changes won't fix the bugs, but should assist in reporting
+           and tracking them down.
+
+        BUGFIXES:
+         * Don't rely on existence of /bin/true - test for /usr/bin/true as
+           well, fall back on "$^X -e 1"
+         * Avoid kernel race condition in t/32childmanager-spawn-setup.t by
+           proper use of select() when testing.
+
 0.05    CHANGES:
          * Added ChildManager object
          * Added singleton storage in IO::Async::Set to store a SignalProxy or
