@@ -437,6 +437,7 @@ sub _spawn_in_parent
    my $dollarbang;
    my ( $dollarat, $length_dollarat );
    my $exitcode;
+   my $pipeclosed = 0;
 
    $set->add( IO::Async::Buffer->new(
       read_handle => $readpipe,
@@ -465,6 +466,8 @@ sub _spawn_in_parent
                $dollarat = "";
             }
 
+            $pipeclosed = 1;
+
             if( defined $exitcode ) {
                local $! = $dollarbang;
                $on_exit->( $kid, $exitcode, $!, $dollarat );
@@ -480,7 +483,7 @@ sub _spawn_in_parent
    $self->watch( $kid => sub { 
       ( my $kid, $exitcode ) = @_;
 
-      if( defined $dollarat ) {
+      if( $pipeclosed ) {
          local $! = $dollarbang;
          $on_exit->( $kid, $exitcode, $!, $dollarat );
       }
