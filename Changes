@@ -1,5 +1,11 @@
 Revision history for IO-Async
 
+0.07    BUGFIXES:
+         * Avoid race condition in t/30childmanager.t - wait for child process
+           to actually exit
+         * Avoid race condition in IO::Async::ChildManager->spawn() by waiting
+           for SIGCHLD+pipe close, rather than SIGCHLD+pipe data
+
 0.06    CHANGES:
          * Allow 'env' setup key to ChildManager->spawn() to change the
            child's %ENV
