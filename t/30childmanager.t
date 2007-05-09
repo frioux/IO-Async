@@ -31,10 +31,24 @@ if( $kid == 0 ) {
 
 my $exitcode;
 
+sub wait_for_exit
+{
+   my $ready = 0;
+   undef $exitcode;
+
+   while( !defined $exitcode ) {
+      $_ = $set->loop_once( 2 ); # Give code a generous 2 seconds to exit
+      die "Nothing was ready after 2 second wait" if $_ == 0;
+      $ready += $_;
+   }
+
+   $ready;
+}
+
 $manager->watch( $kid => sub { ( undef, $exitcode ) = @_; } );
 
 my $ready;
-$ready = $set->loop_once( 0.1 );
+$ready = wait_for_exit;
 
 is( $ready, 1, '$ready after child exit' );
 is( $handled, 1, '$handled after child exit' );
@@ -59,7 +73,7 @@ is( $ready, 0, '$ready after no death' );
 
 kill SIGTERM, $kid;
 
-$ready = $set->loop_once( 0.1 );
+$ready = wait_for_exit;
 
 is( $ready, 1, '$ready after child SIGTERM' );
 is( $handled, 1, '$handled after child SIGTERM' );
@@ -89,7 +103,7 @@ if( $kid == 0 ) {
 
 $set->watch_child( $kid => sub { ( undef, $exitcode ) = @_; } );
 
-$ready = $set->loop_once( 0.1 );
+$ready = wait_for_exit;
 
 is( $ready, 1, '$ready after child exit for set' );
 
