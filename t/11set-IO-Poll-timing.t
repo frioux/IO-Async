@@ -37,7 +37,7 @@ $set->loop_once( 2 );
 $took = time - $now;
 
 cmp_ok( $took, '>', 1.9, 'loop_once(2) while idle takes at least 1.9 seconds' );
-cmp_ok( $took, '<', 2.1, 'loop_once(2) while idle takes no more than 2.1 seconds' );
+cmp_ok( $took, '<', 2.5, 'loop_once(2) while idle takes no more than 2.5 seconds' );
 
 $set->add( $notifier );
 
@@ -46,4 +46,4 @@ $set->loop_once( 2 );
 $took = time - $now;
 
 cmp_ok( $took, '>', 1.9, 'loop_once(2) while waiting takes at least 1.9 seconds' );
-cmp_ok( $took, '<', 2.1, 'loop_once(2) while waiting takes no more than 2.1 seconds' );
+cmp_ok( $took, '<', 2.5, 'loop_once(2) while waiting takes no more than 2.5 seconds' );
