@@ -16,7 +16,7 @@ IO
  );
 
  my $buffer = IO::Async::Buffer->new(
-    handle => $line_socket,
+    handle => $socket,
 
     on_incoming_data => sub {
        return 0 unless( $$_[0] =~ s/^(.*\n)// );
