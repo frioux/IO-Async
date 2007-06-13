@@ -58,13 +58,9 @@ sub new
    my $class = shift;
    my ( %args ) = @_;
 
-   # Test if Glib::main_depth exists - a good hint on whether Glib is loaded
-   unless( Glib->can( 'main_depth' ) ) {
-      croak 'Cannot construct '.__PACKAGE__.' unless Glib is already loaded';
-   }
-
-   unless( defined Glib::MainContext->default ) {
-      croak 'Cannot construct '.__PACKAGE__.' unless a Glib::MainContext exists';
+   # Test if Glib is loaded
+   unless( exists $INC{'Glib.pm'} ) {
+      croak 'Cannot construct '.__PACKAGE__.' unless a Glib is loaded';
    }
 
    my $self = $class->__new( %args );
