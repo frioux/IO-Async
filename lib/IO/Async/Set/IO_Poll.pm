@@ -137,6 +137,12 @@ sub post_poll
    my $notifiers = $self->{notifiers};
    my $poll      = $self->{poll};
 
+   # Build a list of the notifiers that are ready, then fire the callbacks
+   # afterwards. This avoids races and other bad effects if any of the
+   # callbacks happen to change the notifiers in the set
+   my @readready;
+   my @writeready;
+
    foreach my $nkey ( keys %$notifiers ) {
       my $notifier = $notifiers->{$nkey};
 
@@ -148,16 +154,19 @@ sub post_poll
       # We have to test separately because kernel doesn't report POLLIN when
       # a pipe gets closed.
       if( $revents & (POLLIN|POLLHUP) ) {
-         $notifier->on_read_ready;
+         push @readready, $notifier;
       }
 
       my $wevents = defined $whandle ? $poll->events( $whandle ) : 0;
 
       if( $wevents & POLLOUT or
           ( $notifier->want_writeready and $wevents & POLLHUP ) ) {
-         $notifier->on_write_ready;
+         push @writeready, $notifier;
       }
    }
+
+   $_->on_read_ready foreach @readready;
+   $_->on_write_ready foreach @writeready;
 }
 
 =head2 $ready = $set->loop_once( $timeout )

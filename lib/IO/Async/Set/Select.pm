@@ -141,6 +141,12 @@ sub post_select
    my $self = shift;
    my ( $readvec, $writevec, $exceptvec ) = @_;
 
+   # Build a list of the notifiers that are ready, then fire the callbacks
+   # afterwards. This avoids races and other bad effects if any of the
+   # callbacks happen to change the notifiers in the set
+   my @readready;
+   my @writeready;
+
    my $notifiers = $self->{notifiers};
    foreach my $nkey ( keys %$notifiers ) {
       my $notifier = $notifiers->{$nkey};
@@ -149,13 +155,16 @@ sub post_select
       my $wfileno = $notifier->write_fileno;
 
       if( vec( $readvec, $rfileno, 1 ) ) {
-         $notifier->on_read_ready;
+         push @readready, $notifier;
       }
 
       if( defined $wfileno and vec( $writevec, $wfileno, 1 ) ) {
-         $notifier->on_write_ready;
+         push @writeready, $notifier;
       }
    }
+
+   $_->on_read_ready foreach @readready;
+   $_->on_write_ready foreach @writeready;
 }
 
 # Keep perl happy; keep Britain tidy
