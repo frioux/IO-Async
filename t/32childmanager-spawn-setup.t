@@ -51,7 +51,7 @@ sub TEST
    }
 
    if( exists $attr{ready} ) {
-      is( $ready, $attr{ready}, "\$ready after $name" );
+      cmp_ok( $ready, '>=', $attr{ready}, "\$ready after $name" );
    }
 
    if( exists $attr{exitstatus} ) {

@@ -64,7 +64,7 @@ $spawned_pid = $manager->spawn(
 my $ready;
 $ready = wait_for_exit;
 
-is( $ready, 3, '$ready after spawn CODE' );
+cmp_ok( $ready, '>=', 3, '$ready after spawn CODE' );
 
 is( $exited_pid, $spawned_pid,  '$exited_pid == $spawned_pid after spawn CODE' );
 ok( WIFEXITED($exitcode),       'WIFEXITED($exitcode) after spawn CODE' );
@@ -82,7 +82,7 @@ $spawned_pid = $manager->spawn(
 
 $ready = wait_for_exit;
 
-is( $ready, 3, '$ready after spawn CODE with END' );
+cmp_ok( $ready, '>=', 3, '$ready after spawn CODE with END' );
 
 is( $exited_pid, $spawned_pid, '$exited_pid == $spawned_pid after spawn CODE with END' );
 ok( WIFEXITED($exitcode),      'WIFEXITED($exitcode) after spawn CODE with END' );
@@ -98,7 +98,7 @@ $spawned_pid = $manager->spawn(
 
 $ready = wait_for_exit;
 
-is( $ready, 3, '$ready after spawn CODE with die with END' );
+cmp_ok( $ready, '>=', 3, '$ready after spawn CODE with die with END' );
 
 is( $exited_pid, $spawned_pid,   '$exited_pid == $spawned_pid after spawn CODE with die with END' );
 ok( WIFEXITED($exitcode),        'WIFEXITED($exitcode) after spawn CODE with die with END' );
@@ -143,7 +143,7 @@ $spawned_pid = $manager->spawn(
 
 $ready = wait_for_exit;
 
-is( $ready, 3, '$ready after spawn donotexist' );
+cmp_ok( $ready, '>=', 3, '$ready after spawn donotexist' );
 
 is( $exited_pid, $spawned_pid,   '$exited_pid == $spawned_pid after spawn donotexist' );
 ok( WIFEXITED($exitcode),        'WIFEXITED($exitcode) after spawn donotexist' );
