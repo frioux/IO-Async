@@ -15,6 +15,11 @@ use POSIX qw( EAGAIN EWOULDBLOCK );
 
 use Carp;
 
+# Tuneable from outside
+# Not yet documented
+our $READLEN  = 8192;
+our $WRITELEN = 8192;
+
 =head1 NAME
 
 C<IO::Async::Buffer> - a class which implements asynchronous sending
@@ -277,7 +282,7 @@ sub on_read_ready
    my $handle = $self->read_handle;
 
    my $data;
-   my $len = $handle->sysread( $data, 8192 );
+   my $len = $handle->sysread( $data, $READLEN );
 
    if( !defined $len ) {
       my $errno = $!;
@@ -325,7 +330,7 @@ sub on_write_ready
    my $handle = $self->write_handle;
 
    my $len = length( $self->{sendbuff} );
-   $len = 8192 if( $len > 8192 );
+   $len = $WRITELEN if( $len > $WRITELEN );
 
    my $data = substr( $self->{sendbuff}, 0, $len );
 
