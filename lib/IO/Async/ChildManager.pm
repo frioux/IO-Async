@@ -167,7 +167,7 @@ sub SIGCHLD
  
       if( defined $handlermap->{$zid} ) {
          $handlermap->{$zid}->( $zid, $? );
-         undef $handlermap->{$zid};
+         delete $handlermap->{$zid};
       }
       else {
          carp "No child death handler for '$zid'";
