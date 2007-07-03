@@ -2,20 +2,25 @@
 
 use strict;
 
-use Test::More;
+use constant MAIN_TESTS => 20;
+
+use Test::More tests => MAIN_TESTS + 1;
 use Test::Exception;
 
 use IO::Socket::UNIX;
 use IO::Async::Notifier;
 
-if( defined eval { require Glib } ) {
-   plan tests => 18;
-}
-else {
-   plan skip_all => "No Glib available";
-}
-
 use IO::Async::Set::GMainLoop;
+
+dies_ok( sub { IO::Async::Set::GMainLoop->new(); },
+         'No Glib loaded' );
+
+SKIP: { # Don't indent because most of this script is within the block; it would look messy
+
+if( !defined eval { require Glib } ) {
+   skip "No Glib available", MAIN_TESTS;
+   exit 0;
+}
 
 ( my $S1, my $S2 ) = IO::Socket::UNIX->socketpair( AF_UNIX, SOCK_STREAM, PF_UNSPEC ) or
    die "Cannot create socket pair - $!";
@@ -33,6 +38,9 @@ my $notifier = IO::Async::Notifier->new( handle => $S1,
 );
 
 my $set = IO::Async::Set::GMainLoop->new();
+
+ok( defined $set, '$set defined' );
+is( ref $set, "IO::Async::Set::GMainLoop", 'ref $set is IO::Async::Set::GMainLoop' );
 
 # Empty
 
@@ -124,3 +132,5 @@ $context->iteration( 0 );
 is( $readready, 1, '$readready after pipe HUP' );
 
 $set->remove( $pipe_notifier );
+
+} # for SKIP block

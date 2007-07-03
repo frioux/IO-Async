@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 25;
+use Test::More tests => 28;
 use Test::Exception;
 
 use POSIX qw( EAGAIN ECONNRESET );
@@ -16,6 +16,9 @@ use IO::Async::Buffer;
 # Need sockets in nonblocking mode
 $S1->blocking( 0 );
 $S2->blocking( 0 );
+
+dies_ok( sub { IO::Async::Buffer->new( handle => $S1 ) },
+         'No on_incoming_data' );
 
 sub read_data($)
 {
@@ -55,6 +58,9 @@ my $buff = IO::Async::Buffer->new(
    on_incoming_data => \&on_incoming_data,
    on_outgoing_empty => sub { $empty = 1 },
 );
+
+ok( defined $buff, '$buff defined' );
+is( ref $buff, "IO::Async::Buffer", 'ref $buff is IO::Async::Buffer' );
 
 # Sending
 

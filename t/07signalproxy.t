@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 13;
+use Test::More tests => 15;
 use Test::Exception;
 
 use POSIX qw( SIGUSR1 SIGUSR2 SIGTERM );
@@ -42,6 +42,9 @@ my $proxy = IO::Async::SignalProxy->new(
    signal_USR1 => sub { $caught .= "1" },
    signal_USR2 => sub { $caught .= "2" },
 );
+
+ok( defined $proxy, '$proxy defined' );
+is( ref $proxy, "IO::Async::SignalProxy", 'ref $proxy is IO::Async::SignalProxy' );
 
 # Idle
 

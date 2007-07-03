@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 20;
+use Test::More tests => 24;
 use Test::Exception;
 
 use IO::Socket::UNIX;
@@ -10,6 +10,9 @@ use IO::Socket::UNIX;
 use IO::Async::Notifier;
 
 use IO::Handle;
+
+dies_ok( sub { IO::Async::Notifier->new( handle => "Hello" ) },
+         'Not a socket' );
 
 ( my $S1, my $S2 ) = IO::Socket::UNIX->socketpair( AF_UNIX, SOCK_STREAM, PF_UNSPEC ) or
    die "Cannot create socket pair - $!";
@@ -21,10 +24,16 @@ $S2->blocking( 0 );
 my $readready = 0;
 my $writeready = 0;
 
+dies_ok( sub { IO::Async::Notifier->new( handle => $S1 ) },
+         'No on_read_ready' );
+
 my $ioan = IO::Async::Notifier->new( handle => $S1, want_writeready => 0,
    on_read_ready  => sub { $readready = 1 },
    on_write_ready => sub { $writeready = 1 },
 );
+
+ok( defined $ioan, '$ioan defined' );
+is( ref $ioan, "IO::Async::Notifier", 'ref $ioan is IO::Async::Notifier' );
 
 is( $ioan->read_handle,  $S1, '->read_handle returns S1' );
 is( $ioan->write_handle, $S1, '->write_handle returns S1' );

@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 32;
+use Test::More tests => 34;
 use Test::Exception;
 
 use IO::Socket::UNIX;
@@ -30,6 +30,9 @@ my $notifier = IO::Async::Notifier->new( handle => $S1,
 my $poll = IO::Poll->new();
 
 my $set = IO::Async::Set::IO_Poll->new( poll => $poll );
+
+ok( defined $set, '$set defined' );
+is( ref $set, "IO::Async::Set::IO_Poll", 'ref $set is IO::Async::Set::IO_Poll' );
 
 # Empty
 

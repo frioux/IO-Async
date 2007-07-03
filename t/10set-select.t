@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 23;
+use Test::More tests => 25;
 use Test::Exception;
 
 use IO::Socket::UNIX;
@@ -26,6 +26,9 @@ my $notifier = IO::Async::Notifier->new( handle => $S1,
 );
 
 my $set = IO::Async::Set::Select->new();
+
+ok( defined $set, '$set defined' );
+is( ref $set, "IO::Async::Set::Select", 'ref $set is IO::Async::Set::Select' );
 
 my $testvec = '';
 vec( $testvec, $S1->fileno, 1 ) = 1;

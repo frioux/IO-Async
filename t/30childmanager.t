@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 27;
+use Test::More tests => 29;
 use Test::Exception;
 
 use IO::Async::ChildManager;
@@ -12,6 +12,9 @@ use POSIX qw( SIGTERM WIFEXITED WEXITSTATUS WIFSIGNALED WTERMSIG );
 use IO::Async::Set::IO_Poll;
 
 my $manager = IO::Async::ChildManager->new();
+
+ok( defined $manager, '$manager defined' );
+is( ref $manager, "IO::Async::ChildManager", 'ref $manager is IO::Async::ChildManager' );
 
 my $handled;
 $handled = $manager->SIGCHLD;
