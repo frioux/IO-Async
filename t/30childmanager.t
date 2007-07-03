@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 16;
+use Test::More tests => 27;
 use Test::Exception;
 
 use IO::Async::ChildManager;
@@ -17,6 +17,8 @@ my $handled;
 $handled = $manager->SIGCHLD;
 
 is( $handled, 0, '$handled while idle' );
+
+is_deeply( [ $manager->list_watching ], [], 'list_watching while idle' );
 
 my $set = IO::Async::Set::IO_Poll->new();
 
@@ -47,6 +49,9 @@ sub wait_for_exit
 
 $manager->watch( $kid => sub { ( undef, $exitcode ) = @_; } );
 
+ok( $manager->is_watching( $kid ), 'is_watching after adding $kid' );
+is_deeply( [ $manager->list_watching ], [ $kid ], 'list_watching after adding $kid' );
+
 my $ready;
 $ready = wait_for_exit;
 
@@ -55,6 +60,9 @@ is( $handled, 1, '$handled after child exit' );
 
 ok( WIFEXITED($exitcode),      'WIFEXITED($exitcode) after child exit' );
 is( WEXITSTATUS($exitcode), 3, 'WEXITSTATUS($exitcode) after child exit' );
+
+ok( !$manager->is_watching( $kid ), 'is_watching after child exit' );
+is_deeply( [ $manager->list_watching ], [], 'list_watching after child exit' );
 
 $kid = fork();
 defined $kid or die "Cannot fork() - $!";
@@ -67,7 +75,13 @@ if( $kid == 0 ) {
 
 $manager->watch( $kid => sub { ( undef, $exitcode ) = @_; } );
 
+ok( $manager->is_watching( $kid ), 'is_watching after adding $kid' );
+is_deeply( [ $manager->list_watching ], [ $kid ], 'list_watching after adding $kid' );
+
 $ready = $set->loop_once( 0.1 );
+
+ok( $manager->is_watching( $kid ), 'is_watching after loop' );
+is_deeply( [ $manager->list_watching ], [ $kid ], 'list_watching after loop' );
 
 is( $ready, 0, '$ready after no death' );
 
@@ -80,6 +94,9 @@ is( $handled, 1, '$handled after child SIGTERM' );
 
 ok( WIFSIGNALED($exitcode),          'WIFSIGNALED($exitcode) after SIGTERM' );
 is( WTERMSIG($exitcode),    SIGTERM, 'WTERMSIG($exitcode) after SIGTERM' );
+
+ok( !$manager->is_watching( $kid ), 'is_watching after child SIGTERM' );
+is_deeply( [ $manager->list_watching ], [], 'list_watching after child SIGTERM' );
 
 # Now lets test the integration with a ::Set
 

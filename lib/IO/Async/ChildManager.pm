@@ -210,6 +210,47 @@ sub watch
    return;
 }
 
+=head2 $watching = $manager->is_watching( $kid )
+
+This method tests if the manager is currently watching for termination of the
+given PID. It returns a boolean value.
+
+=over 8
+
+=item $kid
+
+The PID.
+
+=back
+
+=cut
+
+sub is_watching
+{
+   my $self = shift;
+   my ( $kid ) = @_;
+
+   my $handlermap = $self->{childdeathhandlers};
+
+   return exists $handlermap->{$kid};
+}
+
+=head2 @kids = $manager->list_watching()
+
+This method returns a list of the PIDs that the manager is currently watching
+for. The list is returned in no particular order.
+
+=cut
+
+sub list_watching
+{
+   my $self = shift;
+
+   my $handlermap = $self->{childdeathhandlers};
+
+   return keys %$handlermap;
+}
+
 =head2 $pid = $manager->spawn( %params )
 
 This method creates a new child process to run a given code block or command.
