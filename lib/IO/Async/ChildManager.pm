@@ -251,6 +251,55 @@ sub list_watching
    return keys %$handlermap;
 }
 
+=head2 $pid = $manager->detach_child( %params )
+
+This method creates a new child process to run a given code block.
+
+=over 8
+
+=item code => CODE
+
+A block of code to execute in the child process. It will be called in scalar
+context inside an C<eval> block. The return value will be used as the
+C<exit()> code from the child if it returns (or 255 if it returned C<undef> or
+thows an exception).
+
+=item on_exit => CODE
+
+A optional callback function to be called when the child processes exits. It
+will be invoked in the following way:
+
+ $on_exit->( $pid, $exitcode )
+
+This key is optional; if not supplied, the calling code should install a
+handler using the C<watch_child()> method.
+
+=cut
+
+sub detach_child
+{
+   my $self = shift;
+   my %params = @_;
+
+   my $code = $params{code};
+
+   my $kid = fork();
+   defined $kid or croak "Cannot fork() - $!";
+
+   if( $kid == 0 ) {
+      my $exitvalue = eval { $code->() };
+
+      defined $exitvalue or $exitvalue = -1;
+      _exit( $exitvalue );
+   }
+
+   if( defined $params{on_exit} ) {
+      $self->watch( $kid => $params{on_exit} );
+   }
+
+   return $kid;
+}
+
 =head2 $pid = $manager->spawn( %params )
 
 This method creates a new child process to run a given code block or command.
@@ -344,19 +393,17 @@ sub spawn
       };
    }
 
-   my $kid = fork();
-   defined $kid or croak "Cannot fork() - $!";
+   my $kid = $self->detach_child( 
+      code => sub {
+         # Child
+         close( $readpipe );
+         $self->_spawn_in_child( $writepipe, $code, \@setup );
+      },
+   );
 
-   if( $kid != 0 ) {
-      # Parent
-      close( $writepipe );
-      $self->_spawn_in_parent( $readpipe, $kid, $on_exit );
-   }
-   else {
-      # Child
-      close( $readpipe );
-      $self->_spawn_in_child( $writepipe, $code, \@setup );
-   }
+   # Parent
+   close( $writepipe );
+   return $self->_spawn_in_parent( $readpipe, $kid, $on_exit );
 }
 
 =head2 C<setup> array
@@ -606,14 +653,13 @@ sub _spawn_in_child
       $code->();
    };
 
-   defined $exitvalue or $exitvalue = -1;
-
    my $writebuffer = "";
    $writebuffer .= pack( "I", $!+0 );
    $writebuffer .= pack( "I", length( $@ ) ) . $@;
 
    syswrite( $writepipe, $writebuffer );
-   _exit( $exitvalue );
+
+   return $exitvalue;
 }
 
 # Keep perl happy; keep Britain tidy
