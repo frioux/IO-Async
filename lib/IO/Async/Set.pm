@@ -330,6 +330,27 @@ sub detach_child
    $childmanager->detach_child( %params );
 }
 
+=head2 $code = $set->detach_code( %params )
+
+This method creates a new detached code object. It is equivalent to calling
+the C<IO::Async::DetachedCode> constructor, passing in the given set. See the
+documentation on this class for more information.
+
+=cut
+
+sub detach_code
+{
+   my $self = shift;
+   my %params = @_;
+
+   require IO::Async::DetachedCode;
+
+   return IO::Async::DetachedCode->new(
+      %params,
+      set => $self
+   );
+}
+
 =head2 $set->spawn_child( %params )
 
 This method creates a new child process to run a given code block or command.
