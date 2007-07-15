@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 23;
+use Test::More tests => 29;
 use Test::Exception;
 
 use IO::Async::DetachedCode;
@@ -136,6 +136,63 @@ dies_ok( sub { IO::Async::DetachedCode->new(
                   stream => "oranges",
                ); },
          'Unrecognised stream type fails' );
+
+$code = IO::Async::DetachedCode->new(
+   set  => $set,
+   code => sub { return $_[0] + $_[1] },
+   marshaller => "flat",
+);
+
+$code->call(
+   args => [ 7, 8 ],
+   on_return => sub { $result = shift },
+   on_error  => sub { die "Test failed early - @_" },
+);
+
+undef $result;
+$ready = wait_for { defined $result };
+
+cmp_ok( $ready, '>=', 2, '$ready after call to code over flat marshaller' );
+is( $result, 15, '$result of code over flat' );
+
+dies_ok( sub { $code->call( 
+                  args => [ \'a' ], 
+                  on_return => sub {},
+                  on_error  => sub {},
+               );
+            },
+         'call with reference arguments using flat marshaller dies' );
+
+$code->shutdown;
+undef $code;
+
+dies_ok( sub { IO::Async::DetachedCode->new(
+                  set  => $set,
+                  code => sub { return $_[0] },
+                  marshaller => "grapefruit",
+               ); },
+         'Unrecognised marshaller type fails' );
+
+$code = IO::Async::DetachedCode->new(
+   set  => $set,
+   code => sub { return ref( $_[0] ), \$_[1] },
+   marshaller => "storable",
+);
+
+$code->call(
+   args => [ \'a', 'b' ],
+   on_return => sub { @result = @_ },
+   on_error  => sub { die "Test failed early - @_" },
+);
+
+undef @result;
+$ready = wait_for { scalar @result };
+
+cmp_ok( $ready, '>=', 2, '$ready after call to code over storable marshaller' );
+is_deeply( \@result, [ 'SCALAR', \'b' ], '@result after call to code over storable marshaller' );
+
+$code->shutdown;
+undef $code;
 
 my $err;
 

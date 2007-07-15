@@ -2,23 +2,19 @@
 
 use strict;
 
-use Test::More tests => 14;
+use Test::More tests => 24;
 use Test::Exception;
 
 use IO::Async::DetachedCode;
 
 use IO::Async::DetachedCode::FlatMarshaller;
+use IO::Async::DetachedCode::StorableMarshaller;
 
 use IO::Async::Set::IO_Poll;
 
-my $marshaller = IO::Async::DetachedCode::FlatMarshaller->new();
-
-ok( defined $marshaller, '$marshaller defined' );
-is( ref $marshaller, "IO::Async::DetachedCode::FlatMarshaller", 'ref $marshaller is IO::Async::DetachedCode::FlatMarshaller' );
-
 sub test_marshall_args
 {
-   my ( $name ) = @_;
+   my ( $marshaller, $name ) = @_;
 
    my $data = $marshaller->marshall_args( 1, [] );
    my $args = $marshaller->unmarshall_args( 1, $data );
@@ -41,7 +37,37 @@ sub test_marshall_args
    is_deeply( $args, [ undef ], "args for args list with undef using $name" );
 }
 
-test_marshall_args( "flat" );
+sub test_marshall_args_ref
+{
+   my ( $marshaller, $name ) = @_;
+
+   my $data = $marshaller->marshall_args( 3, [ \'a' ] );
+   my $args = $marshaller->unmarshall_args( 3, $data );
+
+   is_deeply( $args, [ \'a' ], "args for SCALAR ref using $name" );
+
+   $data = $marshaller->marshall_args( 30, [ [ 'a' ] ] );
+   $args = $marshaller->unmarshall_args( 30, $data );
+
+   is_deeply( $args, [ [ 'a' ] ], "args for ARRAY ref using $name" );
+
+   $data = $marshaller->marshall_args( 300, [ { a => 'A' } ] );
+   $args = $marshaller->unmarshall_args( 300, $data );
+
+   is_deeply( $args, [ { a => 'A' } ], "args for HASH ref using $name" );
+
+   $data = $marshaller->marshall_args( 3000, [ [ [ 'a' ] ] ] );
+   $args = $marshaller->unmarshall_args( 3000, $data );
+
+   is_deeply( $args, [ [ [ 'a' ] ] ], "args for deep ARRAY ref using $name" );
+}
+
+my $marshaller = IO::Async::DetachedCode::FlatMarshaller->new();
+
+ok( defined $marshaller, '$marshaller defined' );
+is( ref $marshaller, "IO::Async::DetachedCode::FlatMarshaller", 'ref $marshaller is IO::Async::DetachedCode::FlatMarshaller' );
+
+test_marshall_args( $marshaller, "flat" );
 
 dies_ok( sub { $marshaller->marshall_args( 2, [ \'a' ] ); },
          "marshalling SCALAR ref dies using flat" );
@@ -51,6 +77,14 @@ dies_ok( sub { $marshaller->marshall_args( 2, [ ['a'] ] ); },
 
 dies_ok( sub { $marshaller->marshall_args( 2, [ { a => 'A' } ] ); },
          "marshalling HASH ref dies using flat" );
+
+$marshaller = IO::Async::DetachedCode::StorableMarshaller->new();
+
+ok( defined $marshaller, '$marshaller defined' );
+is( ref $marshaller, "IO::Async::DetachedCode::StorableMarshaller", 'ref $marshaller is IO::Async::DetachedCode::StorableMarshaller' );
+
+test_marshall_args( $marshaller, "storable" );
+test_marshall_args_ref( $marshaller, "storable" );
 
 my $set = IO::Async::Set::IO_Poll->new();
 $set->enable_childmanager;

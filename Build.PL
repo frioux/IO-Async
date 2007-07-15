@@ -10,6 +10,7 @@ my $build = Module::Build->new
    dist_abstract     => "a collection of modules that implement asynchronous filehandle IO",
    requires => {
                  'IO::Poll' => 0,
+                 'Storable' => 0,
                },
    build_requires => {
                  'Test::More' => 0,

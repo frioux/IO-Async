@@ -76,7 +76,9 @@ the order they were queued, and results returned in that order.
 
 The default marshalling code can only cope with plain scalars or C<undef>
 values; no references, objects, or IO handles may be passed to the function
-each time it is called. (See also B<TODO> section).
+each time it is called. If references are required, code based on L<Storable>
+may be used instead, to pass these. See the documentation on the C<marshaller>
+parameter of C<new()> method.
 
 The C<IO::Async> framework generally provides mechanisms for multiplexing IO
 tasks between different handles, so there aren't many occasions when such
@@ -131,6 +133,16 @@ file descriptors in the parent process, however.
 
 If not supplied, the C<socket> method is used.
 
+=item marshaller => STRING: C<flat> or C<storable>
+
+Optional string, specifies the way that call arguments and return values are
+marshalled over the stream that connects the child and parent processes.
+The C<flat> method is small, simple and fast, but can only cope with strings
+or C<undef>; cannot cope with any references. The C<storable> method uses the
+L<Storable> module to marshall arbitrary reference structures.
+
+If not supplied, the C<flat> method is used.
+
 =back
 
 Since the code block will be called multiple times within the same child
@@ -152,8 +164,19 @@ sub new
    my $code = delete $params{code};
    ref $code eq "CODE" or croak "Expected a CODE reference as 'code'";
 
-   require IO::Async::DetachedCode::FlatMarshaller;
-   my $marshaller = IO::Async::DetachedCode::FlatMarshaller->new();
+   my $marshaller;
+
+   if( !defined $params{marshaller} or $params{marshaller} eq "flat" ) {
+      require IO::Async::DetachedCode::FlatMarshaller;
+      $marshaller = IO::Async::DetachedCode::FlatMarshaller->new();
+   }
+   elsif( $params{marshaller} eq "storable" ) {
+      require IO::Async::DetachedCode::StorableMarshaller;
+      $marshaller = IO::Async::DetachedCode::StorableMarshaller->new();
+   }
+   else {
+      croak "Unrecognised marshaller type '$params{marshaller}'";
+   }
 
    my $self = bless {
       next_id => 0,
@@ -486,8 +509,8 @@ __END__
 
 =item *
 
-Allow other argument/return value marshalling code - at least one based on
-C<Storable> so as to allow arbitrary references in arguments.
+Allow other argument/return value marshalling code - perhaps an arbitrary
+object.
 
 =item *
 
