@@ -152,12 +152,16 @@ sub new
    my $code = delete $params{code};
    ref $code eq "CODE" or croak "Expected a CODE reference as 'code'";
 
+   require IO::Async::DetachedCode::FlatMarshaller;
+   my $marshaller = IO::Async::DetachedCode::FlatMarshaller->new();
+
    my $self = bless {
       next_id => 0,
       set     => $set,
       code    => $code,
 
       result_handler => {},
+      marshaller     => $marshaller,
    }, $class;
 
    my ( $childread, $mywrite );
@@ -297,7 +301,7 @@ sub call
 
    my $callid = $self->{next_id}++;
 
-   my $data = $self->_marshall_args( $callid, $args );
+   my $data = $self->{marshaller}->marshall_args( $callid, $args );
    my $request = $self->_marshall_record( 'c', $callid, $data );
 
    $self->{iobuffer}->send( pack( "I", length $request ) . $request );
@@ -366,7 +370,7 @@ sub _socket_incoming
    my $handler = $handlermap->{$id};
 
    if( $type eq "r" ) {
-      my $ret = $self->_unmarshall_ret( $id, $data );
+      my $ret = $self->{marshaller}->unmarshall_ret( $id, $data );
       $handler->( "return", @$ret );
    }
    elsif( $type eq "e" ) {
@@ -394,64 +398,6 @@ sub _child_error
    $self->shutdown;
 
    return 0;
-}
-
-##### (De)marshalling abstraction support
-
-sub _marshall_args
-{
-   my ( $self ) = shift;
-   my ( $id, $args ) = @_;
-
-   my $buffer = "";
-
-   foreach( @$args ) {
-      croak "Cannot marshall a ".ref($_)." using the 'flat' marshaller" if ref $_;
-
-      $buffer .= defined $_ ?
-         pack( "i", length( $_ ) ) . $_ :
-         pack( "i", -1 );
-   }
-
-   return $buffer;
-}
-
-sub _unmarshall_args
-{
-   my ( $self ) = shift;
-   my ( $id, $record ) = @_;
-
-   my @args;
-
-   while( length $record ) {
-      my $arglen = unpack( "i", $record );
-      substr( $record, 0, LENGTH_OF_I, "" );
-
-      if( $arglen == -1 ) {
-         push @args, undef;
-      }
-      else {
-         push @args, substr( $record, 0, $arglen, "" );
-      }
-   }
-
-   return ( \@args );
-}
-
-sub _marshall_ret
-{
-   my $self = shift;
-   my ( $id, $ret ) = @_;
-
-   return $self->_marshall_args( $id, $ret );
-}
-
-sub _unmarshall_ret
-{
-   my $self = shift;
-   my ( $id, $record ) = @_;
-
-   return $self->_unmarshall_args( $id, $record );
 }
 
 sub _marshall_record
@@ -502,14 +448,14 @@ sub _child_loop
       my ( $type, $id, $data ) = $self->_unmarshall_record( $record );
       $type eq "c" or die "Unexpected record type $type\n";
 
-      my $args = $self->_unmarshall_args( $id, $data );
+      my $args = $self->{marshaller}->unmarshall_args( $id, $data );
 
       my @ret;
       my $ok = eval { @ret = $code->( @$args ); 1 };
 
       my $result;
       if( $ok ) {
-         my $data = $self->_marshall_ret( $id, \@ret );
+         my $data = $self->{marshaller}->marshall_ret( $id, \@ret );
          $result = $self->_marshall_record( 'r', $id, $data );
       }
       else {
