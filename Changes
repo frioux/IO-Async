@@ -1,5 +1,15 @@
 Revision history for IO-Async
 
+0.08    CHANGES:
+         * Added ChildManager->detach_child() method
+         * Added DetachedCode object
+        BUGFIXES:
+         * Better tests for presence of Glib to improve test false failures
+         * More lenient times in test script 11set-IO-Poll-timing to allow for
+           variances at test time
+         * Avoid bugs in post_select()/post_poll() caused by some notifier
+           callbacks removing other notifiers from the set
+
 0.07    BUGFIXES:
          * Avoid race condition in t/30childmanager.t - wait for child process
            to actually exit
