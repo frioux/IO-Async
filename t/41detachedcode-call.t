@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 18;
+use Test::More tests => 23;
 use Test::Exception;
 
 use IO::Async::DetachedCode;
@@ -87,6 +87,55 @@ is_deeply( \@result, [ 3, 7 ], '@result after both calls return' );
 
 $code->shutdown;
 undef $code;
+
+$code = IO::Async::DetachedCode->new(
+   set  => $set,
+   code => sub { return $_[0] + $_[1] },
+   stream => "socket",
+);
+
+$code->call(
+   args => [ 5, 6 ],
+   on_return => sub { $result = shift },
+   on_error  => sub { die "Test failed early - @_" },
+);
+
+undef $result;
+$ready = wait_for { defined $result };
+
+cmp_ok( $ready, '>=', 2, '$ready after call to code over socket' );
+is( $result, 11, '$result of code over socket' );
+
+$code->shutdown;
+undef $code;
+
+$code = IO::Async::DetachedCode->new(
+   set  => $set,
+   code => sub { return $_[0] + $_[1] },
+   stream => "pipe",
+);
+
+$code->call(
+   args => [ 5, 6 ],
+   on_return => sub { $result = shift },
+   on_error  => sub { die "Test failed early - @_" },
+);
+
+undef $result;
+$ready = wait_for { defined $result };
+
+cmp_ok( $ready, '>=', 2, '$ready after call to code over pipe' );
+is( $result, 11, '$result of code over pipe' );
+
+$code->shutdown;
+undef $code;
+
+dies_ok( sub { IO::Async::DetachedCode->new(
+                  set  => $set,
+                  code => sub { return $_[0] },
+                  stream => "oranges",
+               ); },
+         'Unrecognised stream type fails' );
 
 my $err;
 

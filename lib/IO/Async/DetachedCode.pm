@@ -121,6 +121,16 @@ context each time the C<call()> method is is called, passing in the arguments
 given. The result will be given to the C<on_result> or C<on_return> callback
 provided to the C<call()> method.
 
+=item stream => STRING: C<socket> or C<pipe>
+
+Optional string, specifies which sort of stream will be used to attach to the
+child process. C<socket> uses only one file descriptor in the parent process,
+but not all systems may be able to use it. If the system does not allow
+C<PF_UNIX> socket pairs, then C<pipe> can be used instead. This will use two
+file descriptors in the parent process, however.
+
+If not supplied, the C<socket> method is used.
+
 =back
 
 Since the code block will be called multiple times within the same child
@@ -150,30 +160,49 @@ sub new
       result_handler => {},
    }, $class;
 
-   # BIG TODO: consider pipe-vs-socket here
-   socketpair( my $myend, my $otherend, PF_UNIX, SOCK_STREAM, 0 ) or
-      croak "Cannot socketpair(PF_UNIX) - $!";
+   my ( $childread, $mywrite );
+   my ( $myread, $childwrite );
+
+   my $streamtype = $params{stream};
+
+   if( !defined $streamtype or $streamtype eq "socket" ) {
+      socketpair( my $myend, my $childend, PF_UNIX, SOCK_STREAM, 0 ) or
+         croak "Cannot socketpair(PF_UNIX) - $!";
+
+      $mywrite = $myread = $myend;
+      $childwrite = $childread = $childend;
+   }
+   elsif( $streamtype eq "pipe" ) {
+      pipe( $childread, $mywrite ) or croak "Cannot pipe() - $!";
+      pipe( $myread, $childwrite ) or croak "Cannot pipe() - $!";
+   }
+   else {
+      croak "Unrecognised stream type '$streamtype'";
+   }
 
    my $kid = $set->detach_child(
       code => sub { 
          foreach( 0 .. IO::Async::ChildManager::OPEN_MAX_FD() ) {
             next if $_ == 2;
-            next if $_ == fileno $otherend;
+            next if $_ == fileno $childread;
+            next if $_ == fileno $childwrite;
 
             POSIX::close( $_ );
          }
 
-         $self->_child_loop( $otherend, $otherend ),
+         $self->_child_loop( $childread, $childwrite ),
       },
       on_exit => sub { $self->_child_error( 'exit', @_ ) },
    );
 
    $self->{kid} = $kid;
 
-   close( $otherend );
+   close( $childread );
+   close( $childwrite );
 
    my $iobuffer = IO::Async::Buffer->new(
-      handle => $myend,
+      read_handle  => $myread,
+      write_handle => $mywrite,
 
       on_incoming_data => sub { $self->_socket_incoming( $_[1], $_[2] ) },
    );
