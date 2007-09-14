@@ -11,6 +11,10 @@ use POSIX qw( WIFEXITED WEXITSTATUS ENOENT );
 
 use IO::Async::Set::IO_Poll;
 
+# Need to look this up, so we don't hardcode the message in the test script
+# This might cause locale issues
+use constant ENOENT_MESSAGE => do { local $! = ENOENT; "$!" };
+
 my $manager = IO::Async::ChildManager->new();
 
 dies_ok( sub { $manager->spawn( command => "/bin/true", on_exit => sub {} ); },
@@ -148,8 +152,8 @@ cmp_ok( $ready, '>=', 3, '$ready after spawn donotexist' );
 is( $exited_pid, $spawned_pid,   '$exited_pid == $spawned_pid after spawn donotexist' );
 ok( WIFEXITED($exitcode),        'WIFEXITED($exitcode) after spawn donotexist' );
 is( WEXITSTATUS($exitcode), 255, 'WEXITSTATUS($exitcode) after spawn donotexist' );
-is( $dollarbang+0, ENOENT,                      '$dollarbang numerically after spawn donotexist' ); 
-is( "$dollarbang", "No such file or directory", '$dollarbang string after spawn donotexist' );
+is( $dollarbang+0, ENOENT,         '$dollarbang numerically after spawn donotexist' ); 
+is( "$dollarbang", ENOENT_MESSAGE, '$dollarbang string after spawn donotexist' );
 is( $dollarat,             '', '$dollarat after spawn donotexist' );
 
 $spawned_pid = $manager->spawn(
