@@ -1,0 +1,206 @@
+#  You may distribute under the terms of either the GNU General Public License
+#  or the Artistic License (the same terms as Perl itself)
+#
+#  (C) Paul Evans, 2006,2007 -- leonerd@leonerd.org.uk
+
+package IO::Async::TimeQueue;
+
+use strict;
+
+our $VERSION = '0.08';
+
+use Carp;
+use Heap::Fibonacci;
+
+=head1 NAME
+
+C<IO::Async::TimeQueue> - a class which implements a queue of future timed
+event callbacks
+
+=head1 DESCRIPTION
+
+This class is not intended to be used by external code; it is used by
+C<IO::Async::Set::Select> and C<IO::Async::Set::IO_Poll> to implement the
+timer features.
+
+=cut
+
+=head1 CONSTRUCTOR
+
+=cut
+
+=head2 $queue = IO::Async::TimeQueue->new()
+
+=cut
+
+sub new
+{
+   my $class = shift;
+   my ( %params ) = @_;
+
+   my $self = bless {
+      heap => Heap::Fibonacci->new,
+   }, $class;
+
+   return $self;
+}
+
+=head1 METHODS
+
+=cut
+
+=head2 $time = $queue->next_time
+
+Returns the time of the next event on the queue, or C<undef> if no events
+are left.
+
+=cut
+
+sub next_time
+{
+   my $self = shift;
+
+   my $heap = $self->{heap};
+
+   my $top = $heap->top;
+
+   return defined $top ? $top->time : undef;
+}
+
+=head2 $queue->enqueue( %params )
+
+Adds a new event to the queue. The C<%params> takes the following keys:
+
+=over 8
+
+=item time => NUM
+
+The absolute system timestamp to run the event.
+
+=item delay => NUM
+
+The delay after now at which to run the event.
+
+=item now => NUM
+
+The time to consider as now; defaults to C<time()> if not specified.
+
+=item code => CODE
+
+CODE reference to the callback function to run at the allotted time.
+
+=back
+
+Either C<time> or C<delay> must be specified.
+
+=cut
+
+sub enqueue
+{
+   my $self = shift;
+   my ( %params ) = @_;
+
+   my $time;
+   if( exists $params{time} ) {
+      $time = delete $params{time};
+   }
+   elsif( exists $params{delay} ) {
+      my $now = exists $params{now} ? $params{now} : time();
+
+      $time = $now + delete $params{delay};
+   }
+   else {
+      croak "Expected either 'time' or 'delay' keys";
+   }
+
+   my $code = delete $params{code};
+   ref $code eq "CODE" or croak "Expected 'code' to be a CODE reference";
+
+   my $heap = $self->{heap};
+
+   $heap->add( IO::Async::TimeQueue::Elem->new( $time, $code ) );
+}
+
+=head2 $queue->fire( %params )
+
+Call all the event callbacks that should have run by now. The C<%params> hash
+takes the following keys:
+
+=over 8
+
+=item now => NUM
+
+The time to consider as now; defaults to C<time()> if not specified.
+
+=back
+
+=cut
+
+sub fire
+{
+   my $self = shift;
+   my ( %params ) = @_;
+
+   my $now = exists $params{now} ? $params{now} : time();
+
+   my $heap = $self->{heap};
+
+   while( defined( my $top = $heap->top ) ) {
+      last if( $top->time > $now );
+
+      $top->code->();
+
+      $heap->extract_top;
+   }
+}
+
+# Keep perl happy; keep Britain tidy
+1;
+
+package IO::Async::TimeQueue::Elem;
+
+use strict;
+use base qw( Heap::Elem );
+
+sub new
+{
+   my $self = shift;
+   my $class = ref $self || $self;
+
+   my ( $time, $code ) = @_;
+
+   my $new = $class->SUPER::new();
+
+   $new->{time} = $time;
+   $new->{code} = $code;
+
+   return $new;
+}
+
+sub cmp
+{
+   my $self = shift;
+   my $other = shift;
+
+   $self->{time} <=> $other->{time};
+}
+
+sub time 
+{
+   my $self = shift;
+   return $self->{time};
+}
+
+sub code
+{
+   my $self = shift;
+   return $self->{code};
+}
+
+1;
+
+__END__
+
+=head1 AUTHOR
+
+Paul Evans E<lt>leonerd@leonerd.org.ukE<gt>
