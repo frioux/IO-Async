@@ -136,6 +136,39 @@ sub __notifier_want_writeready
    }
 }
 
+# override
+sub enqueue_timer
+{
+   my $self = shift;
+   my ( %params ) = @_;
+
+   # Just let GLib handle all these timer events
+   my $delay;
+   if( exists $params{time} ) {
+      my $now = exists $params{now} ? $params{now} : time();
+
+      $delay = delete($params{time}) - $now;
+   }
+   elsif( exists $params{delay} ) {
+      $delay = delete $params{delay};
+   }
+   else {
+      croak "Expected either 'time' or 'delay' keys";
+   }
+
+   my $interval = $delay * 1000; # miliseconds
+
+   my $code = delete $params{code};
+   ref $code eq "CODE" or croak "Expected 'code' to be a CODE reference";
+
+   my $callback = sub {
+      $code->();
+      return 0;
+   };
+
+   my $ret = Glib::Timeout->add( $interval, $callback );
+}
+
 # Keep perl happy; keep Britain tidy
 1;
 

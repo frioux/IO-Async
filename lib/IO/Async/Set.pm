@@ -63,6 +63,7 @@ sub __new
       notifiers    => {}, # {nkey} = notifier
       sigproxy     => undef,
       childmanager => undef,
+      timequeue    => undef,
    }, $class;
 
    return $self;
@@ -366,6 +367,83 @@ sub spawn_child
 
    my $childmanager = $self->get_childmanager;
    $childmanager->spawn( %params );
+}
+
+sub __enable_timer
+{
+   my $self = shift;
+
+   defined $self->{timequeue} and
+      croak "Timer already enabled for this set";
+
+   require IO::Async::TimeQueue;
+   my $timequeue = IO::Async::TimeQueue->new();
+
+   $self->{timequeue} = $timequeue;
+}
+
+# For subclasses to call
+sub _adjust_timeout
+{
+   my $self = shift;
+   my ( $timeref ) = @_;
+
+   my $timequeue = $self->{timequeue};
+   return unless defined $timequeue;
+
+   my $nexttime = $timequeue->next_time;
+   return unless defined $nexttime;
+
+   my $now = time(); # TODO: Time::HiRes
+   my $timer_delay = $nexttime - $now;
+
+   if( $timer_delay < 0 ) {
+      $$timeref = 0;
+   }
+   elsif( $timer_delay < \$timeref ) {
+      $$timeref = $timer_delay;
+   }
+}
+
+=head2 $set->enqueue_timer( %params )
+
+This method installs a callback which will be called at the specified time.
+The time may either be specified as an absolute value (the C<time> key), or
+as a delay from the time it is installed (the C<delay> key). The C<%params>
+hash takes the following keys:
+
+=over 8
+
+=item time => NUM
+
+The absolute system timestamp to run the event.
+
+=item delay => NUM
+
+The delay after now at which to run the event.
+
+=item now => NUM
+
+The time to consider as now; defaults to C<time()> if not specified.
+
+=item code => CODE
+
+CODE reference to the callback function to run at the allotted time.
+
+=back
+
+=cut
+
+sub enqueue_timer
+{
+   my $self = shift;
+   my ( %params ) = @_;
+
+   defined $self->{timequeue} or $self->__enable_timer;
+
+   my $timequeue = $self->{timequeue};
+
+   $timequeue->enqueue( %params );
 }
 
 # Keep perl happy; keep Britain tidy

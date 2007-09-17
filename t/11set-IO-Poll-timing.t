@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 4;
+use Test::More tests => 7;
 
 use Time::HiRes qw( time );
 
@@ -47,3 +47,20 @@ $took = time - $now;
 
 cmp_ok( $took, '>', 1.9, 'loop_once(2) while waiting takes at least 1.9 seconds' );
 cmp_ok( $took, '<', 2.5, 'loop_once(2) while waiting takes no more than 2.5 seconds' );
+
+$set->remove( $notifier );
+
+# timers
+
+my $done = 0;
+
+$set->enqueue_timer( delay => 2, code => sub { $done = 1; } );
+
+$now = time;
+$set->loop_once( 5 );
+$took = time - $now;
+
+cmp_ok( $took, '>', 1.9, 'loop_once(5) while waiting for timer takes at least 1.9 seconds' );
+cmp_ok( $took, '<', 2.5, 'loop_once(5) while waiting for timer no more than 2.5 seconds' );
+
+is( $done, 1, '$done after loop_once while waiting for timer' );

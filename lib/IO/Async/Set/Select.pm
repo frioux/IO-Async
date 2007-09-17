@@ -114,6 +114,8 @@ sub pre_select
       vec( $$writeref, $notifier->write_fileno, 1 ) = 1 if( $notifier->want_writeready );
    }
 
+   $self->_adjust_timeout( $timeref );
+
    return;
 }
 
@@ -165,6 +167,12 @@ sub post_select
 
    $_->on_read_ready foreach @readready;
    $_->on_write_ready foreach @writeready;
+
+   # Since we have no way to know if the timeout occured, we'll have to
+   # attempt to fire any waiting timeout events anyway
+
+   my $timequeue = $self->{timequeue};
+   $timequeue->fire if $timequeue;
 }
 
 # Keep perl happy; keep Britain tidy

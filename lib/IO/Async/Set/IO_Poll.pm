@@ -167,6 +167,12 @@ sub post_poll
 
    $_->on_read_ready foreach @readready;
    $_->on_write_ready foreach @writeready;
+
+   # Since we have no way to know if the timeout occured, we'll have to
+   # attempt to fire any waiting timeout events anyway
+
+   my $timequeue = $self->{timequeue};
+   $timequeue->fire if $timequeue;
 }
 
 =head2 $ready = $set->loop_once( $timeout )
@@ -183,6 +189,8 @@ sub loop_once
 {
    my $self = shift;
    my ( $timeout ) = @_;
+
+   $self->_adjust_timeout( \$timeout );
 
    my $poll = $self->{poll};
 
