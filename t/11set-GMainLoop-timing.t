@@ -12,6 +12,8 @@ use IO::Socket::UNIX;
 
 use IO::Async::Set::GMainLoop;
 
+SKIP: { # Don't indent because most of this script is within the block; it would look messy
+
 if( !defined eval { require Glib } ) {
    skip "No Glib available", MAIN_TESTS;
    exit 0;
@@ -43,3 +45,5 @@ alarm 0;
 $context->iteration( 0 );
 
 is( $done, 1, '$done after iteration while waiting for timer' );
+
+} # for SKIP block
