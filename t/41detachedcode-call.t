@@ -45,8 +45,8 @@ sub wait_for(&)
    undef $result;
 
    while( !$cond->() ) {
-      $_ = $set->loop_once( 2 ); # Give code a generous 2 seconds to do something
-      die "Nothing was ready after 2 second wait" if $_ == 0;
+      $_ = $set->loop_once( 10 ); # Give code a generous 10 seconds to do something
+      die "Nothing was ready after 10 second wait" if $_ == 0;
       $ready += $_;
    }
 
