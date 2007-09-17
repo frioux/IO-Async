@@ -174,8 +174,8 @@ my $ret;
    undef $buffer;
    $ret = read_timeout( $pipe_r, $buffer, 4, 0.1 );
 
-   is( $ret, 4,         '$pipe_r->read() after pipe dup to stderr' );
-   is( $buffer, 'test', '$buffer after pipe dup to stderr' );
+   is( $ret, 4,         '$pipe_r->read() after pipe dup to other FD' );
+   is( $buffer, 'test', '$buffer after pipe dup to other FD' );
 
    TEST "other FD close",
       code => sub { return $pipe_w->syswrite( "test" ); },
