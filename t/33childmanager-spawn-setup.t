@@ -12,12 +12,10 @@ use POSIX qw( WIFEXITED WEXITSTATUS ENOENT EBADF );
 
 use IO::Async::Set::IO_Poll;
 
-my $manager = IO::Async::ChildManager->new();
-
 my $set = IO::Async::Set::IO_Poll->new();
 $set->enable_childmanager;
 
-$manager = $set->get_childmanager;
+my $manager = $set->get_childmanager;
 
 dies_ok( sub { $manager->spawn( code => sub { 1 }, setup => "hello" ); },
          'Bad setup type fails' );
