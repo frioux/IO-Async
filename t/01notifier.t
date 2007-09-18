@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 24;
+use Test::More tests => 25;
 use Test::Exception;
 
 use IO::Socket::UNIX;
@@ -86,3 +86,16 @@ is( $ioan->write_fileno, undef,         '->write_fileno returns undef' );
 dies_ok( sub { $ioan->want_writeready( 1 ); },
          'setting want_writeready with write_handle == undef dies' );
 is( $ioan->want_writeready, 0, 'wantwriteready write_handle == undef 1' );
+
+my $closed = 0;
+
+$ioan = IO::Async::Notifier->new(
+   read_handle => \*STDIN,
+   want_writeready => 0,
+   on_read_ready => sub {},
+   on_closed => sub { $closed = 1 },
+);
+
+$ioan->handle_closed;
+
+is( $closed, 1, '$closed after ->handle_closed' );

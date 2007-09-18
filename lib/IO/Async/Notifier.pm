@@ -60,6 +60,11 @@ called when the underlying IO handle becomes readable or writable:
 
  $on_write_ready->( $self )
 
+Optionally, an C<on_closed> key can also be specified, which will be called
+when the C<handle_closed> method is invoked. This is intended for subclasses.
+
+ $on_closed->( $self )
+
 =item Base Class
 
 If a subclass is built, then it can override the C<on_read_ready> or
@@ -109,6 +114,10 @@ as above. Must implement C<fileno> method in way that C<IO::Handle> does.
 CODE references to handlers for when the handle becomes read-ready or
 write-ready. If these are not supplied, subclass methods will be called
 instead.
+
+=item on_closed => CODE
+
+CODE reference to the handler for when the handle becomes closed.
 
 =back
 
@@ -181,6 +190,11 @@ sub new
 
    if( $params{on_write_ready} ) {
       $self->{on_write_ready} = $params{on_write_ready};
+   }
+   # No problem if it doesn't exist
+
+   if( $params{on_closed} ) {
+      $self->{on_closed} = $params{on_closed};
    }
    # No problem if it doesn't exist
 
@@ -311,12 +325,20 @@ sub handle_closed
 {
    my $self = shift;
 
-   my $handle = $self->{handle};
-   return unless( defined $handle );
+   my $read_handle = $self->{read_handle};
+   return unless( defined $read_handle );
 
-   $handle->close;
-   undef $handle;
-   delete $self->{handle};
+   $self->{on_closed}->( $self ) if $self->{on_closed};
+
+   $read_handle->close;
+   undef $read_handle;
+   delete $self->{read_handle};
+
+   my $write_handle = $self->{write_handle};
+   if( defined $write_handle ) {
+      undef $write_handle;
+      delete $self->{write_handle};
+   }
 }
 
 =head1 CHILD NOTIFIERS
