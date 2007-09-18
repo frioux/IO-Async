@@ -36,6 +36,8 @@ sub TEST
    my $dollarbang;
    my $dollarat;
 
+   my ( undef, $callerfile, $callerline ) = caller();
+
    $manager->spawn(
       code => $attr{code},
       exists $attr{setup} ? ( setup => $attr{setup} ) : (),
@@ -46,7 +48,7 @@ sub TEST
 
    while( !defined $exitcode ) {
       $_ = $set->loop_once( 10 ); # Give code a generous 10 seconds to exit
-      die "Nothing was ready after 10 second wait" if $_ == 0;
+      die "Nothing was ready after 10 second wait; called at $callerfile line $callerline\n" if $_ == 0;
       $ready += $_;
    }
 
