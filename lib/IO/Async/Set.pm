@@ -11,6 +11,12 @@ our $VERSION = '0.08';
 
 use Carp;
 
+BEGIN {
+   if ( eval { Time::HiRes::time(); 1 } ) {
+      Time::HiRes->import( qw( time ) );
+   }
+}
+
 =head1 NAME
 
 C<IO::Async::Set> - a class that maintains a set of C<IO::Async::Notifier>
@@ -394,7 +400,7 @@ sub _adjust_timeout
    my $nexttime = $timequeue->next_time;
    return unless defined $nexttime;
 
-   my $now = time(); # TODO: Time::HiRes
+   my $now = time();
    my $timer_delay = $nexttime - $now;
 
    if( $timer_delay < 0 ) {
@@ -431,6 +437,13 @@ The time to consider as now; defaults to C<time()> if not specified.
 CODE reference to the callback function to run at the allotted time.
 
 =back
+
+If the C<Time::HiRes> module is loaded, then it is used to obtain the current
+time which is used for the delay calculation. If this behaviour is required,
+the C<Time::HiRes> module must be loaded before C<IO::Async::Set>:
+
+ use Time::HiRes;
+ use IO::Async::Set;
 
 =cut
 

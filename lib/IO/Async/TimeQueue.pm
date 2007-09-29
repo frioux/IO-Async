@@ -12,6 +12,12 @@ our $VERSION = '0.08';
 use Carp;
 use Heap::Fibonacci;
 
+BEGIN {
+   if ( eval { Time::HiRes::time(); 1 } ) {
+      Time::HiRes->import( qw( time ) );
+   }
+}
+
 =head1 NAME
 
 C<IO::Async::TimeQueue> - a class which implements a queue of future timed
