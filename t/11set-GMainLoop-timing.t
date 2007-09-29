@@ -35,14 +35,12 @@ $SIG{ALRM} = sub { die "Test timed out" };
 alarm 4;
 
 $now = time;
-$context->iteration( 1 );
+# GLib might return just a little early, such that the TimerQueue
+# doesn't think anything is ready yet. We need to handle that case.
+$context->iteration( 1 ) while !$done;
 $took = time - $now;
 
 alarm 0;
-
-# GLib may need to be poked again to actually fire the timeout, since it may
-# only have been woken up above
-$context->iteration( 0 );
 
 is( $done, 1, '$done after iteration while waiting for timer' );
 
