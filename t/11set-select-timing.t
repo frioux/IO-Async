@@ -44,8 +44,6 @@ $set->post_select( $rvec, $evec, $wvec );
 # select() might have returned just a little early, such that the TimerQueue
 # doesn't think anything is ready yet. We need to handle that case.
 while( !$done ) {
-   print STDERR "FILLING IN TIME\n";
-
    $timeout = 0.1;
 
    $set->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
