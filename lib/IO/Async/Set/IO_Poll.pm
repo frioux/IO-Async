@@ -203,7 +203,8 @@ sub loop_once
    if( $poll->handles ) {
       $pollret = $poll->poll( $timeout );
 
-      if( $pollret == -1 and $! == EINTR and defined $self->{sigproxy} ) {
+      if( ( $pollret == -1 and $! == EINTR ) or $pollret == 0 
+              and defined $self->{sigproxy} ) {
          # A signal occured and we have a sigproxy. Allow one more poll call
          # with zero timeout. If it finds something, keep that result. If it
          # finds nothing, keep -1

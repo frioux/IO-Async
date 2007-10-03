@@ -11,6 +11,16 @@ our $VERSION = '0.08';
 
 use Carp;
 
+# Never sleep for more than 1 second if a signal proxy is registered, to avoid
+# a borderline race condition.
+# There is a race condition in perl involving signals interacting with XS code
+# that implements blocking syscalls. There is a slight chance a signal will
+# arrive in the XS function, before the blocking itself. Perl will not run our
+# (safe) deferred signal handler in this case. To mitigate this, if we have a
+# signal proxy, we'll adjust the maximal timeout. The signal handler will be 
+# run when the XS function returns. 
+our $MAX_SIGWAIT_TIME = 1;
+
 BEGIN {
    if ( eval { Time::HiRes::time(); 1 } ) {
       Time::HiRes->import( qw( time ) );
@@ -393,6 +403,10 @@ sub _adjust_timeout
 {
    my $self = shift;
    my ( $timeref ) = @_;
+
+   if( defined $self->{sigproxy} ) {
+      $$timeref = $MAX_SIGWAIT_TIME if( !defined $$timeref or $$timeref > $MAX_SIGWAIT_TIME );
+   }
 
    my $timequeue = $self->{timequeue};
    return unless defined $timequeue;
