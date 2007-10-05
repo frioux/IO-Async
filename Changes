@@ -1,8 +1,20 @@
 Revision history for IO-Async
 
+0.09    CHANGES:
+         * Added TimeQueue object and integration with IO::Async::Set and
+           subclasses.
+         * Added MergePoint object
+         * Added 'on_closed' callback support to IO::Async::Buffer
+
+        BUGFIXES:
+         * Don't depend on system locale when checking string value of $!
+         * Fixed test scripts to more closely approximate real code behaviour
+           in the presence of poll() vs. deferred signal delivery
+
 0.08    CHANGES:
          * Added ChildManager->detach_child() method
          * Added DetachedCode object
+
         BUGFIXES:
          * Better tests for presence of Glib to improve test false failures
          * More lenient times in test script 11set-IO-Poll-timing to allow for
