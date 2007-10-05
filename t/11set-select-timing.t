@@ -26,6 +26,11 @@ is( $timeout, 5, '$timeout idling pre_select with timeout' );
 my $done = 0;
 $set->enqueue_timer( delay => 2, code => sub { $done = 1; } );
 
+my $id = $set->enqueue_timer( delay => 5, code => sub { die "This timer should have been cancelled" } );
+$set->cancel_timer( $id );
+
+undef $id;
+
 $set->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
 cmp_ok( $timeout, '>', 1.9, '$timeout while timer waiting pre_select at least 1.9' );
 cmp_ok( $timeout, '<', 2.5, '$timeout while timer waiting pre_select at least 2.5' );

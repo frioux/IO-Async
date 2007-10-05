@@ -166,7 +166,16 @@ sub enqueue_timer
       return 0;
    };
 
-   my $ret = Glib::Timeout->add( $interval, $callback );
+   return Glib::Timeout->add( $interval, $callback );
+}
+
+# override
+sub cancel_timer
+{
+   my $self = shift;
+   my ( $id ) = @_;
+
+   Glib::Source->remove( $id );
 }
 
 # Keep perl happy; keep Britain tidy

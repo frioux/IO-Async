@@ -56,6 +56,11 @@ my $done = 0;
 
 $set->enqueue_timer( delay => 2, code => sub { $done = 1; } );
 
+my $id = $set->enqueue_timer( delay => 5, code => sub { die "This timer should have been cancelled" } );
+$set->cancel_timer( $id );
+
+undef $id;
+
 $now = time;
 
 $set->loop_once( 5 );

@@ -425,12 +425,18 @@ sub _adjust_timeout
    }
 }
 
-=head2 $set->enqueue_timer( %params )
+=head2 $id = $set->enqueue_timer( %params )
 
 This method installs a callback which will be called at the specified time.
 The time may either be specified as an absolute value (the C<time> key), or
-as a delay from the time it is installed (the C<delay> key). The C<%params>
-hash takes the following keys:
+as a delay from the time it is installed (the C<delay> key).
+
+The returned C<$id> value can be used to identify the timer in case it needs
+to be cancelled by the C<cancel_timer()> method. Note that this value may be
+an object reference, so if it is stored, it should be released after it has
+been fired or cancelled, so the object itself can be freed.
+
+The C<%params> hash takes the following keys:
 
 =over 8
 
@@ -471,6 +477,24 @@ sub enqueue_timer
    my $timequeue = $self->{timequeue};
 
    $timequeue->enqueue( %params );
+}
+
+=head2 $set->canel_timer( $id )
+
+Cancels a previously-enqueued timer event by removing it from the queue.
+
+=cut
+
+sub cancel_timer
+{
+   my $self = shift;
+   my ( $id ) = @_;
+
+   defined $self->{timequeue} or $self->__enable_timer;
+
+   my $timequeue = $self->{timequeue};
+
+   $timequeue->cancel( $id );
 }
 
 # Keep perl happy; keep Britain tidy

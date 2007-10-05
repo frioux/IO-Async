@@ -2,7 +2,7 @@
 
 use strict;
 
-use constant MAIN_TESTS => 2;
+use constant MAIN_TESTS => 4;
 
 use Test::More tests => MAIN_TESTS;
 
@@ -29,6 +29,11 @@ my $done = 0;
 
 $set->enqueue_timer( delay => 2, code => sub { $done = 1; } );
 
+my $id = $set->enqueue_timer( delay => 5, code => sub { die "This timer should have been cancelled" } );
+$set->cancel_timer( $id );
+
+undef $id;
+
 my ( $now, $took );
 
 $SIG{ALRM} = sub { die "Test timed out" };
@@ -43,5 +48,8 @@ $took = time - $now;
 alarm 0;
 
 is( $done, 1, '$done after iteration while waiting for timer' );
+
+cmp_ok( $took, '>', 1.9, 'iteration while waiting for timer takes at least 1.9 seconds' );
+cmp_ok( $took, '<', 2.5, 'iteration while waiting for timer no more than 2.5 seconds' );
 
 } # for SKIP block
