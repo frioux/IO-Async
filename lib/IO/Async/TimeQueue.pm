@@ -73,9 +73,15 @@ sub next_time
    return defined $top ? $top->time : undef;
 }
 
-=head2 $queue->enqueue( %params )
+=head2 $id = $queue->enqueue( %params )
 
-Adds a new event to the queue. The C<%params> takes the following keys:
+Adds a new event to the queue. An ID value is returned, which may be passed
+to the C<cancel()> method to cancel this timer. This value may be an object
+reference, so care should be taken not to store it unless it is required. If
+it is stored, it should be released after the timer code has fired, or it has
+been canceled, in order to free the object itself.
+
+The C<%params> takes the following keys:
 
 =over 8
 
@@ -124,7 +130,25 @@ sub enqueue
 
    my $heap = $self->{heap};
 
-   $heap->add( IO::Async::TimeQueue::Elem->new( $time, $code ) );
+   my $elem = IO::Async::TimeQueue::Elem->new( $time, $code );
+   $heap->add( $elem );
+
+   return $elem;
+}
+
+=head2 $queue->cancel( $id )
+
+Cancels a previously-enqueued timer event by removing it from the queue.
+
+=cut
+
+sub cancel
+{
+   my $self = shift;
+   my ( $id ) = @_;
+
+   my $heap = $self->{heap};
+   $heap->delete( $id );
 }
 
 =head2 $queue->fire( %params )

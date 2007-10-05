@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 15;
+use Test::More tests => 19;
 use Test::Exception;
 
 use IO::Async::TimeQueue;
@@ -53,3 +53,21 @@ $queue->fire( now => 1400 );
 
 is( $fired, 3, '$fired after fire at time 1400' );
 is( $queue->next_time, undef, '->next_time after fire at time 1400' );
+
+my $id = $queue->enqueue( time => 1500, code => sub { $fired++ } );
+$queue->enqueue( time => 1505, code => sub { $fired++ } );
+
+is( $queue->next_time, 1500, '->next_time before cancel()' );
+
+$queue->cancel( $id );
+
+is( $queue->next_time, 1505, '->next_time after cancel()' );
+
+$fired = 0;
+$queue->fire( now => 1501 );
+
+is( $fired, 0, '$fired after fire at time 1501' );
+
+$queue->fire( now => 1510 );
+
+is( $fired, 1, '$fired after fire at time 1510' );
