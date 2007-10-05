@@ -523,6 +523,20 @@ Fall back on a pipe pair if socketpair doesn't work.
 
 =back
 
+=head1 BUGS
+
+=over 4
+
+=item *
+
+The child process is not shut down, and the connecting socket or pipes not
+closed when the application using the DetachedCode drops its last reference.
+This is due to an internal reference being kept. A workaround for this is to
+make sure always to call the C<shutdown()> method. A proper fix will be
+included in a later version.
+
+=back
+
 =head1 NOTES
 
 For the record, 123454321 is 11111 * 11111, a square number, and therefore not
