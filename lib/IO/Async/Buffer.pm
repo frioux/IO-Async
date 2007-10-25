@@ -22,8 +22,8 @@ our $WRITELEN = 8192;
 
 =head1 NAME
 
-C<IO::Async::Buffer> - a class which implements asynchronous sending
-and receiving data buffers around a connected handle
+C<IO::Async::Buffer> - a class which implements asynchronous reading and
+writing data buffers around a connected handle
 
 =head1 SYNOPSIS
 
@@ -56,7 +56,7 @@ and receiving data buffers around a connected handle
     }
  );
 
- $buffer->send( "An initial line here\n" );
+ $buffer->write( "An initial line here\n" );
 
  my $set = IO::Async::Set::...
  $set->add( $buffer );
@@ -101,7 +101,7 @@ buffers behind connected handles. It provides buffering for both incoming and
 outgoing data, which are transferred to or from the actual handle as
 appropriate.
 
-Data can be added to the outgoing buffer at any time using the C<send()>
+Data can be added to the outgoing buffer at any time using the C<write()>
 method, and will be flushed whenever the underlying handle is notified as
 being write-ready. Whenever the handle is notified as being read-ready, the
 data is read in from the handle, and the C<on_incoming_data> code is called to
@@ -204,7 +204,7 @@ A CODE reference for when the C<sysread()> method on the read handle fails.
 
 =item on_outgoing_empty => CODE
 
-A CODE reference for when the sending data buffer becomes empty.
+A CODE reference for when the writing data buffer becomes empty.
 
 =item on_write_error => CODE
 
@@ -215,7 +215,7 @@ A CODE reference for when the C<syswrite()> method on the write handle fails.
 It is required that either an C<on_incoming_data> callback reference is
 passed, or that the object provides an C<on_incoming_data> method. It is
 optional whether either is true for C<on_outgoing_empty>; if neither is
-supplied then no action will be taken when the sending buffer becomes empty.
+supplied then no action will be taken when the writing buffer becomes empty.
 
 =cut
 
@@ -239,7 +239,7 @@ sub new
       $self->{$_} = $params{$_} if $params{$_};
    }
 
-   $self->{sendbuff} = "";
+   $self->{writebuff} = "";
    $self->{recvbuff} = "";
 
    return $self;
@@ -249,7 +249,7 @@ sub new
 
 =cut
 
-=head2 $buffer->send( $data )
+=head2 $buffer->write( $data )
 
 This method adds data to the outgoing data queue. The data is not yet sent to
 the handle; this will be done later in the C<on_write_ready()> method.
@@ -258,18 +258,18 @@ the handle; this will be done later in the C<on_write_ready()> method.
 
 =item $data
 
-A scalar containing data to send
+A scalar containing data to write
 
 =back
 
 =cut
 
-sub send
+sub write
 {
    my $self = shift;
    my ( $data ) = @_;
 
-   $self->{sendbuff} .= $data;
+   $self->{writebuff} .= $data;
 
    $self->want_writeready( 1 );
 }
@@ -329,10 +329,10 @@ sub on_write_ready
 
    my $handle = $self->write_handle;
 
-   my $len = length( $self->{sendbuff} );
+   my $len = length( $self->{writebuff} );
    $len = $WRITELEN if( $len > $WRITELEN );
 
-   my $data = substr( $self->{sendbuff}, 0, $len );
+   my $data = substr( $self->{writebuff}, 0, $len );
 
    $len = $handle->syswrite( $data );
 
@@ -358,9 +358,9 @@ sub on_write_ready
       $self->handle_closed();
    }
    else {
-      substr( $self->{sendbuff}, 0, $len ) = "";
+      substr( $self->{writebuff}, 0, $len ) = "";
 
-      if( length( $self->{sendbuff} ) == 0 ) {
+      if( length( $self->{writebuff} ) == 0 ) {
          $self->want_writeready( 0 );
 
          if( defined( my $callback = $self->{on_outgoing_empty} ) ) {
@@ -371,6 +371,30 @@ sub on_write_ready
          }
       }
    }
+}
+
+=head1 DEPRECATED METHODS
+
+These methods are mainained for backward compatibility with existing code.
+They should not be used in new code, and existing code should be modified to
+use the replacements.
+
+=head2 $buffer->send( $data )
+
+A synonym for C<write()>.
+
+=cut
+
+sub send
+{
+   carp "IO::Async::Buffer->send() is deprecated; use ->write() instead";
+
+   # Use write next time
+   no warnings 'redefine';
+   *send = \&write;
+
+   # Jump to it now - subsequent calls will go direct
+   goto &write;
 }
 
 # Keep perl happy; keep Britain tidy

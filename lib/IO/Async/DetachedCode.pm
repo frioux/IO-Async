@@ -327,7 +327,7 @@ sub call
    my $data = $self->{marshaller}->marshall_args( $callid, $args );
    my $request = $self->_marshall_record( 'c', $callid, $data );
 
-   $self->{iobuffer}->send( pack( "I", length $request ) . $request );
+   $self->{iobuffer}->write( pack( "I", length $request ) . $request );
 
    my $handlermap = $self->{result_handler};
    $handlermap->{$callid} = $on_result;

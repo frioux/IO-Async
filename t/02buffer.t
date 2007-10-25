@@ -62,27 +62,27 @@ my $buff = IO::Async::Buffer->new(
 ok( defined $buff, '$buff defined' );
 is( ref $buff, "IO::Async::Buffer", 'ref $buff is IO::Async::Buffer' );
 
-# Sending
+# Writing
 
-is( $buff->want_writeready, 0, 'want_writeready before send' );
-$buff->send( "message\n" );
+is( $buff->want_writeready, 0, 'want_writeready before write' );
+$buff->write( "message\n" );
 
-is( $buff->want_writeready, 1, 'want_writeready after send' );
+is( $buff->want_writeready, 1, 'want_writeready after write' );
 
-is( scalar @received, 0,  '@received before sending buffer' );
-is( $closed,          0,  '$closed before sending buffer' );
-is( read_data( $S2 ), "", 'data before sending buffer' );
+is( scalar @received, 0,  '@received before writing buffer' );
+is( $closed,          0,  '$closed before writing buffer' );
+is( read_data( $S2 ), "", 'data before writing buffer' );
 
-is( $empty, 0, '$empty before sending buffer' );
+is( $empty, 0, '$empty before writing buffer' );
 
 $buff->on_write_ready;
 
 is( $buff->want_writeready, 0, 'want_writeready after on_write_ready' );
-is( $empty, 1, '$empty after sending buffer' );
+is( $empty, 1, '$empty after writing buffer' );
 
-is( scalar @received, 0,           '@received before sending buffer' );
-is( $closed,          0,           '$closed before sending buffer' );
-is( read_data( $S2 ), "message\n", 'data after sending buffer' );
+is( scalar @received, 0,           '@received before writing buffer' );
+is( $closed,          0,           '$closed before writing buffer' );
+is( read_data( $S2 ), "message\n", 'data after writing buffer' );
 
 # Receiving
 
@@ -98,22 +98,22 @@ is( $closed,          0,         '$closed receiving after select' );
 
 # Buffer chaining;
 
-# Send partial buffer;
+# Write partial buffer;
 
 $S2->syswrite( "return" );
 
 $buff->on_read_ready;
 
-is( scalar @received, 0, 'scalar @received sendpartial 1' );
-is( $closed,          0, '$closed sendpartial 1' );
+is( scalar @received, 0, 'scalar @received writepartial 1' );
+is( $closed,          0, '$closed writepartial 1' );
 
 $S2->syswrite( "\n" );
 
 $buff->on_read_ready;
 
 is( scalar @received, 1,          'scalar @received receiving after select' );
-is( $received[0],     "return\n", '$received[0] sendpartial 2' );
-is( $closed,          0,          '$closed sendpartial 2' );
+is( $received[0],     "return\n", '$received[0] writepartial 2' );
+is( $closed,          0,          '$closed writepartial 2' );
 
 package ErrorSocket;
 

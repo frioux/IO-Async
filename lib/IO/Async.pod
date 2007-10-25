@@ -27,7 +27,7 @@ IO
     }
  );
 
- $buffer->send( "An initial line here\n" );
+ $buffer->write( "An initial line here\n" );
 
  my $set = IO::Async::Set::IO_Poll->new();
  

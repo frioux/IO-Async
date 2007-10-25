@@ -56,8 +56,8 @@ my $buff = IO::Async::Buffer->new(
    on_incoming_data => \&on_incoming_data,
 );
 
-# Sending
-$buff->send( "message\n" );
+# Writing
+$buff->write( "message\n" );
 $buff->on_write_ready;
 
 is( read_data( $S[3] ), "message\n", '$S[3] receives data' );
