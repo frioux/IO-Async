@@ -249,7 +249,7 @@ sub new
    }
 
    $self->{writebuff} = "";
-   $self->{recvbuff} = "";
+   $self->{readbuff} = "";
 
    return $self;
 }
@@ -313,16 +313,16 @@ sub on_read_ready
 
    my $handleclosed = ( $len == 0 );
 
-   $self->{recvbuff} .= $data if( !$handleclosed );
+   $self->{readbuff} .= $data if( !$handleclosed );
    my $callback = $self->{on_read};
-   while( length( $self->{recvbuff} ) > 0 || $handleclosed ) {
+   while( length( $self->{readbuff} ) > 0 || $handleclosed ) {
       my $again;
 
       if( defined $callback ) {
-         $again = $callback->( $self, \$self->{recvbuff}, $handleclosed );
+         $again = $callback->( $self, \$self->{readbuff}, $handleclosed );
       }
       else {
-         $again = $self->on_read( \$self->{recvbuff}, $handleclosed );
+         $again = $self->on_read( \$self->{readbuff}, $handleclosed );
       }
 
       last if !$again;
