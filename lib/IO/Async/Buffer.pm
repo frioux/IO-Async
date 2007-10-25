@@ -39,7 +39,7 @@ writing data buffers around a connected handle
  my $buffer = IO::Async::Buffer->new(
     handle => $socket,
 
-    on_incoming_data => sub {
+    on_read => sub {
        my ( $self, $buffref, $closed ) = @_;
 
        if( $$buffref =~ s/^(.*\n)// ) {
@@ -66,7 +66,7 @@ Or
  my $record_buffer = IO::Async::Buffer->new(
     handle => ...,
 
-    on_incoming_data => sub {
+    on_read => sub {
        my ( $self, $buffref, $closed ) = @_;
 
        if( length $$buffref >= 16 ) {
@@ -104,8 +104,8 @@ appropriate.
 Data can be added to the outgoing buffer at any time using the C<write()>
 method, and will be flushed whenever the underlying handle is notified as
 being write-ready. Whenever the handle is notified as being read-ready, the
-data is read in from the handle, and the C<on_incoming_data> code is called to
-indicate the data is available.
+data is read in from the handle, and the C<on_read> code is called to indicate
+the data is available.
 
 This object may be used in one of two ways; with a callback function, or as a
 base class.
@@ -117,7 +117,7 @@ base class.
 If certain keys are supplied to the constructor, they should contain CODE
 references to callback functions that will be called in the following manner:
 
- $again = $on_incoming_data->( $self, \$buffer, $handleclosed )
+ $again = $on_read->( $self, \$buffer, $handleclosed )
 
  $on_read_error->( $self, $errno )
 
@@ -130,10 +130,10 @@ argument, so that the callback can access it.
 
 =item Base Class
 
-If a subclass is built, then it can override the C<on_incoming_data> or
+If a subclass is built, then it can override the C<on_read> or
 C<on_outgoing_empty> methods, which will be called in the following manner:
 
- $again = $self->on_incoming_data( \$buffer, $handleclosed )
+ $again = $self->on_read( \$buffer, $handleclosed )
 
  $self->on_read_error( $errno )
 
@@ -143,10 +143,10 @@ C<on_outgoing_empty> methods, which will be called in the following manner:
 
 =back
 
-The first argument to the C<on_incoming_data()> callback is a reference to a
-plain perl string. The code should inspect and remove any data it likes, but
-is not required to remove all, or indeed any of the data. Any data remaining
-in the buffer will be preserved for the next call, the next time more data is
+The first argument to the C<on_read()> callback is a reference to a plain perl
+string. The code should inspect and remove any data it likes, but is not
+required to remove all, or indeed any of the data. Any data remaining in the
+buffer will be preserved for the next call, the next time more data is
 received from the handle.
 
 In this way, it is easy to implement code that reads records of some form when
@@ -157,11 +157,11 @@ will be called again. This makes it easy to implement code that handles
 multiple incoming records at the same time. See the examples at the end of
 this documentation for more detail.
 
-The second argument to the C<on_incoming_data()> method is a scalar indicating
-whether the handle has been closed. Normally it is false, but will become true
-once the handle closes. A reference to the buffer is passed to the method in
-the usual way, so it may inspect data contained in it. Once the method returns
-a false value, it will not be called again, as the handle is now closed and no
+The second argument to the C<on_read()> method is a scalar indicating whether
+the handle has been closed. Normally it is false, but will become true once
+the handle closes. A reference to the buffer is passed to the method in the
+usual way, so it may inspect data contained in it. Once the method returns a
+false value, it will not be called again, as the handle is now closed and no
 more data can arrive.
 
 The C<on_read_error> and C<on_write_error> callbacks are passed the value of
@@ -193,10 +193,15 @@ The C<%params> hash takes the following keys:
 The handle object to wrap. Must implement C<fileno>, C<sysread> and
 C<syswrite> methods in the way that C<IO::Handle> does.
 
-=item on_incoming_data => CODE
+=item on_read => CODE
 
 A CODE reference for when more data is available in the internal receiving 
 buffer.
+
+=item on_incoming_data => CODE
+
+This option is deprecated and should not be used in new code. It is maintained
+as a backward-compatibility synonym for C<on_read>.
 
 =item on_read_error => CODE
 
@@ -212,10 +217,10 @@ A CODE reference for when the C<syswrite()> method on the write handle fails.
 
 =back
 
-It is required that either an C<on_incoming_data> callback reference is
-passed, or that the object provides an C<on_incoming_data> method. It is
-optional whether either is true for C<on_outgoing_empty>; if neither is
-supplied then no action will be taken when the writing buffer becomes empty.
+It is required that either an C<on_read> callback reference is passed, or that
+the object provides an C<on_read> method. It is optional whether either is
+true for C<on_outgoing_empty>; if neither is supplied then no action will be
+taken when the writing buffer becomes empty.
 
 =cut
 
@@ -226,12 +231,16 @@ sub new
 
    my $self = $class->SUPER::new( %params );
 
-   if( $params{on_incoming_data} ) {
-      $self->{on_incoming_data} = $params{on_incoming_data};
+   if( $params{on_read} ) {
+      $self->{on_read} = $params{on_read};
+   }
+   elsif( $params{on_incoming_data} ) {
+      carp "The 'on_incoming_data' callback is deprecated; use 'on_read' instead";
+      $self->{on_read} = $params{on_incoming_data};
    }
    else {
-      unless( $self->can( 'on_incoming_data' ) ) {
-         croak 'Expected either an on_incoming_data callback or to be able to ->on_incoming_data';
+      unless( $self->can( 'on_read' ) ) {
+         croak 'Expected either an on_read callback or to be able to ->on_read';
       }
    }
 
@@ -305,7 +314,7 @@ sub on_read_ready
    my $handleclosed = ( $len == 0 );
 
    $self->{recvbuff} .= $data if( !$handleclosed );
-   my $callback = $self->{on_incoming_data};
+   my $callback = $self->{on_read};
    while( length( $self->{recvbuff} ) > 0 || $handleclosed ) {
       my $again;
 
@@ -313,7 +322,7 @@ sub on_read_ready
          $again = $callback->( $self, \$self->{recvbuff}, $handleclosed );
       }
       else {
-         $again = $self->on_incoming_data( \$self->{recvbuff}, $handleclosed );
+         $again = $self->on_read( \$self->{recvbuff}, $handleclosed );
       }
 
       last if !$again;
@@ -404,12 +413,12 @@ __END__
 
 =head1 EXAMPLES
 
-=head2 A line-based C<on_incoming_data()> method
+=head2 A line-based C<on_read()> method
 
-The following C<on_incoming_data()> method accepts incoming 'C<\n>'-terminated
-lines and prints them to the program's C<STDOUT> stream.
+The following C<on_read()> method accepts incoming 'C<\n>'-terminated lines
+and prints them to the program's C<STDOUT> stream.
 
- sub on_incoming_data
+ sub on_read
  {
     my $self = shift;
     my ( $buffref, $handleclosed ) = @_;

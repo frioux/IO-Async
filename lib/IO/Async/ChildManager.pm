@@ -530,7 +530,7 @@ sub _spawn_in_parent
    $set->add( IO::Async::Buffer->new(
       read_handle => $readpipe,
 
-      on_incoming_data => sub {
+      on_read => sub {
          my ( $self, $buffref, $closed ) = @_;
 
          if( !defined $dollarbang ) {

@@ -18,7 +18,7 @@ $S1->blocking( 0 );
 $S2->blocking( 0 );
 
 dies_ok( sub { IO::Async::Buffer->new( handle => $S1 ) },
-         'No on_incoming_data' );
+         'No on_read' );
 
 sub read_data($)
 {
@@ -37,7 +37,7 @@ my @received;
 my $closed = 0;
 my $empty = 0;
 
-sub on_incoming_data
+sub on_read
 {
    my $self = shift;
    my ( $buffref, $buffclosed ) = @_;
@@ -55,7 +55,7 @@ sub on_incoming_data
 
 my $buff = IO::Async::Buffer->new( 
    handle => $S1,
-   on_incoming_data => \&on_incoming_data,
+   on_read => \&on_read,
    on_outgoing_empty => sub { $empty = 1 },
 );
 
@@ -134,7 +134,7 @@ package main;
 
    my $buff = IO::Async::Buffer->new(
       handle => ErrorSocket->new(),
-      on_incoming_data => sub {},
+      on_read => sub {},
    );
 
    $ErrorSocket::errno = EAGAIN;
@@ -170,7 +170,7 @@ my $write_errno;
 
 $buff = IO::Async::Buffer->new(
    handle => ErrorSocket->new(),
-   on_incoming_data => sub {},
+   on_read => sub {},
 
    on_read_error  => sub { ( undef, $read_errno  ) = @_ },
    on_write_error => sub { ( undef, $write_errno ) = @_ },

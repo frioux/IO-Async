@@ -231,7 +231,7 @@ sub new
       read_handle  => $myread,
       write_handle => $mywrite,
 
-      on_incoming_data => sub { $self->_socket_incoming( $_[1], $_[2] ) },
+      on_read => sub { $self->_socket_incoming( $_[1], $_[2] ) },
    );
 
    $self->{iobuffer} = $iobuffer;

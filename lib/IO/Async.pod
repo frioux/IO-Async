@@ -18,7 +18,7 @@ IO
  my $buffer = IO::Async::Buffer->new(
     handle => $socket,
 
-    on_incoming_data => sub {
+    on_read => sub {
        return 0 unless( $$_[0] =~ s/^(.*\n)// );
 
        print "Received a line $1";
