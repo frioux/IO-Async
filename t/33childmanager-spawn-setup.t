@@ -235,6 +235,7 @@ TEST "stdout close",
 
 {
    my $name = tmpnam();
+   END { unlink $name if defined $name and -f $name }
 
    TEST "stdout open",
       setup => [ stdout => [ 'open', '>', $name ] ],
