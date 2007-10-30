@@ -38,7 +38,7 @@ Usually this object would be constructed indirectly, via an C<IO::Async::Set>:
     }
  );
 
- $code->call
+ $code->call(
     args => [ 123454321 ],
     on_return => sub {
        my $isprime = shift;
