@@ -387,7 +387,8 @@ sub _socket_incoming
 
    my $handlermap = $self->{result_handler};
    if( !exists $handlermap->{$id} ) {
-      $self->_child_error( 'badretid', $id );
+      # Child returned a result for an ID we don't recognise
+      carp "Unrecognised return ID $id from detached code child";
       return 1;
    }
    my $handler = $handlermap->{$id};
