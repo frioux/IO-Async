@@ -325,7 +325,7 @@ sub call
    my $callid = $self->{next_id}++;
 
    my $data = $self->{marshaller}->marshall_args( $callid, $args );
-   my $request = $self->_marshall_record( 'c', $callid, $data );
+   my $request = _marshall_record( 'c', $callid, $data );
 
    $self->{iobuffer}->write( pack( "I", length $request ) . $request );
 
@@ -383,7 +383,7 @@ sub _socket_incoming
    substr( $$buffref, 0, LENGTH_OF_I, "" );
    my $record = substr( $$buffref, 0, $reclen, "" );
 
-   my ( $type, $id, $data ) = $self->_unmarshall_record( $record );
+   my ( $type, $id, $data ) = _unmarshall_record( $record );
 
    my $handlermap = $self->{result_handler};
    if( !exists $handlermap->{$id} ) {
@@ -423,9 +423,11 @@ sub _child_error
    return 0;
 }
 
+# These are FUNCTIONS, not methods
+# They don't need $self
+
 sub _marshall_record
 {
-   my $self = shift;
    my ( $type, $id, $data ) = @_;
 
    return pack( "a1 I a*", $type, $id, $data );
@@ -433,7 +435,6 @@ sub _marshall_record
 
 sub _unmarshall_record
 {
-   my $self = shift;
    my ( $record ) = @_;
 
    return unpack( "a1 I a*", $record );
@@ -468,7 +469,7 @@ sub _child_loop
       $n = _read_exactly( $inhandle, my $record, $reclen );
       defined $n or die "Cannot read - $!";
 
-      my ( $type, $id, $data ) = $self->_unmarshall_record( $record );
+      my ( $type, $id, $data ) = _unmarshall_record( $record );
       $type eq "c" or die "Unexpected record type $type\n";
 
       my $args = $self->{marshaller}->unmarshall_args( $id, $data );
@@ -479,11 +480,11 @@ sub _child_loop
       my $result;
       if( $ok ) {
          my $data = $self->{marshaller}->marshall_ret( $id, \@ret );
-         $result = $self->_marshall_record( 'r', $id, $data );
+         $result = _marshall_record( 'r', $id, $data );
       }
       else {
          my $e = "$@"; # Force stringification
-         $result = $self->_marshall_record( 'e', $id, $e );
+         $result = _marshall_record( 'e', $id, $e );
       }
 
       # Prepend record length

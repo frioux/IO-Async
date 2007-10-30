@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 24;
+use Test::More tests => 22;
 use Test::Exception;
 
 use IO::Async::DetachedCode;
@@ -89,16 +89,8 @@ test_marshall_args_ref( $marshaller, "storable" );
 my $set = IO::Async::Set::IO_Poll->new();
 $set->enable_childmanager;
 
-my $code = IO::Async::DetachedCode->new(
-   set  => $set,
-   code => sub { 1 },
-);
-
-ok( defined $code, '$code defined' );
-is( ref $code, "IO::Async::DetachedCode", 'ref $code is IO::Async::DetachedCode' );
-
-my $record = $code->_marshall_record( 'c', 1, "call data here" );
-my ( $type, $id, $data ) = $code->_unmarshall_record( $record );
+my $record = IO::Async::DetachedCode::_marshall_record( 'c', 1, "call data here" );
+my ( $type, $id, $data ) = IO::Async::DetachedCode::_unmarshall_record( $record );
 
 is( $type, 'c',              "type for record marshall test" );
 is( $id,   1,                "id for record marshall test" );
