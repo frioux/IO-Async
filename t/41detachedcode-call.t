@@ -87,9 +87,6 @@ $ready = wait_for { @result == 2 };
 cmp_ok( $ready, '>=', 2, '$ready after both calls return' );
 is_deeply( \@result, [ 3, 7 ], '@result after both calls return' );
 
-$code->shutdown;
-undef $code;
-
 $code = IO::Async::DetachedCode->new(
    set  => $set,
    code => sub { return $_[0] + $_[1] },
@@ -108,9 +105,6 @@ $ready = wait_for { defined $result };
 cmp_ok( $ready, '>=', 2, '$ready after call to code over socket' );
 is( $result, 11, '$result of code over socket' );
 
-$code->shutdown;
-undef $code;
-
 $code = IO::Async::DetachedCode->new(
    set  => $set,
    code => sub { return $_[0] + $_[1] },
@@ -128,9 +122,6 @@ $ready = wait_for { defined $result };
 
 cmp_ok( $ready, '>=', 2, '$ready after call to code over pipe' );
 is( $result, 11, '$result of code over pipe' );
-
-$code->shutdown;
-undef $code;
 
 dies_ok( sub { IO::Async::DetachedCode->new(
                   set  => $set,
@@ -165,9 +156,6 @@ dies_ok( sub { $code->call(
             },
          'call with reference arguments using flat marshaller dies' );
 
-$code->shutdown;
-undef $code;
-
 dies_ok( sub { IO::Async::DetachedCode->new(
                   set  => $set,
                   code => sub { return $_[0] },
@@ -193,9 +181,6 @@ $ready = wait_for { scalar @result };
 cmp_ok( $ready, '>=', 2, '$ready after call to code over storable marshaller' );
 is_deeply( \@result, [ 'SCALAR', \'b' ], '@result after call to code over storable marshaller' );
 
-$code->shutdown;
-undef $code;
-
 my $err;
 
 $code = IO::Async::DetachedCode->new(
@@ -214,9 +199,6 @@ $ready = wait_for { defined $err };
 cmp_ok( $ready, '>=', 2, '$ready after exception' );
 like( $err, qr/^exception name at $0 line \d+\.$/, '$err after exception' );
 
-$code->shutdown;
-undef $code;
-
 $code = IO::Async::DetachedCode->new(
    set => $set,
    code => sub { exit shift },
@@ -234,9 +216,6 @@ $ready = wait_for { defined $err };
 cmp_ok( $ready, '>=', 2, '$ready after child death' );
 # Not sure what reason we might get - need to check both
 ok( $err->[0] eq "closed" || $err->[0] eq "exit", '$err->[0] after child death' );
-
-$code->shutdown;
-undef $code;
 
 $code = $set->detach_code(
    code => sub { return join( "+", @_ ) },

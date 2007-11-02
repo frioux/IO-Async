@@ -154,6 +154,14 @@ all of the result must be represented in the return values.
 
 =cut
 
+# This object class has to be careful not to leave any $self references in
+# registered callback code. To acheive this, all callbacks are plain functions
+# rather than methods, and all take a plain unblessed hashref for the state.
+# This hashref is stored in the 'inner' key of the main $self object.
+#
+# This allows the DESTROY handler to work properly when the user code drops
+# the last reference to this object.
+
 sub new
 {
    my $class = shift;
@@ -180,12 +188,17 @@ sub new
 
    my $self = bless {
       next_id => 0,
-      set     => $set,
       code    => $code,
 
-      result_handler => {},
-      marshaller     => $marshaller,
+      inner => {
+         set            => $set,
+         result_handler => {},
+         marshaller     => $marshaller,
+      },
+
    }, $class;
+
+   my $inner = $self->{inner};
 
    my ( $childread, $mywrite );
    my ( $myread, $childwrite );
@@ -219,7 +232,7 @@ sub new
 
          $self->_child_loop( $childread, $childwrite ),
       },
-      on_exit => sub { $self->_child_error( 'exit', @_ ) },
+      on_exit => sub { _child_error( $inner, 'exit', @_ ) },
    );
 
    $self->{kid} = $kid;
@@ -231,10 +244,10 @@ sub new
       read_handle  => $myread,
       write_handle => $mywrite,
 
-      on_read => sub { $self->_socket_incoming( $_[1], $_[2] ) },
+      on_read => sub { _socket_incoming( $inner, $_[1], $_[2] ) },
    );
 
-   $self->{iobuffer} = $iobuffer;
+   $inner->{iobuffer} = $iobuffer;
 
    $set->add( $iobuffer );
 
@@ -298,6 +311,8 @@ sub call
    my $self = shift;
    my ( %params ) = @_;
 
+   my $inner = $self->{inner};
+
    my $args = delete $params{args};
    ref $args eq "ARRAY" or croak "Expected 'args' to be an array";
 
@@ -324,12 +339,12 @@ sub call
 
    my $callid = $self->{next_id}++;
 
-   my $data = $self->{marshaller}->marshall_args( $callid, $args );
+   my $data = $inner->{marshaller}->marshall_args( $callid, $args );
    my $request = _marshall_record( 'c', $callid, $data );
 
-   $self->{iobuffer}->write( pack( "I", length $request ) . $request );
+   $inner->{iobuffer}->write( pack( "I", length $request ) . $request );
 
-   my $handlermap = $self->{result_handler};
+   my $handlermap = $inner->{result_handler};
    $handlermap->{$callid} = $on_result;
 }
 
@@ -339,22 +354,20 @@ This method requests that the detached child process stops running. All
 pending calls to the code are finished with a 'shutdown' error, and the child
 process itself exits.
 
-It is not normally necessary to call this method during normal exit of the
-containing program. It is only required if the detact code is to be dropped,
-and recreated in a different way.
-
 =cut
 
 sub shutdown
 {
    my $self = shift;
 
-   if( defined $self->{iobuffer} ) {
-      $self->{set}->remove( $self->{iobuffer} );
-      undef $self->{iobuffer};
+   my $inner = $self->{inner};
+
+   if( defined $inner->{iobuffer} ) {
+      $inner->{set}->remove( $inner->{iobuffer} );
+      undef $inner->{iobuffer};
    }
 
-   my $handlermap = $self->{result_handler};
+   my $handlermap = $inner->{result_handler};
 
    foreach my $id ( keys %$handlermap ) {
       $handlermap->{$id}->( 'shutdown' );
@@ -362,19 +375,18 @@ sub shutdown
    }
 }
 
-# Internal
+# INNER FUNCTION
 sub _socket_incoming
 {
-   my $self = shift;
-   my ( $buffref, $closed ) = @_;
+   my ( $inner, $buffref, $closed ) = @_;
 
-   my $handlermap = $self->{result_handler};
+   my $handlermap = $inner->{result_handler};
 
    if( $closed ) {
-      $self->_child_error( 'closed' );
+      _child_error( $inner, 'closed' );
 
-      $self->{set}->remove( $self->{iobuffer} );
-      undef $self->{iobuffer};
+      $inner->{set}->remove( $inner->{iobuffer} );
+      undef $inner->{iobuffer};
 
       return 0;
    }
@@ -397,7 +409,7 @@ sub _socket_incoming
    my $handler = $handlermap->{$id};
 
    if( $type eq "r" ) {
-      my $ret = $self->{marshaller}->unmarshall_ret( $id, $data );
+      my $ret = $inner->{marshaller}->unmarshall_ret( $id, $data );
       $handler->( "return", @$ret );
    }
    elsif( $type eq "e" ) {
@@ -408,12 +420,12 @@ sub _socket_incoming
    return 1;
 }
 
+# INNER FUNCTION
 sub _child_error
 {
-   my $self = shift;
-   my ( $cause, @args ) = @_;
+   my ( $inner, $cause, @args ) = @_;
 
-   my $handlermap = $self->{result_handler};
+   my $handlermap = $inner->{result_handler};
 
    foreach my $id ( keys %$handlermap ) {
       $handlermap->{$id}->( 'error', $cause, @args );
@@ -458,6 +470,8 @@ sub _child_loop
    my $self = shift;
    my ( $inhandle, $outhandle ) = @_;
 
+   my $inner = $self->{inner};
+
    my $code = $self->{code};
 
    while( 1 ) {
@@ -472,14 +486,14 @@ sub _child_loop
       my ( $type, $id, $data ) = _unmarshall_record( $record );
       $type eq "c" or die "Unexpected record type $type\n";
 
-      my $args = $self->{marshaller}->unmarshall_args( $id, $data );
+      my $args = $inner->{marshaller}->unmarshall_args( $id, $data );
 
       my @ret;
       my $ok = eval { @ret = $code->( @$args ); 1 };
 
       my $result;
       if( $ok ) {
-         my $data = $self->{marshaller}->marshall_ret( $id, \@ret );
+         my $data = $inner->{marshaller}->marshall_ret( $id, \@ret );
          $result = _marshall_record( 'r', $id, $data );
       }
       else {
