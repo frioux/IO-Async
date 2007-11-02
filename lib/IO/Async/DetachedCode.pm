@@ -349,8 +349,6 @@ sub shutdown
 {
    my $self = shift;
 
-   $self->{shutting_down} = 1;
-
    if( defined $self->{iobuffer} ) {
       $self->{set}->remove( $self->{iobuffer} );
       undef $self->{iobuffer};
@@ -370,8 +368,14 @@ sub _socket_incoming
    my $self = shift;
    my ( $buffref, $closed ) = @_;
 
+   my $handlermap = $self->{result_handler};
+
    if( $closed ) {
       $self->_child_error( 'closed' );
+
+      $self->{set}->remove( $self->{iobuffer} );
+      undef $self->{iobuffer};
+
       return 0;
    }
 
@@ -385,7 +389,6 @@ sub _socket_incoming
 
    my ( $type, $id, $data ) = _unmarshall_record( $record );
 
-   my $handlermap = $self->{result_handler};
    if( !exists $handlermap->{$id} ) {
       # Child returned a result for an ID we don't recognise
       carp "Unrecognised return ID $id from detached code child";
@@ -410,16 +413,12 @@ sub _child_error
    my $self = shift;
    my ( $cause, @args ) = @_;
 
-   return if $self->{shutting_down};
-
    my $handlermap = $self->{result_handler};
 
    foreach my $id ( keys %$handlermap ) {
       $handlermap->{$id}->( 'error', $cause, @args );
       delete $handlermap->{$id};
    }
-
-   $self->shutdown;
 
    return 0;
 }
