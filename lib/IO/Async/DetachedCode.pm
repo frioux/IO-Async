@@ -251,8 +251,7 @@ sub _detach_child
 
    my $kid = $set->detach_child(
       code => sub { 
-      #foreach( 0 .. IO::Async::ChildManager::OPEN_MAX_FD() ) {
-         foreach( 0 .. 10 ) {
+         foreach( 0 .. IO::Async::ChildManager::OPEN_MAX_FD() ) {
             next if $_ == 2;
             next if $_ == fileno $childread;
             next if $_ == fileno $childwrite;
