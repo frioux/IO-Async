@@ -14,6 +14,7 @@ my $build = Module::Build->new
                  'Storable' => 0,
                },
    build_requires => {
+                 'File::Temp' => 0,
                  'Test::More' => 0,
                  'Test::Exception' => 0,
                  'Time::HiRes' => 0,

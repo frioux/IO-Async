@@ -2,8 +2,11 @@
 
 use strict;
 
-use Test::More tests => 29;
+use Test::More tests => 31;
 use Test::Exception;
+
+use File::Temp qw( tempdir );
+use Time::HiRes qw( sleep );
 
 use IO::Async::DetachedCode;
 
@@ -232,3 +235,54 @@ $ready = wait_for { defined $result };
 
 cmp_ok( $ready, '>=', 2, '$ready after call to Set-constructed code' );
 is( $result, "a+b+c", '$result of Set-constructed code' );
+
+## Now test that parallel runs really are parallel
+
+$code = $set->detach_code(
+   code => sub {
+      my ( $file, $ret ) = @_;
+
+      open( my $fh, ">", $file ) or die "Cannot write $file - $!";
+      close( $file );
+
+      # Wait for synchronisation
+      sleep 0.1 while -e $file;
+
+      return $ret;
+   },
+   workers => 3,
+);
+
+my $dir = tempdir( CLEANUP => 1 );
+
+my %ret;
+
+foreach my $id ( 1, 2, 3 ) {
+   $code->call(
+      args => [ "$dir/$id", $id ],
+      on_return => sub { $ret{$id} = shift },
+      on_error  => sub { die "Test failed early - @_" },
+   );
+}
+
+my $start = time();
+
+while( not( -e "$dir/1" and -e "$dir/2" and -e "$dir/3" ) ) {
+   if( time() - $start > 10 ) {
+      die "Not all child processes ready after 10second wait";
+   }
+
+   $set->loop_once( 0.1 );
+}
+
+ok( 1, 'synchronise files created' );
+
+# Synchronize deleting them;
+
+for my $f ( "$dir/1", "$dir/2", "$dir/3" ) {
+   unlink $f or die "Cannot unlink $f - $!";
+}
+
+wait_for { keys %ret == 3 };
+
+is_deeply( \%ret, { 1 => 1, 2 => 2, 3 => 3 }, 'ret keys after parallel run' );

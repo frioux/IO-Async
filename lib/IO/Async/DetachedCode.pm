@@ -20,7 +20,7 @@ use constant LENGTH_OF_I => length( pack( "I", 0 ) );
 =head1 NAME
 
 C<IO::Async::DetachedCode> - a class that allows a block of code to execute
-asynchronously in a detached child process
+asynchronously in detached child processes
 
 =head1 SYNOPSIS
 
@@ -64,21 +64,24 @@ an C<IO::Async::Set> object:
 =head1 DESCRIPTION
 
 This module provides a class that allows a block of code to "detach" from the
-main process, and execute independently in its own child process. The object
+main process, and execute independently in its own child processes. The object
 itself acts as a proxy to this code block, allowing arguments to be passed to
 it each time it is called, and returning results back to a callback function
 in the main process.
 
 The object represents the code block itself, rather than one specific
 invocation of it. It can be called multiple times, by the C<call()> method.
-Multiple outstanding invocations can be queued up; they will be executed in
-the order they were queued, and results returned in that order.
+Multiple outstanding invocations can be called; they will be executed in
+the order they were queued. If only one worker process is used then results
+will be returned in the order they were called. If multiple are used, then
+each request will be sent in the order called, but timing differences between
+each worker may mean results are returned in a different order.
 
 The default marshalling code can only cope with plain scalars or C<undef>
 values; no references, objects, or IO handles may be passed to the function
-each time it is called. If references are required, code based on L<Storable>
-may be used instead, to pass these. See the documentation on the C<marshaller>
-parameter of C<new()> method.
+each time it is called. If references are required then code based on
+L<Storable> may be used instead to pass these. See the documentation on the
+C<marshaller> parameter of C<new()> method.
 
 The C<IO::Async> framework generally provides mechanisms for multiplexing IO
 tasks between different handles, so there aren't many occasions when such
@@ -93,8 +96,8 @@ When a large amount of computationally-intensive work needs to be performed
 
 =item 2.
 
-When an OS or library-level function needs to be called, that will block, and
-no asynchronous version is supplied.
+When a blocking OS syscall or library-level function needs to be called, and
+no nonblocking or asynchronous version is supplied.
 
 =back
 
@@ -125,28 +128,34 @@ provided to the C<call()> method.
 
 =item stream => STRING: C<socket> or C<pipe>
 
-Optional string, specifies which sort of stream will be used to attach to the
-child process. C<socket> uses only one file descriptor in the parent process,
-but not all systems may be able to use it. If the system does not allow
-C<PF_UNIX> socket pairs, then C<pipe> can be used instead. This will use two
-file descriptors in the parent process, however.
+Optional string, specifies which sort of stream will be used to attach to each
+worker. C<socket> uses only one file descriptor per worker in the parent
+process, but not all systems may be able to use it. If the system does not
+allow C<PF_UNIX> socket pairs, then C<pipe> can be used instead. This will use
+two file descriptors per worker in the parent process, however.
 
 If not supplied, the C<socket> method is used.
 
 =item marshaller => STRING: C<flat> or C<storable>
 
 Optional string, specifies the way that call arguments and return values are
-marshalled over the stream that connects the child and parent processes.
+marshalled over the stream that connects the worker and parent processes.
 The C<flat> method is small, simple and fast, but can only cope with strings
 or C<undef>; cannot cope with any references. The C<storable> method uses the
 L<Storable> module to marshall arbitrary reference structures.
 
 If not supplied, the C<flat> method is used.
 
+=item workers => INT
+
+Optional integer, specifies the number of parallel workers to create.
+
+If not supplied, 1 is used.
+
 =back
 
 Since the code block will be called multiple times within the same child
-process, it must take care not to modify any global state that might affect
+process, it must take care not to modify any of its state that might affect
 subsequent calls. Since it executes in a child process, it cannot make any
 modifications to the state of the parent program. Therefore, all the data
 required to perform its task must be represented in the call arguments, and
@@ -157,7 +166,8 @@ all of the result must be represented in the return values.
 # This object class has to be careful not to leave any $self references in
 # registered callback code. To acheive this, all callbacks are plain functions
 # rather than methods, and all take a plain unblessed hashref for the state.
-# This hashref is stored in the 'inner' key of the main $self object.
+# Hashrefs of this state are stored in the 'inners' arrayref of the main $self
+# object, one per worker process.
 #
 # This allows the DESTROY handler to work properly when the user code drops
 # the last reference to this object.
@@ -192,21 +202,18 @@ sub new
       croak "Unrecognised stream type '$streamtype'";
 
    my $self = bless {
-      next_id => 0,
-      code    => $code,
+      next_id    => 0,
+      code       => $code,
+      set        => $set,
       streamtype => $streamtype,
+      marshaller => $marshaller,
 
-      kids => [],
+      inners => [],
 
-      inner => {
-         set            => $set,
-         result_handler => {},
-         marshaller     => $marshaller,
-      },
-
+      queue  => [],
    }, $class;
 
-   $self->_detach_child;
+   $self->_detach_child foreach( 1 .. $params{workers} || 1 );
 
    return $self;
 }
@@ -215,7 +222,13 @@ sub _detach_child
 {
    my $self = shift;
 
-   my $inner = $self->{inner};
+   my $inner = {
+      set            => $self->{set},
+      result_handler => {},
+      marshaller     => $self->{marshaller},
+      busy           => 0,
+      queue          => $self->{queue},
+   };
 
    my ( $childread, $mywrite );
    my ( $myread, $childwrite );
@@ -247,12 +260,12 @@ sub _detach_child
             POSIX::close( $_ );
          }
 
-         $self->_child_loop( $childread, $childwrite ),
+         $self->_child_loop( $childread, $childwrite, $inner ),
       },
       on_exit => sub { _child_error( $inner, 'exit', @_ ) },
    );
 
-   push @{ $self->{kids} }, $kid;
+   $inner->{kid} = $kid;
 
    close( $childread );
    close( $childwrite );
@@ -267,6 +280,8 @@ sub _detach_child
    $inner->{iobuffer} = $iobuffer;
 
    $set->add( $iobuffer );
+
+   push @{ $self->{inners} }, $inner;
 }
 
 sub DESTROY
@@ -282,8 +297,14 @@ sub DESTROY
 
 =head2 $code->call( %params )
 
-This method queues one invocation of the code block to be executed in the
-child process. The C<%params> hash takes the following keys:
+This method causes one invocation of the code block to be executed in a
+free worker. If there are no free workers available at the time this method is
+called, the request will be queued, to be sent to the first worker that later
+becomes available. The request will already have been serialised by the
+marshaller, so it will be safe to modify any referenced data structures in the
+arguments after this call returns.
+
+The C<%params> hash takes the following keys:
 
 =over 8
 
@@ -326,8 +347,6 @@ sub call
    my $self = shift;
    my ( %params ) = @_;
 
-   my $inner = $self->{inner};
-
    my $args = delete $params{args};
    ref $args eq "ARRAY" or croak "Expected 'args' to be an array";
 
@@ -354,20 +373,27 @@ sub call
 
    my $callid = $self->{next_id}++;
 
-   my $data = $inner->{marshaller}->marshall_args( $callid, $args );
+   my $data = $self->{marshaller}->marshall_args( $callid, $args );
    my $request = _marshall_record( 'c', $callid, $data );
 
-   $inner->{iobuffer}->write( pack( "I", length $request ) . $request );
+   my $inner;
+   foreach( @{ $self->{inners} } ) {
+      $inner = $_, last if !$_->{busy};
+   }
 
-   my $handlermap = $inner->{result_handler};
-   $handlermap->{$callid} = $on_result;
+   if( $inner ) {
+      _send_request( $inner, $callid, $request, $on_result );
+   }
+   else {
+      push @{ $self->{queue} }, [ $callid, $request, $on_result ];
+   }
 }
 
 =head2 $code->shutdown
 
-This method requests that the detached child process stops running. All
-pending calls to the code are finished with a 'shutdown' error, and the child
-process itself exits.
+This method requests that the detached worker processes stop running. All
+pending calls to the code are finished with a 'shutdown' error, and the worker
+processes exit.
 
 =cut
 
@@ -375,19 +401,31 @@ sub shutdown
 {
    my $self = shift;
 
-   my $inner = $self->{inner};
+   foreach my $inner ( @{ $self->{inners} } ) {
+      if( defined $inner->{iobuffer} ) {
+         $inner->{set}->remove( $inner->{iobuffer} );
+         undef $inner->{iobuffer};
+      }
 
-   if( defined $inner->{iobuffer} ) {
-      $inner->{set}->remove( $inner->{iobuffer} );
-      undef $inner->{iobuffer};
+      my $handlermap = $inner->{result_handler};
+
+      foreach my $id ( keys %$handlermap ) {
+         $handlermap->{$id}->( 'shutdown' );
+         delete $handlermap->{$id};
+      }
    }
+}
+
+# INNER FUNCTION
+sub _send_request
+{
+   my ( $inner, $callid, $request, $on_result ) = @_;
 
    my $handlermap = $inner->{result_handler};
+   $handlermap->{$callid} = $on_result;
 
-   foreach my $id ( keys %$handlermap ) {
-      $handlermap->{$id}->( 'shutdown' );
-      delete $handlermap->{$id};
-   }
+   $inner->{iobuffer}->write( pack( "I", length $request ) . $request );
+   $inner->{busy} = 1;
 }
 
 # INNER FUNCTION
@@ -432,6 +470,13 @@ sub _socket_incoming
    }
 
    delete $handlermap->{$id};
+   $inner->{busy} = 0;
+
+   if( @{ $inner->{queue} } ) {
+      my ( $callid, $request, $on_result ) = @{ shift @{ $inner->{queue} } };
+      _send_request( $inner, $callid, $request, $on_result );
+   }
+
    return 1;
 }
 
@@ -483,9 +528,7 @@ sub _read_exactly
 sub _child_loop
 {
    my $self = shift;
-   my ( $inhandle, $outhandle ) = @_;
-
-   my $inner = $self->{inner};
+   my ( $inhandle, $outhandle, $inner ) = @_;
 
    my $code = $self->{code};
 
@@ -544,26 +587,11 @@ object.
 
 =item *
 
-Pooling of multiple child processes - perhaps even dynamic. Default one
-process, allow dynamic creation of more if it's busy.
+Dynamic pooling of multiple worker processes, with min/max watermarks.
 
 =item *
 
 Fall back on a pipe pair if socketpair doesn't work.
-
-=back
-
-=head1 BUGS
-
-=over 4
-
-=item *
-
-The child process is not shut down, and the connecting socket or pipes not
-closed when the application using the DetachedCode drops its last reference.
-This is due to an internal reference being kept. A workaround for this is to
-make sure always to call the C<shutdown()> method. A proper fix will be
-included in a later version.
 
 =back
 
