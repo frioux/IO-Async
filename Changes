@@ -4,7 +4,7 @@ Revision history for IO-Async
          * Added TimeQueue object and integration with IO::Async::Set and
            subclasses.
          * Added MergePoint object
-         * Added 'on_closed' callback support to IO::Async::Buffer
+         * Added 'on_closed' callback support to IO::Async::Notifier
 
         BUGFIXES:
          * Don't depend on system locale when checking string value of $!
