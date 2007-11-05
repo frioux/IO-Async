@@ -186,9 +186,17 @@ sub new
       croak "Unrecognised marshaller type '$params{marshaller}'";
    }
 
+   my $streamtype = $params{stream} || "socket";
+
+   $streamtype eq "socket" or $streamtype eq "pipe" or
+      croak "Unrecognised stream type '$streamtype'";
+
    my $self = bless {
       next_id => 0,
       code    => $code,
+      streamtype => $streamtype,
+
+      kids => [],
 
       inner => {
          set            => $set,
@@ -198,14 +206,23 @@ sub new
 
    }, $class;
 
+   $self->_detach_child;
+
+   return $self;
+}
+
+sub _detach_child
+{
+   my $self = shift;
+
    my $inner = $self->{inner};
 
    my ( $childread, $mywrite );
    my ( $myread, $childwrite );
 
-   my $streamtype = $params{stream};
+   my $streamtype = $self->{streamtype};
 
-   if( !defined $streamtype or $streamtype eq "socket" ) {
+   if( $streamtype eq "socket" ) {
       socketpair( my $myend, my $childend, PF_UNIX, SOCK_STREAM, 0 ) or
          croak "Cannot socketpair(PF_UNIX) - $!";
 
@@ -216,13 +233,13 @@ sub new
       pipe( $childread, $mywrite ) or croak "Cannot pipe() - $!";
       pipe( $myread, $childwrite ) or croak "Cannot pipe() - $!";
    }
-   else {
-      croak "Unrecognised stream type '$streamtype'";
-   }
+
+   my $set = $inner->{set};
 
    my $kid = $set->detach_child(
       code => sub { 
-         foreach( 0 .. IO::Async::ChildManager::OPEN_MAX_FD() ) {
+      #foreach( 0 .. IO::Async::ChildManager::OPEN_MAX_FD() ) {
+         foreach( 0 .. 10 ) {
             next if $_ == 2;
             next if $_ == fileno $childread;
             next if $_ == fileno $childwrite;
@@ -235,7 +252,7 @@ sub new
       on_exit => sub { _child_error( $inner, 'exit', @_ ) },
    );
 
-   $self->{kid} = $kid;
+   push @{ $self->{kids} }, $kid;
 
    close( $childread );
    close( $childwrite );
@@ -250,8 +267,6 @@ sub new
    $inner->{iobuffer} = $iobuffer;
 
    $set->add( $iobuffer );
-
-   return $self;
 }
 
 sub DESTROY
