@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 41;
+use Test::More tests => 45;
 use Test::Exception;
 
 use File::Temp qw( tempdir );
@@ -219,12 +219,12 @@ like( $err, qr/^exception name at $0 line \d+\.$/, '$err after exception' );
 
 $code = IO::Async::DetachedCode->new(
    set => $set,
-   code => sub { exit shift },
+   code => sub { $_[0] ? exit shift : return 0 },
 );
 
 $code->call(
    args => [ 16 ],
-   on_return => sub { },
+   on_return => sub { $err = "" },
    on_error  => sub { $err = [ @_ ] },
 );
 
@@ -234,6 +234,22 @@ $ready = wait_for { defined $err };
 cmp_ok( $ready, '>=', 2, '$ready after child death' );
 # Not sure what reason we might get - need to check both
 ok( $err->[0] eq "closed" || $err->[0] eq "exit", '$err->[0] after child death' );
+
+is( scalar $code->workers, 0, '$code->workers is now 0' );
+
+$code->call(
+   args => [ 0 ],
+   on_return => sub { $err = "return" },
+   on_error  => sub { $err = [ @_ ] },
+);
+
+is( scalar $code->workers, 1, '$code->workers is now 1 again' );
+
+undef $err;
+$ready = wait_for { defined $err };
+
+cmp_ok( $ready, '>=', 2, '$ready after child nondeath' );
+is( $err, "return", '$err is "return" after child nondeath' );
 
 $code = $set->detach_code(
    code => sub { return join( "+", @_ ) },

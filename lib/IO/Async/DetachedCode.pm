@@ -201,19 +201,22 @@ sub new
    $streamtype eq "socket" or $streamtype eq "pipe" or
       croak "Unrecognised stream type '$streamtype'";
 
+   my $workers = $params{workers} || 1;
+
    my $self = bless {
       next_id    => 0,
       code       => $code,
       set        => $set,
       streamtype => $streamtype,
       marshaller => $marshaller,
+      workers    => $workers,
 
       inners => [],
 
       queue  => [],
    }, $class;
 
-   $self->_detach_child foreach( 1 .. $params{workers} || 1 );
+   $self->_detach_child foreach( 1 .. $workers );
 
    return $self;
 }
@@ -222,12 +225,14 @@ sub _detach_child
 {
    my $self = shift;
 
+   # The inner object needs references to some members of the outer object
    my $inner = {
       set            => $self->{set},
       result_handler => {},
       marshaller     => $self->{marshaller},
       busy           => 0,
       queue          => $self->{queue},
+      inners         => $self->{inners},
    };
 
    my ( $childread, $mywrite );
@@ -281,6 +286,8 @@ sub _detach_child
    $set->add( $iobuffer );
 
    push @{ $self->{inners} }, $inner;
+
+   return $inner;
 }
 
 sub DESTROY
@@ -378,6 +385,10 @@ sub call
    my $inner;
    foreach( @{ $self->{inners} } ) {
       $inner = $_, last if !$_->{busy};
+   }
+
+   if( !$inner and @{ $self->{inners} } < $self->{workers} ) {
+      $inner = $self->_detach_child;
    }
 
    if( $inner ) {
@@ -509,6 +520,9 @@ sub _child_error
       $handlermap->{$id}->( 'error', $cause, @args );
       delete $handlermap->{$id};
    }
+
+   # Remove myself from the parent's inners list
+   @{ $inner->{inners} } = grep { $_ != $inner } @{ $inner->{inners} };
 
    return 0;
 }
