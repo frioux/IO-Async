@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 31;
+use Test::More tests => 41;
 use Test::Exception;
 
 use File::Temp qw( tempdir );
@@ -22,6 +22,11 @@ my $code = IO::Async::DetachedCode->new(
 
 ok( defined $code, '$code defined' );
 is( ref $code, "IO::Async::DetachedCode", 'ref $code is IO::Async::DetachedCode' );
+
+is( scalar $code->workers, 1, '$code->workers is 1' );
+my @workers = $code->workers;
+is( scalar @workers, 1, '@workers has 1 value' );
+ok( kill( 0, $workers[0] ), '$workers[0] is a PID' );
 
 dies_ok( sub { $code->call( args => [], on_result => "hello" ) },
          'call with on_result not CODE ref fails' );
@@ -66,6 +71,8 @@ $code->call(
 
 is( $result, undef, '$result before call returns' );
 
+is( scalar $code->workers, 1, '$code->workers is still 1 after call' );
+
 my $ready;
 $ready = wait_for { defined $result };
 
@@ -85,16 +92,22 @@ $code->call(
    on_error  => sub { die "Test failed early - @_" },
 );
 
+is( scalar $code->workers, 1, '$code->workers is still 1 after 2 calls' );
+
 $ready = wait_for { @result == 2 };
 
 cmp_ok( $ready, '>=', 2, '$ready after both calls return' );
 is_deeply( \@result, [ 3, 7 ], '@result after both calls return' );
+
+is( scalar $code->workers, 1, '$code->workers is still 1 after 2 calls return' );
 
 $code = IO::Async::DetachedCode->new(
    set  => $set,
    code => sub { return $_[0] + $_[1] },
    stream => "socket",
 );
+
+is( scalar $code->workers, 1, '$code->workers is 1 for socket stream' );
 
 $code->call(
    args => [ 5, 6 ],
@@ -119,6 +132,8 @@ $code->call(
    on_return => sub { $result = shift },
    on_error  => sub { die "Test failed early - @_" },
 );
+
+is( scalar $code->workers, 1, '$code->workers is 1 for pipe stream' );
 
 undef $result;
 $ready = wait_for { defined $result };
@@ -253,6 +268,8 @@ $code = $set->detach_code(
    workers => 3,
 );
 
+is( scalar $code->workers, 3, '$code->workers is 3' );
+
 my $dir = tempdir( CLEANUP => 1 );
 
 my %ret;
@@ -286,3 +303,5 @@ for my $f ( "$dir/1", "$dir/2", "$dir/3" ) {
 wait_for { keys %ret == 3 };
 
 is_deeply( \%ret, { 1 => 1, 2 => 2, 3 => 3 }, 'ret keys after parallel run' );
+
+is( scalar $code->workers, 3, '$code->workers is still 3' );

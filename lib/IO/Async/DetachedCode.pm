@@ -415,6 +415,25 @@ sub shutdown
    }
 }
 
+=head2 $n_workers = $code->workers
+
+This method in scalar context returns the number of workers currently running.
+
+=head2 @worker_pids = $code->workers
+
+This method in list context returns a list of the PID numbers of all the
+currently running worker processes.
+
+=cut
+
+sub workers
+{
+   my $self = shift;
+
+   return scalar @{ $self->{inners} } unless wantarray;
+   return map { $_->{kid} } @{ $self->{inners} };
+}
+
 # INNER FUNCTION
 sub _send_request
 {
