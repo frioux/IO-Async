@@ -205,6 +205,25 @@ sub new
 
 =cut
 
+=head2 $notifier->close
+
+This method calls C<close> on the underlying IO handles. This method won't
+directly invoke the C<on_closed> event callback; that will be done by the
+C<handle_closed> method.
+
+=cut
+
+sub close
+{
+   my $self = shift;
+
+   my $read_handle = $self->{read_handle};
+   $read_handle->close;
+
+   my $write_handle = $self->{write_handle};
+   $write_handle->close if $write_handle != $read_handle;
+}
+
 =head2 $handle = $notifier->read_handle
 
 =head2 $handle = $notifier->write_handle
@@ -315,9 +334,9 @@ sub on_write_ready
 
 =head2 $notifier->handle_closed()
 
-This method marks that the handle has been closed. After this has been called,
-the object will no longer mark any bits in the C<pre_select()> call, nor
-respond to any set bits in the C<post_select()> call.
+This method marks that the handle has been closed. It is intended to be called
+by a subclass, or from the C<on_read_ready> and C<on_write_ready> event
+callbacks.
 
 =cut
 

@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 25;
+use Test::More tests => 28;
 use Test::Exception;
 
 use IO::Socket::UNIX;
@@ -10,6 +10,8 @@ use IO::Socket::UNIX;
 use IO::Async::Notifier;
 
 use IO::Handle;
+
+use POSIX qw( EAGAIN );
 
 dies_ok( sub { IO::Async::Notifier->new( handle => "Hello" ) },
          'Not a socket' );
@@ -55,6 +57,16 @@ is( $readready, 1, '$readready after call' );
 is( $writeready, 0, '$writeready before call' );
 $ioan->on_write_ready;
 is( $writeready, 1, '$writeready after call' );
+
+my $ret = $S2->sysread( my $b, 1 );
+my $errno = $!;
+is( $ret, undef,  '$S2 not readable before close...' );
+is( $!+0, EAGAIN, '$S2 read error is EAGAIN before close' );
+
+$ioan->close;
+
+$ret = $S2->sysread( $b, 1 );
+is( $ret, 0, '$S2 gives EOF after close' );
 
 undef $ioan;
 $ioan = IO::Async::Notifier->new(
