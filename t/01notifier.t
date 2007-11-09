@@ -108,6 +108,6 @@ $ioan = IO::Async::Notifier->new(
    on_closed => sub { $closed = 1 },
 );
 
-$ioan->handle_closed;
+$ioan->close;
 
-is( $closed, 1, '$closed after ->handle_closed' );
+is( $closed, 1, '$closed after ->close' );

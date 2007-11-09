@@ -61,7 +61,7 @@ called when the underlying IO handle becomes readable or writable:
  $on_write_ready->( $self )
 
 Optionally, an C<on_closed> key can also be specified, which will be called
-when the C<handle_closed> method is invoked. This is intended for subclasses.
+when the C<close> method is invoked. This is intended for subclasses.
 
  $on_closed->( $self )
 
@@ -77,7 +77,7 @@ should not call the C<SUPER::> versions of those methods.
 
 =back
 
-If either of the readyness methods calls the C<handle_closed()> method, then
+If either of the readyness methods calls the C<close()> method, then
 the handle is internally marked as closed within the object.
 
 =cut
@@ -207,9 +207,7 @@ sub new
 
 =head2 $notifier->close
 
-This method calls C<close> on the underlying IO handles. This method won't
-directly invoke the C<on_closed> event callback; that will be done by the
-C<handle_closed> method.
+This method calls C<close> on the underlying IO handles.
 
 =cut
 
@@ -218,10 +216,19 @@ sub close
    my $self = shift;
 
    my $read_handle = $self->{read_handle};
+   return unless( defined $read_handle );
+
+   $self->{on_closed}->( $self ) if $self->{on_closed};
+
+   if( my $set = $self->{set} ) {
+      $set->remove( $self );
+   }
+
+   delete $self->{read_handle};
    $read_handle->close;
 
-   my $write_handle = $self->{write_handle};
-   $write_handle->close if $write_handle != $read_handle;
+   my $write_handle = delete $self->{write_handle};
+   $write_handle->close if defined $write_handle and $write_handle != $read_handle;
 }
 
 =head2 $handle = $notifier->read_handle
@@ -330,34 +337,6 @@ sub on_write_ready
    my $self = shift;
    my $callback = $self->{on_write_ready};
    $callback->( $self ) if defined $callback;
-}
-
-=head2 $notifier->handle_closed()
-
-This method marks that the handle has been closed. It is intended to be called
-by a subclass, or from the C<on_read_ready> and C<on_write_ready> event
-callbacks.
-
-=cut
-
-sub handle_closed
-{
-   my $self = shift;
-
-   my $read_handle = $self->{read_handle};
-   return unless( defined $read_handle );
-
-   $self->{on_closed}->( $self ) if $self->{on_closed};
-
-   $read_handle->close;
-   undef $read_handle;
-   delete $self->{read_handle};
-
-   my $write_handle = $self->{write_handle};
-   if( defined $write_handle ) {
-      undef $write_handle;
-      delete $self->{write_handle};
-   }
 }
 
 =head1 CHILD NOTIFIERS

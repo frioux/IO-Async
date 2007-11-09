@@ -170,7 +170,7 @@ nature, may have changed from the original error by the time this callback
 runs so it should always use the value passed in).
 
 If an error occurs when the corresponding error callback is not supplied, and
-there is not a subclass method for it, then the C<handle_closed()> method is
+there is not a subclass method for it, then the C<close()> method is
 called instead.
 
 The C<on_outgoing_empty> callback is not passed any arguments.
@@ -305,7 +305,7 @@ sub on_read_ready
          $self->on_read_error( $errno );
       }
       else {
-         $self->handle_closed();
+         $self->close();
       }
 
       return;
@@ -328,7 +328,7 @@ sub on_read_ready
       last if !$again;
    }
 
-   $self->handle_closed() if $handleclosed;
+   $self->close() if $handleclosed;
 }
 
 # protected
@@ -357,14 +357,14 @@ sub on_write_ready
          $self->on_write_error( $errno );
       }
       else {
-         $self->handle_closed();
+         $self->close();
       }
 
       return;
    }
 
    if( $len == 0 ) {
-      $self->handle_closed();
+      $self->close();
    }
    else {
       substr( $self->{writebuff}, 0, $len ) = "";
