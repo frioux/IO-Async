@@ -140,7 +140,7 @@ sub new
 
       # Test if we've got a fileno. We put it in an eval block in case what
       # we were passed in can't do fileno. We can't just test if 
-      # $read_handle->can( "fileno" ) because this is true for bare
+      # $read_handle->can( "fileno" ) because this is not true for bare
       # filehandles like \*STDIN, whereas STDIN->fileno still works.
       unless( defined eval { $read_handle->fileno } ) {
          croak 'Expected that read_handle can fileno()';
