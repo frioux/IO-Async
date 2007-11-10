@@ -207,7 +207,8 @@ sub new
 
 =head2 $notifier->close
 
-This method calls C<close> on the underlying IO handles.
+This method calls C<close> on the underlying IO handles. This method will will
+remove the notifier from its containing set.
 
 =cut
 

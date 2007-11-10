@@ -168,10 +168,8 @@ my ( $N1, $N2 ) = map {
 $set->add( $N1 );
 $set->add( $N2 );
 
-$set->remove( $N1 ); $set->remove( $N2 );
-undef $N1;           undef $N2;
-close( $P1 );        close( $P2 );
-undef $P1;           undef $P2;
+$N1->close;
+$N2->close;
 
 @handles = $poll->handles();
 is( scalar @handles, 1, '@handles before clean removal test' );
