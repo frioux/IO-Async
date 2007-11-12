@@ -258,6 +258,15 @@ sub new
 
 =cut
 
+sub close
+{
+   my $self = shift;
+
+   return $self->SUPER::close if length( $self->{writebuff} ) == 0;
+
+   $self->{closing} = 1;
+}
+
 =head2 $buffer->write( $data )
 
 This method adds data to the outgoing data queue. The data is not yet sent to
@@ -277,6 +286,8 @@ sub write
 {
    my $self = shift;
    my ( $data ) = @_;
+
+   carp "Cannot write data to a Buffer that is closing", return if $self->{closing};
 
    $self->{writebuff} .= $data;
 
@@ -378,6 +389,8 @@ sub on_write_ready
          elsif( $self->can( 'on_outgoing_empty' ) ) {
             $self->on_outgoing_empty();
          }
+
+         $self->close if $self->{closing};
       }
    }
 }
