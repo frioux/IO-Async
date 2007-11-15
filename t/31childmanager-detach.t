@@ -2,10 +2,10 @@
 
 use strict;
 
-use Test::More tests => 4;
+use Test::More tests => 8;
 use Test::Exception;
 
-use POSIX qw( WEXITSTATUS );
+use POSIX qw( SIGINT WEXITSTATUS WIFSIGNALED WTERMSIG );
 
 use IO::Async::Set::IO_Poll;
 
@@ -52,3 +52,26 @@ $ready = wait_for_exit;
 
 is( $ready, 1, '$ready after child die' );
 is( WEXITSTATUS($exitcode), 255, 'WEXITSTATUS($exitcode) after child die' );
+
+$SIG{INT} = sub { exit( 22 ) };
+
+$manager->detach_child(
+   code    => sub { kill SIGINT, $$ },
+   on_exit => sub { ( undef, $exitcode ) = @_ },
+);
+
+wait_for_exit;
+
+is( WIFSIGNALED($exitcode), 1, 'WIFSIGNALED($exitcode) after child SIGINT' );
+is( WTERMSIG($exitcode), SIGINT, 'WTERMSIG($exitcode) after child SIGINT' );
+
+$manager->detach_child(
+   code    => sub { kill SIGINT, $$ },
+   on_exit => sub { ( undef, $exitcode ) = @_ },
+   keep_signals => 1,
+);
+
+wait_for_exit;
+
+is( WIFSIGNALED($exitcode), 0, 'WIFSIGNALED($exitcode) after child SIGINT with keep_signals' );
+is( WEXITSTATUS($exitcode), 22, 'WEXITSTATUS($exitcode) after child SIGINT with keep_signals' );

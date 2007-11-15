@@ -274,6 +274,12 @@ will be invoked in the following way:
 This key is optional; if not supplied, the calling code should install a
 handler using the C<watch_child()> method.
 
+=item keep_signals => BOOL
+
+Optional boolean. If missing or false, any CODE references in the C<%SIG> hash
+will be removed and restored back to C<DEFAULT> in the child process. If true,
+no adjustment of the C<%SIG> hash will be performed.
+
 =cut
 
 sub detach_child
@@ -287,6 +293,13 @@ sub detach_child
    defined $kid or croak "Cannot fork() - $!";
 
    if( $kid == 0 ) {
+      unless( $params{keep_signals} ) {
+         foreach( keys %SIG ) {
+            next if m/^__(WARN|DIE)__$/;
+            $SIG{$_} = "DEFAULT" if ref $SIG{$_} eq "CODE";
+         }
+      }
+
       my $exitvalue = eval { $code->() };
 
       defined $exitvalue or $exitvalue = -1;
