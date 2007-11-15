@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 45;
+use Test::More tests => 47;
 use Test::Exception;
 
 use File::Temp qw( tempdir );
@@ -216,6 +216,52 @@ $ready = wait_for { defined $err };
 
 cmp_ok( $ready, '>=', 2, '$ready after exception' );
 like( $err, qr/^exception name at $0 line \d+\.$/, '$err after exception' );
+
+my $count = 0;
+$code = IO::Async::DetachedCode->new(
+   set => $set,
+   code => sub { $count++; die "$count\n" },
+   exit_on_die => 0,
+);
+
+my @errs;
+$code->call(
+   args => [],
+   on_return => sub { },
+   on_error  => sub { push @errs, shift },
+);
+$code->call(
+   args => [],
+   on_return => sub { },
+   on_error  => sub { push @errs, shift },
+);
+
+wait_for { scalar @errs == 2 };
+
+is_deeply( \@errs, [ "1\n", "2\n" ], 'Closed variables preserved when exit_on_die => 0' );
+
+$code = IO::Async::DetachedCode->new(
+   set => $set,
+   code => sub { $count++; die "$count\n" },
+   exit_on_die => 1,
+);
+
+undef @errs;
+$code->call(
+   args => [],
+   on_return => sub { },
+   on_error  => sub { push @errs, shift },
+);
+wait_for { scalar @errs == 1 };
+
+$code->call(
+   args => [],
+   on_return => sub { },
+   on_error  => sub { push @errs, shift },
+);
+wait_for { scalar @errs == 2 };
+
+is_deeply( \@errs, [ "1\n", "1\n" ], 'Closed variables no preserved when exit_on_die => 1' );
 
 $code = IO::Async::DetachedCode->new(
    set => $set,

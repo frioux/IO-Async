@@ -152,6 +152,13 @@ Optional integer, specifies the number of parallel workers to create.
 
 If not supplied, 1 is used.
 
+=item exit_on_die => BOOL
+
+Optional boolean, controls what happens after the C<code> throws an
+exception. If missing or false, the worker will continue running to process
+more requests. If true, the worker will be shut down. A new worker might be
+constructed by the C<call> method to replace it, if necessary.
+
 =back
 
 Since the code block will be called multiple times within the same child
@@ -203,13 +210,17 @@ sub new
 
    my $workers = $params{workers} || 1;
 
+   # Squash this down to a boolean
+   my $exit_on_die =  $params{exit_on_die} ? 1 : 0;
+
    my $self = bless {
-      next_id    => 0,
-      code       => $code,
-      set        => $set,
-      streamtype => $streamtype,
-      marshaller => $marshaller,
-      workers    => $workers,
+      next_id     => 0,
+      code        => $code,
+      set         => $set,
+      streamtype  => $streamtype,
+      marshaller  => $marshaller,
+      workers     => $workers,
+      exit_on_die => $exit_on_die,
 
       inners => [],
 
@@ -233,6 +244,7 @@ sub _detach_child
       busy           => 0,
       queue          => $self->{queue},
       inners         => $self->{inners},
+      exit_on_die    => $self->{exit_on_die},
    };
 
    my ( $childread, $mywrite );
@@ -309,6 +321,11 @@ called, the request will be queued, to be sent to the first worker that later
 becomes available. The request will already have been serialised by the
 marshaller, so it will be safe to modify any referenced data structures in the
 arguments after this call returns.
+
+If the number of available workers is less than the number supplied to the
+constructor (perhaps because some of them were shut down because of
+C<exit_on_die>) and they are all busy, then a new one will be created to
+perform this request.
 
 The C<%params> hash takes the following keys:
 
@@ -488,7 +505,9 @@ sub _socket_incoming
       carp "Unrecognised return ID $id from detached code child";
       return 1;
    }
-   my $handler = $handlermap->{$id};
+
+   my $handler = delete $handlermap->{$id};
+   $inner->{busy} = 0;
 
    if( $type eq "r" ) {
       my $ret = $inner->{marshaller}->unmarshall_ret( $id, $data );
@@ -496,10 +515,14 @@ sub _socket_incoming
    }
    elsif( $type eq "e" ) {
       $handler->( "error", $data );
-   }
 
-   delete $handlermap->{$id};
-   $inner->{busy} = 0;
+      if( $inner->{exit_on_die} ) {
+         _child_error( $inner, 'die' );
+
+         $inner->{set}->remove( $inner->{iobuffer} );
+         undef $inner->{iobuffer};
+      }
+   }
 
    if( @{ $inner->{queue} } ) {
       my ( $callid, $request, $on_result ) = @{ shift @{ $inner->{queue} } };
