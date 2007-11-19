@@ -7,7 +7,7 @@ package IO::Async::Set::GMainLoop;
 
 use strict;
 
-our $VERSION = '0.09';
+our $VERSION = '0.10';
 
 use base qw( IO::Async::Set );
 

@@ -7,7 +7,7 @@ package IO::Async::MergePoint;
 
 use strict;
 
-our $VERSION = '0.09';
+our $VERSION = '0.10';
 
 use Carp;
 
