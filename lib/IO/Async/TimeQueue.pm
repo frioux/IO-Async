@@ -151,10 +151,12 @@ sub cancel
    $heap->delete( $id );
 }
 
-=head2 $queue->fire( %params )
+=head2 $count = $queue->fire( %params )
 
-Call all the event callbacks that should have run by now. The C<%params> hash
-takes the following keys:
+Call all the event callbacks that should have run by now. The number of
+callbacks actually invoked will be returned.
+
+The C<%params> hash takes the following keys:
 
 =over 8
 
@@ -175,13 +177,18 @@ sub fire
 
    my $heap = $self->{heap};
 
+   my $count = 0;
+
    while( defined( my $top = $heap->top ) ) {
       last if( $top->time > $now );
 
       $top->code->();
+      $count++;
 
       $heap->extract_top;
    }
+
+   return $count;
 }
 
 # Keep perl happy; keep Britain tidy
