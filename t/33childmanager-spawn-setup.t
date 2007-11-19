@@ -190,7 +190,7 @@ my $ret;
       code => sub { print "test"; },
       setup => [ map { +"fd$_" => $pipe_w } ( 1 .. 19 ) ],
 
-      ready      => 3,
+      ready      => 2,
       exitstatus => 1,
       dollarat   => '';
 

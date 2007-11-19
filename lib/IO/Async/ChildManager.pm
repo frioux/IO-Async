@@ -601,19 +601,43 @@ sub _spawn_in_child
    my $exitvalue = eval {
       my %keep_fds = ( 0 => 1, 1 => 1, 2 => 1 ); # Keep STDIN, STDOUT, STDERR
 
+      my $max_fd = 0;
+      my $writepipe_clashes = 0;
+
       if( @$setup ) {
          # The writepipe might be in the way of a setup filedescriptor. If it
          # is we'll have to dup2() it out of the way then close the original.
-         my ( $max_fd, $writepipe_clashes ) = ( 0, 0 );
          foreach my $i ( 0 .. $#$setup/2 ) {
-            my $key = $$setup[$i*2];
+            my ( $key, $value ) = @$setup[$i*2, $i*2 + 1];
             $key =~ m/^fd(\d+)$/ or next;
             my $fd = $1;
 
             $max_fd = $fd if $fd > $max_fd;
             $writepipe_clashes = 1 if $fd == fileno $writepipe;
-         }
 
+            my ( $operation, @params ) = @$value;
+
+            $operation eq "close" and do {
+               delete $keep_fds{$fd};
+            };
+
+            $operation eq "dup" and do {
+               my $fileno = fileno $params[0];
+               # Keep a count of how many times it will be dup()ed from so we
+               # can close it once we've finished
+               $keep_fds{$fileno}++;
+            };
+         }
+      }
+
+      $keep_fds{fileno $writepipe} = 1;
+
+      foreach ( 0 .. OPEN_MAX_FD ) {
+         next if exists $keep_fds{$_};
+         POSIX::close( $_ );
+      }
+
+      if( @$setup ) {
          if( $writepipe_clashes ) {
             $max_fd++;
 
@@ -629,17 +653,20 @@ sub _spawn_in_child
                my $fd = $1;
                my( $operation, @params ) = @$value;
 
-               $operation eq "close" and do {
-                  delete $keep_fds{$fd};
-                  next;
-               };
-
-               $keep_fds{$fd} = 1;
-
                $operation eq "dup"   and do {
                   my $from = fileno $params[0];
-                  dup2( $from, $fd ) or die "Cannot dup2($from to $fd) - $!\n";
+
+                  if( $from != $fd ) {
+                     POSIX::close( $fd );
+                     dup2( $from, $fd ) or die "Cannot dup2($from to $fd) - $!\n";
+                  }
+
+                  $keep_fds{$from}--;
+                  if( !$keep_fds{$from} ) {
+                     POSIX::close( $from );
+                  }
                };
+
                $operation eq "open"  and do {
                   my ( $mode, $filename ) = @params;
                   open( my $fh, $mode, $filename ) or die "Cannot open('$mode', '$filename') - $!\n";
@@ -654,13 +681,6 @@ sub _spawn_in_child
                %ENV = %$value;
             }
          }
-      }
-
-      $keep_fds{fileno $writepipe} = 1;
-
-      foreach ( 0 .. OPEN_MAX_FD ) {
-         next if exists $keep_fds{$_};
-         POSIX::close( $_ );
       }
 
       $code->();
