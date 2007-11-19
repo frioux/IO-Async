@@ -1,5 +1,25 @@
 Revision history for IO-Async
 
+0.10    INCOMPATIBLE CHANGES:
+         * Renamed events and methods in IO::Async::Notifier to better fit the
+           naming scheme of normal Perl handles. Backward-compatibility hooks
+           are currently provided, but will be removed in a later release. Any
+           code using the old names should be updated
+
+        CHANGES:
+         * Allow DetachedCode to have multiple back-end worker processes.
+         * Control if a back-end worker exits when the code "die"s
+         * Added 'close()' method on Notifiers/Buffers. Sensible behaviour on
+           buffers with queued data to send
+         * Reset %SIG hash in ChildManager->detach_child()
+
+        BUGFIXES:
+         * Clean up temporary directory during testing
+         * Shut down DetachedCode workers properly on object deref
+         * Better handling of borderline timing failures in t/11set-*.t
+         * Close old handles before dup2()ing new ones when detaching code
+         * Various other minor test script improvements
+
 0.09    CHANGES:
          * Added TimeQueue object and integration with IO::Async::Set and
            subclasses.
