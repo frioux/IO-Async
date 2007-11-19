@@ -115,10 +115,13 @@ sub new
 
 =cut
 
-=head2 $set->post_poll( $poll )
+=head2 $count = $set->post_poll( $poll )
 
 This method checks the returned event list from a C<IO::Poll::poll()> call,
 and calls any of the notification methods or callbacks that are appropriate.
+It returns the total number of callbacks that were invoked; that is, the
+total number of C<on_read_ready> and C<on_write_ready> methods on Notifiers,
+and the total number of TimeQueue event callbacks.
 
 =over 8
 
@@ -165,6 +168,8 @@ sub post_poll
       }
    }
 
+   my $count = @readready + @writeready;
+
    $_->on_read_ready foreach @readready;
    $_->on_write_ready foreach @writeready;
 
@@ -172,7 +177,9 @@ sub post_poll
    # attempt to fire any waiting timeout events anyway
 
    my $timequeue = $self->{timequeue};
-   $timequeue->fire if $timequeue;
+   $count += $timequeue->fire if $timequeue;
+
+   return $count;
 }
 
 =head2 $ready = $set->loop_once( $timeout )

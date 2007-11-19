@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 34;
+use Test::More tests => 38;
 use Test::Exception;
 
 use IO::Socket::UNIX;
@@ -41,6 +41,9 @@ my @handles;
 
 is( scalar @handles, 0, '@handles empty' );
 
+my $count = $set->post_poll();
+is( $count, 0, '$count while empty' );
+
 # Idle
 
 $set->add( $notifier );
@@ -53,6 +56,9 @@ my $ready;
 $ready = $poll->poll( 0.1 );
 
 is( $ready, 0, '$ready idle' );
+
+$count = $set->post_poll();
+is( $count, 0, '$count while idle' );
 
 @handles = $poll->handles();
 is_deeply( \@handles, [ $S1 ] , '@handles idle' );
@@ -70,7 +76,8 @@ $ready = $poll->poll( 0.1 );
 is( $ready, 1, '$ready readready' );
 
 is( $readready, 0, '$readready before post_poll' );
-$set->post_poll();
+$count = $set->post_poll();
+is( $count, 1, '$count after post_poll' );
 is( $readready, 1, '$readready after post_poll' );
 
 # Ready $S1 to clear the data
@@ -84,7 +91,8 @@ $ready = $poll->poll( 0.1 );
 is( $ready, 1, '$ready writeready' );
 
 is( $writeready, 0, '$writeready before post_poll' );
-$set->post_poll();
+$count = $set->post_poll();
+is( $count, 1, '$count after post_poll' );
 is( $writeready, 1, '$writeready after post_poll' );
 
 # loop_once
