@@ -2,6 +2,9 @@
 
 use strict;
 
+use lib 't';
+use TestAsync;
+
 use Test::More tests => 47;
 use Test::Exception;
 
@@ -14,6 +17,8 @@ use IO::Async::Set::IO_Poll;
 
 my $set = IO::Async::Set::IO_Poll->new();
 $set->enable_childmanager;
+
+testing_set( $set );
 
 my $code = IO::Async::DetachedCode->new(
    set  => $set,
@@ -45,24 +50,6 @@ dies_ok( sub { $code->call( args => [], on_return => sub {}, on_error => "hello"
 
 my $result;
 
-sub wait_for(&)
-{
-   my ( $cond ) = @_;
-
-   my $ready = 0;
-   undef $result;
-
-   my ( undef, $callerfile, $callerline ) = caller();
-
-   while( !$cond->() ) {
-      $_ = $set->loop_once( 10 ); # Give code a generous 10 seconds to do something
-      die "Nothing was ready after 10 second wait; called at $callerfile line $callerline\n" if $_ == 0;
-      $ready += $_;
-   }
-
-   $ready;
-}
-
 $code->call(
    args => [ 10, 20 ],
    on_return => sub { $result = shift },
@@ -74,6 +61,8 @@ is( $result, undef, '$result before call returns' );
 is( scalar $code->workers, 1, '$code->workers is still 1 after call' );
 
 my $ready;
+
+undef $result;
 $ready = wait_for { defined $result };
 
 cmp_ok( $ready, '>=', 2, '$ready after call returns' );
@@ -94,6 +83,7 @@ $code->call(
 
 is( scalar $code->workers, 1, '$code->workers is still 1 after 2 calls' );
 
+undef @result;
 $ready = wait_for { @result == 2 };
 
 cmp_ok( $ready, '>=', 4, '$ready after both calls return' );
@@ -212,6 +202,7 @@ $code->call(
    on_error  => sub { $err = shift },
 );
 
+undef $err;
 $ready = wait_for { defined $err };
 
 cmp_ok( $ready, '>=', 2, '$ready after exception' );
@@ -236,6 +227,7 @@ $code->call(
    on_error  => sub { push @errs, shift },
 );
 
+undef @errs;
 wait_for { scalar @errs == 2 };
 
 is_deeply( \@errs, [ "1\n", "2\n" ], 'Closed variables preserved when exit_on_die => 0' );
@@ -247,6 +239,7 @@ $code = IO::Async::DetachedCode->new(
 );
 
 undef @errs;
+
 $code->call(
    args => [],
    on_return => sub { },
@@ -362,6 +355,7 @@ for my $f ( "$dir/1", "$dir/2", "$dir/3" ) {
    unlink $f or die "Cannot unlink $f - $!";
 }
 
+undef %ret;
 wait_for { keys %ret == 3 };
 
 is_deeply( \%ret, { 1 => 1, 2 => 2, 3 => 3 }, 'ret keys after parallel run' );
