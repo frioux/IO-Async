@@ -2,7 +2,7 @@
 
 use strict;
 
-use constant MAIN_TESTS => 20;
+use constant MAIN_TESTS => 13;
 
 use Test::More tests => MAIN_TESTS + 1;
 use Test::Exception;
@@ -42,11 +42,7 @@ my $set = IO::Async::Set::GMainLoop->new();
 ok( defined $set, '$set defined' );
 is( ref $set, "IO::Async::Set::GMainLoop", 'ref $set is IO::Async::Set::GMainLoop' );
 
-# Empty
-
 my $context = Glib::MainContext->default;
-
-ok( ! $context->pending, 'nothing pending empty' );
 
 # Idle
 
@@ -58,13 +54,10 @@ dies_ok( sub { $set->add( $notifier ) }, 'adding again produces error' );
 
 $context->iteration( 0 );
 
-ok( ! $context->pending, 'nothing pending idle' );
-
 # Read-ready
 
 $S2->syswrite( "data\n" );
 
-ok( $context->pending, 'pending before readready' );
 is( $readready, 0, '$readready before iteration' );
 
 $context->iteration( 0 );
@@ -72,19 +65,16 @@ $context->iteration( 0 );
 # Ready $S1 to clear the data
 $S1->getline(); # ignore return
 
-ok( ! $context->pending, 'nothing pending after readready' );
 is( $readready, 1, '$readready after iteration' );
 
 # Write-ready
 $notifier->want_writeready( 1 );
 
-ok( $context->pending, 'pending before writeready' );
 is( $writeready, 0, '$writeready before iteration' );
 
 $context->iteration( 0 );
 $notifier->want_writeready( 0 );
 
-ok( ! $context->pending, 'nothing pending after writeready' );
 is( $writeready, 1, '$writeready after iteration' );
 
 # HUP
@@ -106,8 +96,6 @@ is( $readready, 1, '$readready after HUP' );
 $set->remove( $notifier );
 
 is( $notifier->__memberof_set, undef, '$notifier->__memberof_set is undef' );
-
-ok( ! $context->pending, 'nothing pending after removal' );
 
 # HUP of pipe
 

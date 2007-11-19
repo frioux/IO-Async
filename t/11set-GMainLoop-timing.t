@@ -2,7 +2,7 @@
 
 use strict;
 
-use constant MAIN_TESTS => 4;
+use constant MAIN_TESTS => 3;
 
 use Test::More tests => MAIN_TESTS;
 
@@ -22,8 +22,6 @@ if( !defined eval { require Glib } ) {
 my $set = IO::Async::Set::GMainLoop->new();
 
 my $context = Glib::MainContext->default;
-
-ok( ! $context->pending, 'nothing pending empty' );
 
 my $done = 0;
 
