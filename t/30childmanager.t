@@ -2,6 +2,9 @@
 
 use strict;
 
+use lib 't';
+use TestAsync;
+
 use Test::More tests => 29;
 use Test::Exception;
 
@@ -25,6 +28,8 @@ is_deeply( [ $manager->list_watching ], [], 'list_watching while idle' );
 
 my $set = IO::Async::Set::IO_Poll->new();
 
+testing_set( $set );
+
 $set->attach_signal( CHLD => sub { $handled = $manager->SIGCHLD } );
 
 my $kid = fork();
@@ -38,18 +43,8 @@ my $exitcode;
 
 sub wait_for_exit
 {
-   my $ready = 0;
    undef $exitcode;
-
-   my ( undef, $callerfile, $callerline ) = caller();
-
-   while( !defined $exitcode ) {
-      $_ = $set->loop_once( 10 ); # Give code a generous 10 seconds to exit
-      die "Nothing was ready after 10 second wait; called at $callerfile line $callerline\n" if $_ == 0;
-      $ready += $_;
-   }
-
-   $ready;
+   return wait_for { defined $exitcode };
 }
 
 $manager->watch( $kid => sub { ( undef, $exitcode ) = @_; } );

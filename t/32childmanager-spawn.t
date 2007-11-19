@@ -2,6 +2,9 @@
 
 use strict;
 
+use lib 't';
+use TestAsync;
+
 use Test::More tests => 38;
 use Test::Exception;
 
@@ -23,6 +26,8 @@ dies_ok( sub { $manager->spawn( command => "/bin/true", on_exit => sub {} ); },
 my $set = IO::Async::Set::IO_Poll->new();
 $set->enable_childmanager;
 
+testing_set( $set );
+
 $manager = $set->get_childmanager;
 
 my $exited_pid;
@@ -37,18 +42,8 @@ sub on_exit
 
 sub wait_for_exit
 {
-   my $ready = 0;
    undef $exitcode;
-
-   my ( undef, $callerfile, $callerline ) = caller();
-
-   while( !defined $exitcode ) {
-      $_ = $set->loop_once( 10 ); # Give code a generous 10 seconds to exit
-      die "Nothing was ready after 10 second wait; called at $callerfile line $callerline\n" if $_ == 0;
-      $ready += $_;
-   }
-
-   $ready;
+   return wait_for { defined $exitcode };
 }
 
 dies_ok( sub { $manager->spawn( badoption => 1 ); },
