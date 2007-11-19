@@ -37,7 +37,11 @@ $set->loop_once( 2 );
 $took = time - $now;
 
 cmp_ok( $took, '>', 1.9, 'loop_once(2) while idle takes at least 1.9 seconds' );
-cmp_ok( $took, '<', 2.5, 'loop_once(2) while idle takes no more than 2.5 seconds' );
+cmp_ok( $took, '<', 10, 'loop_once(2) while idle takes no more than 10 seconds' );
+if( $took > 2.5 ) {
+   diag( "loop_once(2) while idle took more than 2.5 seconds.\n" .
+         "This is not itself a bug, and may just be an indication of a busy testing machine" );
+}
 
 $set->add( $notifier );
 
@@ -46,7 +50,11 @@ $set->loop_once( 2 );
 $took = time - $now;
 
 cmp_ok( $took, '>', 1.9, 'loop_once(2) while waiting takes at least 1.9 seconds' );
-cmp_ok( $took, '<', 2.5, 'loop_once(2) while waiting takes no more than 2.5 seconds' );
+cmp_ok( $took, '<', 10, 'loop_once(2) while waiting takes no more than 10 seconds' );
+if( $took > 2.5 ) {
+   diag( "loop_once(2) while waiting took more than 2.5 seconds.\n" .
+         "This is not itself a bug, and may just be an indication of a busy testing machine" );
+}
 
 $set->remove( $notifier );
 
@@ -75,4 +83,8 @@ while( !$done ) {
 $took = time - $now;
 
 cmp_ok( $took, '>', 1.9, 'loop_once(5) while waiting for timer takes at least 1.9 seconds' );
-cmp_ok( $took, '<', 2.5, 'loop_once(5) while waiting for timer no more than 2.5 seconds' );
+cmp_ok( $took, '<', 10, 'loop_once(5) while waiting for timer no more than 10 seconds' );
+if( $took > 2.5 ) {
+   diag( "loop_once(2) while waiting for timer took more than 2.5 seconds.\n" .
+         "This is not itself a bug, and may just be an indication of a busy testing machine" );
+}
