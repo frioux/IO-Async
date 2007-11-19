@@ -182,13 +182,13 @@ sub post_poll
    return $count;
 }
 
-=head2 $ready = $set->loop_once( $timeout )
+=head2 $count = $set->loop_once( $timeout )
 
 This method calls the C<poll()> method on the stored C<IO::Poll> object,
 passing in the value of C<$timeout>, and then runs the C<post_poll()> method
-on itself. It returns the value returned by the underlying C<poll()> method;
-which will be the number of handles that returned a result, 0 if a timeout
-occured, or C<undef> on error.
+on itself. It returns the total number of callbacks invoked by the 
+C<post_poll()> method, or C<undef> if the underlying C<poll()> method returned
+an error.
 
 =cut
 
@@ -228,13 +228,9 @@ sub loop_once
       $pollret = select( undef, undef, undef, $timeout );
    }
 
-   {
-      # Preserve whatever value poll() or select() left here
-      local $!;
-      $self->post_poll();
-   }
+   return undef unless defined $pollret;
 
-   return $pollret;
+   return $self->post_poll();
 }
 
 =head2 $set->loop_forever()

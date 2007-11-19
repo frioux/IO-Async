@@ -233,5 +233,5 @@ $notifier->want_writeready( 1 );
 $writeready = 0;
 
 $ready = $set->loop_once( 0.1 );
-is( $ready, 1, '$ready after loop_once with implied IO::Poll' );
+is( $ready, 2, '$ready after loop_once with implied IO::Poll' );
 is( $writeready, 1, '$writeready after loop_once with implied IO::Poll' );

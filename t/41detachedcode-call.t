@@ -96,7 +96,7 @@ is( scalar $code->workers, 1, '$code->workers is still 1 after 2 calls' );
 
 $ready = wait_for { @result == 2 };
 
-cmp_ok( $ready, '>=', 2, '$ready after both calls return' );
+cmp_ok( $ready, '>=', 4, '$ready after both calls return' );
 is_deeply( \@result, [ 3, 7 ], '@result after both calls return' );
 
 is( scalar $code->workers, 1, '$code->workers is still 1 after 2 calls return' );
