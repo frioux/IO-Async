@@ -22,8 +22,7 @@ our $WRITELEN = 8192;
 
 =head1 NAME
 
-C<IO::Async::Buffer> - a class which implements asynchronous reading and
-writing data buffers around a connected handle
+C<IO::Async::Buffer> - read and write buffers around an IO handle
 
 =head1 SYNOPSIS
 

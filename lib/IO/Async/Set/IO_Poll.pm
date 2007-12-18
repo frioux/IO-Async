@@ -24,8 +24,7 @@ use constant IO_POLL_REMOVE_BUG => ( $IO::Poll::VERSION == '0.05' );
 
 =head1 NAME
 
-C<IO::Async::Set::IO_Poll> - a class that maintains a set of
-C<IO::Async::Notifier> objects by using an C<IO::Poll> object.
+C<IO::Async::Set::IO_Poll> - a set using an C<IO::Poll> object
 
 =head1 SYNOPSIS
 

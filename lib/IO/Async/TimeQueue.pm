@@ -20,8 +20,7 @@ BEGIN {
 
 =head1 NAME
 
-C<IO::Async::TimeQueue> - a class which implements a queue of future timed
-event callbacks
+C<IO::Async::TimeQueue> - a queue of future timed event callbacks
 
 =head1 DESCRIPTION
 

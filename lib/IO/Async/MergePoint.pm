@@ -13,7 +13,7 @@ use Carp;
 
 =head1 NAME
 
-C<IO::Async::MergePoint> - a class for resynchronising diverged control flow
+C<IO::Async::MergePoint> - resynchronise diverged control flow
 
 =head1 SYNOPSIS
 

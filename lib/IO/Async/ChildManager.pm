@@ -22,8 +22,7 @@ use constant OPEN_MAX_FD => sysconf(_SC_OPEN_MAX);
 
 =head1 NAME
 
-C<IO::Async::ChildManager> - a class which facilitates the execution of child
-processes
+C<IO::Async::ChildManager> - facilitates the execution of child processes
 
 =head1 SYNOPSIS
 

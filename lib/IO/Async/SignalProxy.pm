@@ -20,8 +20,7 @@ use warnings qw();
 
 =head1 NAME
 
-C<IO::Async::SignalProxy> - a class to allow handling of POSIX signals with
-C<IO::Async>-based IO
+C<IO::Async::SignalProxy> - handle POSIX signals with C<IO::Async>-based IO
 
 =head1 SYNOPSIS
 

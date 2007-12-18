@@ -15,8 +15,7 @@ use Carp;
 
 =head1 NAME
 
-C<IO::Async::Set::Select> - a class that maintains a set of
-C<IO::Async::Notifier> objects by using the C<select()> syscall.
+C<IO::Async::Set::Select> - a set using the C<select()> syscall
 
 =head1 SYNOPSIS
 

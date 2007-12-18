@@ -15,8 +15,7 @@ use Carp;
 
 =head1 NAME
 
-C<IO::Async::Set::GMainLoop> - a class that maintains a set of
-C<IO::Async::Notifier> objects by using the C<Glib::MainLoop> object.
+C<IO::Async::Set::GMainLoop> - a set using the C<Glib::MainLoop> object
 
 =head1 SYNOPSIS
 

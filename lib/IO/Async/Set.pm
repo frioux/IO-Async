@@ -30,8 +30,7 @@ BEGIN {
 
 =head1 NAME
 
-C<IO::Async::Set> - a class that maintains a set of C<IO::Async::Notifier>
-objects.
+C<IO::Async::Set> - maintain a set of C<IO::Async::Notifier> objects
 
 =head1 SYNOPSIS
 

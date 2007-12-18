@@ -19,8 +19,7 @@ use constant LENGTH_OF_I => length( pack( "I", 0 ) );
 
 =head1 NAME
 
-C<IO::Async::DetachedCode> - a class that allows a block of code to execute
-asynchronously in detached child processes
+C<IO::Async::DetachedCode> - execute code asynchronously in child processes
 
 =head1 SYNOPSIS
 

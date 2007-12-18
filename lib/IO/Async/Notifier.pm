@@ -13,8 +13,7 @@ use Carp;
 
 =head1 NAME
 
-C<IO::Async::Notifier> - a class which implements event callbacks for a
-non-blocking file descriptor
+C<IO::Async::Notifier> - event callbacks for a non-blocking file descriptor
 
 =head1 SYNOPSIS
 
