@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 9;
+use Test::More tests => 6;
 use Test::Exception;
 
 use POSIX qw( SIGUSR1 );
@@ -10,12 +10,6 @@ use POSIX qw( SIGUSR1 );
 use IO::Async::Set::IO_Poll;
 
 my $set = IO::Async::Set::IO_Poll->new();
-
-my $proxy = $set->get_sigproxy;
-
-ok( defined $proxy, 'defined $proxy' );
-ok( ref $proxy, 'ref $proxy' );
-ok( $proxy->isa( "IO::Async::SignalProxy" ), '$proxy isa SignalProxy' );
 
 my $caught = "";
 

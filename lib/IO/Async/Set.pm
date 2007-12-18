@@ -199,9 +199,20 @@ This method returns the associated C<IO::Async::SignalProxy> object for the
 set. If there is not yet such a proxy, a new one is constructed and added to
 the set.
 
+Use of this method is deprecated as not all C<IO::Async::Set> subclasses will
+be able to support it. All signal handling should be done by calling
+C<attach_signal()> or C<detach_signal()> directly.
+
 =cut
 
 sub get_sigproxy
+{
+   my $self = shift;
+   carp "IO::Async::Set->get_sigproxy is deprecated; use ->attach_signal() or ->detach_signal() instead";
+   return $self->_get_sigproxy;
+}
+
+sub _get_sigproxy
 {
    my $self = shift;
 
@@ -216,9 +227,19 @@ sub get_sigproxy
 
 =head2 $set->attach_signal( $signal, $code )
 
-This method adds a new signal handler to the associated
-C<IO::Async::SignalProxy> object. It is equivalent to calling the C<attach()>
-method on the object returned from the set's C<get_sigproxy()> method.
+This method adds a new signal handler to watch the given signal.
+
+=over 8
+
+=item $signal
+
+The name of the signal to attach to. This should be a bare name like C<TERM>.
+
+=item $code
+
+A CODE reference to the handling function.
+
+=back
 
 =cut
 
@@ -227,15 +248,21 @@ sub attach_signal
    my $self = shift;
    my ( $signal, $code ) = @_;
 
-   my $sigproxy = $self->get_sigproxy;
+   my $sigproxy = $self->_get_sigproxy;
    $sigproxy->attach( $signal, $code );
 }
 
 =head2 $set->detach_signal( $signal )
 
-This method removes a signal handler from the associated
-C<IO::Async::SignalProxy> object. It is equivalent to calling the C<detach()>
-method on the object returned from the set's C<get_sigproxy()> method.
+This method removes the signal handler for the given signal.
+
+=over 8
+
+=item $signal
+
+The name of the signal to attach to. This should be a bare name like C<TERM>.
+
+=back
 
 =cut
 
@@ -244,7 +271,7 @@ sub detach_signal
    my $self = shift;
    my ( $signal ) = @_;
 
-   my $sigproxy = $self->get_sigproxy;
+   my $sigproxy = $self->_get_sigproxy;
    $sigproxy->detach( $signal );
 
    # TODO: Consider "refcount" signals and cleanup if zero. How do we know if
