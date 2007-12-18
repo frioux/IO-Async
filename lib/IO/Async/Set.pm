@@ -241,6 +241,8 @@ A CODE reference to the handling function.
 
 =back
 
+See also L<POSIX> for the C<SIGI<name>> constants.
+
 =cut
 
 sub attach_signal
