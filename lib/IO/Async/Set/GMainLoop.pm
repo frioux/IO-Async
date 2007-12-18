@@ -30,7 +30,7 @@ C<IO::Async::Set::GMainLoop> - a set using the C<Glib::MainLoop> object
 
 =head1 DESCRIPTION
 
-This subclass of C<IO::Async::Notifier> uses the C<Glib::MainLoop> to perform
+This subclass of C<IO::Async::Set> uses the C<Glib::MainLoop> to perform
 read-ready and write-ready tests.
 
 The appropriate C<Glib::IO> sources are added or removed from the

@@ -38,8 +38,8 @@ C<IO::Async::Set::Select> - a set using the C<select()> syscall
 
 =head1 DESCRIPTION
 
-This subclass of C<IO::Async::Notifier> uses the C<select()> syscall to
-perform read-ready and write-ready tests.
+This subclass of C<IO::Async::Set> uses the C<select()> syscall to perform
+read-ready and write-ready tests.
 
 To integrate with an existing C<select()>-based event loop, a pair of methods
 C<pre_select()> and C<post_select()> can be called immediately before and
