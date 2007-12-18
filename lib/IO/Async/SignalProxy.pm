@@ -16,6 +16,8 @@ use Carp;
 use POSIX qw( EAGAIN SIG_BLOCK SIG_SETMASK sigprocmask );
 use IO::Handle;
 
+use warnings qw();
+
 =head1 NAME
 
 C<IO::Async::SignalProxy> - a class to allow handling of POSIX signals with
@@ -40,6 +42,11 @@ sub new
 {
    my $class = shift;
    my ( %params ) = @_;
+
+   unless( caller =~ m/^IO::Async::Set/ ) {
+      warnings::warnif "deprecated", 
+         "Use of IO::Async::SignalProxy outside of IO::Async::Set is deprecated";
+   }
 
    pipe( my ( $reader, $writer ) ) or croak "Cannot pipe() - $!";
 

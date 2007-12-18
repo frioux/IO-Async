@@ -10,6 +10,7 @@ use strict;
 our $VERSION = '0.10';
 
 use Carp;
+use warnings qw();
 
 # Never sleep for more than 1 second if a signal proxy is registered, to avoid
 # a borderline race condition.
@@ -208,7 +209,10 @@ C<attach_signal()> or C<detach_signal()> directly.
 sub get_sigproxy
 {
    my $self = shift;
-   carp "IO::Async::Set->get_sigproxy is deprecated; use ->attach_signal() or ->detach_signal() instead";
+
+   warnings::warnif "deprecated",
+      "IO::Async::Set->get_sigproxy is deprecated; use ->attach_signal() or ->detach_signal() instead";
+
    return $self->_get_sigproxy;
 }
 

@@ -11,7 +11,12 @@ use IO::Async::SignalProxy;
 
 my $caught = "";
 
-my $proxy = IO::Async::SignalProxy->new();
+# Avoid the deprecation warning
+my $proxy;
+{
+   no warnings 'deprecated';
+   $proxy = IO::Async::SignalProxy->new();
+}
 
 ok( defined $proxy, '$proxy defined' );
 is( ref $proxy, "IO::Async::SignalProxy", 'ref $proxy is IO::Async::SignalProxy' );
