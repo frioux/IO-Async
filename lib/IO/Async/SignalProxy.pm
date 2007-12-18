@@ -62,11 +62,6 @@ sub new
 
    $self->{sigset_block} = POSIX::SigSet->new();
 
-   # Find all the signal handler callbacks
-   foreach my $signame ( map { m/^signal_(.*)$/ ? $1 : () } keys %params ) {
-      $self->attach( $signame, $params{"signal_$signame"} );
-   }
-
    return $self;
 }
 
