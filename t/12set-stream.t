@@ -8,7 +8,7 @@ use Test::Exception;
 use IO::Socket::UNIX;
 
 use IO::Async::Set::IO_Poll;
-use IO::Async::Buffer;
+use IO::Async::Stream;
 
 my ( $S1, my $S2 ) = IO::Socket::UNIX->socketpair( AF_UNIX, SOCK_STREAM, PF_UNSPEC ) or
    die "Cannot create socketpair - $!";
@@ -19,19 +19,19 @@ $S2->blocking( 0 );
 
 my $closed = 0;
 
-my $buffer = IO::Async::Buffer->new( handle => $S1,
+my $stream = IO::Async::Stream->new( handle => $S1,
    on_read   => sub { },
    on_closed => sub { $closed = 1 },
 );
 
-$buffer->write( "hello" );
+$stream->write( "hello" );
 
 my $set = IO::Async::Set::IO_Poll->new();
-$set->add( $buffer );
+$set->add( $stream );
 
 is( $closed, 0, 'closed before close' );
 
-$buffer->close;
+$stream->close;
 
 is( $closed, 0, 'closed after close' );
 

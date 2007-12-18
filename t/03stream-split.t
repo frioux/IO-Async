@@ -7,7 +7,7 @@ use Test::More tests => 3;
 use POSIX qw( EAGAIN );
 use IO::Socket::UNIX;
 
-use IO::Async::Buffer;
+use IO::Async::Stream;
 
 # 4 ends of sockets:
 #  test => notifier ; notifier => test
@@ -50,15 +50,15 @@ sub on_read
    return 0;
 }
 
-my $buff = IO::Async::Buffer->new(
+my $stream = IO::Async::Stream->new(
    read_handle  => $S[1],
    write_handle => $S[2],
    on_read => \&on_read,
 );
 
 # Writing
-$buff->write( "message\n" );
-$buff->on_write_ready;
+$stream->write( "message\n" );
+$stream->on_write_ready;
 
 is( read_data( $S[3] ), "message\n", '$S[3] receives data' );
 is( read_data( $S[0] ), "",          '$S[0] empty' );
@@ -68,6 +68,6 @@ $S[0]->syswrite( "another message\n" );
 # Reverse push - should be ignored
 $S[3]->syswrite( "reverse\n" );
 
-$buff->on_read_ready;
+$stream->on_read_ready;
 
 is( $incoming_buffer, "another message\n", 'incoming buffer contains message' );

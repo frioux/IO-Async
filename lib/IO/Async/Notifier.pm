@@ -35,7 +35,7 @@ C<IO::Async::Notifier> - event callbacks for a non-blocking file descriptor
  $set->add( $notifier );
 
 For most other uses with sockets, pipes or other filehandles that carry a byte
-stream, the C<IO::Async::Buffer> class is likely to be more suitable.
+stream, the C<IO::Async::Stream> class is likely to be more suitable.
 
 =head1 DESCRIPTION
 
@@ -99,7 +99,7 @@ The C<%params> hash takes the following keys:
 The reading and writing IO handles. Each must implement the C<fileno> method.
 C<read_handle> must be defined, C<write_handle> is allowed to be C<undef>.
 Primarily used for passing C<STDIN> / C<STDOUT>; see the SYNOPSIS section of
-C<IO::Async::Buffer> for an example.
+C<IO::Async::Stream> for an example.
 
 =item handle => IO
 

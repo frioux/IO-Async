@@ -11,7 +11,7 @@ our $VERSION = '0.10';
 
 # Not a notifier
 
-use IO::Async::Buffer;
+use IO::Async::Stream;
 
 use Carp;
 use Fcntl qw( F_GETFL F_SETFL FD_CLOEXEC );
@@ -539,7 +539,7 @@ sub _spawn_in_parent
    my $exitcode;
    my $pipeclosed = 0;
 
-   $set->add( IO::Async::Buffer->new(
+   $set->add( IO::Async::Stream->new(
       read_handle => $readpipe,
 
       on_read => sub {

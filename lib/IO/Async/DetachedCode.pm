@@ -9,7 +9,7 @@ use strict;
 
 our $VERSION = '0.10';
 
-use IO::Async::Buffer;
+use IO::Async::Stream;
 
 use Carp;
 
@@ -285,16 +285,16 @@ sub _detach_child
    close( $childread );
    close( $childwrite );
 
-   my $iobuffer = IO::Async::Buffer->new(
+   my $iostream = IO::Async::Stream->new(
       read_handle  => $myread,
       write_handle => $mywrite,
 
       on_read => sub { _socket_incoming( $inner, $_[1], $_[2] ) },
    );
 
-   $inner->{iobuffer} = $iobuffer;
+   $inner->{iostream} = $iostream;
 
-   $set->add( $iobuffer );
+   $set->add( $iostream );
 
    push @{ $self->{inners} }, $inner;
 
@@ -428,9 +428,9 @@ sub shutdown
    my $self = shift;
 
    foreach my $inner ( @{ $self->{inners} } ) {
-      if( defined $inner->{iobuffer} ) {
-         $inner->{set}->remove( $inner->{iobuffer} );
-         undef $inner->{iobuffer};
+      if( defined $inner->{iostream} ) {
+         $inner->{set}->remove( $inner->{iostream} );
+         undef $inner->{iostream};
       }
 
       my $handlermap = $inner->{result_handler};
@@ -469,7 +469,7 @@ sub _send_request
    my $handlermap = $inner->{result_handler};
    $handlermap->{$callid} = $on_result;
 
-   $inner->{iobuffer}->write( pack( "I", length $request ) . $request );
+   $inner->{iostream}->write( pack( "I", length $request ) . $request );
    $inner->{busy} = 1;
 }
 
@@ -483,8 +483,8 @@ sub _socket_incoming
    if( $closed ) {
       _child_error( $inner, 'closed' );
 
-      $inner->{set}->remove( $inner->{iobuffer} );
-      undef $inner->{iobuffer};
+      $inner->{set}->remove( $inner->{iostream} );
+      undef $inner->{iostream};
 
       return 0;
    }
@@ -518,8 +518,8 @@ sub _socket_incoming
       if( $inner->{exit_on_die} ) {
          _child_error( $inner, 'die' );
 
-         $inner->{set}->remove( $inner->{iobuffer} );
-         undef $inner->{iobuffer};
+         $inner->{set}->remove( $inner->{iostream} );
+         undef $inner->{iostream};
       }
    }
 

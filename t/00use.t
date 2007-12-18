@@ -6,7 +6,7 @@ use Test::More tests => 10;
 use_ok( "IO::Async::Notifier" );
 use_ok( "IO::Async::TimeQueue" );
 use_ok( "IO::Async::MergePoint" );
-use_ok( "IO::Async::Buffer" );
+use_ok( "IO::Async::Stream" );
 use_ok( "IO::Async::SignalProxy" );
 
 use_ok( "IO::Async::Set::Select" );

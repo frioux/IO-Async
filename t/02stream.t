@@ -8,7 +8,7 @@ use Test::Exception;
 use POSIX qw( EAGAIN ECONNRESET );
 use IO::Socket::UNIX;
 
-use IO::Async::Buffer;
+use IO::Async::Stream;
 
 ( my $S1, my $S2 ) = IO::Socket::UNIX->socketpair( AF_UNIX, SOCK_STREAM, PF_UNSPEC ) or
    die "Cannot create socket pair - $!";
@@ -17,7 +17,7 @@ use IO::Async::Buffer;
 $S1->blocking( 0 );
 $S2->blocking( 0 );
 
-dies_ok( sub { IO::Async::Buffer->new( handle => $S1 ) },
+dies_ok( sub { IO::Async::Stream->new( handle => $S1 ) },
          'No on_read' );
 
 sub read_data($)
@@ -53,21 +53,21 @@ sub on_read
    return 1;
 }
 
-my $buff = IO::Async::Buffer->new( 
+my $stream = IO::Async::Stream->new( 
    handle => $S1,
    on_read => \&on_read,
    on_outgoing_empty => sub { $empty = 1 },
 );
 
-ok( defined $buff, '$buff defined' );
-is( ref $buff, "IO::Async::Buffer", 'ref $buff is IO::Async::Buffer' );
+ok( defined $stream, '$stream defined' );
+is( ref $stream, "IO::Async::Stream", 'ref $stream is IO::Async::Stream' );
 
 # Writing
 
-is( $buff->want_writeready, 0, 'want_writeready before write' );
-$buff->write( "message\n" );
+is( $stream->want_writeready, 0, 'want_writeready before write' );
+$stream->write( "message\n" );
 
-is( $buff->want_writeready, 1, 'want_writeready after write' );
+is( $stream->want_writeready, 1, 'want_writeready after write' );
 
 is( scalar @received, 0,  '@received before writing buffer' );
 is( $closed,          0,  '$closed before writing buffer' );
@@ -75,9 +75,9 @@ is( read_data( $S2 ), "", 'data before writing buffer' );
 
 is( $empty, 0, '$empty before writing buffer' );
 
-$buff->on_write_ready;
+$stream->on_write_ready;
 
-is( $buff->want_writeready, 0, 'want_writeready after on_write_ready' );
+is( $stream->want_writeready, 0, 'want_writeready after on_write_ready' );
 is( $empty, 1, '$empty after writing buffer' );
 
 is( scalar @received, 0,           '@received before writing buffer' );
@@ -88,7 +88,7 @@ is( read_data( $S2 ), "message\n", 'data after writing buffer' );
 
 $S2->syswrite( "reply\n" );
 
-$buff->on_read_ready;
+$stream->on_read_ready;
 
 is( scalar @received, 1,         'scalar @received receiving after select' );
 is( $received[0],     "reply\n", '$received[0] receiving after select' );
@@ -102,14 +102,14 @@ is( $closed,          0,         '$closed receiving after select' );
 
 $S2->syswrite( "return" );
 
-$buff->on_read_ready;
+$stream->on_read_ready;
 
 is( scalar @received, 0, 'scalar @received writepartial 1' );
 is( $closed,          0, '$closed writepartial 1' );
 
 $S2->syswrite( "\n" );
 
-$buff->on_read_ready;
+$stream->on_read_ready;
 
 is( scalar @received, 1,          'scalar @received receiving after select' );
 is( $received[0],     "return\n", '$received[0] writepartial 2' );
@@ -132,7 +132,7 @@ package main;
    my $warning;
    local $SIG{__WARN__} = sub { $warning .= join( "", @_ ) };
 
-   my $buff = IO::Async::Buffer->new(
+   my $stream = IO::Async::Stream->new(
       handle => ErrorSocket->new(),
       on_read => sub {},
    );
@@ -140,12 +140,12 @@ package main;
    $ErrorSocket::errno = EAGAIN;
 
    $warning = "";
-   $buff->on_read_ready;
+   $stream->on_read_ready;
 
    is( $warning, "", 'Spurious on_read_ready does not print a warning' );
 
    $warning = "";
-   $buff->on_write_ready;
+   $stream->on_write_ready;
 
    is( $warning, "", 'Spurious on_write_ready does not print a warning' );
 }
@@ -157,7 +157,7 @@ package main;
 close( $S2 );
 undef $S2;
 
-$buff->on_read_ready;
+$stream->on_read_ready;
 
 is( scalar @received, 0, 'scalar @received receiving after select' );
 is( $closed,          1, '$closed after close' );
@@ -168,7 +168,7 @@ $ErrorSocket::errno = ECONNRESET;
 my $read_errno;
 my $write_errno;
 
-$buff = IO::Async::Buffer->new(
+$stream = IO::Async::Stream->new(
    handle => ErrorSocket->new(),
    on_read => sub {},
 
@@ -176,10 +176,10 @@ $buff = IO::Async::Buffer->new(
    on_write_error => sub { ( undef, $write_errno ) = @_ },
 );
 
-$buff->on_read_ready;
+$stream->on_read_ready;
 
 cmp_ok( $read_errno, "==", ECONNRESET, 'errno after failed read' );
 
-$buff->on_write_ready;
+$stream->on_write_ready;
 
 cmp_ok( $write_errno, "==", ECONNRESET, 'errno after failed write' );

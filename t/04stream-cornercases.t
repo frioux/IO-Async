@@ -8,7 +8,7 @@ use Test::Exception;
 use POSIX qw( EAGAIN );
 use IO::Socket::UNIX;
 
-use IO::Async::Buffer;
+use IO::Async::Stream;
 
 ( my $S1, my $S2 ) = IO::Socket::UNIX->socketpair( AF_UNIX, SOCK_STREAM, PF_UNSPEC ) or
    die "Cannot create socket pair - $!";
@@ -49,7 +49,7 @@ sub on_read
    return 1;
 }
 
-my $buff = IO::Async::Buffer->new(
+my $stream = IO::Async::Stream->new(
    handle => $S1,
    on_read => \&on_read
 );
@@ -60,7 +60,7 @@ foreach( split( m//, "my line here\n" ) ) {
    $S2->syswrite( $_ );
 
    is( scalar @received, 0, 'scalar @received no data yet' );
-   $buff->on_read_ready;
+   $stream->on_read_ready;
 }
 
 is( scalar @received, 1,                'scalar @received line' );
@@ -72,7 +72,7 @@ is( $received[0],     "my line here\n", '$received[0] line' );
 
 $S2->syswrite( "my\nlines\nhere\n" );
 
-$buff->on_read_ready;
+$stream->on_read_ready;
 
 is( scalar @received, 3,         'scalar @received line' );
 is( $received[0],     "my\n",    '$recieved[0] line' );

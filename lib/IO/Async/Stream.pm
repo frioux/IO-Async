@@ -3,7 +3,7 @@
 #
 #  (C) Paul Evans, 2006,2007 -- leonerd@leonerd.org.uk
 
-package IO::Async::Buffer;
+package IO::Async::Stream;
 
 use strict;
 
@@ -22,12 +22,12 @@ our $WRITELEN = 8192;
 
 =head1 NAME
 
-C<IO::Async::Buffer> - read and write buffers around an IO handle
+C<IO::Async::Stream> - read and write buffers around an IO handle
 
 =head1 SYNOPSIS
 
  use IO::Socket::INET;
- use IO::Async::Buffer;
+ use IO::Async::Stream;
 
  my $socket = IO::Socket::INET->new(
     PeerHost => "some.other.host",
@@ -35,7 +35,7 @@ C<IO::Async::Buffer> - read and write buffers around an IO handle
     Blocking => 0,                   # This line is very important
  );
 
- my $buffer = IO::Async::Buffer->new(
+ my $stream = IO::Async::Stream->new(
     handle => $socket,
 
     on_read => sub {
@@ -55,14 +55,14 @@ C<IO::Async::Buffer> - read and write buffers around an IO handle
     }
  );
 
- $buffer->write( "An initial line here\n" );
+ $stream->write( "An initial line here\n" );
 
  my $set = IO::Async::Set::...
- $set->add( $buffer );
+ $set->add( $stream );
 
 Or
 
- my $record_buffer = IO::Async::Buffer->new(
+ my $record_stream = IO::Async::Stream->new(
     handle => ...,
 
     on_read => sub {
@@ -87,7 +87,7 @@ Or
 
  use IO::Handle;
 
- my $buffer = IO::Async::Buffer->new(
+ my $stream = IO::Async::Stream->new(
     read_handle  => \*STDIN,
     write_handle => \*STDOUT,
     ...
@@ -96,7 +96,7 @@ Or
 =head1 DESCRIPTION
 
 This module provides a class for implementing asynchronous communications
-buffers behind connected handles. It provides buffering for both incoming and
+buffers behind stream handles. It provides buffering for both incoming and
 outgoing data, which are transferred to or from the actual handle as
 appropriate.
 
@@ -124,7 +124,7 @@ references to callback functions that will be called in the following manner:
 
  $on_write_error->( $self, $errno )
 
-A reference to the calling C<IO::Async::Buffer> object is passed as the first
+A reference to the calling C<IO::Async::Stream> object is passed as the first
 argument, so that the callback can access it.
 
 =item Base Class
@@ -180,9 +180,9 @@ The C<on_outgoing_empty> callback is not passed any arguments.
 
 =cut
 
-=head2 $buffer = IO::Async::Buffer->new( %params )
+=head2 $stream = IO::Async::Stream->new( %params )
 
-This function returns a new instance of a C<IO::Async::Buffer> object.
+This function returns a new instance of a C<IO::Async::Stream> object.
 The C<%params> hash takes the following keys:
 
 =over 8
@@ -266,7 +266,7 @@ sub close
    $self->{closing} = 1;
 }
 
-=head2 $buffer->write( $data )
+=head2 $stream->write( $data )
 
 This method adds data to the outgoing data queue. The data is not yet sent to
 the handle; this will be done later in the C<on_write_ready()> method.
@@ -286,7 +286,7 @@ sub write
    my $self = shift;
    my ( $data ) = @_;
 
-   carp "Cannot write data to a Buffer that is closing", return if $self->{closing};
+   carp "Cannot write data to a Stream that is closing", return if $self->{closing};
 
    $self->{writebuff} .= $data;
 
@@ -400,7 +400,7 @@ These methods are mainained for backward compatibility with existing code.
 They should not be used in new code, and existing code should be modified to
 use the replacements.
 
-=head2 $buffer->send( $data )
+=head2 $stream->send( $data )
 
 A synonym for C<write()>.
 
@@ -408,7 +408,7 @@ A synonym for C<write()>.
 
 sub send
 {
-   carp "IO::Async::Buffer->send() is deprecated; use ->write() instead";
+   carp "IO::Async::Stream->send() is deprecated; use ->write() instead";
 
    # Use write next time
    no warnings 'redefine';
