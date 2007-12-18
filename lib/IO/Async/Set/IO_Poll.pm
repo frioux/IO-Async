@@ -62,7 +62,7 @@ Or
 
 =head1 DESCRIPTION
 
-This subclass of C<IO::Async::Notifier> uses an C<IO::Poll> object to perform
+This subclass of C<IO::Async::Set> uses an C<IO::Poll> object to perform
 read-ready and write-ready tests.
 
 To integrate with existing code that uses an C<IO::Poll>, a C<post_poll()> can
@@ -89,7 +89,7 @@ It takes the following named arguments:
 =item C<poll>
 
 The C<IO::Poll> object to use for notification. Optional; if a value is not
-given, a new C<IO::Poll> will be constructed.
+given, a new C<IO::Poll> object will be constructed.
 
 =back
 
