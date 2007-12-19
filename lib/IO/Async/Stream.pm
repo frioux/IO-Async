@@ -197,11 +197,6 @@ C<syswrite> methods in the way that C<IO::Handle> does.
 A CODE reference for when more data is available in the internal receiving 
 buffer.
 
-=item on_incoming_data => CODE
-
-This option is deprecated and should not be used in new code. It is maintained
-as a backward-compatibility synonym for C<on_read>.
-
 =item on_read_error => CODE
 
 A CODE reference for when the C<sysread()> method on the read handle fails.
@@ -232,10 +227,6 @@ sub new
 
    if( $params{on_read} ) {
       $self->{on_read} = $params{on_read};
-   }
-   elsif( $params{on_incoming_data} ) {
-      carp "The 'on_incoming_data' callback is deprecated; use 'on_read' instead";
-      $self->{on_read} = $params{on_incoming_data};
    }
    else {
       unless( $self->can( 'on_read' ) ) {
@@ -392,30 +383,6 @@ sub on_write_ready
          $self->close if $self->{closing};
       }
    }
-}
-
-=head1 DEPRECATED METHODS
-
-These methods are mainained for backward compatibility with existing code.
-They should not be used in new code, and existing code should be modified to
-use the replacements.
-
-=head2 $stream->send( $data )
-
-A synonym for C<write()>.
-
-=cut
-
-sub send
-{
-   carp "IO::Async::Stream->send() is deprecated; use ->write() instead";
-
-   # Use write next time
-   no warnings 'redefine';
-   *send = \&write;
-
-   # Jump to it now - subsequent calls will go direct
-   goto &write;
 }
 
 # Keep perl happy; keep Britain tidy
