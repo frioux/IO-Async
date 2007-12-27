@@ -10,7 +10,7 @@ use IO::Poll;
 
 use IO::Async::Notifier;
 
-use IO::Async::Set::IO_Poll;
+use IO::Async::Loop::IO_Poll;
 
 ( my $S1, my $S2 ) = IO::Socket::UNIX->socketpair( AF_UNIX, SOCK_STREAM, PF_UNSPEC ) or
    die "Cannot create socket pair - $!";
@@ -47,9 +47,9 @@ is( scalar @children, 0, '@children after remove_child()' );
 
 my $poll = IO::Poll->new();
 
-my $set = IO::Async::Set::IO_Poll->new( poll => $poll );
+my $loop = IO::Async::Loop::IO_Poll->new( poll => $poll );
 
-$set->add( $parent );
+$loop->add( $parent );
 
 my @handles;
 
@@ -61,21 +61,21 @@ $parent->add_child( $child );
 @handles = $poll->handles();
 is( scalar @handles, 2, '@handles with child' );
 
-dies_ok( sub { $set->remove( $child ) },
-         'Directly removing a child from the set fails' );
+dies_ok( sub { $loop->remove( $child ) },
+         'Directly removing a child from the loop fails' );
 
-$set->remove( $parent );
+$loop->remove( $parent );
 
 @handles = $poll->handles();
 is( scalar @handles, 0, '@handles after removal' );
 
 @children = $parent->children;
-is( scalar @children, 1, '@children after removal from set' );
+is( scalar @children, 1, '@children after removal from loop' );
 
-dies_ok( sub { $set->add( $child ) },
-        'Directly adding a child to the set fails' );
+dies_ok( sub { $loop->add( $child ) },
+        'Directly adding a child to the loop fails' );
 
-$set->add( $parent );
+$loop->add( $parent );
 
 $parent->remove_child( $child );
 
@@ -85,7 +85,7 @@ is( scalar @handles, 1, '@handles after remove_child' );
 @children = $parent->children;
 is( scalar @children, 0, '@children after remove_child' );
 
-$set->remove( $parent );
+$loop->remove( $parent );
 
 $parent->add_child( $child );
 
@@ -93,14 +93,14 @@ my $grandchild = IO::Async::Notifier->new( handle => \*STDOUT,
    on_read_ready => sub {},
 );
 
-$set->add( $grandchild );
+$loop->add( $grandchild );
 
 dies_ok( sub { $parent->add_child( $grandchild ) },
-         'Adding a child that is already a member of a set fails' );
+         'Adding a child that is already a member of a loop fails' );
 
-$set->remove( $grandchild );
+$loop->remove( $grandchild );
 
-$set->add( $parent );
+$loop->add( $parent );
 
 @handles = $poll->handles();
 is( scalar @handles, 2, '@handles after addition again' );
@@ -116,12 +116,12 @@ is( scalar @children, 1, 'parent @children after add_child()' );
 @handles = $poll->handles();
 is( scalar @handles, 3, '@handles after child add_child()' );
 
-$set->remove( $parent );
+$loop->remove( $parent );
 
 @handles = $poll->handles();
 is( scalar @handles, 0, '@handles after removal' );
 
-$set->add( $parent );
+$loop->add( $parent );
 
 @handles = $poll->handles();
 is( scalar @handles, 3, '@handles after addition again' );

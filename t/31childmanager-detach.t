@@ -10,14 +10,14 @@ use Test::Exception;
 
 use POSIX qw( SIGINT WEXITSTATUS WIFSIGNALED WTERMSIG );
 
-use IO::Async::Set::IO_Poll;
+use IO::Async::Loop::IO_Poll;
 
-my $set = IO::Async::Set::IO_Poll->new();
-$set->enable_childmanager;
+my $loop = IO::Async::Loop::IO_Poll->new();
+$loop->enable_childmanager;
 
-testing_set( $set );
+testing_loop( $loop );
 
-my $manager = $set->get_childmanager;
+my $manager = $loop->get_childmanager;
 
 my $exitcode;
 

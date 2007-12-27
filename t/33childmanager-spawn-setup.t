@@ -10,12 +10,12 @@ use IO::Async::ChildManager;
 use File::Temp qw( tmpnam );
 use POSIX qw( WIFEXITED WEXITSTATUS ENOENT EBADF );
 
-use IO::Async::Set::IO_Poll;
+use IO::Async::Loop::IO_Poll;
 
-my $set = IO::Async::Set::IO_Poll->new();
-$set->enable_childmanager;
+my $loop = IO::Async::Loop::IO_Poll->new();
+$loop->enable_childmanager;
 
-my $manager = $set->get_childmanager;
+my $manager = $loop->get_childmanager;
 
 dies_ok( sub { $manager->spawn( code => sub { 1 }, setup => "hello" ); },
          'Bad setup type fails' );
@@ -45,7 +45,7 @@ sub TEST
    my $ready = 0;
 
    while( !defined $exitcode ) {
-      $_ = $set->loop_once( 10 ); # Give code a generous 10 seconds to exit
+      $_ = $loop->loop_once( 10 ); # Give code a generous 10 seconds to exit
       die "Nothing was ready after 10 second wait; called at $callerfile line $callerline\n" if $_ == 0;
       $ready += $_;
    }

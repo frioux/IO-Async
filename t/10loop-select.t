@@ -8,7 +8,7 @@ use Test::Exception;
 use IO::Socket::UNIX;
 use IO::Async::Notifier;
 
-use IO::Async::Set::Select;
+use IO::Async::Loop::Select;
 
 ( my $S1, my $S2 ) = IO::Socket::UNIX->socketpair( AF_UNIX, SOCK_STREAM, PF_UNSPEC ) or
    die "Cannot create socket pair - $!";
@@ -25,10 +25,10 @@ my $notifier = IO::Async::Notifier->new( handle => $S1,
    on_write_ready => sub { $writeready = 1 },
 );
 
-my $set = IO::Async::Set::Select->new();
+my $loop = IO::Async::Loop::Select->new();
 
-ok( defined $set, '$set defined' );
-is( ref $set, "IO::Async::Set::Select", 'ref $set is IO::Async::Set::Select' );
+ok( defined $loop, '$loop defined' );
+is( ref $loop, "IO::Async::Loop::Select", 'ref $loop is IO::Async::Loop::Select' );
 
 my $testvec = '';
 vec( $testvec, $S1->fileno, 1 ) = 1;
@@ -37,7 +37,7 @@ my ( $rvec, $wvec, $evec ) = ('') x 3;
 my $timeout;
 
 # Idle;
-$set->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
+$loop->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
 
 is( $rvec, '', '$rvec idling pre_select' );
 is( $wvec, '', '$wvec idling pre_select' );
@@ -45,14 +45,14 @@ is( $evec, '', '$evec idling pre_select' );
 
 is( $timeout, undef, '$timeout idling pre_select' );
 
-$set->add( $notifier );
+$loop->add( $notifier );
 
-is( $notifier->__memberof_set, $set, '$notifier->__memberof_set == $set' );
+is( $notifier->__memberof_loop, $loop, '$notifier->__memberof_loop == $loop' );
 
-dies_ok( sub { $set->add( $notifier ) }, 'adding again produces error' );
+dies_ok( sub { $loop->add( $notifier ) }, 'adding again produces error' );
 
 # Read-ready
-$set->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
+$loop->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
 
 is( $rvec, $testvec, '$rvec readready pre_select' );
 is( $wvec, '',       '$wvec readready pre_select' );
@@ -62,7 +62,7 @@ is( $timeout, undef, '$timeout readready pre_select' );
 
 # Write-ready
 $notifier->want_writeready( 1 );
-$set->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
+$loop->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
 
 is( $rvec, $testvec, '$rvec writeready pre_select' );
 is( $wvec, $testvec, '$wvec writeready pre_select' );
@@ -77,7 +77,7 @@ $rvec = $testvec;
 $wvec = '';
 $evec = '';
 
-$set->post_select( $rvec, $wvec, $evec );
+$loop->post_select( $rvec, $wvec, $evec );
 
 is( $readready,  1, '$readready readready post_select' );
 is( $writeready, 0, '$writeready readready post_select' );
@@ -89,7 +89,7 @@ $rvec = '';
 $wvec = $testvec;
 $evec = '';
 
-$set->post_select( $rvec, $wvec, $evec );
+$loop->post_select( $rvec, $wvec, $evec );
 
 is( $readready,  0, '$readready writeready post_select' );
 is( $writeready, 1, '$writeready writeready post_select' );
@@ -98,16 +98,16 @@ $readready = 0;
 
 # Removal
 
-$set->remove( $notifier );
+$loop->remove( $notifier );
 
-is( $notifier->__memberof_set, undef, '$notifier->__memberof_set is undef' );
+is( $notifier->__memberof_loop, undef, '$notifier->__memberof_loop is undef' );
 
 $rvec = '';
 $wvec = '';
 $evec = '';
 $timeout = undef;
 
-$set->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
+$loop->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
 
 is( $rvec, '', '$rvec idling pre_select' );
 is( $wvec, '', '$wvec idling pre_select' );

@@ -3,7 +3,7 @@
 #
 #  (C) Paul Evans, 2007 -- leonerd@leonerd.org.uk
 
-package IO::Async::Set;
+package IO::Async::Loop;
 
 use strict;
 
@@ -30,7 +30,7 @@ BEGIN {
 
 =head1 NAME
 
-C<IO::Async::Set> - maintain a set of C<IO::Async::Notifier> objects
+C<IO::Async::Loop> - core loop of the C<IO::Async> framework
 
 =head1 SYNOPSIS
 
@@ -38,35 +38,23 @@ This module would not be used directly; see the subclasses:
 
 =over 4
 
-=item L<IO::Async::Set::Select>
+=item L<IO::Async::Loop::Select>
 
-=item L<IO::Async::Set::IO_Perl>
+=item L<IO::Async::Loop::IO_Perl>
 
-=item L<IO::Async::Set::GMainLoop>
+=item L<IO::Async::Loop::GMainLoop>
 
 =back
 
 =head1 DESCRIPTION
 
-
-This module provides an abstract class to store a set of
+This module provides an abstract class which implements the core loop of the
+C<IO::Async> framework. Its primary purpose is to store a set of
 C<IO::Async::Notifier> objects or subclasses of them. It handles all of the
 lower-level set manipulation actions, and leaves the actual IO readiness 
-testing/notification to the concrete class that implements it.
-
-It also provides access to an C<IO::Async::SignalProxy> object. Only once such
-object would need to be constructed and added to the set in order to handle
-signals. Accessing the object via the containing set allows for simpler code
-that handles signals, so it does not need to carry extra references to the
-signal proxy object.
-
-It also provides access to an C<IO::Async::ChildManager> object. Before this
-object can be used, it must be enabled using the C<enable_childmanager()>
-method. This must be done before any child processes are C<fork()>ed in order
-to avoid the race condition where the child terminates so quickly that the
-parent receives a C<SIGCHLD> signal before it has returned from the C<fork()>
-call. The process must know to be ready to receive such a signal, before it
-knows the PID of the child process.
+testing/notification to the concrete class that implements it. It also
+provides other functionallity such as signal handling, child process managing,
+and timers.
 
 =cut
 
@@ -100,7 +88,7 @@ sub _nkey
    return $notifier + 0;
 }
 
-=head2 $set->add( $notifier )
+=head2 $loop->add( $notifier )
 
 This method adds another notifier object to the stored collection. The object
 may be a C<IO::Async::Notifier>, or any subclass of it.
@@ -116,8 +104,8 @@ sub add
       croak "Cannot add a child notifier directly - add its parent";
    }
 
-   if( defined $notifier->__memberof_set ) {
-      croak "Cannot add a notifier that is already a member of a set";
+   if( defined $notifier->__memberof_loop ) {
+      croak "Cannot add a notifier that is already a member of a loop";
    }
 
    $self->_add_noparentcheck( $notifier );
@@ -132,7 +120,7 @@ sub _add_noparentcheck
 
    $self->{notifiers}->{$nkey} = $notifier;
 
-   $notifier->__memberof_set( $self );
+   $notifier->__memberof_loop( $self );
 
    $self->__notifier_want_writeready( $notifier, $notifier->want_writeready );
 
@@ -141,7 +129,7 @@ sub _add_noparentcheck
    return;
 }
 
-=head2 $set->remove( $notifier )
+=head2 $loop->remove( $notifier )
 
 This method removes a notifier object from the stored collection.
 
@@ -170,7 +158,7 @@ sub _remove_noparentcheck
 
    delete $self->{notifiers}->{$nkey};
 
-   $notifier->__memberof_set( undef );
+   $notifier->__memberof_loop( undef );
 
    $self->_notifier_removed( $notifier );
 
@@ -193,13 +181,13 @@ sub __notifier_want_writeready
    # Ignore
 }
 
-=head2 $sigproxy = $set->get_sigproxy
+=head2 $sigproxy = $loop->get_sigproxy
 
 This method returns the associated C<IO::Async::SignalProxy> object for the
-set. If there is not yet such a proxy, a new one is constructed and added to
-the set.
+loop. If there is not yet such a proxy, a new one is constructed and added to
+the loop.
 
-Use of this method is deprecated as not all C<IO::Async::Set> subclasses will
+Use of this method is deprecated as not all C<IO::Async::Loop> subclasses will
 be able to support it. All signal handling should be done by calling
 C<attach_signal()> or C<detach_signal()> directly.
 
@@ -210,7 +198,7 @@ sub get_sigproxy
    my $self = shift;
 
    warnings::warnif "deprecated",
-      "IO::Async::Set->get_sigproxy is deprecated; use ->attach_signal() or ->detach_signal() instead";
+      "IO::Async::Loop->get_sigproxy is deprecated; use ->attach_signal() or ->detach_signal() instead";
 
    return $self->_get_sigproxy;
 }
@@ -228,7 +216,7 @@ sub _get_sigproxy
    return $self->{sigproxy} = $sigproxy;
 }
 
-=head2 $set->attach_signal( $signal, $code )
+=head2 $loop->attach_signal( $signal, $code )
 
 This method adds a new signal handler to watch the given signal.
 
@@ -257,7 +245,7 @@ sub attach_signal
    $sigproxy->attach( $signal, $code );
 }
 
-=head2 $set->detach_signal( $signal )
+=head2 $loop->detach_signal( $signal )
 
 This method removes the signal handler for the given signal.
 
@@ -283,11 +271,11 @@ sub detach_signal
    # anyone else has a reference to the signal proxy though? Tricky...
 }
 
-=head2 $set->enable_childmanager
+=head2 $loop->enable_childmanager
 
 This method creates a new C<IO::Async::ChildManager> object and attaches the
 C<SIGCHLD> signal to call the manager's C<SIGCHLD()> method. The manager is
-stored in the set and can be obtained using the C<get_childmanager()> method.
+stored in the loop and can be obtained using the C<get_childmanager()> method.
 
 =cut
 
@@ -296,16 +284,16 @@ sub enable_childmanager
    my $self = shift;
 
    defined $self->{childmanager} and
-      croak "ChildManager already enabled for this set";
+      croak "ChildManager already enabled for this loop";
 
    require IO::Async::ChildManager;
-   my $childmanager = IO::Async::ChildManager->new( set => $self );
+   my $childmanager = IO::Async::ChildManager->new( loop => $self );
    $self->attach_signal( CHLD => sub { $childmanager->SIGCHLD } );
 
    $self->{childmanager} = $childmanager;
 }
 
-=head2 $set->disable_childmanager
+=head2 $loop->disable_childmanager
 
 This method detaches the contained C<IO::Async::ChildManager> from the
 C<SIGCHLD> signal and destroys it. After this method is called, the C<SIGCHLD>
@@ -318,16 +306,16 @@ sub disable_childmanager
    my $self = shift;
 
    defined $self->{childmanager} or
-      croak "ChildManager not enabled for this set";
+      croak "ChildManager not enabled for this loop";
 
    $self->detach_signal( 'CHLD' );
    undef $self->{childmanager};
 }
 
-=head2 $manager = $set->get_childmanager
+=head2 $manager = $loop->get_childmanager
 
 This method returns the associated C<IO::Async::ChildManager> object for the
-set. If there is not yet such an object (namely; that the
+loop. If there is not yet such an object (namely; that the
 C<enable_childmanager()> method has not yet been called), an exception is
 thrown.
 
@@ -338,14 +326,14 @@ sub get_childmanager
    my $self = shift;
 
    return $self->{childmanager} if defined $self->{childmanager};
-   croak "ChildManager not enabled in Set";
+   croak "ChildManager not enabled in Loop";
 }
 
-=head2 $set->watch_child( $pid, $code )
+=head2 $loop->watch_child( $pid, $code )
 
 This method adds a new handler for the termination of the given child PID. It
 is equivalent to calling the C<watch()> method on the object returned from the
-set's C<get_childmanager()> method.
+loop's C<get_childmanager()> method.
 
 =cut
 
@@ -358,11 +346,11 @@ sub watch_child
    $childmanager->watch( $kid, $code );
 }
 
-=head2 $set->detach_child( %params )
+=head2 $loop->detach_child( %params )
 
 This method creates a new child process to run a given code block. It is 
 equivalent to calling the C<detach_child()> method on the object returned from
-the set's C<get_childmanager()> method.
+the loop's C<get_childmanager()> method.
 
 =cut
 
@@ -375,10 +363,10 @@ sub detach_child
    $childmanager->detach_child( %params );
 }
 
-=head2 $code = $set->detach_code( %params )
+=head2 $code = $loop->detach_code( %params )
 
 This method creates a new detached code object. It is equivalent to calling
-the C<IO::Async::DetachedCode> constructor, passing in the given set. See the
+the C<IO::Async::DetachedCode> constructor, passing in the given loop. See the
 documentation on this class for more information.
 
 =cut
@@ -392,15 +380,15 @@ sub detach_code
 
    return IO::Async::DetachedCode->new(
       %params,
-      set => $self
+      loop => $self
    );
 }
 
-=head2 $set->spawn_child( %params )
+=head2 $loop->spawn_child( %params )
 
 This method creates a new child process to run a given code block or command.
 It is equivalent to calling the C<spawn()> method on the object returned from
-the set's C<get_childmanager()> method.
+the loop's C<get_childmanager()> method.
 
 =cut
 
@@ -418,7 +406,7 @@ sub __enable_timer
    my $self = shift;
 
    defined $self->{timequeue} and
-      croak "Timer already enabled for this set";
+      croak "Timer already enabled for this loop";
 
    require IO::Async::TimeQueue;
    my $timequeue = IO::Async::TimeQueue->new();
@@ -453,7 +441,7 @@ sub _adjust_timeout
    }
 }
 
-=head2 $id = $set->enqueue_timer( %params )
+=head2 $id = $loop->enqueue_timer( %params )
 
 This method installs a callback which will be called at the specified time.
 The time may either be specified as an absolute value (the C<time> key), or
@@ -488,10 +476,10 @@ CODE reference to the callback function to run at the allotted time.
 
 If the C<Time::HiRes> module is loaded, then it is used to obtain the current
 time which is used for the delay calculation. If this behaviour is required,
-the C<Time::HiRes> module must be loaded before C<IO::Async::Set>:
+the C<Time::HiRes> module must be loaded before C<IO::Async::Loop>:
 
  use Time::HiRes;
- use IO::Async::Set;
+ use IO::Async::Loop;
 
 =cut
 
@@ -507,7 +495,7 @@ sub enqueue_timer
    $timequeue->enqueue( %params );
 }
 
-=head2 $set->canel_timer( $id )
+=head2 $loop->canel_timer( $id )
 
 Cancels a previously-enqueued timer event by removing it from the queue.
 

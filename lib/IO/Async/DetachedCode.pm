@@ -23,14 +23,14 @@ C<IO::Async::DetachedCode> - execute code asynchronously in child processes
 
 =head1 SYNOPSIS
 
-Usually this object would be constructed indirectly, via an C<IO::Async::Set>:
+Usually this object would be constructed indirectly, via an C<IO::Async::Loop>:
 
- use IO::Async::Set::...;
- my $set = IO::Async::Set::...
+ use IO::Async::Loop::...;
+ my $loop = IO::Async::Loop::...
 
- $set->enable_childmanager;
+ $loop->enable_childmanager;
 
- my $code = $set->detach_code(
+ my $code = $loop->detach_code(
     code => sub {
        my ( $number ) = @_;
        return is_prime( $number );
@@ -48,15 +48,15 @@ Usually this object would be constructed indirectly, via an C<IO::Async::Set>:
     },
  );
 
- $set->loop_forever;
+ $loop->loop_forever;
 
 It can also be used directly. In this case, extra effort must be taken to pass
-an C<IO::Async::Set> object:
+an C<IO::Async::Loop> object:
 
- my $set = IO::Async::Set::...
+ my $loop = IO::Async::Loop::...
 
  my $code = IO::Async::DetachedCode->new(
-    set => $set,
+    loop => $loop,
     code => sub { ... },
  );
 
@@ -113,9 +113,9 @@ The C<%params> hash takes the following keys:
 
 =over 8
 
-=item set => IO::Async::Set
+=item loop => IO::Async::Loop
 
-A reference to an C<IO::Async::Set> object. The set must have the child
+A reference to an C<IO::Async::Loop> object. The loop must have the child
 manager enabled.
 
 =item code => CODE
@@ -183,7 +183,7 @@ sub new
    my $class = shift;
    my ( %params ) = @_;
 
-   my $set = delete $params{set} or croak "Expected a 'set'";
+   my $loop = delete $params{loop} or croak "Expected a 'loop'";
 
    my $code = delete $params{code};
    ref $code eq "CODE" or croak "Expected a CODE reference as 'code'";
@@ -215,7 +215,7 @@ sub new
    my $self = bless {
       next_id     => 0,
       code        => $code,
-      set         => $set,
+      loop        => $loop,
       streamtype  => $streamtype,
       marshaller  => $marshaller,
       workers     => $workers,
@@ -237,7 +237,7 @@ sub _detach_child
 
    # The inner object needs references to some members of the outer object
    my $inner = {
-      set            => $self->{set},
+      loop           => $self->{loop},
       result_handler => {},
       marshaller     => $self->{marshaller},
       busy           => 0,
@@ -263,9 +263,9 @@ sub _detach_child
       pipe( $myread, $childwrite ) or croak "Cannot pipe() - $!";
    }
 
-   my $set = $inner->{set};
+   my $loop = $inner->{loop};
 
-   my $kid = $set->detach_child(
+   my $kid = $loop->detach_child(
       code => sub { 
          foreach( 0 .. IO::Async::ChildManager::OPEN_MAX_FD() ) {
             next if $_ == 2;
@@ -294,7 +294,7 @@ sub _detach_child
 
    $inner->{iostream} = $iostream;
 
-   $set->add( $iostream );
+   $loop->add( $iostream );
 
    push @{ $self->{inners} }, $inner;
 
@@ -429,7 +429,7 @@ sub shutdown
 
    foreach my $inner ( @{ $self->{inners} } ) {
       if( defined $inner->{iostream} ) {
-         $inner->{set}->remove( $inner->{iostream} );
+         $inner->{loop}->remove( $inner->{iostream} );
          undef $inner->{iostream};
       }
 
@@ -483,7 +483,7 @@ sub _socket_incoming
    if( $closed ) {
       _child_error( $inner, 'closed' );
 
-      $inner->{set}->remove( $inner->{iostream} );
+      $inner->{loop}->remove( $inner->{iostream} );
       undef $inner->{iostream};
 
       return 0;
@@ -518,7 +518,7 @@ sub _socket_incoming
       if( $inner->{exit_on_die} ) {
          _child_error( $inner, 'die' );
 
-         $inner->{set}->remove( $inner->{iostream} );
+         $inner->{loop}->remove( $inner->{iostream} );
          undef $inner->{iostream};
       }
    }

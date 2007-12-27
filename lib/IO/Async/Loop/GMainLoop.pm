@@ -3,40 +3,40 @@
 #
 #  (C) Paul Evans, 2007 -- leonerd@leonerd.org.uk
 
-package IO::Async::Set::GMainLoop;
+package IO::Async::Loop::GMainLoop;
 
 use strict;
 
 our $VERSION = '0.10';
 
-use base qw( IO::Async::Set );
+use base qw( IO::Async::Loop );
 
 use Carp;
 
 =head1 NAME
 
-C<IO::Async::Set::GMainLoop> - a set using the C<Glib::MainLoop> object
+C<IO::Async::Loop::GMainLoop> - a Loop using the C<Glib::MainLoop> object
 
 =head1 SYNOPSIS
 
- use IO::Async::Set::GMainLoop;
+ use IO::Async::Loop::GMainLoop;
 
- my $set = IO::Async::Set::GMainLoop->new();
+ my $loop = IO::Async::Loop::GMainLoop->new();
 
- $set->add( ... );
+ $loop->add( ... );
 
  ...
  # Rest of GLib/Gtk program that uses GLib::MainContext
 
 =head1 DESCRIPTION
 
-This subclass of C<IO::Async::Set> uses the C<Glib::MainLoop> to perform
+This subclass of C<IO::Async::Loop> uses the C<Glib::MainLoop> to perform
 read-ready and write-ready tests.
 
 The appropriate C<Glib::IO> sources are added or removed from the
 C<Glib::MainLoop> when notifiers are added or removed from the set, or when
 they change their C<want_writeready> status. The callbacks are called
-automatically by Glib itself; no special methods on this set object are
+automatically by Glib itself; no special methods on this loop object are
 required.
 
 =cut
@@ -45,9 +45,9 @@ required.
 
 =cut
 
-=head2 $set = IO::Async::Set::GMainLoop->new()
+=head2 $loop = IO::Async::Loop::GMainLoop->new()
 
-This function returns a new instance of a C<IO::Async::Set::GMainLoop> object.
+This function returns a new instance of a C<IO::Async::Loop::GMainLoop> object.
 It takes no special arguments.
 
 =cut
@@ -72,7 +72,7 @@ sub new
 =head1 METHODS
 
 There are no special methods in this subclass, other than those provided by
-the C<IO::Async::Set> base class.
+the C<IO::Async::Loop> base class.
 
 =cut
 

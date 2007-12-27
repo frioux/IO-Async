@@ -12,7 +12,7 @@ use IO::Async::ChildManager;
 
 use POSIX qw( WIFEXITED WEXITSTATUS ENOENT );
 
-use IO::Async::Set::IO_Poll;
+use IO::Async::Loop::IO_Poll;
 
 # Need to look this up, so we don't hardcode the message in the test script
 # This might cause locale issues
@@ -23,12 +23,12 @@ my $manager = IO::Async::ChildManager->new();
 dies_ok( sub { $manager->spawn( command => "/bin/true", on_exit => sub {} ); },
          'Spawn on unassociated ChildManager fails' );
 
-my $set = IO::Async::Set::IO_Poll->new();
-$set->enable_childmanager;
+my $loop = IO::Async::Loop::IO_Poll->new();
+$loop->enable_childmanager;
 
-testing_set( $set );
+testing_loop( $loop );
 
-$manager = $set->get_childmanager;
+$manager = $loop->get_childmanager;
 
 my $exited_pid;
 my $exitcode;

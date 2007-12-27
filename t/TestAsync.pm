@@ -5,14 +5,14 @@ use strict;
 use Exporter;
 our @ISA = qw( Exporter );
 our @EXPORT = qw(
-   testing_set
+   testing_loop
    wait_for
 );
 
-my $set;
-sub testing_set
+my $loop;
+sub testing_loop
 {
-   $set = shift;
+   $loop = shift;
 }
 
 sub wait_for(&)
@@ -26,7 +26,7 @@ sub wait_for(&)
    while( !$cond->() ) {
       my $retries = 10; # Give code a generous 10 seconds to do something
       while( $retries-- ) {
-         my $subcount = $set->loop_once( 1 );
+         my $subcount = $loop->loop_once( 1 );
          $ready += $subcount, last if $subcount;
 
          die "Nothing was ready after 10 second wait; called at $callerfile line $callerline\n" if $retries == 0;

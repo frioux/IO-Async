@@ -12,7 +12,7 @@ use IO::Async::ChildManager;
 
 use POSIX qw( SIGTERM WIFEXITED WEXITSTATUS WIFSIGNALED WTERMSIG );
 
-use IO::Async::Set::IO_Poll;
+use IO::Async::Loop::IO_Poll;
 
 my $manager = IO::Async::ChildManager->new();
 
@@ -26,11 +26,11 @@ is( $handled, 0, '$handled while idle' );
 
 is_deeply( [ $manager->list_watching ], [], 'list_watching while idle' );
 
-my $set = IO::Async::Set::IO_Poll->new();
+my $loop = IO::Async::Loop::IO_Poll->new();
 
-testing_set( $set );
+testing_loop( $loop );
 
-$set->attach_signal( CHLD => sub { $handled = $manager->SIGCHLD } );
+$loop->attach_signal( CHLD => sub { $handled = $manager->SIGCHLD } );
 
 my $kid = fork();
 defined $kid or die "Cannot fork() - $!";
@@ -78,7 +78,7 @@ $manager->watch( $kid => sub { ( undef, $exitcode ) = @_; } );
 ok( $manager->is_watching( $kid ), 'is_watching after adding $kid' );
 is_deeply( [ $manager->list_watching ], [ $kid ], 'list_watching after adding $kid' );
 
-$ready = $set->loop_once( 0.1 );
+$ready = $loop->loop_once( 0.1 );
 
 ok( $manager->is_watching( $kid ), 'is_watching after loop' );
 is_deeply( [ $manager->list_watching ], [ $kid ], 'list_watching after loop' );
@@ -98,17 +98,17 @@ is( WTERMSIG($exitcode),    SIGTERM, 'WTERMSIG($exitcode) after SIGTERM' );
 ok( !$manager->is_watching( $kid ), 'is_watching after child SIGTERM' );
 is_deeply( [ $manager->list_watching ], [], 'list_watching after child SIGTERM' );
 
-# Now lets test the integration with a ::Set
+# Now lets test the integration with a ::Loop
 
-$set->detach_signal( 'CHLD' );
+$loop->detach_signal( 'CHLD' );
 undef $manager;
 
-dies_ok( sub { $set->watch_child( 1234 => sub { "DUMMY" } ) },
+dies_ok( sub { $loop->watch_child( 1234 => sub { "DUMMY" } ) },
          'watch_child() before enable_childmanager() fails' );
 
-$set->enable_childmanager;
+$loop->enable_childmanager;
 
-dies_ok( sub { $set->enable_childmanager; },
+dies_ok( sub { $loop->enable_childmanager; },
          'enable_childmanager() again fails' );
 
 $kid = fork();
@@ -118,16 +118,16 @@ if( $kid == 0 ) {
    exit( 5 );
 }
 
-$set->watch_child( $kid => sub { ( undef, $exitcode ) = @_; } );
+$loop->watch_child( $kid => sub { ( undef, $exitcode ) = @_; } );
 
 $ready = wait_for_exit;
 
-is( $ready, 1, '$ready after child exit for set' );
+is( $ready, 1, '$ready after child exit for loop' );
 
-ok( WIFEXITED($exitcode),      'WIFEXITED($exitcode) after child exit for set' );
-is( WEXITSTATUS($exitcode), 5, 'WEXITSTATUS($exitcode) after child exit for set' );
+ok( WIFEXITED($exitcode),      'WIFEXITED($exitcode) after child exit for loop' );
+is( WEXITSTATUS($exitcode), 5, 'WEXITSTATUS($exitcode) after child exit for loop' );
 
-$set->disable_childmanager;
+$loop->disable_childmanager;
 
-dies_ok( sub { $set->disable_childmanager; },
+dies_ok( sub { $loop->disable_childmanager; },
          'disable_childmanager() again fails' );

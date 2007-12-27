@@ -57,8 +57,8 @@ C<IO::Async::Stream> - read and write buffers around an IO handle
 
  $stream->write( "An initial line here\n" );
 
- my $set = IO::Async::Set::...
- $set->add( $stream );
+ my $loop = IO::Async::Loop::...
+ $loop->add( $stream );
 
 Or
 

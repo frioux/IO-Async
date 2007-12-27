@@ -10,9 +10,9 @@ use Test::Exception;
 use IO::Socket::UNIX;
 use IO::Async::Notifier;
 
-use IO::Async::Set::GMainLoop;
+use IO::Async::Loop::GMainLoop;
 
-dies_ok( sub { IO::Async::Set::GMainLoop->new(); },
+dies_ok( sub { IO::Async::Loop::GMainLoop->new(); },
          'No Glib loaded' );
 
 SKIP: { # Don't indent because most of this script is within the block; it would look messy
@@ -37,20 +37,20 @@ my $notifier = IO::Async::Notifier->new( handle => $S1,
    on_write_ready => sub { $writeready = 1; return 0 },
 );
 
-my $set = IO::Async::Set::GMainLoop->new();
+my $loop = IO::Async::Loop::GMainLoop->new();
 
-ok( defined $set, '$set defined' );
-is( ref $set, "IO::Async::Set::GMainLoop", 'ref $set is IO::Async::Set::GMainLoop' );
+ok( defined $loop, '$loop defined' );
+is( ref $loop, "IO::Async::Loop::GMainLoop", 'ref $loop is IO::Async::Loop::GMainLoop' );
 
 my $context = Glib::MainContext->default;
 
 # Idle
 
-$set->add( $notifier );
+$loop->add( $notifier );
 
-is( $notifier->__memberof_set, $set, '$notifier->__memberof_set == $set' );
+is( $notifier->__memberof_loop, $loop, '$notifier->__memberof_loop == $loop' );
 
-dies_ok( sub { $set->add( $notifier ) }, 'adding again produces error' );
+dies_ok( sub { $loop->add( $notifier ) }, 'adding again produces error' );
 
 $context->iteration( 0 );
 
@@ -93,9 +93,9 @@ is( $readready, 1, '$readready after HUP' );
 
 # Removal
 
-$set->remove( $notifier );
+$loop->remove( $notifier );
 
-is( $notifier->__memberof_set, undef, '$notifier->__memberof_set is undef' );
+is( $notifier->__memberof_loop, undef, '$notifier->__memberof_loop is undef' );
 
 # HUP of pipe
 
@@ -105,7 +105,7 @@ my $pipe_notifier = IO::Async::Notifier->new( handle => $pipe_io,
    on_read_ready  => sub { $readready = 1 },
    want_writeready => 0,
 );
-$set->add( $pipe_notifier );
+$loop->add( $pipe_notifier );
 
 $readready = 0;
 $context->iteration( 0 );
@@ -119,6 +119,6 @@ $context->iteration( 0 );
 
 is( $readready, 1, '$readready after pipe HUP' );
 
-$set->remove( $pipe_notifier );
+$loop->remove( $pipe_notifier );
 
 } # for SKIP block

@@ -13,15 +13,15 @@ use Time::HiRes qw( sleep );
 
 use IO::Async::DetachedCode;
 
-use IO::Async::Set::IO_Poll;
+use IO::Async::Loop::IO_Poll;
 
-my $set = IO::Async::Set::IO_Poll->new();
-$set->enable_childmanager;
+my $loop = IO::Async::Loop::IO_Poll->new();
+$loop->enable_childmanager;
 
-testing_set( $set );
+testing_loop( $loop );
 
 my $code = IO::Async::DetachedCode->new(
-   set  => $set,
+   loop => $loop,
    code => sub { return $_[0] + $_[1] },
 );
 
@@ -92,7 +92,7 @@ is_deeply( \@result, [ 3, 7 ], '@result after both calls return' );
 is( scalar $code->workers, 1, '$code->workers is still 1 after 2 calls return' );
 
 $code = IO::Async::DetachedCode->new(
-   set  => $set,
+   loop => $loop,
    code => sub { return $_[0] + $_[1] },
    stream => "socket",
 );
@@ -112,7 +112,7 @@ cmp_ok( $ready, '>=', 2, '$ready after call to code over socket' );
 is( $result, 11, '$result of code over socket' );
 
 $code = IO::Async::DetachedCode->new(
-   set  => $set,
+   loop => $loop,
    code => sub { return $_[0] + $_[1] },
    stream => "pipe",
 );
@@ -132,14 +132,14 @@ cmp_ok( $ready, '>=', 2, '$ready after call to code over pipe' );
 is( $result, 11, '$result of code over pipe' );
 
 dies_ok( sub { IO::Async::DetachedCode->new(
-                  set  => $set,
+                  loop => $loop,
                   code => sub { return $_[0] },
                   stream => "oranges",
                ); },
          'Unrecognised stream type fails' );
 
 $code = IO::Async::DetachedCode->new(
-   set  => $set,
+   loop => $loop,
    code => sub { return $_[0] + $_[1] },
    marshaller => "flat",
 );
@@ -165,14 +165,14 @@ dies_ok( sub { $code->call(
          'call with reference arguments using flat marshaller dies' );
 
 dies_ok( sub { IO::Async::DetachedCode->new(
-                  set  => $set,
+                  loop => $loop,
                   code => sub { return $_[0] },
                   marshaller => "grapefruit",
                ); },
          'Unrecognised marshaller type fails' );
 
 $code = IO::Async::DetachedCode->new(
-   set  => $set,
+   loop => $loop,
    code => sub { return ref( $_[0] ), \$_[1] },
    marshaller => "storable",
 );
@@ -192,7 +192,7 @@ is_deeply( \@result, [ 'SCALAR', \'b' ], '@result after call to code over storab
 my $err;
 
 $code = IO::Async::DetachedCode->new(
-   set => $set,
+   loop=> $loop,
    code => sub { die shift },
 );
 
@@ -210,7 +210,7 @@ like( $err, qr/^exception name at $0 line \d+\.$/, '$err after exception' );
 
 my $count = 0;
 $code = IO::Async::DetachedCode->new(
-   set => $set,
+   loop=> $loop,
    code => sub { $count++; die "$count\n" },
    exit_on_die => 0,
 );
@@ -233,7 +233,7 @@ wait_for { scalar @errs == 2 };
 is_deeply( \@errs, [ "1\n", "2\n" ], 'Closed variables preserved when exit_on_die => 0' );
 
 $code = IO::Async::DetachedCode->new(
-   set => $set,
+   loop=> $loop,
    code => sub { $count++; die "$count\n" },
    exit_on_die => 1,
 );
@@ -257,7 +257,7 @@ wait_for { scalar @errs == 2 };
 is_deeply( \@errs, [ "1\n", "1\n" ], 'Closed variables no preserved when exit_on_die => 1' );
 
 $code = IO::Async::DetachedCode->new(
-   set => $set,
+   loop=> $loop,
    code => sub { $_[0] ? exit shift : return 0 },
 );
 
@@ -290,7 +290,7 @@ $ready = wait_for { defined $err };
 cmp_ok( $ready, '>=', 2, '$ready after child nondeath' );
 is( $err, "return", '$err is "return" after child nondeath' );
 
-$code = $set->detach_code(
+$code = $loop->detach_code(
    code => sub { return join( "+", @_ ) },
 );
 
@@ -308,7 +308,7 @@ is( $result, "a+b+c", '$result of Set-constructed code' );
 
 ## Now test that parallel runs really are parallel
 
-$code = $set->detach_code(
+$code = $loop->detach_code(
    code => sub {
       my ( $file, $ret ) = @_;
 
@@ -344,7 +344,7 @@ while( not( -e "$dir/1" and -e "$dir/2" and -e "$dir/3" ) ) {
       die "Not all child processes ready after 10second wait";
    }
 
-   $set->loop_once( 0.1 );
+   $loop->loop_once( 0.1 );
 }
 
 ok( 1, 'synchronise files created' );

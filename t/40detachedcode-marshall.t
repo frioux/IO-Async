@@ -10,7 +10,7 @@ use IO::Async::DetachedCode;
 use IO::Async::DetachedCode::FlatMarshaller;
 use IO::Async::DetachedCode::StorableMarshaller;
 
-use IO::Async::Set::IO_Poll;
+use IO::Async::Loop::IO_Poll;
 
 sub test_marshall_args
 {
@@ -86,8 +86,8 @@ is( ref $marshaller, "IO::Async::DetachedCode::StorableMarshaller", 'ref $marsha
 test_marshall_args( $marshaller, "storable" );
 test_marshall_args_ref( $marshaller, "storable" );
 
-my $set = IO::Async::Set::IO_Poll->new();
-$set->enable_childmanager;
+my $loop = IO::Async::Loop::IO_Poll->new();
+$loop->enable_childmanager;
 
 my $record = IO::Async::DetachedCode::_marshall_record( 'c', 1, "call data here" );
 my ( $type, $id, $data ) = IO::Async::DetachedCode::_unmarshall_record( $record );

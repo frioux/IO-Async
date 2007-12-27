@@ -7,7 +7,7 @@ use Test::Exception;
 
 use IO::Socket::UNIX;
 
-use IO::Async::Set::IO_Poll;
+use IO::Async::Loop::IO_Poll;
 use IO::Async::Stream;
 
 my ( $S1, my $S2 ) = IO::Socket::UNIX->socketpair( AF_UNIX, SOCK_STREAM, PF_UNSPEC ) or
@@ -26,8 +26,8 @@ my $stream = IO::Async::Stream->new( handle => $S1,
 
 $stream->write( "hello" );
 
-my $set = IO::Async::Set::IO_Poll->new();
-$set->add( $stream );
+my $loop = IO::Async::Loop::IO_Poll->new();
+$loop->add( $stream );
 
 is( $closed, 0, 'closed before close' );
 
@@ -35,6 +35,6 @@ $stream->close;
 
 is( $closed, 0, 'closed after close' );
 
-$set->loop_once( 1 ) or die "Nothing ready after 1 second";
+$loop->loop_once( 1 ) or die "Nothing ready after 1 second";
 
 is( $closed, 1, 'closed after wait' );

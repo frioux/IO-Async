@@ -24,16 +24,16 @@ C<IO::Async::SignalProxy> - handle POSIX signals with C<IO::Async>-based IO
 
 =head1 SYNOPSIS
 
-This object class is for internal use by C<IO::Async::Set> subclasses. It is
+This object class is for internal use by C<IO::Async::Loop> subclasses. It is
 not intended for use externally.
 
 =head1 DESCRIPTION
 
 This module provides a class that allows POSIX signals to be handled safely
-alongside other IO operations on filehandles in an C<IO::Async::Set>. Because
+alongside other IO operations on filehandles in an C<IO::Async::Loop>. Because
 signals could arrive at any time, care must be taken that they do not
 interrupt the normal flow of the program, and are handled at the same time as
-other events in the C<IO::Async::Set>'s results.
+other events in the C<IO::Async::Loop>'s results.
 
 =cut
 
@@ -42,9 +42,9 @@ sub new
    my $class = shift;
    my ( %params ) = @_;
 
-   unless( caller =~ m/^IO::Async::Set/ ) {
+   unless( caller =~ m/^IO::Async::Loop/ ) {
       warnings::warnif "deprecated", 
-         "Use of IO::Async::SignalProxy outside of IO::Async::Set is deprecated";
+         "Use of IO::Async::SignalProxy outside of IO::Async::Loop is deprecated";
    }
 
    pipe( my ( $reader, $writer ) ) or croak "Cannot pipe() - $!";
@@ -158,7 +158,7 @@ sub attach
       # __END__ section before attempting to modify this code.
 
       # Protect the interrupted code against unexpected modifications of $!,
-      # such as the line just after the poll() call in IO::Async::Set::IO_Poll
+      # such as the line just after the poll() call in IO::Async::Loop::IO_Poll
       local $!;
 
       if( !@$signal_queue ) {
@@ -203,7 +203,7 @@ Some notes on implementation
 ============================
 
 The purpose of this object class is to safely call the required signal-
-handling callback code as part of the usual IO::Async::Set loop. This is done 
+handling callback code as part of the usual IO::Async::Loop loop. This is done 
 by keeping a queue of incoming signal names in the array referenced by 
 $self->{signal_queue}. The object installs its own signal handler which pushes
 the signal name to this array, and the on_read_ready method then replays them

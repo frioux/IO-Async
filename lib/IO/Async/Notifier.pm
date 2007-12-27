@@ -31,8 +31,8 @@ C<IO::Async::Notifier> - event callbacks for a non-blocking file descriptor
     },
  );
 
- my $set = IO::Async::Set::...
- $set->add( $notifier );
+ my $loop = IO::Async::Loop::...
+ $loop->add( $notifier );
 
 For most other uses with sockets, pipes or other filehandles that carry a byte
 stream, the C<IO::Async::Stream> class is likely to be more suitable.
@@ -41,7 +41,7 @@ stream, the C<IO::Async::Stream> class is likely to be more suitable.
 
 This module provides a base class for implementing non-blocking IO on file
 descriptors. The object provides ways to integrate with existing asynchronous
-IO handling code, by way of the various C<IO::Async::Set::*> collection
+IO handling code, by way of the various C<IO::Async::Loop::*> collection
 classes.
 
 This object may be used in one of two ways; with callback functions, or as a
@@ -207,7 +207,7 @@ sub new
 =head2 $notifier->close
 
 This method calls C<close> on the underlying IO handles. This method will will
-remove the notifier from its containing set.
+remove the notifier from its containing loop.
 
 =cut
 
@@ -220,8 +220,8 @@ sub close
 
    $self->{on_closed}->( $self ) if $self->{on_closed};
 
-   if( my $set = $self->{set} ) {
-      $set->remove( $self );
+   if( my $loop = $self->{loop} ) {
+      $loop->remove( $self );
    }
 
    delete $self->{read_handle};
@@ -274,17 +274,17 @@ sub write_fileno
    return $handle->fileno;
 }
 
-# For ::Sets to call
-sub __memberof_set
+# For ::Loops to call
+sub __memberof_loop
 {
    my $self = shift;
    if( @_ ) {
-      my $old = $self->{set};
-      $self->{set} = $_[0];
+      my $old = $self->{loop};
+      $self->{loop} = $_[0];
       return $old;
    }
    else {
-      return $self->{set};
+      return $self->{loop};
    }
 }
 
@@ -312,8 +312,8 @@ sub want_writeready
       my $old = $self->{want_writeready};
       $self->{want_writeready} = $new;
 
-      if( $self->{set} ) {
-         $self->{set}->__notifier_want_writeready( $self, $self->{want_writeready} );
+      if( $self->{loop} ) {
+         $self->{loop}->__notifier_want_writeready( $self, $self->{want_writeready} );
       }
 
       return $old;
@@ -323,7 +323,7 @@ sub want_writeready
    }
 }
 
-# For ::Sets to call
+# For ::Loops to call
 sub on_read_ready
 {
    my $self = shift;
@@ -331,7 +331,7 @@ sub on_read_ready
    $callback->( $self );
 }
 
-# For ::Sets to call
+# For ::Loops to call
 sub on_write_ready
 {
    my $self = shift;
@@ -345,7 +345,7 @@ During the execution of a program, it may be the case that certain IO handles
 cause other handles to be created; for example, new sockets that have been
 C<accept()>ed from a listening socket. To facilitate these, a notifier may
 contain child notifier objects, that are automatically added to or removed
-from the C<IO::Async::Set> that manages their parent.
+from the C<IO::Async::Loop> that manages their parent.
 
 =cut
 
@@ -375,11 +375,11 @@ sub children
 
 =head2 $notifier->add_child( $child )
 
-Adds a child notifier. This notifier will be added to the containing set, if
+Adds a child notifier. This notifier will be added to the containing loop, if
 the parent has one. Only a notifier that does not currently have a parent and
-is not currently a member of any set may be added as a child. If the child
+is not currently a member of any loop may be added as a child. If the child
 itself has grandchildren, these will be recursively added to the containing
-set.
+loop.
 
 =cut
 
@@ -390,10 +390,10 @@ sub add_child
 
    croak "Cannot add a child that already has a parent" if defined $child->{parent};
 
-   croak "Cannot add a child that is already a member of a set" if defined $child->{set};
+   croak "Cannot add a child that is already a member of a loop" if defined $child->{loop};
 
-   if( defined( my $set = $self->{set} ) ) {
-      $set->add( $child );
+   if( defined( my $loop = $self->{loop} ) ) {
+      $loop->add( $child );
    }
 
    push @{ $self->{children} }, $child;
@@ -404,9 +404,9 @@ sub add_child
 
 =head2 $notifier->remove_child( $child )
 
-Removes a child notifier. The child will be removed from the containing set,
+Removes a child notifier. The child will be removed from the containing loop,
 if the parent has one. If the child itself has grandchildren, these will be
-recurively removed from the set.
+recurively removed from the loop.
 
 =cut
 
@@ -428,8 +428,8 @@ sub remove_child
 
    undef $child->{parent};
 
-   if( defined( my $set = $self->{set} ) ) {
-      $set->remove( $child );
+   if( defined( my $loop = $self->{loop} ) ) {
+      $loop->remove( $child );
    }
 }
 

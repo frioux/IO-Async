@@ -9,7 +9,7 @@ use Time::HiRes qw( time );
 use IO::Socket::UNIX;
 use IO::Async::Notifier;
 
-use IO::Async::Set::IO_Poll;
+use IO::Async::Loop::IO_Poll;
 
 ( my $S1, my $S2 ) = IO::Socket::UNIX->socketpair( AF_UNIX, SOCK_STREAM, PF_UNSPEC ) or
    die "Cannot create socket pair - $!";
@@ -26,14 +26,14 @@ my $notifier = IO::Async::Notifier->new( handle => $S1,
    on_write_ready => sub { $writeready = 1 },
 );
 
-my $set = IO::Async::Set::IO_Poll->new();
+my $loop = IO::Async::Loop::IO_Poll->new();
 
 # loop_once
 
 my ( $now, $took );
 
 $now = time;
-$set->loop_once( 2 );
+$loop->loop_once( 2 );
 $took = time - $now;
 
 cmp_ok( $took, '>', 1.9, 'loop_once(2) while idle takes at least 1.9 seconds' );
@@ -43,10 +43,10 @@ if( $took > 2.5 ) {
          "This is not itself a bug, and may just be an indication of a busy testing machine" );
 }
 
-$set->add( $notifier );
+$loop->add( $notifier );
 
 $now = time;
-$set->loop_once( 2 );
+$loop->loop_once( 2 );
 $took = time - $now;
 
 cmp_ok( $took, '>', 1.9, 'loop_once(2) while waiting takes at least 1.9 seconds' );
@@ -56,27 +56,27 @@ if( $took > 2.5 ) {
          "This is not itself a bug, and may just be an indication of a busy testing machine" );
 }
 
-$set->remove( $notifier );
+$loop->remove( $notifier );
 
 # timers
 
 my $done = 0;
 
-$set->enqueue_timer( delay => 2, code => sub { $done = 1; } );
+$loop->enqueue_timer( delay => 2, code => sub { $done = 1; } );
 
-my $id = $set->enqueue_timer( delay => 5, code => sub { die "This timer should have been cancelled" } );
-$set->cancel_timer( $id );
+my $id = $loop->enqueue_timer( delay => 5, code => sub { die "This timer should have been cancelled" } );
+$loop->cancel_timer( $id );
 
 undef $id;
 
 $now = time;
 
-$set->loop_once( 5 );
+$loop->loop_once( 5 );
 
 # poll() might have returned just a little early, such that the TimerQueue
 # doesn't think anything is ready yet. We need to handle that case.
 while( !$done ) {
-   $set->loop_once( 0.1 );
+   $loop->loop_once( 0.1 );
    die "It should have been ready by now" if( time - $now > 5 );
 }
 

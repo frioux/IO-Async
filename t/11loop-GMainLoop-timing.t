@@ -10,7 +10,7 @@ use Time::HiRes qw( time );
 
 use IO::Socket::UNIX;
 
-use IO::Async::Set::GMainLoop;
+use IO::Async::Loop::GMainLoop;
 
 SKIP: { # Don't indent because most of this script is within the block; it would look messy
 
@@ -19,16 +19,16 @@ if( !defined eval { require Glib } ) {
    exit 0;
 }
 
-my $set = IO::Async::Set::GMainLoop->new();
+my $loop = IO::Async::Loop::GMainLoop->new();
 
 my $context = Glib::MainContext->default;
 
 my $done = 0;
 
-$set->enqueue_timer( delay => 2, code => sub { $done = 1; } );
+$loop->enqueue_timer( delay => 2, code => sub { $done = 1; } );
 
-my $id = $set->enqueue_timer( delay => 5, code => sub { die "This timer should have been cancelled" } );
-$set->cancel_timer( $id );
+my $id = $loop->enqueue_timer( delay => 5, code => sub { die "This timer should have been cancelled" } );
+$loop->cancel_timer( $id );
 
 undef $id;
 

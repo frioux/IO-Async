@@ -3,13 +3,13 @@
 #
 #  (C) Paul Evans, 2007 -- leonerd@leonerd.org.uk
 
-package IO::Async::Set::IO_Poll;
+package IO::Async::Loop::IO_Poll;
 
 use strict;
 
 our $VERSION = '0.10';
 
-use base qw( IO::Async::Set );
+use base qw( IO::Async::Loop );
 
 use Carp;
 
@@ -24,44 +24,44 @@ use constant IO_POLL_REMOVE_BUG => ( $IO::Poll::VERSION == '0.05' );
 
 =head1 NAME
 
-C<IO::Async::Set::IO_Poll> - a set using an C<IO::Poll> object
+C<IO::Async::Loop::IO_Poll> - a Loop using an C<IO::Poll> object
 
 =head1 SYNOPSIS
 
- use IO::Async::Set::IO_Poll;
+ use IO::Async::Loop::IO_Poll;
 
- my $set = IO::Async::Set::IO_Poll->new();
+ my $loop = IO::Async::Loop::IO_Poll->new();
 
- $set->add( ... );
+ $loop->add( ... );
 
- $set->loop_forever();
+ $loop->loop_forever();
 
 Or
 
  while(1) {
-    $set->loop_once();
+    $loop->loop_once();
     ...
  }
 
 Or
 
  use IO::Poll;
- use IO::Async::Set::IO_Poll;
+ use IO::Async::Loop::IO_Poll;
 
  my $poll = IO::Poll->new();
- my $set = IO::Async::Set::IO_Poll->new( poll => $poll );
+ my $loop = IO::Async::Loop::IO_Poll->new( poll => $poll );
 
- $set->add( ... );
+ $loop->add( ... );
 
  while(1) {
     my $timeout = ...
     my $ret = $poll->poll( $timeout );
-    $set->post_poll();
+    $loop->post_poll();
  }
 
 =head1 DESCRIPTION
 
-This subclass of C<IO::Async::Set> uses an C<IO::Poll> object to perform
+This subclass of C<IO::Async::Loop> uses an C<IO::Poll> object to perform
 read-ready and write-ready tests.
 
 To integrate with existing code that uses an C<IO::Poll>, a C<post_poll()> can
@@ -78,9 +78,9 @@ notifiers.
 
 =cut
 
-=head2 $set = IO::Async::Set::IO_Poll->new( %args )
+=head2 $loop = IO::Async::Loop::IO_Poll->new( %args )
 
-This function returns a new instance of a C<IO::Async::Set::IO_Poll> object.
+This function returns a new instance of a C<IO::Async::Loop::IO_Poll> object.
 It takes the following named arguments:
 
 =over 8
@@ -114,7 +114,7 @@ sub new
 
 =cut
 
-=head2 $count = $set->post_poll( $poll )
+=head2 $count = $loop->post_poll( $poll )
 
 This method checks the returned event list from a C<IO::Poll::poll()> call,
 and calls any of the notification methods or callbacks that are appropriate.
@@ -181,7 +181,7 @@ sub post_poll
    return $count;
 }
 
-=head2 $count = $set->loop_once( $timeout )
+=head2 $count = $loop->loop_once( $timeout )
 
 This method calls the C<poll()> method on the stored C<IO::Poll> object,
 passing in the value of C<$timeout>, and then runs the C<post_poll()> method
@@ -232,7 +232,7 @@ sub loop_once
    return $self->post_poll();
 }
 
-=head2 $set->loop_forever()
+=head2 $loop->loop_forever()
 
 This method repeatedly calls the C<loop_once> method with no timeout (i.e.
 allowing the C<poll()> method to block indefinitely), until the C<loop_stop>
@@ -251,7 +251,7 @@ sub loop_forever
    }
 }
 
-=head2 $set->loop_stop()
+=head2 $loop->loop_stop()
 
 This method cancels a running C<loop_forever>, and makes that method return.
 It would be called from an event callback triggered by an event that occured

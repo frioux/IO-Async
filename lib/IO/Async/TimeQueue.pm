@@ -25,7 +25,7 @@ C<IO::Async::TimeQueue> - a queue of future timed event callbacks
 =head1 DESCRIPTION
 
 This class is not intended to be used by external code; it is used by
-C<IO::Async::Set::Select> and C<IO::Async::Set::IO_Poll> to implement the
+C<IO::Async::Loop::Select> and C<IO::Async::Loop::IO_Poll> to implement the
 timer features.
 
 =cut

@@ -7,26 +7,26 @@ use Test::Exception;
 
 use POSIX qw( SIGUSR1 );
 
-use IO::Async::Set::IO_Poll;
+use IO::Async::Loop::IO_Poll;
 
-my $set = IO::Async::Set::IO_Poll->new();
+my $loop = IO::Async::Loop::IO_Poll->new();
 
 my $caught = "";
 
-$set->attach_signal( USR1 => sub { $caught .= "1" } );
+$loop->attach_signal( USR1 => sub { $caught .= "1" } );
 
 my $ready;
 
 # Idle
 
-$ready = $set->loop_once( 0.1 );
+$ready = $loop->loop_once( 0.1 );
 is( $ready,  0,  '$ready idling' );
 is( $caught, "", '$caught idling' );
 
 # Raise
 kill SIGUSR1, $$;
 
-$ready = $set->loop_once( 0.1 );
+$ready = $loop->loop_once( 0.1 );
 is( $ready,  1,   '$ready after raise' );
 is( $caught, "1", '$caught after raise' );
 
@@ -37,6 +37,6 @@ $caught = "";
 kill SIGUSR1, $$;
 kill SIGUSR1, $$;
 
-$ready = $set->loop_once( 0.1 );
+$ready = $loop->loop_once( 0.1 );
 is( $ready,  1,    '$ready after double-raise' );
 is( $caught, "11", '$caught after double-raise' );

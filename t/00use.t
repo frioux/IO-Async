@@ -9,9 +9,9 @@ use_ok( "IO::Async::MergePoint" );
 use_ok( "IO::Async::Stream" );
 use_ok( "IO::Async::SignalProxy" );
 
-use_ok( "IO::Async::Set::Select" );
-use_ok( "IO::Async::Set::IO_Poll" );
-use_ok( "IO::Async::Set::GMainLoop" );
+use_ok( "IO::Async::Loop::Select" );
+use_ok( "IO::Async::Loop::IO_Poll" );
+use_ok( "IO::Async::Loop::GMainLoop" );
 
 use_ok( "IO::Async::ChildManager" );
 use_ok( "IO::Async::DetachedCode" );

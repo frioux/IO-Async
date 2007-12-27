@@ -3,42 +3,42 @@
 #
 #  (C) Paul Evans, 2007 -- leonerd@leonerd.org.uk
 
-package IO::Async::Set::Select;
+package IO::Async::Loop::Select;
 
 use strict;
 
 our $VERSION = '0.10';
 
-use base qw( IO::Async::Set );
+use base qw( IO::Async::Loop );
 
 use Carp;
 
 =head1 NAME
 
-C<IO::Async::Set::Select> - a set using the C<select()> syscall
+C<IO::Async::Loop::Select> - a Loop using the C<select()> syscall
 
 =head1 SYNOPSIS
 
- use IO::Async::Set::Select;
+ use IO::Async::Loop::Select;
 
- my $set = IO::Async::Set::Select->new();
+ my $loop = IO::Async::Loop::Select->new();
 
- $set->add( ... );
+ $loop->add( ... );
 
  while(1) {
     my ( $rvec, $wvec, $evec ) = ('') x 3;
     my $timeout;
 
-    $set->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
+    $loop->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
     ...
     my $ret = select( $rvec, $wvec, $evec, $timeout );
     ...
-    $set->post_select( $rvec, $evec, $wvec );
+    $loop->post_select( $rvec, $evec, $wvec );
  }
 
 =head1 DESCRIPTION
 
-This subclass of C<IO::Async::Set> uses the C<select()> syscall to perform
+This subclass of C<IO::Async::Loop> uses the C<select()> syscall to perform
 read-ready and write-ready tests.
 
 To integrate with an existing C<select()>-based event loop, a pair of methods
@@ -55,9 +55,9 @@ C<on_write_ready()> methods or callbacks as appropriate.
 
 =cut
 
-=head2 $set = IO::Async::Set::Select->new()
+=head2 $loop = IO::Async::Loop::Select->new()
 
-This function returns a new instance of a C<IO::Async::Set::Select> object.
+This function returns a new instance of a C<IO::Async::Loop::Select> object.
 It takes no special arguments.
 
 =cut
@@ -72,10 +72,10 @@ sub new
 
 =cut
 
-=head2 $set->pre_select( \$readvec, \$writevec, \$exceptvec, \$timeout )
+=head2 $loop->pre_select( \$readvec, \$writevec, \$exceptvec, \$timeout )
 
 This method prepares the bitvectors for a C<select()> call, setting the bits
-that notifiers registered by this set are interested in. It will always set
+that notifiers registered by this loop are interested in. It will always set
 the appropriate bits in the read vector, but will only set them in the write
 vector if the notifier's C<want_writeready()> property is true. Neither the
 exception vector nor the timeout are affected.
@@ -118,7 +118,7 @@ sub pre_select
    return;
 }
 
-=head2 $set->post_select( $readvec, $writevec, $exceptvec )
+=head2 $loop->post_select( $readvec, $writevec, $exceptvec )
 
 This method checks the returned bitvectors from a C<select()> call, and calls
 any of the notification methods or callbacks that are appropriate.
