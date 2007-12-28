@@ -5,8 +5,6 @@ use strict;
 use Test::More tests => 83;
 use Test::Exception;
 
-use IO::Async::ChildManager;
-
 use File::Temp qw( tmpnam );
 use POSIX qw( WIFEXITED WEXITSTATUS ENOENT EBADF );
 
@@ -15,12 +13,10 @@ use IO::Async::Loop::IO_Poll;
 my $loop = IO::Async::Loop::IO_Poll->new();
 $loop->enable_childmanager;
 
-my $manager = $loop->get_childmanager;
-
-dies_ok( sub { $manager->spawn( code => sub { 1 }, setup => "hello" ); },
+dies_ok( sub { $loop->spawn_child( code => sub { 1 }, setup => "hello" ); },
          'Bad setup type fails' );
 
-dies_ok( sub { $manager->spawn( code => sub { 1 }, setup => [ 'somerandomthing' => 1 ] ); },
+dies_ok( sub { $loop->spawn_child( code => sub { 1 }, setup => [ 'somerandomthing' => 1 ] ); },
          'Setup with bad key fails' );
 
 # These tests are all very similar looking, with slightly different start and
@@ -36,7 +32,7 @@ sub TEST
 
    my ( undef, $callerfile, $callerline ) = caller();
 
-   $manager->spawn(
+   $loop->spawn_child(
       code => $attr{code},
       exists $attr{setup} ? ( setup => $attr{setup} ) : (),
       on_exit => sub { ( undef, $exitcode, $dollarbang, $dollarat ) = @_; },

@@ -319,11 +319,18 @@ loop. If there is not yet such an object (namely; that the
 C<enable_childmanager()> method has not yet been called), an exception is
 thrown.
 
+Use of this method is deprecated as not all C<IO::Async::Loop> subclasses will
+be able to support it. All child management should be done by calling
+C<watch_child()>, C<detach_child()>, or C<spawn_child()> directly.
+
 =cut
 
 sub get_childmanager
 {
    my $self = shift;
+
+   warnings::warnif "deprecated",
+      "IO::Async::Loop->get_childmanager is deprecated; use ->watch_child(), ->detach_child() or ->spawn_child() instead";
 
    return $self->{childmanager} if defined $self->{childmanager};
    croak "ChildManager not enabled in Loop";
@@ -331,9 +338,7 @@ sub get_childmanager
 
 =head2 $loop->watch_child( $pid, $code )
 
-This method adds a new handler for the termination of the given child PID. It
-is equivalent to calling the C<watch()> method on the object returned from the
-loop's C<get_childmanager()> method.
+This method adds a new handler for the termination of the given child PID.
 
 =cut
 
@@ -342,15 +347,17 @@ sub watch_child
    my $self = shift;
    my ( $kid, $code ) = @_;
 
-   my $childmanager = $self->get_childmanager;
+   my $childmanager = $self->{childmanager} or
+      croak "ChildManager not enabled in Loop";
+
    $childmanager->watch( $kid, $code );
 }
 
 =head2 $loop->detach_child( %params )
 
-This method creates a new child process to run a given code block. It is 
-equivalent to calling the C<detach_child()> method on the object returned from
-the loop's C<get_childmanager()> method.
+This method creates a new child process to run a given code block. For more
+detail, see the C<detach_child()> method on the L<IO::Async::ChildManager>
+class.
 
 =cut
 
@@ -359,7 +366,9 @@ sub detach_child
    my $self = shift;
    my %params = @_;
 
-   my $childmanager = $self->get_childmanager;
+   my $childmanager = $self->{childmanager} or
+      croak "ChildManager not enabled in Loop";
+
    $childmanager->detach_child( %params );
 }
 
@@ -387,8 +396,8 @@ sub detach_code
 =head2 $loop->spawn_child( %params )
 
 This method creates a new child process to run a given code block or command.
-It is equivalent to calling the C<spawn()> method on the object returned from
-the loop's C<get_childmanager()> method.
+For more detail, see the C<detach_child()> method on the
+L<IO::Async::ChildManager> class.
 
 =cut
 
@@ -397,7 +406,9 @@ sub spawn_child
    my $self = shift;
    my %params = @_;
 
-   my $childmanager = $self->get_childmanager;
+   my $childmanager = $self->{childmanager} or
+      croak "ChildManager not enabled in Loop";
+
    $childmanager->spawn( %params );
 }
 

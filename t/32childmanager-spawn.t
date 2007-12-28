@@ -5,10 +5,8 @@ use strict;
 use lib 't';
 use TestAsync;
 
-use Test::More tests => 38;
+use Test::More tests => 37;
 use Test::Exception;
-
-use IO::Async::ChildManager;
 
 use POSIX qw( WIFEXITED WEXITSTATUS ENOENT );
 
@@ -18,17 +16,10 @@ use IO::Async::Loop::IO_Poll;
 # This might cause locale issues
 use constant ENOENT_MESSAGE => do { local $! = ENOENT; "$!" };
 
-my $manager = IO::Async::ChildManager->new();
-
-dies_ok( sub { $manager->spawn( command => "/bin/true", on_exit => sub {} ); },
-         'Spawn on unassociated ChildManager fails' );
-
 my $loop = IO::Async::Loop::IO_Poll->new();
 $loop->enable_childmanager;
 
 testing_loop( $loop );
-
-$manager = $loop->get_childmanager;
 
 my $exited_pid;
 my $exitcode;
@@ -46,18 +37,18 @@ sub wait_for_exit
    return wait_for { defined $exitcode };
 }
 
-dies_ok( sub { $manager->spawn( badoption => 1 ); },
+dies_ok( sub { $loop->spawn_child( badoption => 1 ); },
          'Bad option to spawn fails' );
 
-dies_ok( sub { $manager->spawn( code => sub { 1 }, command => "hello" ); },
+dies_ok( sub { $loop->spawn_child( code => sub { 1 }, command => "hello" ); },
          'Both code and command options to spawn fails' );
 
-dies_ok( sub { $manager->spawn( on_exit => sub { 1 } ); },
+dies_ok( sub { $loop->spawn_child( on_exit => sub { 1 } ); },
          'Bad option to spawn fails' );
 
 my $spawned_pid;
 
-$spawned_pid = $manager->spawn(
+$spawned_pid = $loop->spawn_child(
    code => sub { return 42; },
    on_exit => \&on_exit,
 );
@@ -76,7 +67,7 @@ is( $dollarat,              '', '$dollarat after spawn CODE' );
 my $ENDEXIT = 10;
 END { exit $ENDEXIT if defined $ENDEXIT; }
 
-$spawned_pid = $manager->spawn(
+$spawned_pid = $loop->spawn_child(
    code => sub { return 0; },
    on_exit => \&on_exit,
 );
@@ -92,7 +83,7 @@ is( WEXITSTATUS($exitcode), 0, 'WEXITSTATUS($exitcode) after spawn CODE with END
 # dollarbang isn't interesting here
 is( $dollarat,             '', '$dollarat after spawn CODE with END' );
 
-$spawned_pid = $manager->spawn(
+$spawned_pid = $loop->spawn_child(
    code => sub { die "An exception here\n"; },
    on_exit => \&on_exit,
 );
@@ -118,7 +109,7 @@ foreach (qw( /bin/true /usr/bin/true )) {
 # Didn't find a likely-looking candidate. We'll fake one using perl itself
 $true = "$^X -e 1" if !defined $true;
 
-$spawned_pid = $manager->spawn(
+$spawned_pid = $loop->spawn_child(
    command => $true,
    on_exit => \&on_exit,
 );
@@ -137,7 +128,7 @@ is( $dollarat,             '', '$dollarat after spawn '.$true );
 my $donotexist = "/bin/donotexist";
 $donotexist .= "X" while -e $donotexist;
 
-$spawned_pid = $manager->spawn(
+$spawned_pid = $loop->spawn_child(
    command => $donotexist,
    on_exit => \&on_exit,
 );
@@ -153,7 +144,7 @@ is( $dollarbang+0, ENOENT,         '$dollarbang numerically after spawn donotexi
 is( "$dollarbang", ENOENT_MESSAGE, '$dollarbang string after spawn donotexist' );
 is( $dollarat,             '', '$dollarat after spawn donotexist' );
 
-$spawned_pid = $manager->spawn(
+$spawned_pid = $loop->spawn_child(
    command => [ $^X, "-e", "exit 14" ],
    on_exit => \&on_exit,
 );
