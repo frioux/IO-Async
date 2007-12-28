@@ -10,7 +10,6 @@ use strict;
 our $VERSION = '0.10';
 
 use Carp;
-use warnings qw();
 
 # Never sleep for more than 1 second if a signal proxy is registered, to avoid
 # a borderline race condition.
@@ -181,28 +180,6 @@ sub __notifier_want_writeready
    # Ignore
 }
 
-=head2 $sigproxy = $loop->get_sigproxy
-
-This method returns the associated C<IO::Async::SignalProxy> object for the
-loop. If there is not yet such a proxy, a new one is constructed and added to
-the loop.
-
-Use of this method is deprecated as not all C<IO::Async::Loop> subclasses will
-be able to support it. All signal handling should be done by calling
-C<attach_signal()> or C<detach_signal()> directly.
-
-=cut
-
-sub get_sigproxy
-{
-   my $self = shift;
-
-   warnings::warnif "deprecated",
-      "IO::Async::Loop->get_sigproxy is deprecated; use ->attach_signal() or ->detach_signal() instead";
-
-   return $self->_get_sigproxy;
-}
-
 sub _get_sigproxy
 {
    my $self = shift;
@@ -310,30 +287,6 @@ sub disable_childmanager
 
    $self->detach_signal( 'CHLD' );
    undef $self->{childmanager};
-}
-
-=head2 $manager = $loop->get_childmanager
-
-This method returns the associated C<IO::Async::ChildManager> object for the
-loop. If there is not yet such an object (namely; that the
-C<enable_childmanager()> method has not yet been called), an exception is
-thrown.
-
-Use of this method is deprecated as not all C<IO::Async::Loop> subclasses will
-be able to support it. All child management should be done by calling
-C<watch_child()>, C<detach_child()>, or C<spawn_child()> directly.
-
-=cut
-
-sub get_childmanager
-{
-   my $self = shift;
-
-   warnings::warnif "deprecated",
-      "IO::Async::Loop->get_childmanager is deprecated; use ->watch_child(), ->detach_child() or ->spawn_child() instead";
-
-   return $self->{childmanager} if defined $self->{childmanager};
-   croak "ChildManager not enabled in Loop";
 }
 
 =head2 $loop->watch_child( $pid, $code )
