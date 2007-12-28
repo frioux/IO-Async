@@ -49,11 +49,13 @@ It can also be used directly. In this case, extra effort must be taken to
 ensure a C<IO::Async::Loop> object is available if the C<spawn()> method is
 used:
 
+ use IO::Async::Loop;
  use IO::Async::ChildManager;
 
- my $manager = IO::Async::ChildManager->new();
-
  my $loop = IO::Async::Loop::...
+
+ my $manager = IO::Async::ChildManager->new( loop => $loop );
+
  $loop->attach_signal( CHLD => sub { $manager->SIGCHLD } );
 
  ...
@@ -62,12 +64,6 @@ used:
 
  ...
 
- $manager->associate_loop( $loop );
- $manager->spawn( ... );
-
- # Alternatively
- 
- my $manager = IO::Async::ChildManager->new( loop => $loop );
  $manager->spawn( ... );
 
 It is therefore usually easiest to just use the convenience methods provided
@@ -116,27 +112,14 @@ sub new
    my $class = shift;
    my ( %params ) = @_;
 
+   my $loop = delete $params{loop} or croak "Expected a 'loop'";
+
    my $self = bless {
       childdeathhandlers => {},
-      containing_loop    => $params{loop},
+      loop => $loop,
    }, $class;
 
    return $self;
-}
-
-=head2 $manager->associate_loop( $loop )
-
-This method associates an C<IO::Async::Loop> with the manager. This is required
-for the IO handle code in the C<spawn()> method to work.
-
-=cut
-
-sub associate_loop
-{
-   my $self = shift;
-   my ( $loop ) = @_;
-
-   $self->{containing_loop} = $loop;
 }
 
 =head1 METHODS
@@ -367,10 +350,6 @@ sub spawn
    my $self = shift;
    my %params = @_;
 
-   # We can only spawn if we've got a containing loop
-   defined $self->{containing_loop} or
-      croak "Cannot spawn in a ChildManager with no containing loop";
-
    my $command = delete $params{command};
    my $code    = delete $params{code};
    my $setup   = delete $params{setup};
@@ -528,7 +507,7 @@ sub _spawn_in_parent
    my $self = shift;
    my ( $readpipe, $kid, $on_exit ) = @_;
 
-   my $loop = $self->{containing_loop};
+   my $loop = $self->{loop};
 
    # We need to wait for both the errno pipe to close, and for waitpid()
    # to give us an exit code. We'll form two closures over these two

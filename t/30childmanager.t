@@ -14,7 +14,11 @@ use POSIX qw( SIGTERM WIFEXITED WEXITSTATUS WIFSIGNALED WTERMSIG );
 
 use IO::Async::Loop::IO_Poll;
 
-my $manager = IO::Async::ChildManager->new();
+my $loop = IO::Async::Loop::IO_Poll->new();
+
+testing_loop( $loop );
+
+my $manager = IO::Async::ChildManager->new( loop => $loop );
 
 ok( defined $manager, '$manager defined' );
 is( ref $manager, "IO::Async::ChildManager", 'ref $manager is IO::Async::ChildManager' );
@@ -25,10 +29,6 @@ $handled = $manager->SIGCHLD;
 is( $handled, 0, '$handled while idle' );
 
 is_deeply( [ $manager->list_watching ], [], 'list_watching while idle' );
-
-my $loop = IO::Async::Loop::IO_Poll->new();
-
-testing_loop( $loop );
 
 $loop->attach_signal( CHLD => sub { $handled = $manager->SIGCHLD } );
 
