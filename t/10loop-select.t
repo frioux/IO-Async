@@ -47,7 +47,7 @@ is( $timeout, undef, '$timeout idling pre_select' );
 
 $loop->add( $notifier );
 
-is( $notifier->__memberof_loop, $loop, '$notifier->__memberof_loop == $loop' );
+is( $notifier->get_loop, $loop, '$notifier->__memberof_loop == $loop' );
 
 dies_ok( sub { $loop->add( $notifier ) }, 'adding again produces error' );
 
@@ -100,7 +100,7 @@ $readready = 0;
 
 $loop->remove( $notifier );
 
-is( $notifier->__memberof_loop, undef, '$notifier->__memberof_loop is undef' );
+is( $notifier->get_loop, undef, '$notifier->__memberof_loop is undef' );
 
 $rvec = '';
 $wvec = '';

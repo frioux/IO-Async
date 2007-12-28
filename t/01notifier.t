@@ -45,7 +45,7 @@ is( $ioan->write_fileno, fileno($S1), '->write_fileno returns fileno(S1)' );
 
 is( $ioan->want_writeready, 0, 'wantwriteready 0' );
 
-is( $ioan->__memberof_loop, undef, '__memberof_loop undef' );
+is( $ioan->get_loop, undef, '__memberof_loop undef' );
 
 $ioan->want_writeready( 1 );
 is( $ioan->want_writeready, 1, 'wantwriteready 1' );

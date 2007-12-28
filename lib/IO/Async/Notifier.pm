@@ -274,18 +274,25 @@ sub write_fileno
    return $handle->fileno;
 }
 
-# For ::Loops to call
-sub __memberof_loop
+=head2 $notifier->get_loop
+
+This accessor returns the C<IO::Async::Loop> object to which this notifier
+belongs.
+
+=cut
+
+sub get_loop
 {
    my $self = shift;
-   if( @_ ) {
-      my $old = $self->{loop};
-      $self->{loop} = $_[0];
-      return $old;
-   }
-   else {
-      return $self->{loop};
-   }
+   return $self->{loop}
+}
+
+# Only called by IO::Async::Loop, not external interface
+sub __set_loop
+{
+   my $self = shift;
+   my ( $loop ) = @_;
+   $self->{loop} = $loop;
 }
 
 =head2 $value = $notifier->want_writeready

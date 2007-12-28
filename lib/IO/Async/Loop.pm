@@ -103,7 +103,7 @@ sub add
       croak "Cannot add a child notifier directly - add its parent";
    }
 
-   if( defined $notifier->__memberof_loop ) {
+   if( defined $notifier->get_loop ) {
       croak "Cannot add a notifier that is already a member of a loop";
    }
 
@@ -119,7 +119,7 @@ sub _add_noparentcheck
 
    $self->{notifiers}->{$nkey} = $notifier;
 
-   $notifier->__memberof_loop( $self );
+   $notifier->__set_loop( $self );
 
    $self->__notifier_want_writeready( $notifier, $notifier->want_writeready );
 
@@ -157,7 +157,7 @@ sub _remove_noparentcheck
 
    delete $self->{notifiers}->{$nkey};
 
-   $notifier->__memberof_loop( undef );
+   $notifier->__set_loop( undef );
 
    $self->_notifier_removed( $notifier );
 
