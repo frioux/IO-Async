@@ -94,10 +94,10 @@ sub send
 
    # Use write next time
    no warnings 'redefine';
-   *send = \&write;
+   *send = \&IO::Async::Stream::write;
 
    # Jump to it now - subsequent calls will go direct
-   goto &write;
+   goto &IO::Async::Stream::write;
 }
 
 # Keep perl happy; keep Britain tidy
