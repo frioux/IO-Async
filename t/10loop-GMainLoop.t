@@ -2,7 +2,7 @@
 
 use strict;
 
-use constant MAIN_TESTS => 13;
+use constant MAIN_TESTS => 15;
 
 use Test::More tests => MAIN_TESTS + 1;
 use Test::Exception;
@@ -76,6 +76,17 @@ $context->iteration( 0 );
 $notifier->want_writeready( 0 );
 
 is( $writeready, 1, '$writeready after iteration' );
+
+# loop_once
+
+$writeready = 0;
+$notifier->want_writeready( 1 );
+
+my $ready;
+$ready = $loop->loop_once( 0.1 );
+
+is( $ready, 1, '$ready after loop_once' );
+is( $writeready, 1, '$writeready after loop_once' );
 
 # HUP
 

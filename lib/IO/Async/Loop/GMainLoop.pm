@@ -177,6 +177,37 @@ sub cancel_timer
    Glib::Source->remove( $id );
 }
 
+=head2 $count = $loop->loop_once( $timeout )
+
+This method calls the C<iteration()> method on the underlying 
+C<Glib::MainContext>. If a timeout value is supplied, then a Glib timeout
+will be installed, to interrupt the loop at that time. If Glib indicates that
+any callbacks were fired, then this method will return 1 (however, it does not
+mean that any C<IO::Async> callbacks were invoked, as there may be other parts
+of code sharing the Glib main context. Otherwise, it will return 0.
+
+=cut
+
+sub loop_once
+{
+   my $self = shift;
+   my ( $timeout ) = @_;
+
+   $self->_adjust_timeout( \$timeout, no_sigwait => 1 );
+
+   my $timed_out = 0;
+
+   if( defined $timeout ) {
+      my $interval = $timeout * 1000; # miliseconds
+      Glib::Timeout->add( $interval, sub { $timed_out = 1; return 0; } );
+   }
+
+   my $context = Glib::MainContext->default;
+   my $ret = $context->iteration( 1 );
+
+   return $ret and not $timed_out ? 1 : 0;
+}
+
 # Keep perl happy; keep Britain tidy
 1;
 
