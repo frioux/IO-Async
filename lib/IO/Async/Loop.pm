@@ -382,9 +382,9 @@ sub __enable_timer
 sub _adjust_timeout
 {
    my $self = shift;
-   my ( $timeref ) = @_;
+   my ( $timeref, %params ) = @_;
 
-   if( defined $self->{sigproxy} ) {
+   if( defined $self->{sigproxy} and !$params{no_sigwait} ) {
       $$timeref = $MAX_SIGWAIT_TIME if( !defined $$timeref or $$timeref > $MAX_SIGWAIT_TIME );
    }
 
@@ -394,7 +394,7 @@ sub _adjust_timeout
    my $nexttime = $timequeue->next_time;
    return unless defined $nexttime;
 
-   my $now = time();
+   my $now = exists $params{now} ? $params{now} : time();
    my $timer_delay = $nexttime - $now;
 
    if( $timer_delay < 0 ) {
