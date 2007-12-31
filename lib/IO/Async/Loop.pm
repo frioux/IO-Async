@@ -477,6 +477,25 @@ sub cancel_timer
    $timequeue->cancel( $id );
 }
 
+=head2 $count = $loop->loop_once( $timeout )
+
+This method performs a single wait loop using the specific subclass's
+underlying mechanism. If C<$timeout> is undef, then no timeout is applied, and
+it will wait until an event occurs. The intention of the return value is to
+indicate the number of callbacks that this loop executed, though different
+subclasses vary in how accurately they can report this. See the documentation
+for this method in the specific subclass for more information.
+
+=cut
+
+sub loop_once
+{
+   my $self = shift;
+   my ( $timeout ) = @_;
+
+   croak "Expected that $self overrides ->loop_once()";
+}
+
 # Keep perl happy; keep Britain tidy
 1;
 

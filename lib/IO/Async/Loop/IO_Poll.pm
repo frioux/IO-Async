@@ -191,6 +191,7 @@ an error.
 
 =cut
 
+# override
 sub loop_once
 {
    my $self = shift;

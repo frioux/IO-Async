@@ -188,6 +188,7 @@ of code sharing the Glib main context. Otherwise, it will return 0.
 
 =cut
 
+# override
 sub loop_once
 {
    my $self = shift;
