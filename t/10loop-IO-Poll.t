@@ -106,8 +106,7 @@ is( $writeready, 1, '$writeready after loop_once' );
 
 # loop_forever
 
-my $stdout_io = IO::Handle->new_from_fd( fileno(STDOUT), 'w' );
-my $stdout_notifier = IO::Async::Notifier->new( handle => $stdout_io,
+my $stdout_notifier = IO::Async::Notifier->new( handle => \*STDOUT,
    on_read_ready => sub { },
    on_write_ready => sub { $loop->loop_stop() },
    want_writeready => 1,
@@ -117,7 +116,7 @@ $loop->add( $stdout_notifier );
 @handles = $poll->handles();
 # We can't guarantee the order here, but we can get 'sort' to do that
 is_deeply( [ sort @handles ],
-           [ sort ( $S1, $stdout_io ) ],
+           [ sort ( $S1, \*STDOUT ) ],
            '@handles after adding stdout_notifier' );
 
 $writeready = 0;
