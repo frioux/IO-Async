@@ -2,7 +2,7 @@
 
 use strict;
 
-use constant MAIN_TESTS => 15;
+use constant MAIN_TESTS => 16;
 
 use Test::More tests => MAIN_TESTS + 1;
 use Test::Exception;
@@ -101,6 +101,28 @@ $readready = 0;
 $context->iteration( 0 );
 
 is( $readready, 1, '$readready after HUP' );
+
+# loop_forever
+
+my $stdout_notifier = IO::Async::Notifier->new( handle => \*STDOUT,
+   on_read_ready => sub { },
+   on_write_ready => sub { $loop->loop_stop() },
+   want_writeready => 1,
+);
+$loop->add( $stdout_notifier );
+
+$writeready = 0;
+
+$SIG{ALRM} = sub { die "Test timed out"; };
+alarm( 1 );
+
+$loop->loop_forever();
+
+alarm( 0 );
+
+is( $writeready, 1, '$writeready after loop_forever' );
+
+$loop->remove( $stdout_notifier );
 
 # Removal
 

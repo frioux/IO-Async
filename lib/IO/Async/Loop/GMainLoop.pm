@@ -209,6 +209,25 @@ sub loop_once
    return $ret and not $timed_out ? 1 : 0;
 }
 
+# override
+sub loop_forever
+{
+   my $self = shift;
+
+   my $mainloop = $self->{mainloop} = Glib::MainLoop->new();
+   $mainloop->run;
+
+   undef $self->{mainloop};
+}
+
+# override
+sub loop_stop
+{
+   my $self = shift;
+   
+   $self->{mainloop}->quit;
+}
+
 # Keep perl happy; keep Britain tidy
 1;
 
