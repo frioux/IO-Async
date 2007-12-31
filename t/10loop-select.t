@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 27;
+use Test::More tests => 28;
 use Test::Exception;
 
 use IO::Socket::UNIX;
@@ -106,6 +106,28 @@ $ready = $loop->loop_once( 0.1 );
 
 is( $ready, 1, '$ready after loop_once' );
 is( $writeready, 1, '$writeready after loop_once' );
+
+# loop_forever
+
+my $stdout_notifier = IO::Async::Notifier->new( handle => \*STDOUT,
+   on_read_ready => sub { },
+   on_write_ready => sub { $loop->loop_stop() },
+   want_writeready => 1,
+);
+$loop->add( $stdout_notifier );
+
+$writeready = 0;
+
+$SIG{ALRM} = sub { die "Test timed out"; };
+alarm( 1 );
+
+$loop->loop_forever();
+
+alarm( 0 );
+
+is( $writeready, 1, '$writeready after loop_forever' );
+
+$loop->remove( $stdout_notifier );
 
 # Removal
 

@@ -496,6 +496,40 @@ sub loop_once
    croak "Expected that $self overrides ->loop_once()";
 }
 
+=head2 $loop->loop_forever()
+
+This method repeatedly calls the C<loop_once> method with no timeout (i.e.
+allowing the underlying mechanism to block indefinitely), until the
+C<loop_stop> method is called from an event callback.
+
+=cut
+
+sub loop_forever
+{
+   my $self = shift;
+
+   $self->{still_looping} = 1;
+
+   while( $self->{still_looping} ) {
+      $self->loop_once( undef );
+   }
+}
+
+=head2 $loop->loop_stop()
+
+This method cancels a running C<loop_forever>, and makes that method return.
+It would be called from an event callback triggered by an event that occured
+within the loop.
+
+=cut
+
+sub loop_stop
+{
+   my $self = shift;
+   
+   $self->{still_looping} = 0;
+}
+
 # Keep perl happy; keep Britain tidy
 1;
 
