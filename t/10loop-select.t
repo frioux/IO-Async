@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 25;
+use Test::More tests => 27;
 use Test::Exception;
 
 use IO::Socket::UNIX;
@@ -21,8 +21,8 @@ my $readready = 0;
 my $writeready = 0;
 
 my $notifier = IO::Async::Notifier->new( handle => $S1,
-   on_read_ready  => sub { $readready = 1 },
-   on_write_ready => sub { $writeready = 1 },
+   on_read_ready  => sub { $readready = 1; return 0 },
+   on_write_ready => sub { $writeready = 1; return 0 },
 );
 
 my $loop = IO::Async::Loop::Select->new();
@@ -95,6 +95,17 @@ is( $readready,  0, '$readready writeready post_select' );
 is( $writeready, 1, '$writeready writeready post_select' );
 
 $readready = 0;
+
+# loop_once
+
+$writeready = 0;
+$notifier->want_writeready( 1 );
+
+my $ready;
+$ready = $loop->loop_once( 0.1 );
+
+is( $ready, 1, '$ready after loop_once' );
+is( $writeready, 1, '$writeready after loop_once' );
 
 # Removal
 

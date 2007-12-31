@@ -174,6 +174,35 @@ sub post_select
    $timequeue->fire if $timequeue;
 }
 
+=head2 $count = $loop->loop_once( $timeout )
+
+This method calls the C<pre_select()> method to prepare the bitvectors for a
+C<select()> syscall, performs it, then calls C<post_select()> to process the
+result. It returns the total number of callbacks invoked by the
+C<post_select()> method, or C<undef> if the underlying C<select()> syscall
+returned an error.
+
+=cut
+
+sub loop_once
+{
+   my $self = shift;
+   my ( $timeout ) = @_;
+
+   my ( $rvec, $wvec, $evec ) = ('') x 3;
+
+   $self->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
+
+   my $ret = select( $rvec, $wvec, $evec, $timeout );
+
+   {
+      local $!;
+      $self->post_select( $rvec, $wvec, $evec );
+   }
+
+   return $ret;
+}
+
 # Keep perl happy; keep Britain tidy
 1;
 
