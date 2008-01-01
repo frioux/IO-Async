@@ -25,6 +25,17 @@ C<IO::Async::Loop::Select> - a Loop using the C<select()> syscall
 
  $loop->add( ... );
 
+ $loop->loop_forever();
+
+Or
+
+ while(1) {
+    $loop->loop_once();
+    ...
+ }
+
+Or
+
  while(1) {
     my ( $rvec, $wvec, $evec ) = ('') x 3;
     my $timeout;

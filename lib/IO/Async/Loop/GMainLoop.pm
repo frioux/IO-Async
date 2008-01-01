@@ -26,7 +26,19 @@ C<IO::Async::Loop::GMainLoop> - a Loop using the C<Glib::MainLoop> object
  $loop->add( ... );
 
  ...
- # Rest of GLib/Gtk program that uses GLib::MainContext
+ # Rest of GLib/Gtk program that uses GLib
+
+ Glib::MainLoop->new->run();
+
+Or
+
+ $loop->loop_forever();
+
+Or
+
+ while(1) {
+    $loop->loop_once();
+ }
 
 =head1 DESCRIPTION
 
