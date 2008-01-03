@@ -21,6 +21,8 @@ sub new
 
    my $loop = delete $params{loop} or croak "Expected a 'loop'";
 
+   my $workers = delete $params{workers};
+
    my $code = $loop->detach_code(
       code => sub {
          my ( $type, @data ) = @_;
@@ -34,6 +36,8 @@ sub new
       },
 
       marshaller => 'storable',
+
+      workers => $workers,
    );
 
    $started = 1;
