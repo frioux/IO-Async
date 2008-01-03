@@ -1,9 +1,9 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2007 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2007,2008 -- leonerd@leonerd.org.uk
 
-package IO::Async::Loop::GMainLoop;
+package IO::Async::Loop::Glib;
 
 use strict;
 
@@ -15,13 +15,13 @@ use Carp;
 
 =head1 NAME
 
-C<IO::Async::Loop::GMainLoop> - a Loop using the C<Glib::MainLoop> object
+C<IO::Async::Loop::Glib> - a Loop using the C<Glib::MainLoop> object
 
 =head1 SYNOPSIS
 
- use IO::Async::Loop::GMainLoop;
+ use IO::Async::Loop::Glib;
 
- my $loop = IO::Async::Loop::GMainLoop->new();
+ my $loop = IO::Async::Loop::Glib->new();
 
  $loop->add( ... );
 
@@ -57,10 +57,10 @@ required.
 
 =cut
 
-=head2 $loop = IO::Async::Loop::GMainLoop->new()
+=head2 $loop = IO::Async::Loop::Glib->new()
 
-This function returns a new instance of a C<IO::Async::Loop::GMainLoop> object.
-It takes no special arguments.
+This function returns a new instance of a C<IO::Async::Loop::Glib> object. It
+takes no special arguments.
 
 =cut
 

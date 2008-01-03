@@ -11,7 +11,7 @@ use_ok( "IO::Async::SignalProxy" );
 
 use_ok( "IO::Async::Loop::Select" );
 use_ok( "IO::Async::Loop::IO_Poll" );
-use_ok( "IO::Async::Loop::GMainLoop" );
+use_ok( "IO::Async::Loop::Glib" );
 
 use_ok( "IO::Async::ChildManager" );
 use_ok( "IO::Async::DetachedCode" );

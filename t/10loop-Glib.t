@@ -10,9 +10,9 @@ use Test::Exception;
 use IO::Socket::UNIX;
 use IO::Async::Notifier;
 
-use IO::Async::Loop::GMainLoop;
+use IO::Async::Loop::Glib;
 
-dies_ok( sub { IO::Async::Loop::GMainLoop->new(); },
+dies_ok( sub { IO::Async::Loop::Glib->new(); },
          'No Glib loaded' );
 
 SKIP: { # Don't indent because most of this script is within the block; it would look messy
@@ -37,10 +37,10 @@ my $notifier = IO::Async::Notifier->new( handle => $S1,
    on_write_ready => sub { $writeready = 1; return 0 },
 );
 
-my $loop = IO::Async::Loop::GMainLoop->new();
+my $loop = IO::Async::Loop::Glib->new();
 
 ok( defined $loop, '$loop defined' );
-is( ref $loop, "IO::Async::Loop::GMainLoop", 'ref $loop is IO::Async::Loop::GMainLoop' );
+is( ref $loop, "IO::Async::Loop::Glib", 'ref $loop is IO::Async::Loop::Glib' );
 
 my $context = Glib::MainContext->default;
 

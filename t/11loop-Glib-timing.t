@@ -10,7 +10,7 @@ use Time::HiRes qw( time );
 
 use IO::Socket::UNIX;
 
-use IO::Async::Loop::GMainLoop;
+use IO::Async::Loop::Glib;
 
 SKIP: { # Don't indent because most of this script is within the block; it would look messy
 
@@ -19,7 +19,7 @@ if( !defined eval { require Glib } ) {
    exit 0;
 }
 
-my $loop = IO::Async::Loop::GMainLoop->new();
+my $loop = IO::Async::Loop::Glib->new();
 
 my $context = Glib::MainContext->default;
 

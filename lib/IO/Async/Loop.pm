@@ -41,7 +41,7 @@ This module would not be used directly; see the subclasses:
 
 =item L<IO::Async::Loop::IO_Perl>
 
-=item L<IO::Async::Loop::GMainLoop>
+=item L<IO::Async::Loop::Glib>
 
 =back
 
