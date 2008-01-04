@@ -5,8 +5,10 @@ use strict;
 use lib 't';
 use TestAsync;
 
-use Test::More tests => 7;
+use Test::More tests => 8;
 use Test::Exception;
+
+use Socket::GetAddrInfo qw( getaddrinfo );
 
 use IO::Async::Resolver;
 
@@ -90,6 +92,29 @@ SKIP: {
    wait_for { $result };
 
    is_deeply( $result, \@proto, 'getprotobynumber' );
+}
+
+# getaddrinfo is a little more difficult, as it will mangle the result
+
+my @gai = getaddrinfo( "localhost", "www" );
+
+undef $result;
+
+$resolver->resolve(
+   type => 'getaddrinfo',
+   data => [ "localhost", "www" ],
+   on_resolved => sub { $result = [ 'resolved', @_ ] },
+   on_error    => sub { $result = [ 'error',    @_ ] },
+);
+
+wait_for { $result };
+
+if( @gai == 1 ) {
+   is_deeply( $result, [ error => "$gai[0]\n" ], 'getaddrinfo - error' );
+}
+else {
+   my @expect = map { [ splice @gai, 0, 5 ] } ( 0 .. $#gai/5 );
+   is_deeply( $result, [ resolved => @expect ], 'getaddrinfo - result' );
 }
 
 # Loop integration

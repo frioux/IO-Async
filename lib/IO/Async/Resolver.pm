@@ -9,6 +9,8 @@ use strict;
 
 our $VERSION = '0.10';
 
+use Socket::GetAddrInfo qw( getaddrinfo getnameinfo );
+
 use Carp;
 
 my $started = 0;
@@ -254,6 +256,41 @@ register_resolver( 'getnetbyaddr', sub { return getnetbyaddr( $_[0], $_[1] ) or 
 
 register_resolver( 'getprotobyname',   sub { return getprotobyname( $_[0] ) or die "$!\n" } );
 register_resolver( 'getprotobynumber', sub { return getprotobynumber( $_[0] ) or die "$!\n" } );
+
+# The two Socket::GetAddrInfo-based ones
+
+=pod
+
+The following two resolver names are implemented using the same-named
+functions from the C<Socket::GetAddrInfo> module.
+
+ getaddrinfo getnameinfo
+
+The C<getaddrinfo> resolver mangles the result of the function, so that the
+returned value is more useful to the caller. It splits up the list of 5-tuples
+into a list of ARRAY refs, where each referenced array contains one of the
+tuples of 5 values. The C<getnameinfo> resolver returns its result unchanged.
+
+=cut
+
+register_resolver( 'getaddrinfo', sub {
+   my @args = @_;
+
+   my @res = getaddrinfo( @args );
+
+   # getaddrinfo() uses a 1-element list as an error value
+   die "$res[0]\n" if @res == 1;
+
+   # Convert the @res list into a list of ARRAY refs of 5 values each
+   my @ret;
+   while( @res >= 5 ) {
+      push @ret, [ splice( @res, 0, 5 ) ];
+   }
+
+   return @ret;
+} );
+
+register_resolver( 'getnameinfo', sub { return getnameinfo( @_ ) } );
 
 # Keep perl happy; keep Britain tidy
 1;
