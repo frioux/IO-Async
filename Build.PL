@@ -9,9 +9,10 @@ my $build = Module::Build->new
    dist_version_from => 'lib/IO/Async/Notifier.pm',
    dist_abstract     => "a collection of modules that implement asynchronous filehandle IO",
    requires => {
-                 'Heap'     => 0,
-                 'IO::Poll' => 0,
-                 'Storable' => 0,
+                 'Heap'                => 0,
+                 'IO::Poll'            => 0,
+                 'Socket::GetAddrInfo' => 0,
+                 'Storable'            => 0,
                },
    build_requires => {
                  'File::Temp' => 0,

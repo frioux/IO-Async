@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 use strict;
-use Test::More tests => 10;
+use Test::More tests => 11;
 
 use_ok( "IO::Async::Notifier" );
 use_ok( "IO::Async::TimeQueue" );
@@ -15,3 +15,4 @@ use_ok( "IO::Async::Loop::Glib" );
 
 use_ok( "IO::Async::ChildManager" );
 use_ok( "IO::Async::DetachedCode" );
+use_ok( "IO::Async::Resolver" );
