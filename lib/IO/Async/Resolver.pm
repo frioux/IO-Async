@@ -20,7 +20,22 @@ C<IO::Async::Resolver> - performing name resolutions asynchronously
 
 =head1 SYNOPSIS
 
-TODO
+Usually this object would constructed indirectly, via an C<IO::Async::Loop>:
+
+ use IO::Async::Loop::...;
+ my $loop = IO::Async::Loop::...
+
+ $loop->enable_childmanager;
+
+ $loop->resolve( type => 'getpwuid', data => [ $< ],
+    on_resolved => 
+       sub { print "My passwd ent: " . join( "|", @_ ) . "\n" },
+
+    on_error =>
+       sub { print "Cannot look up my passwd ent - $_[0]\n" },
+ );
+
+ $loop->loop_forever;
 
 =head1 DESCRIPTION
 
