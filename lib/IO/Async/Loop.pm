@@ -477,6 +477,32 @@ sub cancel_timer
    $timequeue->cancel( $id );
 }
 
+sub __new_resolver
+{
+   my $self = shift;
+
+   require IO::Async::Resolver;
+   return IO::Async::Resolver->new( loop => $self );
+}
+
+=head2 $loop->resolve( %params )
+
+This method performs a single name resolution operation. It uses an
+internally-stored C<IO::Async::Resolver> object. For more detail, see the
+C<resolve()> method on the L<IO::Async::Resolver> class.
+
+=cut
+
+sub resolve
+{
+   my $self = shift;
+   my ( %params ) = @_;
+
+   my $resolver = ( $self->{resolver} ||= $self->__new_resolver );
+
+   $resolver->resolve( %params );
+}
+
 =head2 $count = $loop->loop_once( $timeout )
 
 This method performs a single wait loop using the specific subclass's

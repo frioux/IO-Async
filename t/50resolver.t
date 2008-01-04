@@ -5,7 +5,7 @@ use strict;
 use lib 't';
 use TestAsync;
 
-use Test::More tests => 6;
+use Test::More tests => 7;
 use Test::Exception;
 
 use IO::Async::Resolver;
@@ -91,3 +91,18 @@ SKIP: {
 
    is_deeply( $result, \@proto, 'getprotobynumber' );
 }
+
+# Loop integration
+
+undef $result;
+
+$loop->resolve(
+   type => 'getpwuid',
+   data => [ $< ], 
+   on_resolved => sub { $result = [ @_ ] },
+   on_error => sub { die "Test died early" },
+);
+
+wait_for { $result };
+
+is_deeply( $result, \@pwuid, 'getpwuid using Loop->resolve()' );
