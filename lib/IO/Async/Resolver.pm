@@ -14,6 +14,58 @@ use Carp;
 my $started = 0;
 my %METHODS;
 
+=head1 NAME
+
+C<IO::Async::Resolver> - performing name resolutions asynchronously
+
+=head1 SYNOPSIS
+
+TODO
+
+=head1 DESCRIPTION
+
+This module provides a class that allows the system's name resolver functions
+to be used asynchronously. It provides a number of named resolvers, each one
+providing an asynchronous wrapper around a single resolver function.
+
+Because the system may not provide asynchronous versions of its resolver
+functions, this class is implemented using a C<IO::Async::DetachedCode> object
+that wraps the normal (blocking) functions. In this case, name resolutions
+will be performed asynchronously from the rest of the program, but will likely
+be done by a single background worker process, so will be processed in the
+order they were requested; a single slow lookup will hold up the queue of
+other requests behind it. To mitigate this, multiple worker processes can be
+used; see the C<workers> argument to the constructor.
+
+=cut
+
+=head1 CONSTRUCTOR
+
+=cut
+
+=head2 $resolver = IO::Async::Resolver->new( %params )
+
+This function returns a new instance of a C<IO::Async::Resolver> object. The
+C<%params> hash takes the following keys:
+
+=over 8
+
+=item loop => IO::Async::Loop
+
+A reference to an C<IO::Async::Loop> object. This loop must have the child
+manager enabled.
+
+=item workers => INT
+
+Optional integer, specifies the number of workers to create in the
+C<IO::Async::DetachedCode> object.
+
+If not supplied, 1 is used.
+
+=back
+
+=cut
+
 sub new
 {
    my $class = shift;
@@ -49,6 +101,42 @@ sub new
    return $self;
 }
 
+=head1 METHODS
+
+=cut
+
+=head2 $resolver->resolve( %params )
+
+Performs a single name resolution operation, as given by the keys in the hash.
+
+The C<%params> hash keys the following keys:
+
+=over 8
+
+=item type => STRING
+
+Name of the resolution operation to perform. See BUILT-IN RESOLVERS for the
+list of available operations.
+
+=item data => ARRAY
+
+Arguments to pass to the resolver function. Exact meaning depends on the
+specific function chosen by the C<type>; see BUILT-IN RESOLVERS.
+
+=item on_resolved => CODE
+
+A callback that is invoked when the resolver function returns a successful
+result. It will be passed the array returned by the resolver function.
+
+=item on_error => CODE
+
+A callback that is invoked when the resolver function fails. It will be passed
+the exception thrown by the function.
+
+=back
+
+=cut
+
 sub resolve
 {
    my $self = shift;
@@ -72,6 +160,41 @@ sub resolve
    );
 }
 
+=head1 FUNCTIONS
+
+=cut
+
+=head2 register_resolver( $name, $code )
+
+Registers a new named resolver function that can be called by the C<resolve>
+method. All named resolvers must be registered before the object is
+constructed.
+
+=over 8
+
+=item $name
+
+The name of the resolver function; must be a plain string. This name will be
+used by the C<type> argument to the C<resolve()> method, to identify it.
+
+=item $code
+
+A CODE reference to the resolver function body. It will be called in list
+context, being passed the list of arguments given in the C<data> argument to
+the C<resolve()> method. The returned list will be passed to the
+C<on_resolved> callback.
+
+=back
+
+The C<IO::Async::DetachedCode> object underlying this class uses the
+C<storable> argument marshalling type, which means complex data structures
+can be passed by reference. Because the resolver will run in a separate
+process, the function should make sure to return all of the result in the
+returned list; i.e. modifications to call arguments will not be propagated
+back to the caller.
+
+=cut
+
 # Plain function, not a method
 sub register_resolver
 {
@@ -82,6 +205,20 @@ sub register_resolver
    croak "Already have a resolver method called '$name'" if exists $METHODS{$name};
    $METHODS{$name} = $code;
 }
+
+=head1 BUILT-IN RESOLVERS
+
+The following resolver names are implemented by the same-named perl function,
+taking and returning a list of values exactly as the perl function does:
+
+ getpwnam getpwuid
+ getgrnam getgrgid
+ getservbyname getservbyport
+ gethostbyname gethostbyaddr
+ getnetbyname getnetbyaddr
+ getprotobyname getprotobynumber
+
+=cut
 
 # Now register the inbuilt methods
 
@@ -107,3 +244,44 @@ register_resolver( 'getprotobynumber', sub { return getprotobynumber( $_[0] ) or
 1;
 
 __END__
+
+=head1 EXAMPLES
+
+The following somewhat contrieved example shows how to implement a new
+resolver function. This example just uses in-memory data, but a real function
+would likely make calls to OS functions to provide an answer. In traditional
+Unix style, a pair of functions are provided that each look up the entity by
+either type of key, where both functions return the same type of list. This is
+purely a convention, and is in no way required or enforced by the
+C<IO::Async::Resolver> itself.
+
+ @numbers = qw( zero  one   two   three four
+                five  six   seven eight nine  );
+
+ register_resolver( 'getnumberbyindex', sub {
+    my ( $index ) = @_;
+    die "Bad index $index" unless $index >= 0 and $index < @numbers;
+    return ( $index, $numbers[$index] );
+ } );
+
+ register_resolver( 'getnumberbyname', sub {
+    my ( $name ) = @_;
+    foreach my $index ( 0 .. $#numbers ) {
+       return ( $index, $name ) if $numbers[$index] eq $name;
+    }
+    die "Bad name $name";
+ } );
+
+=head1 TODO
+
+=over 4
+
+=item *
+
+Look into (system-specific) ways of accessing asynchronous resolvers directly
+
+=back
+
+=head1 AUTHOR
+
+Paul Evans E<lt>leonerd@leonerd.org.ukE<gt>
