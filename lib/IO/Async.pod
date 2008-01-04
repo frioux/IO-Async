@@ -6,8 +6,8 @@ IO
 =head1 SYNOPSIS
 
  use IO::Socket::INET;
- use IO::Async::Buffer;
- use IO::Async::Set::IO_Poll;
+ use IO::Async::Stream;
+ use IO::Async::Loop::IO_Poll;
 
  my $socket = IO::Socket::INET->new(
     PeerHost => "some.other.host",
@@ -15,7 +15,7 @@ IO
     Blocking => 0,
  );
 
- my $buffer = IO::Async::Buffer->new(
+ my $stream = IO::Async::Stream->new(
     handle => $socket,
 
     on_read => sub {
@@ -27,20 +27,20 @@ IO
     }
  );
 
- $buffer->write( "An initial line here\n" );
+ $stream->write( "An initial line here\n" );
 
- my $set = IO::Async::Set::IO_Poll->new();
+ my $loop = IO::Async::Loop::IO_Poll->new();
  
- $set->add( $buffer );
+ $loop->add( $stream );
 
- $set->loop_forever();
+ $loop->loop_forever();
 
 =head1 DESCRIPTION
 
 This collection of modules allows programs to be written that perform
 asynchronous filehandle IO operations. A typical program using them would
-consist of a single subclass of C<IO::Async::Set> to act as a container for a
-number of C<IO::Async::Notifier> objects (or subclasses thereof). The set
+consist of a single subclass of C<IO::Async::Loop> to act as a container for a
+number of C<IO::Async::Notifier> objects (or subclasses thereof). The loop
 itself is responsible for checking read- or write-readiness, and informing the
 notifiers of these conditions. The notifiers then perform whatever work is
 required on these conditions, by using subclass methods or callback functions.
@@ -52,10 +52,10 @@ managed. While in most cases it will represent a single filehandle, such as a
 socket (for example, an C<IO::Socket::INET> connection), it is possible to
 have separate reading and writing handles (most likely for a program's
 C<STDIN> and C<STDOUT> streams). Subclass methods or callback functions are
-then used by the containing C<IO::Async::Set> object, to inform the notifier
+then used by the containing C<IO::Async::Loop> object, to inform the notifier
 when the handles are read- or write-ready.
 
-The L<IO::Async::Buffer> class is a subclass of C<IO::Async::Notifier> which
+The L<IO::Async::Stream> class is a subclass of C<IO::Async::Notifier> which
 maintains internal incoming and outgoing data buffers. In this way, it
 implements bidirectional buffering of a byte stream, such as a TCP socket. The
 class automatically handles reading of incoming data into the incoming buffer
@@ -64,23 +64,19 @@ buffer when it is notified as write-ready. Methods or callbacks are used to
 inform when new incoming data is available, or when the outgoing buffer is
 empty.
 
-The L<IO::Async::SignalProxy> object allow for safe signal handling to be
-performed alongside other asynchronous IO tasks, within the (explicit or
-implicit) loop provided by the subclass of C<IO::Async::Set> that is used.
+=head2 Loops
 
-=head2 Sets
-
-The L<IO::Async::Set> object class represents an abstract collection of
+The L<IO::Async::Loop> object class represents an abstract collection of
 C<IO::Async::Notifier> objects. It performs all of the low-level set
 management tasks, and leaves the actual determination of read- or write-
 readiness of filehandles to a particular subclass for the purpose.
 
-L<IO::Async::Set::IO_Poll> uses an C<IO::Poll> object for this test.
+L<IO::Async::Loop::IO_Poll> uses an C<IO::Poll> object for this test.
 
-L<IO::Async::Set::Select> provides methods to prepare and test three
+L<IO::Async::Loop::Select> provides methods to prepare and test three
 bitvectors for a C<select()> syscall.
 
-L<IO::Async::Set::GMainLoop> acts as a proxy for the C<Glib::MainLoop> of a
+L<IO::Async::Loop::Glib> acts as a proxy for the C<Glib::MainLoop> of a
 L<Glib>-based program.
 
 =head2 Detached Code
@@ -96,7 +92,7 @@ a detached child process.
 
 =head2 Timers
 
-Each of the L<IO::Async::Set> subclasses supports a pair of methods for
+Each of the L<IO::Async::Loop> subclasses supports a pair of methods for
 installing and cancelling timers. These are callbacks invoked at some fixed
 future time. Once installed, a timer will be called at or after its expiry
 time, which may be absolute, or relative to the time it was installed. An
@@ -120,16 +116,16 @@ techniques, such as the potential for race conditions or deadlocks. The
 downside to this approach is the extra complexity in dealing with events
 asynchronously, handling incoming data as it arrives, even if it is as-yet
 incomplete. This distribution aims to provide abstractions that minimise the
-effort required here, through such objects as C<IO::Async::Buffer>.
+effort required here, through such objects as C<IO::Async::Stream>.
 
 The second reason is to act as a base-layer API, that can be extended while
 still remaining generic. The split between notifiers and sets allows new
 subclasses of notifer to be derived from the C<IO::Async::Notifier> or
-C<IO::Async::Buffer> classes without regard for how they will interact with
+C<IO::Async::Stream> classes without regard for how they will interact with
 the actual looping constructs emplyed by the containing program. Similarly,
-new subclasses of C<IO::Async::Set> can be developed to interact with existing
-programs written for other styles of asynchronous IO loop, without requiring
-detailed knowledge of the way the notifiers work.
+new subclasses of C<IO::Async::Loop> can be developed to interact with
+existing programs written for other styles of asynchronous IO loop, without
+requiring detailed knowledge of the way the notifiers work.
 
 =head1 TODO
 
@@ -148,7 +144,7 @@ program.
 
 =item *
 
-A C<IO::Async::Set> subclass to perform integration with L<Event>.
+A C<IO::Async::Loop> subclass to perform integration with L<Event>.
 
 =item *
 
