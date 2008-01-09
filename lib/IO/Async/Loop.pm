@@ -76,6 +76,10 @@ sub __new
 
 =cut
 
+#######################
+# Notifier management #
+#######################
+
 # Internal method
 sub _nkey
 {
@@ -179,6 +183,10 @@ sub __notifier_want_writeready
    my ( $notifier, $want_writeready ) = @_;
    # Ignore
 }
+
+############
+# Features #
+############
 
 sub _get_sigproxy
 {
@@ -502,6 +510,10 @@ sub resolve
 
    $resolver->resolve( %params );
 }
+
+###################
+# Looping support #
+###################
 
 =head2 $count = $loop->loop_once( $timeout )
 
