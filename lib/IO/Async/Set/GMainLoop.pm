@@ -9,20 +9,20 @@ use strict;
 
 our $VERSION = '0.10';
 
-use base qw( IO::Async::Loop::GMainLoop IO::Async::Set );
+use base qw( IO::Async::Loop::Glib IO::Async::Set );
 
 use warnings qw();
 
 =head1 NAME
 
 C<IO::Async::Set::GMainLoop> - backward-compatibility wrapper around
-C<IO::Async::Loop::GMainLoop>
+C<IO::Async::Loop::Glib>
 
 =head1 SYNOPSIS
 
 This class should not be used in new code, and is provided for backward
 compatibility for older applications that still use it. It has been renamed
-to C<IO::Async::Loop::GMainLoop>. Any application using this class should simply
+to C<IO::Async::Loop::Glib>. Any application using this class should simply
 change
 
  use IO::Async::Set::GMainLoop;
@@ -31,9 +31,9 @@ change
 
 into
 
- use IO::Async::Loop::GMainLoop;
+ use IO::Async::Loop::Glib;
 
- my $loop = IO::Async::Loop::GMainLoop->new( .... );
+ my $loop = IO::Async::Loop::Glib->new( .... );
 
 The behaviour has not otherwise changed.
 
@@ -55,7 +55,7 @@ sub new
    my ( %params ) = @_;
 
    warnings::warnif 'deprecated',
-      "Use of IO::Async::Set::GMainLoop is deprecated; use IO::Async::Loop::GMainLoop instead";
+      "Use of IO::Async::Set::GMainLoop is deprecated; use IO::Async::Loop::Glib instead";
 
    return $class->SUPER::new( %params );
 }
@@ -71,7 +71,7 @@ __END__
 
 =item *
 
-L<IO::Async::Loop::GMainLoop> - a Loop using the C<Glib::MainLoop> object
+L<IO::Async::Loop::Glib> - a Loop using the C<Glib::MainLoop> object
 
 =back
 
