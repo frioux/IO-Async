@@ -97,7 +97,7 @@ The C<%params> hash takes the following keys:
 =item write_handle => IO
 
 The reading and writing IO handles. Each must implement the C<fileno> method.
-C<read_handle> must be defined, C<write_handle> is allowed to be C<undef>.
+At most one of C<read_handle> or C<write_handle> is allowed to be C<undef>.
 Primarily used for passing C<STDIN> / C<STDOUT>; see the SYNOPSIS section of
 C<IO::Async::Stream> for an example.
 
@@ -120,10 +120,11 @@ CODE reference to the handler for when the handle becomes closed.
 
 =back
 
-It is required that either a C<on_read_ready> callback reference is passed, or
-that the object is actually a subclass that overrides the C<on_read_ready>
-method. It is optional whether either is true for C<on_write_ready>; if
-neither is supplied then write-readiness notifications will be ignored.
+It is required that at C<on_read_ready> or C<on_write_ready> are provided for
+any handle that is provided; either as a callback reference or that the object
+is a subclass that overrides the method. I.e. if only a C<read_handle> is
+given, then C<on_write_ready> can be absent. If C<handle> is used as a
+shortcut, then both read and write-ready callbacks or methods are required.
 
 =cut
 
@@ -135,14 +136,16 @@ sub new
    my ( $read_handle, $write_handle );
 
    if( defined $params{read_handle} or defined $params{write_handle} ) {
-      $read_handle  = $params{read_handle};
-
       # Test if we've got a fileno. We put it in an eval block in case what
       # we were passed in can't do fileno. We can't just test if 
       # $read_handle->can( "fileno" ) because this is not true for bare
       # filehandles like \*STDIN, whereas STDIN->fileno still works.
-      unless( defined eval { $read_handle->fileno } ) {
-         croak 'Expected that read_handle can fileno()';
+
+      $read_handle  = $params{read_handle};
+      if( defined $read_handle ) {
+         unless( defined eval { $read_handle->fileno } ) {
+            croak 'Expected that read_handle can fileno()';
+         }
       }
 
       $write_handle = $params{write_handle};
@@ -165,6 +168,19 @@ sub new
       croak "Expected either 'handle' or 'read_handle' and 'write_handle' keys";
    }
 
+   if( defined $read_handle ) {
+      if( !$params{on_read_ready} and $class->can( 'on_read_ready' ) == \&on_read_ready ) {
+         croak 'Expected either a on_read_ready callback or an ->on_read_ready method';
+      }
+   }
+
+   if( defined $write_handle ) {
+      if( !$params{on_write_ready} and $class->can( 'on_write_ready' ) == \&on_write_ready ) {
+         # This used not to be fatal. Make it just a warning for now.
+         carp 'A write handle was provided but neither a on_write_ready callback nor an ->on_write_ready method were. Perhaps you mean \'read_handle\' instead?';
+      }
+   }
+
    my $self = bless {
       read_handle     => $read_handle,
       write_handle    => $write_handle,
@@ -173,29 +189,13 @@ sub new
       parent          => undef,
    }, $class;
 
-   if( $params{on_read_ready} ) {
-      $self->{on_read_ready} = $params{on_read_ready};
-   }
-   else {
-      # No callback was passed. But don't worry; perhaps we're really a
-      # subclass that overrides it
-      if( $self->can( 'on_read_ready' ) == \&on_read_ready ) {
-         croak 'Expected either a on_read_ready callback or to be a subclass that can ->on_read_ready';
-      }
+   $self->{on_read_ready}  = $params{on_read_ready}  if defined $params{on_read_ready};
+   $self->{on_write_ready} = $params{on_write_ready} if defined $params{on_write_ready};
+   $self->{on_closed}      = $params{on_closed}      if defined $params{on_closed};
 
-      # Don't need to store anything - if an overridden method exists, we know
-      # our own won't be called
-   }
-
-   if( $params{on_write_ready} ) {
-      $self->{on_write_ready} = $params{on_write_ready};
-   }
-   # No problem if it doesn't exist
-
-   if( $params{on_closed} ) {
-      $self->{on_closed} = $params{on_closed};
-   }
-   # No problem if it doesn't exist
+   # Slightly asymmetric
+   $self->want_readready( defined $read_handle );
+   $self->want_writeready( $self->{want_writeready} );
 
    return $self;
 }
@@ -215,17 +215,14 @@ sub close
 {
    my $self = shift;
 
-   my $read_handle = $self->{read_handle};
-   return unless( defined $read_handle );
-
    $self->{on_closed}->( $self ) if $self->{on_closed};
 
    if( my $loop = $self->{loop} ) {
       $loop->remove( $self );
    }
 
-   delete $self->{read_handle};
-   $read_handle->close;
+   my $read_handle = delete $self->{read_handle};
+   $read_handle->close if defined $read_handle;
 
    my $write_handle = delete $self->{write_handle};
    $write_handle->close if defined $write_handle and $write_handle != $read_handle;
@@ -295,16 +292,44 @@ sub __set_loop
    $self->{loop} = $loop;
 }
 
+=head2 $value = $notifier->want_readready
+
+=head2 $oldvalue = $notifier->want_readready( $newvalue )
+
 =head2 $value = $notifier->want_writeready
 
 =head2 $oldvalue = $notifier->want_writeready( $newvalue )
 
-This is the accessor for the C<want_writeready> property, which defines
-whether the object will register interest in the write-ready bitvector in a
-C<select()> call, or whether to register the C<POLLOUT> bit in a C<IO::Poll>
-mask.
+These are the accessor for the C<want_readready> and C<want_writeready>
+properties, which define whether the object is interested in knowing about 
+read- or write-readiness on the underlying file handle.
 
 =cut
+
+sub want_readready
+{
+   my $self = shift;
+   if( @_ ) {
+      my ( $new ) = @_;
+
+      if( $new ) {
+         defined $self->read_handle or
+            croak 'Cannot want_readready in a Notifier with no read_handle';
+      }
+
+      my $old = $self->{want_readready};
+      $self->{want_readready} = $new;
+
+      if( $self->{loop} ) {
+         $self->{loop}->__notifier_want_readready( $self, $self->{want_readready} );
+      }
+
+      return $old;
+   }
+   else {
+      return $self->{want_readready};
+   }
+}
 
 sub want_writeready
 {
@@ -312,8 +337,9 @@ sub want_writeready
    if( @_ ) {
       my ( $new ) = @_;
 
-      if( $new and !defined $self->write_handle ) {
-         croak 'Cannot want_writeready in a Notifier with no write_handle';
+      if( $new ) {
+         defined $self->write_handle or
+            croak 'Cannot want_writeready in a Notifier with no write_handle';
       }
 
       my $old = $self->{want_writeready};
@@ -335,7 +361,7 @@ sub on_read_ready
 {
    my $self = shift;
    my $callback = $self->{on_read_ready};
-   $callback->( $self );
+   $callback->( $self ) if defined $callback;
 }
 
 # For ::Loops to call

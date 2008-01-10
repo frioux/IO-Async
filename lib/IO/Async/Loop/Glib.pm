@@ -98,10 +98,35 @@ sub _notifier_removed
 
    my $sourceids = delete $self->{sourceid}->{$nkey};
 
-   Glib::Source->remove( $sourceids->[0] );
+   Glib::Source->remove( $sourceids->[0] ) if defined $sourceids->[0];
+   Glib::Source->remove( $sourceids->[1] ) if defined $sourceids->[1];
+}
 
-   if( defined $sourceids->[1] ) {
-      Glib::Source->remove( $sourceids->[1] );
+# override
+# For ::Notifier to call
+sub __notifier_want_readready
+{
+   my $self = shift;
+   my ( $notifier, $want_readready ) = @_;
+
+   my $nkey = $self->_nkey( $notifier );
+
+   my $sourceids = ( $self->{sourceid}->{$nkey} ||= [] );
+
+   if( !defined $sourceids->[0] and $want_readready ) {
+      $sourceids->[0] = Glib::IO->add_watch(
+         $notifier->read_fileno,
+         ['in', 'hup'],
+         sub {
+            $notifier->on_read_ready;
+            # Must yield true value or else GLib will remove this IO source
+            return 1;
+         }
+      );
+   }
+   elsif( defined $sourceids->[0] and !$want_readready ) {
+      Glib::Source->remove( $sourceids->[0] );
+      undef $sourceids->[0];
    }
 }
 
@@ -114,21 +139,7 @@ sub __notifier_want_writeready
 
    my $nkey = $self->_nkey( $notifier );
 
-   # Fetch the IDs array from storage, or build and store a new one if it's
-   # not found
    my $sourceids = ( $self->{sourceid}->{$nkey} ||= [] );
-
-   if( !defined $sourceids->[0] ) {
-      $sourceids->[0] = Glib::IO->add_watch(
-         $notifier->read_fileno,
-         ['in', 'hup'],
-         sub {
-            $notifier->on_read_ready;
-            # Must yield true value or else GLib will remove this IO source
-            return 1;
-         }
-      );
-   }
 
    if( !defined $sourceids->[1] and $want_writeready ) {
       $sourceids->[1] = Glib::IO->add_watch(

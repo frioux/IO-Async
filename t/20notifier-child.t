@@ -19,11 +19,13 @@ use IO::Async::Loop::IO_Poll;
 $S1->blocking( 0 );
 $S2->blocking( 0 );
 
-my $parent = IO::Async::Notifier->new( handle => $S1,
+my $parent = IO::Async::Notifier->new( 
+   read_handle => $S1,
    on_read_ready => sub {},
 );
 
-my $child = IO::Async::Notifier->new( handle => $S2,
+my $child = IO::Async::Notifier->new( 
+   read_handle => $S2,
    on_read_ready => sub {},
 );
 
@@ -89,7 +91,8 @@ $loop->remove( $parent );
 
 $parent->add_child( $child );
 
-my $grandchild = IO::Async::Notifier->new( handle => \*STDOUT,
+my $grandchild = IO::Async::Notifier->new( 
+   read_handle => \*STDOUT,
    on_read_ready => sub {},
 );
 

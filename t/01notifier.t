@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 28;
+use Test::More tests => 29;
 use Test::Exception;
 
 use IO::Socket::UNIX;
@@ -111,3 +111,12 @@ $ioan = IO::Async::Notifier->new(
 $ioan->close;
 
 is( $closed, 1, '$closed after ->close' );
+
+undef $ioan;
+$ioan = IO::Async::Notifier->new(
+   write_handle => \*STDOUT,
+   want_writeready => 1,
+   on_write_ready => sub {},
+);
+
+ok( defined $ioan, 'defined $ioan for only write_handle/on_write_ready' );

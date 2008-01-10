@@ -2,7 +2,7 @@
 
 use strict;
 
-use constant MAIN_TESTS => 16;
+use constant MAIN_TESTS => 17;
 
 use Test::More tests => MAIN_TESTS + 1;
 use Test::Exception;
@@ -130,13 +130,30 @@ $loop->remove( $notifier );
 
 is( $notifier->get_loop, undef, '$notifier->__memberof_loop is undef' );
 
+# Write-only
+
+my $write_only_notifier = IO::Async::Notifier->new(
+   write_handle => \*STDOUT,
+   want_writeready => 1,
+   on_write_ready => sub { $writeready = 1 },
+);
+
+$loop->add( $write_only_notifier );
+
+$writeready = 0;
+$context->iteration( 0 );
+
+is( $writeready, 1, '$writeready after writeonly notifier' );
+
+$loop->remove( $write_only_notifier );
+
 # HUP of pipe
 
 pipe( my ( $P1, $P2 ) ) or die "Cannot pipe() - $!";
 my $pipe_io = IO::Handle->new_from_fd( fileno( $P1 ), 'r' );
-my $pipe_notifier = IO::Async::Notifier->new( handle => $pipe_io,
+my $pipe_notifier = IO::Async::Notifier->new(
+   read_handle => $pipe_io,
    on_read_ready  => sub { $readready = 1 },
-   want_writeready => 0,
 );
 $loop->add( $pipe_notifier );
 

@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 28;
+use Test::More tests => 33;
 use Test::Exception;
 
 use IO::Socket::UNIX;
@@ -148,3 +148,36 @@ is( $evec, '', '$evec idling pre_select' );
 
 is( $timeout, undef, '$timeout idling pre_select' );
 
+# Write-only
+
+my $write_only_notifier = IO::Async::Notifier->new(
+   write_handle => \*STDOUT,
+   want_writeready => 1,
+   on_write_ready => sub { $writeready = 1 },
+);
+
+$testvec = '';
+vec( $testvec, STDOUT->fileno, 1 ) = 1;
+
+$loop->add( $write_only_notifier );
+
+$rvec = '';
+$wvec = '';
+$evec = '';
+$timeout = undef;
+
+$loop->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
+
+is( $rvec, '',       '$rvec writeonly preselect' );
+is( $wvec, $testvec, '$wvec writeonly preselect' );
+is( $evec, '',       '$evec writeonly preselect' );
+
+is( $timeout, undef, '$timeout writeonly preselect' );
+
+$writeready = 0;
+
+$loop->loop_once( 0 );
+
+is( $writeready, 1, '$writeready after writeonly notifier' );
+
+$loop->remove( $write_only_notifier );

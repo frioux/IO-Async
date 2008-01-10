@@ -125,6 +125,7 @@ sub _add_noparentcheck
 
    $notifier->__set_loop( $self );
 
+   $self->__notifier_want_readready(  $notifier, $notifier->want_readready  );
    $self->__notifier_want_writeready( $notifier, $notifier->want_writeready );
 
    $self->_add_noparentcheck( $_ ) for $notifier->children;
@@ -177,6 +178,13 @@ sub _notifier_removed
 }
 
 # For ::Notifier to call
+sub __notifier_want_readready
+{
+   my $self = shift;
+   my ( $notifier, $want_readready ) = @_;
+   # Ignore
+}
+
 sub __notifier_want_writeready
 {
    my $self = shift;

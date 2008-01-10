@@ -148,22 +148,23 @@ sub post_poll
    foreach my $nkey ( keys %$notifiers ) {
       my $notifier = $notifiers->{$nkey};
 
-      my $rhandle = $notifier->read_handle;
-      my $whandle = $notifier->write_handle;
+      if( defined( my $rhandle = $notifier->read_handle ) ) {
+         my $revents = $poll->events( $rhandle );
 
-      my $revents = $poll->events( $rhandle );
-
-      # We have to test separately because kernel doesn't report POLLIN when
-      # a pipe gets closed.
-      if( $revents & (POLLIN|POLLHUP) ) {
-         push @readready, $notifier;
+         # We have to test separately because kernel doesn't report POLLIN when
+         # a pipe gets closed.
+         if( $revents & (POLLIN|POLLHUP) ) {
+            push @readready, $notifier;
+         }
       }
 
-      my $wevents = defined $whandle ? $poll->events( $whandle ) : 0;
+      if( defined( my $whandle = $notifier->write_handle ) ) {
+         my $wevents = defined $whandle ? $poll->events( $whandle ) : 0;
 
-      if( $wevents & POLLOUT or
-          ( $notifier->want_writeready and $wevents & POLLHUP ) ) {
-         push @writeready, $notifier;
+         if( $wevents & POLLOUT or
+             ( $notifier->want_writeready and $wevents & POLLHUP ) ) {
+            push @writeready, $notifier;
+         }
       }
    }
 
@@ -244,18 +245,34 @@ sub _notifier_removed
    my $rhandle = $notifier->read_handle;
    my $whandle = $notifier->write_handle;
 
-   $poll->remove( $rhandle );
+   if( defined $rhandle ) {
+      $poll->remove( $rhandle );
+      # This sort of mangling is usually frowned-upon because it relies on
+      # knowledge of the internals of IO::Poll. But we know those internals
+      # because it is conditional on a specific version number of IO::Poll, so we
+      # can rely on the internal layout for that particular version.
+      delete $poll->[0]{fileno $rhandle} if IO_POLL_REMOVE_BUG;
+   }
 
-   # This sort of mangling is usually frowned-upon because it relies on
-   # knowledge of the internals of IO::Poll. But we know those internals
-   # because it is conditional on a specific version number of IO::Poll, so we
-   # can rely on the internal layout for that particular version.
-   delete $poll->[0]{fileno $rhandle} if IO_POLL_REMOVE_BUG;
-
-   if( defined $whandle and $whandle != $rhandle ) {
+   if( defined $whandle and ( not defined $rhandle or $whandle != $rhandle ) ) {
       $poll->remove( $whandle );
       delete $poll->[0]{fileno $whandle} if IO_POLL_REMOVE_BUG;
    }
+}
+
+# override
+# For ::Notifier to call
+sub __notifier_want_readready
+{
+   my $self = shift;
+   my ( $notifier, $want_readready ) = @_;
+
+   my $poll = $self->{poll};
+
+   my $rhandle = $notifier->read_handle or return;
+
+   my $curmask = $poll->mask( $rhandle ) || 0;
+   $poll->mask( $rhandle, $want_readready ? $curmask | POLLIN : $curmask & ~POLLIN );
 }
 
 # override
@@ -267,28 +284,10 @@ sub __notifier_want_writeready
 
    my $poll = $self->{poll};
 
-   my $rhandle = $notifier->read_handle;
-   my $whandle = $notifier->write_handle;
+   my $whandle = $notifier->write_handle or return;
 
-   # Logic is a little odd here, as we need to deal correctly with the case
-   # where reading and writing are on different handles
-
-   if( $want_writeready ) {
-      if( $rhandle == $whandle ) {
-         $poll->mask( $rhandle, POLLIN | POLLOUT );
-      }
-      else {
-         $poll->mask( $rhandle, POLLIN );
-         $poll->mask( $whandle, POLLOUT );
-      }
-   }
-   else {
-      $poll->mask( $rhandle, POLLIN );
-
-      if( defined $whandle and $whandle != $rhandle ) {
-         $poll->mask( $whandle, 0 );
-      }
-   }
+   my $curmask = $poll->mask( $whandle ) || 0;
+   $poll->mask( $whandle, $want_writeready ? $curmask | POLLOUT : $curmask & ~POLLOUT );
 }
 
 # Keep perl happy; keep Britain tidy

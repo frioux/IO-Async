@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 38;
+use Test::More tests => 39;
 use Test::Exception;
 
 use IO::Socket::UNIX;
@@ -167,9 +167,9 @@ $loop->add( $stdout_notifier ); # Just to make the loop non-empty
 
 pipe( my ( $P1, $P2 ) ) or die "Cannot pipe() - $!";
 my ( $N1, $N2 ) = map {
-   IO::Async::Notifier->new( handle => $_,
+   IO::Async::Notifier->new( 
+      read_handle => $_,
       on_read_ready   => sub {},
-      want_writeready => 0,
    ) } ( $P1, $P2 );
 
 $loop->add( $N1 );
@@ -187,13 +187,30 @@ is( $ready, 1, '$ready after clean removal test' );
 
 $loop->remove( $stdout_notifier );
 
+# Write-only
+
+my $write_only_notifier = IO::Async::Notifier->new(
+   write_handle => \*STDOUT,
+   want_writeready => 1,
+   on_write_ready => sub { $writeready = 1 },
+);
+
+$loop->add( $write_only_notifier );
+
+$writeready = 0;
+$loop->loop_once( 0 );
+
+is( $writeready, 1, '$writeready after writeonly notifier' );
+
+$loop->remove( $write_only_notifier );
+
 # HUP of pipe
 
 pipe( ( $P1, $P2 ) ) or die "Cannot pipe() - $!";
 ( $N1, $N2 ) = map {
-   IO::Async::Notifier->new( handle => $_,
+   IO::Async::Notifier->new(
+      read_handle => $_,
       on_read_ready   => sub { $readready = 1; },
-      want_writeready => 0,
    ) } ( $P1, $P2 );
 
 $loop->add( $N1 );

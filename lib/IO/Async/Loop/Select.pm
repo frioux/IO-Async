@@ -119,9 +119,8 @@ sub pre_select
    foreach my $nkey ( keys %$notifiers ) {
       my $notifier = $notifiers->{$nkey};
 
-      vec( $$readref, $notifier->read_fileno, 1 ) = 1;
-
-      vec( $$writeref, $notifier->write_fileno, 1 ) = 1 if( $notifier->want_writeready );
+      vec( $$readref,  $notifier->read_fileno,  1 ) = 1 if $notifier->want_readready;
+      vec( $$writeref, $notifier->write_fileno, 1 ) = 1 if $notifier->want_writeready;
    }
 
    $self->_adjust_timeout( $timeref );
@@ -166,7 +165,7 @@ sub post_select
       my $rfileno = $notifier->read_fileno;
       my $wfileno = $notifier->write_fileno;
 
-      if( vec( $readvec, $rfileno, 1 ) ) {
+      if( defined $rfileno and vec( $readvec, $rfileno, 1 ) ) {
          push @readready, $notifier;
       }
 
