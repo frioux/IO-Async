@@ -428,7 +428,9 @@ sub shutdown
    my $self = shift;
 
    foreach my $inner ( @{ $self->{inners} } ) {
-      if( defined $inner->{iostream} ) {
+      # This is called from DESTROY, so all sorts of craziness might have
+      # happened. We need to be extra-paranoid.
+      if( defined $inner->{iostream} and defined $inner->{loop} ) {
          $inner->{loop}->remove( $inner->{iostream} );
          undef $inner->{iostream};
       }
@@ -440,6 +442,8 @@ sub shutdown
          delete $handlermap->{$id};
       }
    }
+
+   @{ $self->{inners} } = ();
 }
 
 =head2 $n_workers = $code->workers
