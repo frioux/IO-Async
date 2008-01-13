@@ -5,12 +5,10 @@ use strict;
 use lib 't';
 use TestAsync;
 
-use Test::More tests => 8;
+use Test::More tests => 5;
 use Test::Exception;
 
 use Socket::GetAddrInfo qw( getaddrinfo );
-
-use IO::Async::Resolver;
 
 use IO::Async::Loop::IO_Poll;
 
@@ -19,16 +17,11 @@ $loop->enable_childmanager;
 
 testing_loop( $loop );
 
-my $resolver = IO::Async::Resolver->new( loop => $loop );
-
-ok( defined $resolver, '$resolver defined' );
-is( ref $resolver, "IO::Async::Resolver", 'ref $resolver is IO::Async::Resolver' );
-
 my $result;
 
 my @pwuid = getpwuid( $< );
 
-$resolver->resolve(
+$loop->resolve(
    type => 'getpwuid',
    data => [ $< ], 
    on_resolved => sub { $result = [ @_ ] },
@@ -47,7 +40,7 @@ SKIP: {
 
    undef $result;
 
-   $resolver->resolve(
+   $loop->resolve(
       type => 'getpwnam',
       data => [ $user_name ],
       on_resolved => sub { $result = [ @_ ] },
@@ -63,7 +56,7 @@ my @proto = getprotobyname( "tcp" );
 
 undef $result;
 
-$resolver->resolve(
+$loop->resolve(
    type => 'getprotobyname',
    data => [ "tcp" ],
    on_resolved => sub { $result = [ @_ ] },
@@ -82,7 +75,7 @@ SKIP: {
 
    undef $result;
 
-   $resolver->resolve(
+   $loop->resolve(
       type => 'getprotobynumber',
       data => [ $proto_number ],
       on_resolved => sub { $result = [ @_ ] },
@@ -100,7 +93,7 @@ my @gai = getaddrinfo( "localhost", "www" );
 
 undef $result;
 
-$resolver->resolve(
+$loop->resolve(
    type => 'getaddrinfo',
    data => [ "localhost", "www" ],
    on_resolved => sub { $result = [ 'resolved', @_ ] },
@@ -116,18 +109,3 @@ else {
    my @expect = map { [ splice @gai, 0, 5 ] } ( 0 .. $#gai/5 );
    is_deeply( $result, [ resolved => @expect ], 'getaddrinfo - result' );
 }
-
-# Loop integration
-
-undef $result;
-
-$loop->resolve(
-   type => 'getpwuid',
-   data => [ $< ], 
-   on_resolved => sub { $result = [ @_ ] },
-   on_error => sub { die "Test died early" },
-);
-
-wait_for { $result };
-
-is_deeply( $result, \@pwuid, 'getpwuid using Loop->resolve()' );
