@@ -24,9 +24,51 @@ C<IO::Async::Connector> - perform non-blocking socket connections
 
 Usually this object would be used indirectly via an C<IO::Async::Loop>:
 
- TODO example
+ use IO::Async::Loop::...;
+ my $loop = IO::Async::Loop::...
+
+ $loop->connect(
+    host => "www.example.com",
+    service => "http",
+
+    on_connected => sub {
+       my ( $sock ) = @_;
+       print "Now connected via $sock\n";
+       ...
+    },
+
+    on_resolve_error => sub { print STDERR "Cannot resolve - $_[0]\n"; },
+    on_connect_error => sub { print STDERR "Cannot connect\n"; },
+ );
 
 =head1 DESCRIPTION
+
+This module provides a class that creates socket connections in a non-blocking
+manner.
+
+There are two modes of operation. Firstly, a list of addresses can be provided
+which will be tried in turn. Alternatively as a convenience, if a host an
+service name are provided instead of a list of addresses, these will be
+resolved using the uderlying loop's C<resolve()> method into the list of
+addresses.
+
+When attempting to connect to any among a list of addresses, there may be
+failures among the first attempts, before a valid connection is made. For
+example, the resolver may have returned some IPv6 addresses, but only IPv4
+routes are valid on the system. In this case, the first C<connect()> syscall
+will fail. This isn't yet a fatal error, if there are more addresses to try,
+perhaps some IPv4 ones.
+
+For this reason, the error reporting cannot report which failure is
+responsible for the failure to connect. On success, the C<on_connected>
+callback is invoked with a connected socket. When all addresses have been
+tried and failed, C<on_connect_error> is invoked, though no error string can
+be provided, as there isn't a "clear winner" which is responsible for the
+failure.
+
+To be aware of individual failures, the optional C<on_fail> callback can be
+used. This will be invoked on each individual C<socket()> or C<connect()>
+failure, which may be useful for debugging or logging.
 
 =cut
 
@@ -173,11 +215,7 @@ sub _connect_addresses
 =head2 $connector->connect( %params )
 
 This method performs a non-blocking connection to a given address or set of
-addresses, and invokes a callback when the socket is connected. It has two
-modes of operation - one that takes a list of addresses, and one that takes a
-hostname and service name, and looks them up first using C<resolve()> on the
-underlying C<IO::Async::Loop>. The latter is provided as a convenience over
-performing the two operations separately.
+addresses, and invokes a callback when the socket is connected.
 
 In plain address mode, the C<%params> hash takes the following keys:
 
