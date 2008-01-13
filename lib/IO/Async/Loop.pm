@@ -519,6 +519,32 @@ sub resolve
    $resolver->resolve( %params );
 }
 
+sub __new_connector
+{
+   my $self = shift;
+
+   require IO::Async::Connector;
+   return IO::Async::Connector->new( loop => $self );
+}
+
+=head2 $loop->connect( %params )
+
+This method performs a non-blocking connect operation. It uses an
+internally-stored C<IO::Async::Connector> object. For more detail, see the
+C<connect()> method on the L<IO::Async::Connector> class.
+
+=cut
+
+sub connect
+{
+   my $self = shift;
+   my ( %params ) = @_;
+
+   my $connector = ( $self->{connector} ||= $self->__new_connector );
+
+   $connector->connect( %params );
+}
+
 ###################
 # Looping support #
 ###################
