@@ -105,6 +105,18 @@ completion of multiple seperate subtasks. It allows for each subtask to return
 some data, which will be collected and given to the callback provided to the
 merge point, which is called when every subtask has completed.
 
+=head2 Resolver
+
+The L<IO::Async::Resolver> extension to the C<IO::Async::Loop> allows
+asynchronous use of any name resolvers the system provides; such as
+C<getaddrinfo> for resolving host/service names into connectable addresses.
+
+=head2 Connector
+
+The L<IO::Async::Connector> extension allows socket connections to be
+established asynchronously, perhaps via the use of the resolver to first
+resolve names into addresses.
+
 =head1 MOTIVATION
 
 The purpose of this distribution is two-fold.
@@ -133,14 +145,6 @@ This collection of modules is still very much in development. As a result,
 some of the potentially-useful parts or features currently missing are:
 
 =over 4
-
-=item *
-
-A way to perform asynchronous name lookups. This will likely be performed by
-C<fork()>ing a subprocess, and calling the C<getaddrinfo()> or
-C<getnameinfo()> functions from L<Socket6> in this subprocess, using an
-internal socket or pair of pipes to perform communications with the main
-program.
 
 =item *
 
