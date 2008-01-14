@@ -1,5 +1,21 @@
 Revision history for IO-Async
 
+0.11    INCOMPATIBLE CHANGES:
+         * Renamed IO::Async::Set::* to IO::Async::Loop::* - provided
+           backward-compatibility wrappers around old names. 
+           IO::Async::Set::GMainLoop has become IO::Async::Lib::Glib
+         * Renamed IO::Async::Buffer to IO::Async::Stream - provided backward-
+           compatibility wrapper around old name.
+         * Loop->get_childmanager() and ->get_sigproxy() no longer allowed
+
+        CHANGES:
+         * Extended ->loop_once() and ->loop() feature out to all
+           IO::Async::Loop classes
+         * Added IO::Async::Resolver and IO::Async::Connector, plus Loop
+           integration
+         * Allow write-only IO::Async::Notifiers that have no read handle or
+           readiness callback.
+
 0.10    INCOMPATIBLE CHANGES:
          * Renamed events and methods in IO::Async::Notifier to better fit the
            naming scheme of normal Perl handles. Backward-compatibility hooks

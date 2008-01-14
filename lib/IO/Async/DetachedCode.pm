@@ -7,7 +7,7 @@ package IO::Async::DetachedCode;
 
 use strict;
 
-our $VERSION = '0.10';
+our $VERSION = '0.11';
 
 use IO::Async::Stream;
 

@@ -7,7 +7,7 @@ package IO::Async::Loop::Glib;
 
 use strict;
 
-our $VERSION = '0.10';
+our $VERSION = '0.11';
 
 use base qw( IO::Async::Loop );
 

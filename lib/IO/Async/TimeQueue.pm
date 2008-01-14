@@ -7,7 +7,7 @@ package IO::Async::TimeQueue;
 
 use strict;
 
-our $VERSION = '0.10';
+our $VERSION = '0.11';
 
 use Carp;
 use Heap::Fibonacci;
