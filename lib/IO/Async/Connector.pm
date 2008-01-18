@@ -14,6 +14,8 @@ use IO::Async::Notifier;
 use POSIX qw( EINPROGRESS );
 use Socket qw( SOL_SOCKET SO_ERROR );
 
+use IO::Socket; # For the actual connections that are created
+
 use Carp;
 
 =head1 NAME
