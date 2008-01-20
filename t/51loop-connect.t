@@ -45,6 +45,7 @@ undef $sock; # This too
 $loop->connect(
    host    => $listensock->sockhost,
    service => $listensock->sockport,
+   type    => $listensock->socktype,
    on_connected => sub { $sock = shift; },
    on_resolve_error => sub { die "Test died early - resolve error $_[0]\n"; },
    on_connect_error => sub { die "Test died early - connect error $_[0]\n"; },
