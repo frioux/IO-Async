@@ -26,12 +26,15 @@ C<IO::Async::Connector> - perform non-blocking socket connections
 
 Usually this object would be used indirectly via an C<IO::Async::Loop>:
 
+ use Socket qw( SOCK_STREAM );
+
  use IO::Async::Loop::...;
  my $loop = IO::Async::Loop::...
 
  $loop->connect(
-    host => "www.example.com",
+    host    => "www.example.com",
     service => "http",
+    type    => SOCK_STREAM,
 
     on_connected => sub {
        my ( $sock ) = @_;
@@ -298,6 +301,10 @@ A callback that is invoked when the name resolution attempt fails. This is
 invoked in the same way as the C<on_error> callback for the C<resolve> method.
 
 =back
+
+It is sometimes necessary to pass the C<type> hint to the resolver when
+resolving the host/service names into an address, as some OS's C<getaddrinfo>
+functions require this hint.
 
 =cut
 
