@@ -269,8 +269,10 @@ sub detach_child
       _exit( $exitvalue );
    }
 
+   my $loop = $self->{loop};
+
    if( defined $params{on_exit} ) {
-      $self->watch( $kid => $params{on_exit} );
+      $loop->watch_child( $kid => $params{on_exit} );
    }
 
    return $kid;
@@ -369,7 +371,9 @@ sub spawn
       };
    }
 
-   my $kid = $self->detach_child( 
+   my $loop = $self->{loop};
+
+   my $kid = $loop->detach_child( 
       code => sub {
          # Child
          close( $readpipe );
@@ -544,7 +548,7 @@ sub _spawn_in_parent
       }
    ) );
 
-   $self->watch( $kid => sub { 
+   $loop->watch_child( $kid => sub { 
       ( my $kid, $exitcode ) = @_;
 
       if( $pipeclosed ) {
@@ -799,7 +803,9 @@ sub open
       },
    );
 
-   $pid = $self->spawn( %subparams, 
+   my $loop = $self->{loop};
+
+   $pid = $loop->spawn_child( %subparams, 
       setup => \@setup,
       on_exit => sub {
          my ( undef, $exitcode ) = @_;
@@ -810,8 +816,6 @@ sub open
    return undef unless defined $pid;
 
    # Now install the handlers
-
-   my $loop = $self->{loop};
 
    foreach my $fd ( keys %filehandles ) {
       my ( $myfd, $childfd, $fdopts ) = @{ $filehandles{$fd} };
