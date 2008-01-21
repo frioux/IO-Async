@@ -45,30 +45,6 @@ Usually this object would be used indirectly, via an C<IO::Async::Loop>:
     ]
  );
 
-It can also be used directly. In this case, extra effort must be taken to
-ensure a C<IO::Async::Loop> object is available if the C<spawn()> method is
-used:
-
- use IO::Async::Loop;
- use IO::Async::ChildManager;
-
- my $loop = IO::Async::Loop::...
-
- my $manager = IO::Async::ChildManager->new( loop => $loop );
-
- $loop->attach_signal( CHLD => sub { $manager->SIGCHLD } );
-
- ...
-
- $manager->watch( 1234 => sub { print "Child 1234 exited\n" } );
-
- ...
-
- $manager->spawn( ... );
-
-It is therefore usually easiest to just use the convenience methods provided
-by the C<IO::Async::Loop> object.
-
 =head1 DESCRIPTION
 
 This module provides a class that manages the execution of child processes. It
@@ -100,8 +76,7 @@ The C<%params> hash takes the following keys:
 
 =item loop => IO::Async::Loop
 
-A reference to an C<IO::Async::Loop> object. This is required to be able to use
-the C<spawn()> method.
+A reference to an C<IO::Async::Loop> object.
 
 =back
 
@@ -119,18 +94,21 @@ sub new
       loop => $loop,
    }, $class;
 
+   $loop->attach_signal( CHLD => sub { $self->SIGCHLD } );
+
    return $self;
 }
 
+sub disable
+{
+   my $self = shift;
+
+   my $loop = $self->{loop};
+
+   $loop->detach_signal( 'CHLD' );
+}
+
 =head1 METHODS
-
-=cut
-
-=head2 $count = $manager->SIGCHLD
-
-This method notifies the manager that one or more child processes may have
-terminated, and that it should check using C<waitpid()>. It returns the number
-of child process terminations that were handled.
 
 =cut
 

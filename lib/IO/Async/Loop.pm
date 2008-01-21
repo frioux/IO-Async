@@ -266,9 +266,8 @@ sub detach_signal
 
 =head2 $loop->enable_childmanager
 
-This method creates a new C<IO::Async::ChildManager> object and attaches the
-C<SIGCHLD> signal to call the manager's C<SIGCHLD()> method. The manager is
-stored in the loop and can be obtained using the C<get_childmanager()> method.
+This method enables the child manager, which allows use of the
+C<watch_child()>, C<detach_child()> and C<spawn_child()> methods.
 
 =cut
 
@@ -281,16 +280,13 @@ sub enable_childmanager
 
    require IO::Async::ChildManager;
    my $childmanager = IO::Async::ChildManager->new( loop => $self );
-   $self->attach_signal( CHLD => sub { $childmanager->SIGCHLD } );
 
    $self->{childmanager} = $childmanager;
 }
 
 =head2 $loop->disable_childmanager
 
-This method detaches the contained C<IO::Async::ChildManager> from the
-C<SIGCHLD> signal and destroys it. After this method is called, the C<SIGCHLD>
-slot is released.
+This method disables the child manager.
 
 =cut
 
@@ -301,7 +297,9 @@ sub disable_childmanager
    defined $self->{childmanager} or
       croak "ChildManager not enabled for this loop";
 
-   $self->detach_signal( 'CHLD' );
+   my $childmanager = $self->{childmanager};
+   $childmanager->disable;
+
    undef $self->{childmanager};
 }
 

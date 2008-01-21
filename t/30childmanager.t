@@ -5,7 +5,7 @@ use strict;
 use lib 't';
 use TestAsync;
 
-use Test::More tests => 29;
+use Test::More tests => 26;
 use Test::Exception;
 
 use IO::Async::ChildManager;
@@ -23,14 +23,7 @@ my $manager = IO::Async::ChildManager->new( loop => $loop );
 ok( defined $manager, '$manager defined' );
 is( ref $manager, "IO::Async::ChildManager", 'ref $manager is IO::Async::ChildManager' );
 
-my $handled;
-$handled = $manager->SIGCHLD;
-
-is( $handled, 0, '$handled while idle' );
-
 is_deeply( [ $manager->list_watching ], [], 'list_watching while idle' );
-
-$loop->attach_signal( CHLD => sub { $handled = $manager->SIGCHLD } );
 
 my $kid = fork();
 defined $kid or die "Cannot fork() - $!";
@@ -56,7 +49,6 @@ my $ready;
 $ready = wait_for_exit;
 
 is( $ready, 1, '$ready after child exit' );
-is( $handled, 1, '$handled after child exit' );
 
 ok( WIFEXITED($exitcode),      'WIFEXITED($exitcode) after child exit' );
 is( WEXITSTATUS($exitcode), 3, 'WEXITSTATUS($exitcode) after child exit' );
@@ -90,7 +82,6 @@ kill SIGTERM, $kid;
 $ready = wait_for_exit;
 
 is( $ready, 1, '$ready after child SIGTERM' );
-is( $handled, 1, '$handled after child SIGTERM' );
 
 ok( WIFSIGNALED($exitcode),          'WIFSIGNALED($exitcode) after SIGTERM' );
 is( WTERMSIG($exitcode),    SIGTERM, 'WTERMSIG($exitcode) after SIGTERM' );
