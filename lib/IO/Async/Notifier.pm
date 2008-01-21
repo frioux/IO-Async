@@ -225,7 +225,7 @@ sub close
    $read_handle->close if defined $read_handle;
 
    my $write_handle = delete $self->{write_handle};
-   $write_handle->close if defined $write_handle and $write_handle != $read_handle;
+   $write_handle->close if defined $write_handle and ( not defined $read_handle or $write_handle != $read_handle );
 }
 
 =head2 $handle = $notifier->read_handle
