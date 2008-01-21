@@ -262,6 +262,8 @@ Optional boolean. If missing or false, any CODE references in the C<%SIG> hash
 will be removed and restored back to C<DEFAULT> in the child process. If true,
 no adjustment of the C<%SIG> hash will be performed.
 
+=back
+
 =cut
 
 sub detach_child
