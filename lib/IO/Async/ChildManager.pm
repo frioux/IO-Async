@@ -12,6 +12,7 @@ our $VERSION = '0.11';
 # Not a notifier
 
 use IO::Async::Stream;
+use IO::Async::MergePoint;
 
 use Carp;
 use Fcntl qw( F_GETFL F_SETFL FD_CLOEXEC );
@@ -322,6 +323,10 @@ exception).
  exec() fails    |         255            |     $!      |    ""
  $code returns   |     return value       |     $!      |    ""
  $code dies      |         255            |     $!      |    $@
+
+It is usually more convenient to use the C<open()> method in simple cases
+where an external program is being started in order to interact with it via
+file IO.
 
 =cut
 
@@ -651,6 +656,208 @@ sub _spawn_in_child
    syswrite( $writepipe, $writebuffer );
 
    return $exitvalue;
+}
+
+=head2 $pid = $manager->open( %params )
+
+This creates a new child process to run the given code block or command, and
+attaches filehandles to it that the parent will watch. The C<%params> hash
+takes the following keys:
+
+=over 8
+
+=item command => ARRAY or STRING
+
+=item code => CODE
+
+The command or code to run in the child process (as per the C<spawn> method)
+
+=item on_finish => CODE
+
+A callback function to be called when the child process exits and has closed
+all of the filehandles that were set up for it. It will be invoked in the
+following way:
+
+ $on_finish->( $pid, $exitcode )
+
+=item setup => ARRAY
+
+Optional reference to an array to pass to the underlying C<spawn> method.
+
+=back
+
+In addition, the hash takes keys that define how to set up file descriptors in
+the child process. (If the C<setup> array is also given, these operations will
+be performed after those specified by C<setup>.)
+
+=over 8
+
+=item fdI<n> => HASH
+
+A hash describing how to set up file descriptor I<n>. The hash may contain one
+of the following sets of keys:
+
+=over 4
+
+=item to => SCALAR
+
+The child will be given the writing end of a pipe. Any data written by the child
+will be appended to scalar referenced by the C<to> parameter.
+
+=item from => STRING
+
+The child will be given the reading end of a pipe. The string given by the
+C<from> parameter will be written to the child. When all of the data has been
+written the pipe will be closed.
+
+=back
+
+=item stdin => ...
+
+=item stdout => ...
+
+=item stderr => ...
+
+Shortcuts for C<fd0>, C<fd1> and C<fd2> respectively.
+
+=back
+
+=cut
+
+sub open
+{
+   my $self = shift;
+   my %params = @_;
+
+   my %subparams;
+   my @setup;
+   my %filehandles;
+
+   my $on_finish = delete $params{on_finish};
+   ref $on_finish eq "CODE" or croak "Expected 'on_finished' to be a CODE ref";
+
+   $params{on_exit} and croak "Cannot pass 'on_exit' parameter through ChildManager->open";
+
+   if( $params{setup} ) {
+      ref $params{setup} eq "ARRAY" or croak "Expected 'setup' to be an ARRAY ref";
+      @setup = @{ $params{setup} };
+      delete $params{setup};
+   }
+
+   foreach my $key ( keys %params ) {
+      my $value = $params{$key};
+
+      my $orig_key = $key;
+
+      # Rewrite stdin/stdout/stderr
+      $key eq "stdin"  and $key = "fd0";
+      $key eq "stdout" and $key = "fd1";
+      $key eq "stderr" and $key = "fd2";
+
+      if( $key =~  m/^fd\d+$/ ) {
+         ref $value eq "HASH" or croak "Expected '$orig_key' to be a HASH ref";
+
+         pipe( my ( $pipe_r, $pipe_w ) ) or croak "Unable to pipe() - $!";
+
+         my ( $myfd, $childfd );
+
+         if( exists $value->{to} ) {
+            ref $value->{to} eq "SCALAR" or croak "Expected 'to' for '$orig_key' be a SCALAR ref";
+            scalar keys %$value == 1 or croak "Found other keys than 'to' for '$orig_key'";
+            ${ $value->{to} } = "";
+
+            $myfd    = $pipe_r;
+            $childfd = $pipe_w;
+         }
+         elsif( exists $value->{from} ) {
+            ref $value->{from} eq "" or croak "Expected 'from' for '$orig_key' not to be a reference";
+            scalar keys %$value == 1 or croak "Found other keys than 'from' for '$orig_key'";
+
+            $myfd    = $pipe_w;
+            $childfd = $pipe_r;
+         }
+         else {
+            croak "Cannot recognise what to do with '$orig_key'";
+         }
+
+         $filehandles{$key} = [ $myfd, $childfd, $value ];
+         push @setup, $key => [ dup => $childfd ];
+      }
+      else {
+         $subparams{$orig_key} = $value;
+      }
+   }
+
+   my $pid;
+
+   my $mergepoint = IO::Async::MergePoint->new(
+      needs => [ "exitcode", keys %filehandles ],
+
+      on_finished => sub {
+         my %items = @_;
+         $on_finish->( $pid, $items{exitcode} );
+      },
+   );
+
+   $pid = $self->spawn( %subparams, 
+      setup => \@setup,
+      on_exit => sub {
+         my ( undef, $exitcode ) = @_;
+         $mergepoint->done( "exitcode", $exitcode );
+      },
+   );
+
+   return undef unless defined $pid;
+
+   # Now install the handlers
+
+   my $loop = $self->{loop};
+
+   foreach my $fd ( keys %filehandles ) {
+      my ( $myfd, $childfd, $fdopts ) = @{ $filehandles{$fd} };
+
+      close( $childfd );
+
+      my $notifier;
+
+      if( exists $fdopts->{to} ) {
+         my $buffer = $fdopts->{to};
+
+         $notifier = IO::Async::Stream->new(
+            read_handle => $myfd,
+
+            on_read => sub {
+               my ( undef, $buffref, $closed ) = @_;
+               $$buffer .= $$buffref;
+               $$buffref = "";
+               return 0;
+            },
+
+            on_closed => sub {
+               $mergepoint->done( $fd );
+            },
+         );
+      }
+      elsif( exists $fdopts->{from} ) {
+         $notifier = IO::Async::Stream->new(
+            write_handle => $myfd,
+
+            on_outgoing_empty => sub {
+               $notifier->close;
+            },
+
+            on_closed => sub {
+               $mergepoint->done( $fd );
+            },
+         );
+
+         $notifier->write( $fdopts->{from} );
+      }
+
+      $loop->add( $notifier );
+   }
+
+   return $pid;
 }
 
 # Keep perl happy; keep Britain tidy

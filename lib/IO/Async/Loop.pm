@@ -379,6 +379,25 @@ sub spawn_child
    $childmanager->spawn( %params );
 }
 
+=head2 $loop->open_child( %params )
+
+This method creates a new child process to run the given code block or command,
+and attaches filehandles to it that the parent will watch. For more detail,
+see the C<open_child()> method on the L<IO::Async::ChildManager> class.
+
+=cut
+
+sub open_child
+{
+   my $self = shift;
+   my %params = @_;
+
+   my $childmanager = $self->{childmanager} or
+      croak "ChildManager not enabled in Loop";
+
+   $childmanager->open( %params );
+}
+
 sub __enable_timer
 {
    my $self = shift;
