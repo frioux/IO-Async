@@ -187,10 +187,17 @@ The C<%params> hash takes the following keys:
 
 =over 8
 
+=item read_handle => $handle
+
+The IO handle to read from. Must implement C<fileno> and C<sysread> methods.
+
+=item write_handle => $handle
+
+The IO handle to write to. Must implement C<fileno> and C<syswrite> methods.
+
 =item handle => $handle
 
-The handle object to wrap. Must implement C<fileno>, C<sysread> and
-C<syswrite> methods in the way that C<IO::Handle> does.
+Shortcut to specifying the same IO handle for both of the above.
 
 =item on_read => CODE
 
@@ -211,10 +218,10 @@ A CODE reference for when the C<syswrite()> method on the write handle fails.
 
 =back
 
-It is required that either an C<on_read> callback reference is passed, or that
-the object provides an C<on_read> method. It is optional whether either is
-true for C<on_outgoing_empty>; if neither is supplied then no action will be
-taken when the writing buffer becomes empty.
+If a read handle is given, it is required that either an C<on_read> callback
+reference is passed, or that the object provides an C<on_read> method. It is
+optional whether either is true for C<on_outgoing_empty>; if neither is
+supplied then no action will be taken when the writing buffer becomes empty.
 
 =cut
 
@@ -225,12 +232,14 @@ sub new
 
    my $self = $class->SUPER::new( %params );
 
-   if( $params{on_read} ) {
-      $self->{on_read} = $params{on_read};
-   }
-   else {
-      unless( $self->can( 'on_read' ) ) {
-         croak 'Expected either an on_read callback or to be able to ->on_read';
+   if( $params{handle} or $params{read_handle} ) {
+      if( $params{on_read} ) {
+         $self->{on_read} = $params{on_read};
+      }
+      else {
+         unless( $self->can( 'on_read' ) ) {
+            croak 'Expected either an on_read callback or to be able to ->on_read';
+         }
       }
    }
 
