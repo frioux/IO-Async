@@ -864,6 +864,85 @@ sub open
    return $pid;
 }
 
+=head2 $pid = $manager->run( %params )
+
+This creates a new child process to run the given code block or command,
+capturing its STDOUT and STDERR streams. When the process exits, the callback
+is invoked being passed the exitcode, and content of the streams.
+
+=over 8
+
+=item command => ARRAY or STRING
+
+=item code => CODE
+
+The command or code to run in the child process (as per the C<spawn> method)
+
+=item on_finish => CODE
+
+A callback function to be called when the child process exits and closed its
+STDOUT and STDERR streams. It will be invoked in the following way:
+
+ $on_finish->( $pid, $exitcode, $stdout, $stderr )
+
+=item stdin => STRING
+
+Optional. String to pass in to the child process's STDIN stream.
+
+=back
+
+This function is intended mainly as an IO::Async-compatible replacement for
+the perl C<readpipe> function (`backticks`), allowing it to replace
+
+  my $output = `command here`;
+
+with
+
+ $loop->run(
+    command => "command here", 
+    on_finish => sub {
+       my ( undef, $exitcode, $output ) = @_;
+       ...
+    }
+ );
+
+=cut
+
+sub run
+{
+   my $self = shift;
+   my %params = @_;
+
+   my $on_finish = delete $params{on_finish};
+   ref $on_finish eq "CODE" or croak "Expected 'on_finished' to be a CODE ref";
+
+   my $child_out;
+   my $child_err;
+
+   my %subparams;
+
+   if( my $child_stdin = delete $params{stdin} ) {
+      ref $child_stdin and croak "Expected 'stdin' not to be a reference";
+      $subparams{stdin} = { from => $child_stdin };
+   }
+
+   $subparams{code}    = delete $params{code};
+   $subparams{command} = delete $params{command};
+
+   croak "Unrecognised parameters " . join( ", ", keys %params ) if keys %params;
+
+   my $loop = $self->{loop};
+   $loop->open_child(
+      %subparams,
+      stdout => { to => \$child_out },
+      stderr => { to => \$child_err },
+      on_finish => sub {
+         my ( $kid, $exitcode ) = @_;
+         $on_finish->( $kid, $exitcode, $child_out, $child_err );
+      },
+   );
+}
+
 # Keep perl happy; keep Britain tidy
 1;
 

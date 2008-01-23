@@ -398,6 +398,26 @@ sub open_child
    $childmanager->open( %params );
 }
 
+=head2 $loop->run_child( %params )
+
+This method creates a new child process to run the given code block or command,
+captures its STDOUT and STDERR streams, and passes them to the given callback
+function. For more detail see the C<run_child()> method on the
+L<IO::Async::ChildManager> class.
+
+=cut
+
+sub run_child
+{
+   my $self = shift;
+   my %params = @_;
+
+   my $childmanager = $self->{childmanager} or
+      croak "ChildManager not enabled in Loop";
+
+   $childmanager->run( %params );
+}
+
 sub __enable_timer
 {
    my $self = shift;
