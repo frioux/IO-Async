@@ -738,7 +738,7 @@ sub open
    my %filehandles;
 
    my $on_finish = delete $params{on_finish};
-   ref $on_finish eq "CODE" or croak "Expected 'on_finished' to be a CODE ref";
+   ref $on_finish eq "CODE" or croak "Expected 'on_finish' to be a CODE ref";
 
    $params{on_exit} and croak "Cannot pass 'on_exit' parameter through ChildManager->open";
 
@@ -908,7 +908,7 @@ sub run
    my %params = @_;
 
    my $on_finish = delete $params{on_finish};
-   ref $on_finish eq "CODE" or croak "Expected 'on_finished' to be a CODE ref";
+   ref $on_finish eq "CODE" or croak "Expected 'on_finish' to be a CODE ref";
 
    my $child_out;
    my $child_err;
