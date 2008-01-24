@@ -684,6 +684,17 @@ following way:
 
  $on_finish->( $pid, $exitcode )
 
+=item on_error => CODE
+
+Optional callback to be called when the child code block throws an exception,
+or the command could not be C<exec()>ed. It will be invoked in the following
+way (as per C<spawn>)
+
+ $on_error->( $pid, $exitcode, $dollarbang, $dollarat )
+
+If this callback is not supplied, then C<on_finish> is used instead. The value
+of C<$!> and C<$@> will not be reported.
+
 =item setup => ARRAY
 
 Optional reference to an array to pass to the underlying C<spawn> method.
@@ -740,6 +751,11 @@ sub open
    my $on_finish = delete $params{on_finish};
    ref $on_finish eq "CODE" or croak "Expected 'on_finish' to be a CODE ref";
 
+   my $on_error = delete $params{on_error};
+   if( $on_error ) {
+      ref $on_error eq "CODE" or croak "Expected 'on_error' to be a CODE ref";
+   }
+
    $params{on_exit} and croak "Cannot pass 'on_exit' parameter through ChildManager->open";
 
    if( $params{setup} ) {
@@ -794,11 +810,23 @@ sub open
    my $pid;
 
    my $mergepoint = IO::Async::MergePoint->new(
-      needs => [ "exitcode", keys %filehandles ],
+      needs => [ "exit", keys %filehandles ],
 
       on_finished => sub {
          my %items = @_;
-         $on_finish->( $pid, $items{exitcode} );
+         my ( $exitcode, $dollarbang, $dollarat ) = @{ $items{exit} };
+
+         if( $params{code} and $dollarat eq "" or $params{command} and $dollarbang == 0 ) {
+            $on_finish->( $pid, $exitcode );
+         }
+         else {
+            if( $on_error ) {
+               $on_error->( $pid, $exitcode, $dollarbang, $dollarat );
+            }
+            else {
+               $on_finish->( $pid, $exitcode ); # Don't have a way to report dollarbang/dollarat
+            }
+         }
       },
    );
 
@@ -807,8 +835,8 @@ sub open
    $pid = $loop->spawn_child( %subparams, 
       setup => \@setup,
       on_exit => sub {
-         my ( undef, $exitcode ) = @_;
-         $mergepoint->done( "exitcode", $exitcode );
+         my ( undef, $exitcode, $dollarbang, $dollarat ) = @_;
+         $mergepoint->done( "exit", [ $exitcode, $dollarbang, $dollarat ] );
       },
    );
 

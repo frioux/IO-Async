@@ -5,12 +5,16 @@ use strict;
 use lib 't';
 use TestAsync;
 
-use Test::More tests => 28;
+use Test::More tests => 36;
 use Test::Exception;
 
-use POSIX qw( WIFEXITED WEXITSTATUS );
+use POSIX qw( WIFEXITED WEXITSTATUS ENOENT );
 
 use IO::Async::Loop::IO_Poll;
+
+# Need to look this up, so we don't hardcode the message in the test script
+# This might cause locale issues
+use constant ENOENT_MESSAGE => do { local $! = ENOENT; "$!" };
 
 my $loop = IO::Async::Loop::IO_Poll->new();
 $loop->enable_childmanager;
@@ -41,6 +45,21 @@ wait_for { defined $exitcode };
 ok( WIFEXITED($exitcode),      'WIFEXITED($exitcode) after sub { 3 }' );
 is( WEXITSTATUS($exitcode), 3, 'WEXITSTATUS($exitcode) after sub { 3 }' );
 
+my ( $dollarbang, $dollarat );
+
+$loop->open_child(
+   code => sub { die "An error\n" },
+   on_finish => sub { die "Test failed early\n" },
+   on_error => sub { ( undef, $exitcode, $dollarbang, $dollarat ) = @_ },
+);
+
+undef $exitcode;
+wait_for { defined $exitcode };
+
+ok( WIFEXITED($exitcode),        'WIFEXITED($exitcode) after sub { die }' );
+is( WEXITSTATUS($exitcode), 255, 'WEXITSTATUS($exitcode) after sub { die }' );
+is( $dollarat, "An error\n",     '$dollarat after sub { die }' );
+
 $loop->open_child(
    command => [ $^X, "-e", '1' ],
    on_finish => sub { ( undef, $exitcode ) = @_; },
@@ -62,6 +81,25 @@ wait_for { defined $exitcode };
 
 ok( WIFEXITED($exitcode),      'WIFEXITED($exitcode) after perl -e exit 5' );
 is( WEXITSTATUS($exitcode), 5, 'WEXITSTATUS($exitcode) after perl -e exit 5' );
+
+# Just be paranoid in case anyone actually has this
+my $donotexist = "/bin/donotexist";
+$donotexist .= "X" while -e $donotexist;
+
+$loop->open_child(
+   command => $donotexist,
+   on_finish => sub { die "Test failed early\n" },
+   on_error => sub { ( undef, $exitcode, $dollarbang, $dollarat ) = @_ },
+);
+
+undef $exitcode;
+wait_for { defined $exitcode };
+
+ok( WIFEXITED($exitcode),          'WIFEXITED($exitcode) after donotexist' );
+is( WEXITSTATUS($exitcode), 255,   'WEXITSTATUS($exitcode) after donotexist' );
+is( $dollarbang+0, ENOENT,         '$dollarbang numerically after donotexist' ); 
+is( "$dollarbang", ENOENT_MESSAGE, '$dollarbang string after donotexist' );
+is( $dollarat, "",                 '$dollarat after donotexist' );
 
 my @stdout_lines;
 
