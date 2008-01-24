@@ -63,84 +63,120 @@ wait_for { defined $exitcode };
 ok( WIFEXITED($exitcode),      'WIFEXITED($exitcode) after perl -e exit 5' );
 is( WEXITSTATUS($exitcode), 5, 'WEXITSTATUS($exitcode) after perl -e exit 5' );
 
-my $child_out;
+my @stdout_lines;
+
+sub child_out_reader
+{
+   my ( $stream, $buffref ) = @_;
+
+   while( $$buffref =~ s/^(.*\n)// ) {
+      push @stdout_lines, $1;
+   }
+
+   return 0;
+}
+
+pipe( my $syncpipe_r, my $syncpipe_w ) or die "Cannot pipe - $!";
+$syncpipe_w->autoflush;
 
 $loop->open_child(
    code    => sub { print "hello\n"; 0 },
-   stdout  => { to => \$child_out },
+   stdout  => { on_read => \&child_out_reader },
    on_finish => sub { ( undef, $exitcode ) = @_; },
 );
 
 undef $exitcode;
+undef @stdout_lines;
+
 wait_for { defined $exitcode };
 
 ok( WIFEXITED($exitcode),      'WIFEXITED($exitcode) after sub { print }' );
 is( WEXITSTATUS($exitcode), 0, 'WEXITSTATUS($exitcode) after sub { print }' );
-is( $child_out, "hello\n", '$child_out after sub { print }' );
+is_deeply( \@stdout_lines, [ "hello\n" ], '@stdout_lines after sub { print }' );
 
 $loop->open_child(
    command => [ $^X, "-e", 'print "goodbye\n"' ],
-   stdout  => { to => \$child_out },
+   stdout  => { on_read => \&child_out_reader },
    on_finish => sub { ( undef, $exitcode ) = @_; },
 );
 
 undef $exitcode;
+undef @stdout_lines;
+
 wait_for { defined $exitcode };
 
 ok( WIFEXITED($exitcode),      'WIFEXITED($exitcode) after perl STDOUT' );
 is( WEXITSTATUS($exitcode), 0, 'WEXITSTATUS($exitcode) after perl STDOUT' );
-is( $child_out, "goodbye\n", '$child_out after perl STDOUT' );
+is_deeply( \@stdout_lines, [ "goodbye\n" ], '@stdout_lines after perl STDOUT' );
 
-my $child_err;
+my @stderr_lines;
+
+sub child_err_reader
+{
+   my ( $stream, $buffref ) = @_;
+
+   while( $$buffref =~ s/^(.*\n)// ) {
+      push @stderr_lines, $1;
+   }
+
+   return 0;
+}
 
 $loop->open_child(
    command => [ $^X, "-e", 'print STDOUT "output\n"; print STDERR "error\n";' ],
-   stdout  => { to => \$child_out },
-   stderr  => { to => \$child_err },
+   stdout  => { on_read => \&child_out_reader },
+   stderr  => { on_read => \&child_err_reader },
    on_finish => sub { ( undef, $exitcode ) = @_; },
 );
 
 undef $exitcode;
+undef @stdout_lines;
+
 wait_for { defined $exitcode };
 
 ok( WIFEXITED($exitcode),      'WIFEXITED($exitcode) after perl STDOUT/STDERR' );
 is( WEXITSTATUS($exitcode), 0, 'WEXITSTATUS($exitcode) after perl STDOUT/STDERR' );
-is( $child_out, "output\n", '$child_out after perl STDOUT/STDERR' );
-is( $child_err, "error\n",  '$child_err after perl STDOUT/STDERR' );
+is_deeply( \@stdout_lines, [ "output\n" ], '@stdout_lines after perl STDOUT/STDERR' );
+is_deeply( \@stderr_lines, [ "error\n"  ], '@stderr_lines after perl STDOUT/STDERR' );
 
 # perl -pe 1 behaves like cat; copies STDIN to STDOUT
 
 $loop->open_child(
    command => [ $^X, "-pe", '1' ],
    stdin   => { from => "some data\n" },
-   stdout  => { to   => \$child_out },
+   stdout  => { on_read => \&child_out_reader },
    on_finish => sub { ( undef, $exitcode ) = @_; },
 );
 
 undef $exitcode;
+undef @stdout_lines;
+
 wait_for { defined $exitcode };
 
 ok( WIFEXITED($exitcode),      'WIFEXITED($exitcode) after perl STDIN->STDOUT' );
 is( WEXITSTATUS($exitcode), 0, 'WEXITSTATUS($exitcode) after perl STDIN->STDOUT' );
-is( $child_out, "some data\n", '$child_out after perl STDIN->STDOUT' );
+is_deeply( \@stdout_lines, [ "some data\n" ], '@stdout_lines after perl STDIN->STDOUT' );
 
 # Now check fd[n] works just as well
 
 $loop->open_child(
    command => [ $^X, "-pe", 'print STDERR "Error\n"' ],
    fd0     => { from => "some data\n" },
-   fd1     => { to   => \$child_out },
-   fd2     => { to   => \$child_err },
+   stdout  => { on_read => \&child_out_reader },
+   stderr  => { on_read => \&child_err_reader },
    on_finish => sub { ( undef, $exitcode ) = @_; },
 );
 
 undef $exitcode;
+undef @stdout_lines;
+undef @stderr_lines;
+
 wait_for { defined $exitcode };
 
 ok( WIFEXITED($exitcode),      'WIFEXITED($exitcode) after perl STDIN->STDOUT using fd[n]' );
 is( WEXITSTATUS($exitcode), 0, 'WEXITSTATUS($exitcode) after perl STDIN->STDOUT using fd[n]' );
-is( $child_out, "some data\n", '$child_out after perl STDIN->STDOUT using fd[n]' );
-is( $child_err, "Error\n",     '$child_err after perl STDIN->STDOUT using fd[n]' );
+is_deeply( \@stdout_lines, [ "some data\n" ], '@stdout_lines after perl STDIN->STDOUT using fd[n]' );
+is_deeply( \@stderr_lines, [ "Error\n"     ], '@stderr_lines after perl STDIN->STDOUT using fd[n]' );
 
 dies_ok( sub { $loop->open_child(
                   command => [ $^X, "-e", 1 ]

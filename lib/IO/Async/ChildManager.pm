@@ -703,10 +703,10 @@ of the following sets of keys:
 
 =over 4
 
-=item to => SCALAR
+=item on_read => CODE
 
-The child will be given the writing end of a pipe. Any data written by the child
-will be appended to scalar referenced by the C<to> parameter.
+The child will be given the writing end of a pipe. The reading end will be
+wrapped by an C<IO::Async::Stream> using this C<on_read> callback function.
 
 =item from => STRING
 
@@ -765,10 +765,9 @@ sub open
 
          my ( $myfd, $childfd );
 
-         if( exists $value->{to} ) {
-            ref $value->{to} eq "SCALAR" or croak "Expected 'to' for '$orig_key' be a SCALAR ref";
-            scalar keys %$value == 1 or croak "Found other keys than 'to' for '$orig_key'";
-            ${ $value->{to} } = "";
+         if( exists $value->{on_read} ) {
+            ref $value->{on_read} eq "CODE" or croak "Expected 'on_read' for '$orig_key' be a CODE ref";
+            scalar keys %$value == 1 or croak "Found other keys than 'on_read' for '$orig_key'";
 
             $myfd    = $pipe_r;
             $childfd = $pipe_w;
@@ -824,18 +823,13 @@ sub open
 
       my $notifier;
 
-      if( exists $fdopts->{to} ) {
-         my $buffer = $fdopts->{to};
+      if( exists $fdopts->{on_read} ) {
+         my $on_read = $fdopts->{on_read};
 
          $notifier = IO::Async::Stream->new(
             read_handle => $myfd,
 
-            on_read => sub {
-               my ( undef, $buffref, $closed ) = @_;
-               $$buffer .= $$buffref;
-               $$buffref = "";
-               return 0;
-            },
+            on_read => $on_read,
 
             on_closed => sub {
                $mergepoint->done( $fd );
@@ -934,8 +928,22 @@ sub run
    my $loop = $self->{loop};
    $loop->open_child(
       %subparams,
-      stdout => { to => \$child_out },
-      stderr => { to => \$child_err },
+      stdout => {
+         on_read => sub { 
+            my ( $stream, $buffref, $closed ) = @_;
+            $child_out = $$buffref if $closed;
+            return 0;
+         }
+      },
+
+      stderr => { 
+         on_read => sub {
+            my ( $stream, $buffref, $closed ) = @_;
+            $child_err = $$buffref if $closed;
+            return 0;
+         }
+      },
+
       on_finish => sub {
          my ( $kid, $exitcode ) = @_;
          $on_finish->( $kid, $exitcode, $child_out, $child_err );
