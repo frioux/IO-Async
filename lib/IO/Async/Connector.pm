@@ -32,9 +32,9 @@ Usually this object would be used indirectly via an C<IO::Async::Loop>:
  my $loop = IO::Async::Loop::...
 
  $loop->connect(
-    host    => "www.example.com",
-    service => "http",
-    type    => SOCK_STREAM,
+    host     => "www.example.com",
+    service  => "http",
+    socktype => SOCK_STREAM,
 
     on_connected => sub {
        my ( $sock ) = @_;
@@ -288,7 +288,7 @@ The hostname and service name to connect to.
 
 =item family => INT
 
-=item type => INT
+=item socktype => INT
 
 =item protocol => INT
 
@@ -304,7 +304,7 @@ invoked in the same way as the C<on_error> callback for the C<resolve> method.
 
 =back
 
-It is sometimes necessary to pass the C<type> hint to the resolver when
+It is sometimes necessary to pass the C<socktype> hint to the resolver when
 resolving the host/service names into an address, as some OS's C<getaddrinfo>
 functions require this hint.
 
@@ -333,7 +333,16 @@ sub connect
       my $loop = $self->{loop};
 
       my $family   = $params{family}   || 0;
-      my $socktype = $params{type}     || 0; # TODO: This should take {socktype}
+
+      my $socktype;
+      if( $params{type} ) {
+         carp( "'type' deprecated, use 'socktype' instead" );
+         $socktype = $params{type} || 0;
+      }
+      else {
+         $socktype = $params{socktype} || 0;
+      }
+
       my $protocol = $params{protocol} || 0;
       my $flags    = $params{flags}    || 0;
 
