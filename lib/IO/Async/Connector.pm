@@ -292,6 +292,8 @@ The hostname and service name to connect to.
 
 =item protocol => INT
 
+=item flags => INT
+
 Optional. Other arguments to pass along with C<host> and C<service> to the
 C<getaddrinfo()> call.
 
@@ -330,9 +332,14 @@ sub connect
 
       my $loop = $self->{loop};
 
+      my $family   = $params{family}   || 0;
+      my $socktype = $params{type}     || 0; # TODO: This should take {socktype}
+      my $protocol = $params{protocol} || 0;
+      my $flags    = $params{flags}    || 0;
+
       $loop->resolve(
          type => 'getaddrinfo',
-         data => [ $host, $service, $params{family} || 0, $params{type} || 0, $params{protocol} || 0 ],
+         data => [ $host, $service, $family, $socktype, $protocol, $flags ],
 
          on_error => $on_resolve_error,
 
