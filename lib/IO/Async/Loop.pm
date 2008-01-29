@@ -41,9 +41,10 @@ This module would not be used directly; see the subclasses:
 
 =item L<IO::Async::Loop::IO_Perl>
 
-=item L<IO::Async::Loop::Glib>
-
 =back
+
+Or other subclasses that may appear on CPAN which are not part of the core
+C<IO::Async> distribution.
 
 =head1 DESCRIPTION
 
