@@ -127,6 +127,7 @@ sub DESTROY  { }
 sub fileno   { 100; }
 sub sysread  { $! = $errno; undef; }
 sub syswrite { $! = $errno; undef; }
+sub close    { }
 
 package main;
 
@@ -175,13 +176,19 @@ $stream = IO::Async::Stream->new(
    handle => ErrorSocket->new(),
    on_read => sub {},
 
-   on_read_error  => sub { ( undef, $read_errno  ) = @_ },
-   on_write_error => sub { ( undef, $write_errno ) = @_ },
+   on_read_error  => sub { ( undef, $read_errno ) = @_ },
 );
 
 $stream->on_read_ready;
 
 cmp_ok( $read_errno, "==", ECONNRESET, 'errno after failed read' );
+
+$stream = IO::Async::Stream->new(
+   handle => ErrorSocket->new(),
+   on_read => sub {},
+
+   on_write_error  => sub { ( undef, $write_errno ) = @_ },
+);
 
 $stream->on_write_ready;
 

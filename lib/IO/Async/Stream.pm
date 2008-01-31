@@ -360,7 +360,7 @@ sub on_write_ready
 
       return if $errno == EAGAIN or $errno == EWOULDBLOCK;
 
-      if( defined $self->{on_read_error} ) {
+      if( defined $self->{on_write_error} ) {
          $self->{on_write_error}->( $self, $errno );
       }
       elsif( $self->can( "on_write_error" ) ) {
