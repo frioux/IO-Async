@@ -1,5 +1,16 @@
 Revision history for IO-Async
 
+0.12    CHANGES:
+         * Allow Notifiers that are write-only.
+         * Added ChildManager->open and ->run; with ->open_child and 
+           ->run_child on the containing Loop.
+         * Moved IO::Async::Loop::Glib out to its own CPAN dist, to
+           simplify Build.PL and testing scripts
+
+        BUGFIXES:
+         * Make sure to "use IO::Socket" in IO::Async::Connector
+         * Pass 'socktype' argument to ->connect during testing
+
 0.11    INCOMPATIBLE CHANGES:
          * Renamed IO::Async::Set::* to IO::Async::Loop::* - provided
            backward-compatibility wrappers around old names. 
