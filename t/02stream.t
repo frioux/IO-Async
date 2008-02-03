@@ -190,6 +190,8 @@ $stream = IO::Async::Stream->new(
    on_write_error  => sub { ( undef, $write_errno ) = @_ },
 );
 
+$stream->write( "hello" );
+
 $stream->on_write_ready;
 
 cmp_ok( $write_errno, "==", ECONNRESET, 'errno after failed write' );
