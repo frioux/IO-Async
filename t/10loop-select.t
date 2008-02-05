@@ -151,13 +151,13 @@ is( $timeout, undef, '$timeout idling pre_select' );
 # Write-only
 
 my $write_only_notifier = IO::Async::Notifier->new(
-   write_handle => \*STDOUT,
+   write_handle => $S1,
    want_writeready => 1,
    on_write_ready => sub { $writeready = 1 },
 );
 
 $testvec = '';
-vec( $testvec, STDOUT->fileno, 1 ) = 1;
+vec( $testvec, $S1->fileno, 1 ) = 1;
 
 $loop->add( $write_only_notifier );
 
