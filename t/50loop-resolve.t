@@ -3,7 +3,7 @@
 use strict;
 
 use lib 't';
-use TestAsync;
+use IO::Async::Test;
 
 use Test::More tests => 5;
 use Test::Exception;
