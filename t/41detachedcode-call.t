@@ -5,7 +5,7 @@ use strict;
 use lib 't';
 use TestAsync;
 
-use Test::More tests => 47;
+use Test::More tests => 37;
 use Test::Exception;
 
 use File::Temp qw( tempdir );
@@ -60,12 +60,9 @@ is( $result, undef, '$result before call returns' );
 
 is( scalar $code->workers, 1, '$code->workers is still 1 after call' );
 
-my $ready;
-
 undef $result;
-$ready = wait_for { defined $result };
+wait_for { defined $result };
 
-cmp_ok( $ready, '>=', 2, '$ready after call returns' );
 is( $result, 30, '$result after call returns' );
 
 my @result;
@@ -84,9 +81,8 @@ $code->call(
 is( scalar $code->workers, 1, '$code->workers is still 1 after 2 calls' );
 
 undef @result;
-$ready = wait_for { @result == 2 };
+wait_for { @result == 2 };
 
-cmp_ok( $ready, '>=', 4, '$ready after both calls return' );
 is_deeply( \@result, [ 3, 7 ], '@result after both calls return' );
 
 is( scalar $code->workers, 1, '$code->workers is still 1 after 2 calls return' );
@@ -106,9 +102,8 @@ $code->call(
 );
 
 undef $result;
-$ready = wait_for { defined $result };
+wait_for { defined $result };
 
-cmp_ok( $ready, '>=', 2, '$ready after call to code over socket' );
 is( $result, 11, '$result of code over socket' );
 
 $code = IO::Async::DetachedCode->new(
@@ -126,9 +121,8 @@ $code->call(
 is( scalar $code->workers, 1, '$code->workers is 1 for pipe stream' );
 
 undef $result;
-$ready = wait_for { defined $result };
+wait_for { defined $result };
 
-cmp_ok( $ready, '>=', 2, '$ready after call to code over pipe' );
 is( $result, 11, '$result of code over pipe' );
 
 dies_ok( sub { IO::Async::DetachedCode->new(
@@ -151,9 +145,8 @@ $code->call(
 );
 
 undef $result;
-$ready = wait_for { defined $result };
+wait_for { defined $result };
 
-cmp_ok( $ready, '>=', 2, '$ready after call to code over flat marshaller' );
 is( $result, 15, '$result of code over flat' );
 
 dies_ok( sub { $code->call( 
@@ -184,9 +177,8 @@ $code->call(
 );
 
 undef @result;
-$ready = wait_for { scalar @result };
+wait_for { scalar @result };
 
-cmp_ok( $ready, '>=', 2, '$ready after call to code over storable marshaller' );
 is_deeply( \@result, [ 'SCALAR', \'b' ], '@result after call to code over storable marshaller' );
 
 my $err;
@@ -203,9 +195,8 @@ $code->call(
 );
 
 undef $err;
-$ready = wait_for { defined $err };
+wait_for { defined $err };
 
-cmp_ok( $ready, '>=', 2, '$ready after exception' );
 like( $err, qr/^exception name at $0 line \d+\.$/, '$err after exception' );
 
 my $count = 0;
@@ -268,9 +259,8 @@ $code->call(
 );
 
 undef $err;
-$ready = wait_for { defined $err };
+wait_for { defined $err };
 
-cmp_ok( $ready, '>=', 2, '$ready after child death' );
 # Not sure what reason we might get - need to check both
 ok( $err->[0] eq "closed" || $err->[0] eq "exit", '$err->[0] after child death' );
 
@@ -285,9 +275,8 @@ $code->call(
 is( scalar $code->workers, 1, '$code->workers is now 1 again' );
 
 undef $err;
-$ready = wait_for { defined $err };
+wait_for { defined $err };
 
-cmp_ok( $ready, '>=', 2, '$ready after child nondeath' );
 is( $err, "return", '$err is "return" after child nondeath' );
 
 $code = $loop->detach_code(
@@ -301,9 +290,8 @@ $code->call(
 );
 
 undef $result;
-$ready = wait_for { defined $result };
+wait_for { defined $result };
 
-cmp_ok( $ready, '>=', 2, '$ready after call to Set-constructed code' );
 is( $result, "a+b+c", '$result of Set-constructed code' );
 
 ## Now test that parallel runs really are parallel

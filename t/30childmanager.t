@@ -5,7 +5,7 @@ use strict;
 use lib 't';
 use TestAsync;
 
-use Test::More tests => 26;
+use Test::More tests => 22;
 use Test::Exception;
 
 use IO::Async::ChildManager;
@@ -45,10 +45,7 @@ $manager->watch( $kid => sub { ( undef, $exitcode ) = @_; } );
 ok( $manager->is_watching( $kid ), 'is_watching after adding $kid' );
 is_deeply( [ $manager->list_watching ], [ $kid ], 'list_watching after adding $kid' );
 
-my $ready;
-$ready = wait_for_exit;
-
-is( $ready, 1, '$ready after child exit' );
+wait_for_exit;
 
 ok( WIFEXITED($exitcode),      'WIFEXITED($exitcode) after child exit' );
 is( WEXITSTATUS($exitcode), 3, 'WEXITSTATUS($exitcode) after child exit' );
@@ -70,18 +67,14 @@ $manager->watch( $kid => sub { ( undef, $exitcode ) = @_; } );
 ok( $manager->is_watching( $kid ), 'is_watching after adding $kid' );
 is_deeply( [ $manager->list_watching ], [ $kid ], 'list_watching after adding $kid' );
 
-$ready = $loop->loop_once( 0.1 );
+$loop->loop_once( 0.1 );
 
 ok( $manager->is_watching( $kid ), 'is_watching after loop' );
 is_deeply( [ $manager->list_watching ], [ $kid ], 'list_watching after loop' );
 
-is( $ready, 0, '$ready after no death' );
-
 kill SIGTERM, $kid;
 
-$ready = wait_for_exit;
-
-is( $ready, 1, '$ready after child SIGTERM' );
+wait_for_exit;
 
 ok( WIFSIGNALED($exitcode),          'WIFSIGNALED($exitcode) after SIGTERM' );
 is( WTERMSIG($exitcode),    SIGTERM, 'WTERMSIG($exitcode) after SIGTERM' );
@@ -111,9 +104,7 @@ if( $kid == 0 ) {
 
 $loop->watch_child( $kid => sub { ( undef, $exitcode ) = @_; } );
 
-$ready = wait_for_exit;
-
-is( $ready, 1, '$ready after child exit for loop' );
+wait_for_exit;
 
 ok( WIFEXITED($exitcode),      'WIFEXITED($exitcode) after child exit for loop' );
 is( WEXITSTATUS($exitcode), 5, 'WEXITSTATUS($exitcode) after child exit for loop' );

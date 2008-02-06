@@ -5,7 +5,7 @@ use strict;
 use lib 't';
 use TestAsync;
 
-use Test::More tests => 8;
+use Test::More tests => 6;
 use Test::Exception;
 
 use POSIX qw( SIGINT WEXITSTATUS WIFSIGNALED WTERMSIG );
@@ -30,10 +30,8 @@ $loop->detach_child(
    on_exit => sub { ( undef, $exitcode ) = @_ },
 );
 
-my $ready;
-$ready = wait_for_exit;
+wait_for_exit;
 
-is( $ready, 1, '$ready after child exit' );
 is( WEXITSTATUS($exitcode), 5, 'WEXITSTATUS($exitcode) after child exit' );
 
 $loop->detach_child(
@@ -41,9 +39,8 @@ $loop->detach_child(
    on_exit => sub { ( undef, $exitcode ) = @_ },
 );
 
-$ready = wait_for_exit;
+wait_for_exit;
 
-is( $ready, 1, '$ready after child die' );
 is( WEXITSTATUS($exitcode), 255, 'WEXITSTATUS($exitcode) after child die' );
 
 $SIG{INT} = sub { exit( 22 ) };
