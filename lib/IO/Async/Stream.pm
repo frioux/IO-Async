@@ -95,10 +95,10 @@ Or
 
 =head1 DESCRIPTION
 
-This module provides a class for implementing asynchronous communications
-buffers behind stream handles. It provides buffering for both incoming and
-outgoing data, which are transferred to or from the actual handle as
-appropriate.
+This module provides a subclass of C<IO::Async::Notifier> which implements
+asynchronous communications buffers around stream handles. It provides
+buffering for both incoming and outgoing data, which are transferred to or
+from the actual handle when it is read- or write-ready.
 
 Data can be added to the outgoing buffer at any time using the C<write()>
 method, and will be flushed whenever the underlying handle is notified as
