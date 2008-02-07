@@ -39,7 +39,7 @@ This module would not be used directly; see the subclasses:
 
 =item L<IO::Async::Loop::Select>
 
-=item L<IO::Async::Loop::IO_Perl>
+=item L<IO::Async::Loop::IO_Poll>
 
 =back
 
@@ -513,7 +513,7 @@ sub enqueue_timer
    $timequeue->enqueue( %params );
 }
 
-=head2 $loop->canel_timer( $id )
+=head2 $loop->cancel_timer( $id )
 
 Cancels a previously-enqueued timer event by removing it from the queue.
 
