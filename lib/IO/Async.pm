@@ -1,3 +1,13 @@
+package IO::Async;
+
+use strict;
+
+# This package contains no code other than a declaration of the version.
+# It is provided simply to keep CPAN happy:
+#   cpan -i IO::Async
+
+our $VERSION = '0.12';
+
 =head1 NAME
 
 C<IO::Async> - a collection of modules that implement asynchronous filehandle
@@ -187,3 +197,6 @@ L<POE> - portable multitasking and networking framework for Perl
 Paul Evans E<lt>leonerd@leonerd.org.ukE<gt>
 
 =cut
+
+# Keep perl happy; keep Britain tidy
+1;
