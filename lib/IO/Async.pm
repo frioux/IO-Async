@@ -15,33 +15,40 @@ IO
 
 =head1 SYNOPSIS
 
- use IO::Socket::INET;
  use IO::Async::Stream;
  use IO::Async::Loop::IO_Poll;
 
- my $socket = IO::Socket::INET->new(
-    PeerHost => "some.other.host",
-    PeerPort => 12345,
-    Blocking => 0,
- );
-
- my $stream = IO::Async::Stream->new(
-    handle => $socket,
-
-    on_read => sub {
-       return 0 unless( $$_[0] =~ s/^(.*\n)// );
-
-       print "Received a line $1";
-
-       return 1;
-    }
- );
-
- $stream->write( "An initial line here\n" );
+ use Socket qw( SOCK_STREAM );
 
  my $loop = IO::Async::Loop::IO_Poll->new();
- 
- $loop->add( $stream );
+
+ $loop->connect(
+    host     => "some.other.host",
+    service  => 12345,
+    socktype => SOCK_STREAM,
+
+    on_connected => sub {
+       my ( $socket ) = @_;
+
+       my $stream = IO::Async::Stream->new(
+          handle => $socket,
+
+          on_read => sub {
+             return 0 unless( $$_[0] =~ s/^(.*\n)// );
+
+             print "Received a line $1";
+
+             return 1;
+          }
+       );
+
+       $stream->write( "An initial line here\n" );
+
+       $loop->add( $stream );
+    },
+
+    ...
+ );
 
  $loop->loop_forever();
 
