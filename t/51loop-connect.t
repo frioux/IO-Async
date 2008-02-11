@@ -5,9 +5,11 @@ use strict;
 use lib 't';
 use IO::Async::Test;
 
-use Test::More tests => 4;
+use Test::More tests => 6;
 
 use IO::Socket::INET;
+use POSIX qw( ENOENT );
+use Socket qw( AF_UNIX pack_sockaddr_un );
 
 use IO::Async::Loop::IO_Poll;
 
@@ -58,3 +60,22 @@ is( $sock->peername, $addr, 'by host/service: $sock->getpeername is $addr' );
 
 $listensock->accept; # Throw it away
 undef $sock; # This too
+
+# Now try an address we know to be invalid - a UNIX socket that doesn't exist
+
+my $error;
+
+my $failop;
+my $failerr;
+
+$loop->connect(
+   addr => [ AF_UNIX, SOCK_STREAM, 0, pack_sockaddr_un( "/some/path/we/know/breaks" ) ],
+   on_connected => sub { die "Test died early - connect succeeded\n"; },
+   on_fail => sub { $failop = shift @_; $failerr = pop @_; },
+   on_connect_error => sub { $error = 1 },
+);
+
+wait_for { $error };
+
+is( $failop, "connect", '$failop is connect' );
+is( $failerr+0, ENOENT, '$failerr is ENOENT' );
