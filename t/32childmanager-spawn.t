@@ -5,10 +5,10 @@ use strict;
 use lib 't';
 use IO::Async::Test;
 
-use Test::More tests => 31;
+use Test::More tests => 36;
 use Test::Exception;
 
-use POSIX qw( WIFEXITED WEXITSTATUS ENOENT );
+use POSIX qw( WIFEXITED WEXITSTATUS ENOENT EBADF );
 
 use IO::Async::Loop::IO_Poll;
 
@@ -145,3 +145,20 @@ ok( WIFEXITED($exitcode),       'WIFEXITED($exitcode) after spawn ARRAY' );
 is( WEXITSTATUS($exitcode), 14, 'WEXITSTATUS($exitcode) after spawn ARRAY' );
 is( $dollarbang+0,           0, '$dollarbang after spawn ARRAY' );
 is( $dollarat,              '', '$dollarat after spawn ARRAY' );
+
+{
+   pipe( my( $pipe_r, $pipe_w ) ) or die "Cannot pipe() - $!";
+
+   $spawned_pid = $loop->spawn_child(
+      code => sub { return $pipe_w->syswrite( "test" ); },
+      on_exit => \&on_exit,
+   );
+
+   wait_for_exit;
+
+   is( $exited_pid, $spawned_pid,   '$exited_pid == $spawned_pid after pipe close test' );
+   ok( WIFEXITED($exitcode),        'WIFEXITED($exitcode) after pipe close test' );
+   is( WEXITSTATUS($exitcode), 255, 'WEXITSTATUS($exitcode) after pipe close test' );
+   is( $dollarbang+0,        EBADF, '$dollarbang numerically after pipe close test' );
+   is( $dollarat,               '', '$dollarat after pipe close test' );
+}
