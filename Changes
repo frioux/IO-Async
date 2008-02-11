@@ -1,5 +1,14 @@
 Revision history for IO-Async
 
+0.13    CHANGES:
+         * Flush all awaiting data from Stream when it becomes writeready
+         * Supply a real IO::Async::Test module to allow testing in 3rd party
+           distros
+         * Various documentation fixes
+
+        BUGFIXES:
+         * Don't rely on STDOUT being writable during test scripts
+
 0.12    CHANGES:
          * Allow Notifiers that are write-only.
          * Added ChildManager->open and ->run; with ->open_child and 
