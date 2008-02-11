@@ -116,6 +116,36 @@ sub new
 
 =cut
 
+## Utility function
+sub _get_sock_err
+{
+   my ( $sock ) = @_;
+
+   my $err_packed = getsockopt( $sock, SOL_SOCKET, SO_ERROR );
+
+   if( defined $err_packed ) {
+      my $err = unpack( "I", $err_packed );
+
+      return undef if !$err;
+
+      $! = $err;
+      return $!;
+   }
+
+   # It seems we can't call getsockopt to query SO_ERROR. We'll try getpeername
+   if( defined getpeername( $sock ) ) {
+      return undef;
+   }
+
+   # Not connected so we know this ought to fail
+   if( read( $sock, my $buff, 1 ) ) {
+      print STDERR "Oops - getpeername() fails but read() returns!\n";
+      # TODO
+   }
+
+   return $!;
+}
+
 sub _connect_addresses
 {
    my $self = shift;
@@ -172,38 +202,14 @@ sub _connect_addresses
 
          $loop->remove( $notifier );
 
-         my $err_packed = getsockopt( $sock, SOL_SOCKET, SO_ERROR );
+         my $err = _get_sock_err( $sock );
 
-         if( defined $err_packed ) {
-            my $err = unpack( "I", $err_packed );
-
-            if( $err == 0 ) {
-                $on_connected->( $sock );
-                return;
-            }
-
-            $! = $err;
-            my $errstr = "$!";
-
-            $on_fail->( "connect", $sock, $address, $errstr ) if $on_fail;
+         if( !defined $err ) {
+             $on_connected->( $sock );
+             return;
          }
-         else {
-            # It seems we can't call getsockopt to query SO_ERROR. We'll try getpeername
-            if( defined getpeername( $sock ) ) {
-               $on_connected->( $sock );
-               return;
-            }
 
-            # Not connected so we know this ought to fail
-            if( read( $sock, my $buff, 1 ) ) {
-               print STDERR "Oops - getpeername() fails but read() returns!\n";
-               # TODO
-            }
-
-            my $errstr = "$!";
-
-            $on_fail->( "connect", $sock, $address, $errstr ) if $on_fail;
-         }
+         $on_fail->( "connect", $sock, $address, $err ) if $on_fail;
 
          # Try the next one
          $self->_connect_addresses( $addrlist, $on_connected, $on_connect_error, $on_fail );
