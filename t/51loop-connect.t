@@ -2,7 +2,6 @@
 
 use strict;
 
-use lib 't';
 use IO::Async::Test;
 
 use Test::More tests => 6;
