@@ -416,6 +416,10 @@ The file descriptor will be opened from the named file in the given mode. The
 C<$mode> string should be in the form usually given to the C<open()> function;
 such as '<' or '>>'.
 
+=item [ 'keep' ]
+
+The file descriptor will not be closed; it will be left as-is.
+
 =back
 
 =item fdI<n> => IO
@@ -430,11 +434,15 @@ A shortcut for the C<dup> case given above.
 
 Shortcuts for C<fd0>, C<fd1> and C<fd2> respectively.
 
-=back
-
 =item env => HASH
 
 A reference to a hash to set as the child process's environment.
+
+=back
+
+If no directions for what to do with C<stdin>, C<stdout> and C<stderr> are
+given, a default of C<keep> is implied. All other file descriptors will be
+closed, unless a C<keep> operation is given for them.
 
 =cut
 
@@ -475,7 +483,7 @@ sub _check_setup_and_canonicise
          }
 
          my $operation = $value->[0];
-         grep { $_ eq $operation } qw( open close dup ) or 
+         grep { $_ eq $operation } qw( open close dup keep ) or 
             croak "Unrecognised operation '$operation' for file descriptor $fd";
       }
       elsif( $key eq "env" ) {
@@ -566,11 +574,11 @@ sub _spawn_in_child
    my ( $writepipe, $code, $setup ) = @_;
 
    my $exitvalue = eval {
-      # Count of how many times we'll need to use the current handles.
-      my %fds_refcount;
-
       # Map of which handles will be in use by the end
       my %fd_in_use = ( 0 => 1, 1 => 1, 2 => 1 ); # Keep STDIN, STDOUT, STDERR
+
+      # Count of how many times we'll need to use the current handles.
+      my %fds_refcount = %fd_in_use;
 
       my $max_fd = 0;
       my $writepipe_clashes = 0;
@@ -590,6 +598,7 @@ sub _spawn_in_child
 
             $operation eq "close" and do {
                delete $fd_in_use{$fd};
+               delete $fds_refcount{$fd};
             };
 
             $operation eq "dup" and do {
@@ -599,6 +608,10 @@ sub _spawn_in_child
                # Keep a count of how many times it will be dup()ed from so we
                # can close it once we've finished
                $fds_refcount{$fileno}++;
+            };
+
+            $operation eq "keep" and do {
+               $fds_refcount{$fd} = 1;
             };
          }
       }
