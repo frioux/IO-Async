@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 69;
+use Test::More tests => 72;
 use Test::Exception;
 
 use File::Temp qw( tmpnam );
@@ -91,6 +91,20 @@ my $ret;
 
    is( $ret, 4,         '$pipe_r->read() after pipe dup to fd1' );
    is( $buffer, 'test', '$buffer after pipe dup to fd1' );
+
+   my $pipe_w_fileno = fileno $pipe_w;
+
+   TEST "pipe dup to fd1 closes pipe",
+      setup => [ fd1 => [ 'dup', $pipe_w ] ],
+      code => sub {
+         my $f = IO::Handle->new_from_fd( $pipe_w_fileno, "w" );
+         defined $f and return 1;
+         $! == EBADF or return 1;
+         return 0;
+      },
+
+      exitstatus => 0,
+      dollarat   => '';
 
    TEST "pipe dup to stdout shortcut",
       setup => [ stdout => $pipe_w ],
