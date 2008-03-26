@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 72;
+use Test::More tests => 77;
 use Test::Exception;
 
 use File::Temp qw( tmpnam );
@@ -217,6 +217,19 @@ my $ret;
 
    is( $ret, 5,          '$pipe2_r->read() after pipe dup to stdout and stderr' );
    is( $buffer, 'error', '$buffer after pipe dup to stdout and stderr' );
+
+   TEST "pipe dup to stdout and stderr same pipe",
+      setup => [ stdout => $pipe_w, stderr => $pipe_w ],
+      code => sub { print "output"; print STDERR "error"; },
+
+      exitstatus => 1,
+      dollarat   => '';
+
+   undef $buffer;
+   $ret = read_timeout( $pipe_r, $buffer, 11, 0.1 );
+
+   is( $ret, 11,               '$pipe_r->read() after pipe dup to stdout and stderr same pipe' );
+   is( $buffer, 'outputerror', '$buffer after pipe dup to stdout and stderr same pipe' );
 }
 
 TEST "stdout close",
