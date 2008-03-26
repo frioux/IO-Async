@@ -2,7 +2,9 @@
 
 use strict;
 
-use Test::More tests => 83;
+use IO::Async::Test;
+
+use Test::More tests => 69;
 use Test::Exception;
 
 use File::Temp qw( tmpnam );
@@ -12,6 +14,8 @@ use IO::Async::Loop::IO_Poll;
 
 my $loop = IO::Async::Loop::IO_Poll->new();
 $loop->enable_childmanager;
+
+testing_loop( $loop );
 
 dies_ok( sub { $loop->spawn_child( code => sub { 1 }, setup => "hello" ); },
          'Bad setup type fails' );
@@ -38,17 +42,7 @@ sub TEST
       on_exit => sub { ( undef, $exitcode, $dollarbang, $dollarat ) = @_; },
    );
 
-   my $ready = 0;
-
-   while( !defined $exitcode ) {
-      $_ = $loop->loop_once( 10 ); # Give code a generous 10 seconds to exit
-      die "Nothing was ready after 10 second wait; called at $callerfile line $callerline\n" if $_ == 0;
-      $ready += $_;
-   }
-
-   if( exists $attr{ready} ) {
-      cmp_ok( $ready, '>=', $attr{ready}, "\$ready after $name" );
-   }
+   wait_for { defined $exitcode };
 
    if( exists $attr{exitstatus} ) {
       ok( WIFEXITED($exitcode), "WIFEXITED(\$exitcode) after $name" );
@@ -89,7 +83,6 @@ my $ret;
       setup => [ fd1 => [ 'dup', $pipe_w ] ],
       code => sub { print "test"; },
 
-      ready      => 3,
       exitstatus => 1,
       dollarat   => '';
 
@@ -103,7 +96,6 @@ my $ret;
       setup => [ stdout => $pipe_w ],
       code => sub { print "test"; },
 
-      ready      => 3,
       exitstatus => 1,
       dollarat   => '';
 
@@ -117,7 +109,6 @@ my $ret;
       setup => [ stdout => [ 'dup', $pipe_w ] ],
       code => sub { print "test"; },
 
-      ready      => 3,
       exitstatus => 1,
       dollarat   => '';
 
@@ -131,7 +122,6 @@ my $ret;
       setup => [ fd2 => [ 'dup', $pipe_w ] ],
       code => sub { print STDERR "test"; },
 
-      ready      => 3,
       exitstatus => 1,
       dollarat   => '';
 
@@ -145,7 +135,6 @@ my $ret;
       setup => [ stderr => [ 'dup', $pipe_w ] ],
       code => sub { print STDERR "test"; },
 
-      ready      => 3,
       exitstatus => 1,
       dollarat   => '';
 
@@ -163,7 +152,6 @@ my $ret;
          print "test";
       },
 
-      ready      => 3,
       exitstatus => 1,
       dollarat   => '';
 
@@ -176,7 +164,6 @@ my $ret;
    TEST "other FD close",
       code => sub { return $pipe_w->syswrite( "test" ); },
 
-      ready      => 3,
       exitstatus => 255,
       dollarbang => EBADF,
       dollarat   => '';
@@ -186,7 +173,6 @@ my $ret;
       code => sub { print "test"; },
       setup => [ map { +"fd$_" => $pipe_w } ( 1 .. 19 ) ],
 
-      ready      => 2,
       exitstatus => 1,
       dollarat   => '';
 
@@ -203,7 +189,6 @@ my $ret;
       setup => [ stdout => $pipe_w, stderr => $pipe2_w ],
       code => sub { print "output"; print STDERR "error"; },
 
-      ready      => 3,
       exitstatus => 1,
       dollarat   => '';
 
@@ -224,7 +209,6 @@ TEST "stdout close",
    setup => [ stdout => [ 'close' ] ],
    code => sub { print "test"; },
 
-   ready      => 3,
    exitstatus => 255,
    dollarbang => EBADF,
    dollarat   => '';
@@ -237,7 +221,6 @@ TEST "stdout close",
       setup => [ stdout => [ 'open', '>', $name ] ],
       code => sub { print "test"; },
 
-      ready      => 3,
       exitstatus => 1,
       dollarat   => '';
 
@@ -255,7 +238,6 @@ TEST "stdout close",
       setup => [ stdout => [ 'open', '>>', $name ] ],
       code => sub { print "value"; },
 
-      ready      => 3,
       exitstatus => 1,
       dollarat   => '';
 
@@ -274,7 +256,6 @@ TEST "environment is preserved",
    setup => [],
    code => sub { return $ENV{TESTKEY} eq "parent value" ? 0 : 1 },
 
-   ready      => 3,
    exitstatus => 0,
    dollarat   => '';
 
@@ -282,6 +263,5 @@ TEST "environment is overwritten",
    setup => [ env => { TESTKEY => "child value" } ],
    code => sub { return $ENV{TESTKEY} eq "child value" ? 0 : 1 },
 
-   ready      => 3,
    exitstatus => 0,
    dollarat   => '';
