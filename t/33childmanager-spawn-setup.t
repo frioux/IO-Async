@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 77;
+use Test::More tests => 82;
 use Test::Exception;
 
 use File::Temp qw( tmpnam );
@@ -174,6 +174,23 @@ my $ret;
 
    is( $ret, 4,         '$pipe_r->read() after pipe dup to other FD' );
    is( $buffer, 'test', '$buffer after pipe dup to other FD' );
+
+   TEST "pipe dup to its own FD",
+      setup => [ "fd$pipe_w_fileno" => $pipe_w ],
+      code => sub {
+         close STDOUT;
+         open( STDOUT, ">&=$pipe_w_fileno" ) or die "Cannot open fd$pipe_w_fileno as stdout - $!";
+         print "test";
+      },
+
+      exitstatus => 1,
+      dollarat   => '';
+
+   undef $buffer;
+   $ret = read_timeout( $pipe_r, $buffer, 4, 0.1 );
+
+   is( $ret, 4,         '$pipe_r->read() after pipe dup to its own FD' );
+   is( $buffer, 'test', '$buffer after pipe dup to its own FD' );
 
    TEST "other FD close",
       code => sub { return $pipe_w->syswrite( "test" ); },

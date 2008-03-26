@@ -566,7 +566,11 @@ sub _spawn_in_child
    my ( $writepipe, $code, $setup ) = @_;
 
    my $exitvalue = eval {
-      my %keep_fds = ( 0 => 1, 1 => 1, 2 => 1 ); # Keep STDIN, STDOUT, STDERR
+      # Count of how many times we'll need to use the current handles.
+      my %fds_refcount;
+
+      # Map of which handles will be in use by the end
+      my %fd_in_use = ( 0 => 1, 1 => 1, 2 => 1 ); # Keep STDIN, STDOUT, STDERR
 
       my $max_fd = 0;
       my $writepipe_clashes = 0;
@@ -585,22 +589,23 @@ sub _spawn_in_child
             my ( $operation, @params ) = @$value;
 
             $operation eq "close" and do {
-               delete $keep_fds{$fd};
+               delete $fd_in_use{$fd};
             };
 
             $operation eq "dup" and do {
+               $fd_in_use{$fd} = 1;
+
                my $fileno = fileno $params[0];
                # Keep a count of how many times it will be dup()ed from so we
                # can close it once we've finished
-               $keep_fds{$fileno}++;
+               $fds_refcount{$fileno}++;
             };
          }
       }
 
-      $keep_fds{fileno $writepipe} = 1;
-
       foreach ( 0 .. OPEN_MAX_FD ) {
-         next if exists $keep_fds{$_};
+         next if $fds_refcount{$_};
+         next if $_ == fileno $writepipe;
          POSIX::close( $_ );
       }
 
@@ -628,8 +633,8 @@ sub _spawn_in_child
                      dup2( $from, $fd ) or die "Cannot dup2($from to $fd) - $!\n";
                   }
 
-                  $keep_fds{$from}--;
-                  if( !$keep_fds{$from} ) {
+                  $fds_refcount{$from}--;
+                  if( !$fds_refcount{$from} and !$fd_in_use{$from} ) {
                      POSIX::close( $from );
                   }
                };
