@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 1;
+use Test::More tests => 2;
 use IO::Async::Test;
 
 use IO::Socket::UNIX;
@@ -41,3 +41,15 @@ $S2->syswrite( "A line\n" );
 wait_for { $readbuffer =~ m/\n/ };
 
 is( $readbuffer, "A line\n", 'Single-wait' );
+
+$loop->remove( $stream );
+
+# Now the automatic version
+
+$readbuffer = "";
+
+$S2->syswrite( "Another line\n" );
+
+wait_for_stream { $readbuffer =~ m/\n/ } $S1 => $readbuffer;
+
+is( $readbuffer, "Another line\n", 'Automatic stream read wait' );
