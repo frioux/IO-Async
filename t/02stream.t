@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 29;
+use Test::More tests => 31;
 use Test::Exception;
 
 use POSIX qw( EAGAIN ECONNRESET );
@@ -117,6 +117,35 @@ $stream->on_read_ready;
 is( scalar @received, 1,          'scalar @received receiving after select' );
 is( $received[0],     "return\n", '$received[0] writepartial 2' );
 is( $closed,          0,          '$closed writepartial 2' );
+
+# Call counts
+
+my $called;
+my $count;
+
+my $countedstream = IO::Async::Stream->new(
+   handle => $S1,
+   on_read => sub {
+      $called++;
+      return --$count ? 1 : 0;
+   },
+);
+
+$S2->syswrite( "hi" );
+
+$called = 0;
+$count = 1;
+
+$countedstream->on_read_ready;
+is( $called, 1, '$called after count=1 call' );
+
+$called = 0;
+$count = 3;
+
+$S2->syswrite( "hi again" );
+
+$countedstream->on_read_ready;
+is( $called, 3, '$called after count=3 call' );
 
 package ErrorSocket;
 
