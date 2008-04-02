@@ -116,7 +116,7 @@ base class.
 If certain keys are supplied to the constructor, they should contain CODE
 references to callback functions that will be called in the following manner:
 
- $again = $on_read->( $self, \$buffer, $handleclosed )
+ $ret = $on_read->( $self, \$buffer, $handleclosed )
 
  $on_read_error->( $self, $errno )
 
@@ -132,7 +132,7 @@ argument, so that the callback can access it.
 If a subclass is built, then it can override the C<on_read> or
 C<on_outgoing_empty> methods, which will be called in the following manner:
 
- $again = $self->on_read( \$buffer, $handleclosed )
+ $ret = $self->on_read( \$buffer, $handleclosed )
 
  $self->on_read_error( $errno )
 
@@ -151,10 +151,10 @@ received from the handle.
 In this way, it is easy to implement code that reads records of some form when
 completed, but ignores partially-received records, until all the data is
 present. If the method is confident no more useful data remains, it should
-return a false value. If not, it should return a true value, and the method
-will be called again. This makes it easy to implement code that handles
-multiple incoming records at the same time. See the examples at the end of
-this documentation for more detail.
+return C<0>. If not, it should return C<1>, and the method will be called
+again. This makes it easy to implement code that handles multiple incoming
+records at the same time. See the examples at the end of this documentation
+for more detail.
 
 The second argument to the C<on_read()> method is a scalar indicating whether
 the handle has been closed. Normally it is false, but will become true once
@@ -162,6 +162,13 @@ the handle closes. A reference to the buffer is passed to the method in the
 usual way, so it may inspect data contained in it. Once the method returns a
 false value, it will not be called again, as the handle is now closed and no
 more data can arrive.
+
+The C<on_read()> code may also dynamically replace itself with a new callback
+by returning a CODE reference instead of C<0> or C<1>. The original callback
+or method that the object first started with may be restored by returning
+C<undef>. Whenever the callback is changed in this way, the new code is called
+again; even if the read buffer is currently empty. See the examples at the end
+of this documentation for more detail.
 
 The C<on_read_error> and C<on_write_error> callbacks are passed the value of
 C<$!> at the time the error occured. (The C<$!> variable itself, by its
@@ -236,10 +243,11 @@ sub new
       if( $params{on_read} ) {
          $self->{on_read} = $params{on_read};
       }
+      elsif( $self->can( 'on_read' ) ) {
+         # That's fine
+      }
       else {
-         unless( $self->can( 'on_read' ) ) {
-            croak 'Expected either an on_read callback or to be able to ->on_read';
-         }
+         croak 'Expected either an on_read callback or to be able to ->on_read';
       }
    }
 
@@ -324,15 +332,31 @@ sub on_read_ready
    my $handleclosed = ( $len == 0 );
 
    $self->{readbuff} .= $data if( !$handleclosed );
-   my $callback = $self->{on_read};
-   while( length( $self->{readbuff} ) > 0 || $handleclosed ) {
-      my $again;
+
+   while(1) {
+      my $callback = $self->{current_on_read} || $self->{on_read};
+
+      my $ret;
 
       if( defined $callback ) {
-         $again = $callback->( $self, \$self->{readbuff}, $handleclosed );
+         $ret = $callback->( $self, \$self->{readbuff}, $handleclosed );
       }
       else {
-         $again = $self->on_read( \$self->{readbuff}, $handleclosed );
+         $ret = $self->on_read( \$self->{readbuff}, $handleclosed );
+      }
+
+      my $again;
+
+      if( ref $ret eq "CODE" ) {
+         $self->{current_on_read} = $ret;
+         $again = 1;
+      }
+      elsif( $self->{current_on_read} and !defined $ret ) {
+         undef $self->{current_on_read};
+         $again = 1;
+      }
+      else {
+         $again = $ret && ( length( $self->{readbuff} ) > 0 || $handleclosed );
       }
 
       last if !$again;
@@ -401,8 +425,8 @@ __END__
 
 =head2 A line-based C<on_read()> method
 
-The following C<on_read()> method accepts incoming 'C<\n>'-terminated lines
-and prints them to the program's C<STDOUT> stream.
+The following C<on_read()> method accepts incoming C<\n>-terminated lines and
+prints them to the program's C<STDOUT> stream.
 
  sub on_read
  {
@@ -423,6 +447,56 @@ is ready (i.e. a whole line), and to remove it from the buffer. If no data is
 available then C<0> is returned, to indicate it should not be tried again. If
 a line was successfully extracted, then C<1> is returned, to indicate it
 should try again in case more lines exist in the buffer.
+
+=head2 Dynamic replacement of C<on_read()>
+
+Consider the following protocol (inspired by IMAP), which consists of
+C<\n>-terminated lines that may have an optional data block attached. The
+presence of such a data block, as well as its size, is indicated by the line
+prefix.
+
+ sub on_read
+ {
+    my $self = shift;
+    my ( $buffref, $handleclosed ) = @_;
+
+    if( $$buffref =~ s/^DATA (\d+):(.*)\n// ) {
+       my $length = $1;
+       my $line   = $2;
+
+       return sub {
+          my $self = shift;
+          my ( $buffref, $handleclosed ) = @_;
+
+          return 0 unless length $$buffref >= $length;
+
+          # Take and remove the data from the buffer
+          my $data = substr( $$buffref, 0, $length, "" );
+
+          print "Received a line $line with some data ($data)\n";
+
+          return undef; # Restore the original method
+       }
+    }
+    elsif( $$buffref =~ s/^LINE:(.*)\n// ) {
+       my $line = $1;
+
+       print "Received a line $line with no data\n";
+
+       return 1;
+    }
+    else {
+       print STDERR "Unrecognised input\n";
+       # Handle it somehow
+    }
+ }
+
+In the case where trailing data is supplied, a new temporary C<on_read()>
+callback is provided in a closure. This closure captures the C<$length>
+variable so it knows how much data to expect. It also captures the C<$line>
+variable so it can use it in the event report. When this method has finished
+reading the data, it reports the event, then restores the original method by
+returning C<undef>.
 
 =head1 SEE ALSO
 
