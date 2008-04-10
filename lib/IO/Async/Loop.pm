@@ -197,14 +197,24 @@ sub __notifier_want_writeready
 # Features #
 ############
 
+sub __new_feature
+{
+   my $self = shift;
+   my ( $classname ) = @_;
+
+   ( my $filename = "$classname.pm" ) =~ s{::}{/}g;
+   require $filename;
+
+   return $classname->new( loop => $self );
+}
+
 sub _get_sigproxy
 {
    my $self = shift;
 
    return $self->{sigproxy} if defined $self->{sigproxy};
 
-   require IO::Async::SignalProxy;
-   my $sigproxy = IO::Async::SignalProxy->new();
+   my $sigproxy = $self->__new_feature( "IO::Async::SignalProxy" );
    $self->add( $sigproxy );
 
    return $self->{sigproxy} = $sigproxy;
@@ -279,10 +289,7 @@ sub enable_childmanager
    defined $self->{childmanager} and
       croak "ChildManager already enabled for this loop";
 
-   require IO::Async::ChildManager;
-   my $childmanager = IO::Async::ChildManager->new( loop => $self );
-
-   $self->{childmanager} = $childmanager;
+   $self->{childmanager} = $self->__new_feature( "IO::Async::ChildManager" );
 }
 
 =head2 $loop->disable_childmanager
@@ -419,19 +426,6 @@ sub run_child
    $childmanager->run( %params );
 }
 
-sub __enable_timer
-{
-   my $self = shift;
-
-   defined $self->{timequeue} and
-      croak "Timer already enabled for this loop";
-
-   require IO::Async::TimeQueue;
-   my $timequeue = IO::Async::TimeQueue->new();
-
-   $self->{timequeue} = $timequeue;
-}
-
 # For subclasses to call
 sub _adjust_timeout
 {
@@ -506,9 +500,7 @@ sub enqueue_timer
    my $self = shift;
    my ( %params ) = @_;
 
-   defined $self->{timequeue} or $self->__enable_timer;
-
-   my $timequeue = $self->{timequeue};
+   my $timequeue = $self->{timequeue} ||= $self->__new_feature( "IO::Async::TimeQueue" );
 
    $timequeue->enqueue( %params );
 }
@@ -524,19 +516,9 @@ sub cancel_timer
    my $self = shift;
    my ( $id ) = @_;
 
-   defined $self->{timequeue} or $self->__enable_timer;
-
-   my $timequeue = $self->{timequeue};
+   my $timequeue = $self->{timequeue} ||= $self->__new_feature( "IO::Async::TimeQueue" );
 
    $timequeue->cancel( $id );
-}
-
-sub __new_resolver
-{
-   my $self = shift;
-
-   require IO::Async::Resolver;
-   return IO::Async::Resolver->new( loop => $self );
 }
 
 =head2 $loop->resolve( %params )
@@ -552,17 +534,9 @@ sub resolve
    my $self = shift;
    my ( %params ) = @_;
 
-   my $resolver = ( $self->{resolver} ||= $self->__new_resolver );
+   my $resolver = $self->{resolver} ||= $self->__new_feature( "IO::Async::Resolver" );
 
    $resolver->resolve( %params );
-}
-
-sub __new_connector
-{
-   my $self = shift;
-
-   require IO::Async::Connector;
-   return IO::Async::Connector->new( loop => $self );
 }
 
 =head2 $loop->connect( %params )
@@ -578,7 +552,7 @@ sub connect
    my $self = shift;
    my ( %params ) = @_;
 
-   my $connector = ( $self->{connector} ||= $self->__new_connector );
+   my $connector = $self->{connector} ||= $self->__new_feature( "IO::Async::Connector" );
 
    $connector->connect( %params );
 }
