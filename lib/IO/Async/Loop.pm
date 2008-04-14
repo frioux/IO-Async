@@ -325,7 +325,7 @@ sub watch_child
    my $childmanager = $self->{childmanager} or
       croak "ChildManager not enabled in Loop";
 
-   $childmanager->watch( $kid, $code );
+   $childmanager->watch_child( $kid, $code );
 }
 
 =head2 $pid = $loop->detach_child( %params )
@@ -384,7 +384,7 @@ sub spawn_child
    my $childmanager = $self->{childmanager} or
       croak "ChildManager not enabled in Loop";
 
-   $childmanager->spawn( %params );
+   $childmanager->spawn_child( %params );
 }
 
 =head2 $loop->open_child( %params )
@@ -403,7 +403,7 @@ sub open_child
    my $childmanager = $self->{childmanager} or
       croak "ChildManager not enabled in Loop";
 
-   $childmanager->open( %params );
+   $childmanager->open_child( %params );
 }
 
 =head2 $loop->run_child( %params )
@@ -423,7 +423,7 @@ sub run_child
    my $childmanager = $self->{childmanager} or
       croak "ChildManager not enabled in Loop";
 
-   $childmanager->run( %params );
+   $childmanager->run_child( %params );
 }
 
 # For subclasses to call
