@@ -328,7 +328,7 @@ sub watch_child
    $childmanager->watch( $kid, $code );
 }
 
-=head2 $loop->detach_child( %params )
+=head2 $pid = $loop->detach_child( %params )
 
 This method creates a new child process to run a given code block. For more
 detail, see the C<detach_child()> method on the L<IO::Async::ChildManager>
