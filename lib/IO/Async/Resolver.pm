@@ -24,8 +24,8 @@ C<IO::Async::Resolver> - performing name resolutions asynchronously
 
 This object is used indirectly via an C<IO::Async::Loop>:
 
- use IO::Async::Loop::...;
- my $loop = IO::Async::Loop::...
+ use IO::Async::Loop::IO_Poll;
+ my $loop = IO::Async::Loop::IO_Poll->new();
 
  $loop->enable_childmanager;
 

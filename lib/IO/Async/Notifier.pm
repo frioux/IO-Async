@@ -20,6 +20,9 @@ C<IO::Async::Notifier> - event callbacks for a non-blocking file descriptor
  use IO::Socket::INET;
  use IO::Async::Notifier;
 
+ use IO::Async::Loop::IO_Poll;
+ my $loop = IO::Async::Loop::IO_Poll->new();
+
  my $socket = IO::Socket::INET->new( LocalPort => 1234, Listen => 1 );
 
  my $notifier = IO::Async::Notifer->new(
@@ -31,7 +34,6 @@ C<IO::Async::Notifier> - event callbacks for a non-blocking file descriptor
     },
  );
 
- my $loop = IO::Async::Loop::...
  $loop->add( $notifier );
 
 For most other uses with sockets, pipes or other filehandles that carry a byte
