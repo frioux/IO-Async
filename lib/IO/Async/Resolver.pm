@@ -22,7 +22,7 @@ C<IO::Async::Resolver> - performing name resolutions asynchronously
 
 =head1 SYNOPSIS
 
-Usually this object would constructed indirectly, via an C<IO::Async::Loop>:
+This object is used indirectly via an C<IO::Async::Loop>:
 
  use IO::Async::Loop::...;
  my $loop = IO::Async::Loop::...
@@ -41,8 +41,8 @@ Usually this object would constructed indirectly, via an C<IO::Async::Loop>:
 
 =head1 DESCRIPTION
 
-This module provides a class that allows the system's name resolver functions
-to be used asynchronously. It provides a number of named resolvers, each one
+This module extends an C<IO::Async::Loop> to use the system's name resolver
+functions asynchronously. It provides a number of named resolvers, each one
 providing an asynchronous wrapper around a single resolver function.
 
 Because the system may not provide asynchronous versions of its resolver
@@ -56,33 +56,7 @@ used; see the C<workers> argument to the constructor.
 
 =cut
 
-=head1 CONSTRUCTOR
-
-=cut
-
-=head2 $resolver = IO::Async::Resolver->new( %params )
-
-This function returns a new instance of a C<IO::Async::Resolver> object. The
-C<%params> hash takes the following keys:
-
-=over 8
-
-=item loop => IO::Async::Loop
-
-A reference to an C<IO::Async::Loop> object. This loop must have the child
-manager enabled.
-
-=item workers => INT
-
-Optional integer, specifies the number of workers to create in the
-C<IO::Async::DetachedCode> object.
-
-If not supplied, 1 is used.
-
-=back
-
-=cut
-
+# Internal constructor
 sub new
 {
    my $class = shift;
@@ -122,7 +96,7 @@ sub new
 
 =cut
 
-=head2 $resolver->resolve( %params )
+=head2 $loop->resolve( %params )
 
 Performs a single name resolution operation, as given by the keys in the hash.
 

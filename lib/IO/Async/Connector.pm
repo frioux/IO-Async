@@ -24,7 +24,7 @@ C<IO::Async::Connector> - perform non-blocking socket connections
 
 =head1 SYNOPSIS
 
-Usually this object would be used indirectly via an C<IO::Async::Loop>:
+This object is used indirectly via an C<IO::Async::Loop>:
 
  use Socket qw( SOCK_STREAM );
 
@@ -48,8 +48,8 @@ Usually this object would be used indirectly via an C<IO::Async::Loop>:
 
 =head1 DESCRIPTION
 
-This module provides a class that creates socket connections in a non-blocking
-manner.
+This module extends an C<IO::Async::Loop> to give it the ability to create
+socket connections in a non-blocking manner.
 
 There are two modes of operation. Firstly, a list of addresses can be provided
 which will be tried in turn. Alternatively as a convenience, if a host an
@@ -77,27 +77,7 @@ failure, which may be useful for debugging or logging.
 
 =cut
 
-=head1 CONSTRUCTOR
-
-=cut
-
-=head2 $connector = IO::Async::Connector->new( %params )
-
-This function returns a new instance of a C<IO::Async::Connector> object. The
-C<%params> hash takes the following keys:
-
-=over 8
-
-=item loop => IO::Async::Loop
-
-A reference to an C<IO::Async::Loop> object. This loop must have the child
-manager enabled if name-based connections will be attempted (as opposed to
-simple connections to addresses).
-
-=back
-
-=cut
-
+# Internal constructor
 sub new
 {
    my $class = shift;
@@ -223,7 +203,7 @@ sub _connect_addresses
    return;
 }
 
-=head2 $connector->connect( %params )
+=head2 $loop->connect( %params )
 
 This method performs a non-blocking connection to a given address or set of
 addresses, and invokes a callback when the socket is connected.
