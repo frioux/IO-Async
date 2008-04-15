@@ -52,9 +52,9 @@ This module extends an C<IO::Async::Loop> to give it the ability to create
 socket connections in a non-blocking manner.
 
 There are two modes of operation. Firstly, a list of addresses can be provided
-which will be tried in turn. Alternatively as a convenience, if a host an
+which will be tried in turn. Alternatively as a convenience, if a host and
 service name are provided instead of a list of addresses, these will be
-resolved using the uderlying loop's C<resolve()> method into the list of
+resolved using the underlying loop's C<resolve()> method into the list of
 addresses.
 
 When attempting to connect to any among a list of addresses, there may be
