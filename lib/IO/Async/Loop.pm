@@ -557,6 +557,24 @@ sub connect
    $connector->connect( %params );
 }
 
+=head2 $loop->listen( %params )
+
+This method sets up a listening socket. It uses an internally-stored
+C<IO::Async::Listener> object. For more detail, see the C<listen()> method on
+the L<IO::Async::Listener> class.
+
+=cut
+
+sub listen
+{
+   my $self = shift;
+   my ( %params ) = @_;
+
+   my $listener = $self->{listener} ||= $self->__new_feature( "IO::Async::Listener" );
+
+   $listener->listen( %params );
+}
+
 ###################
 # Looping support #
 ###################
