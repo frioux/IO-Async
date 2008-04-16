@@ -2,10 +2,10 @@
 
 use strict;
 
-use Test::More tests => 6;
+use Test::More tests => 11;
 use Test::Exception;
 
-use POSIX qw( SIGUSR1 );
+use POSIX qw( SIGUSR1 SIGUSR2 SIGTERM );
 
 use IO::Async::Loop::IO_Poll;
 
@@ -14,6 +14,7 @@ my $loop = IO::Async::Loop::IO_Poll->new();
 my $caught = "";
 
 $loop->attach_signal( USR1 => sub { $caught .= "1" } );
+$loop->attach_signal( USR2 => sub { $caught .= "2" } );
 
 my $ready;
 
@@ -40,3 +41,45 @@ kill SIGUSR1, $$;
 $ready = $loop->loop_once( 0.1 );
 is( $ready,  1,    '$ready after double-raise' );
 is( $caught, "11", '$caught after double-raise' );
+
+# Ordering
+
+$caught = "";
+
+kill SIGUSR1, $$;
+kill SIGUSR2, $$;
+
+$ready = $loop->loop_once( 0.1 );
+is( $caught, "12", '$caught after first order test' );
+
+$caught = "";
+
+kill SIGUSR2, $$;
+kill SIGUSR1, $$;
+
+$ready = $loop->loop_once( 0.1 );
+is( $caught, "21", '$caught after second order test' );
+
+# Dynamic attachment
+
+$loop->attach_signal( TERM => sub { $caught .= "T" } );
+
+$caught = "";
+
+kill SIGTERM, $$;
+
+$ready = $loop->loop_once( 0.1 );
+is( $caught, "T", '$caught after dynamic attachment of SIGTERM' );
+
+$loop->detach_signal( "TERM" );
+$SIG{TERM} = "IGNORE";
+
+$caught = "";
+
+kill SIGTERM, $$;
+
+$ready = $loop->loop_once( 0.1 );
+is( $caught, "", '$caught empty after dynamic removal of SIGTERM' );
+
+dies_ok( sub { $loop->detach_signal( "INT" ); },
+         'Detachment of non-attached signal fails' );

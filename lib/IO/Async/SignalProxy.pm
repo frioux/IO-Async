@@ -42,10 +42,7 @@ sub new
    my $class = shift;
    my ( %params ) = @_;
 
-   unless( caller =~ m/^IO::Async::Loop/ ) {
-      warnings::warnif "deprecated", 
-         "Use of IO::Async::SignalProxy outside of IO::Async::Loop is deprecated";
-   }
+   my $loop = delete $params{loop} or croak "Expected a 'loop'";
 
    pipe( my ( $reader, $writer ) ) or croak "Cannot pipe() - $!";
 
@@ -67,6 +64,8 @@ sub new
    $self->{signal_queue} = [];
 
    $self->{sigset_block} = POSIX::SigSet->new();
+
+   $loop->add( $self );
 
    return $self;
 }

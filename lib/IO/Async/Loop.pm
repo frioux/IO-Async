@@ -208,18 +208,6 @@ sub __new_feature
    return $classname->new( loop => $self );
 }
 
-sub _get_sigproxy
-{
-   my $self = shift;
-
-   return $self->{sigproxy} if defined $self->{sigproxy};
-
-   my $sigproxy = $self->__new_feature( "IO::Async::SignalProxy" );
-   $self->add( $sigproxy );
-
-   return $self->{sigproxy} = $sigproxy;
-}
-
 =head2 $loop->attach_signal( $signal, $code )
 
 This method adds a new signal handler to watch the given signal.
@@ -245,7 +233,7 @@ sub attach_signal
    my $self = shift;
    my ( $signal, $code ) = @_;
 
-   my $sigproxy = $self->_get_sigproxy;
+   my $sigproxy = $self->{sigproxy} ||= $self->__new_feature( "IO::Async::SignalProxy" );
    $sigproxy->attach( $signal, $code );
 }
 
@@ -268,7 +256,7 @@ sub detach_signal
    my $self = shift;
    my ( $signal ) = @_;
 
-   my $sigproxy = $self->_get_sigproxy;
+   my $sigproxy = $self->{sigproxy} ||= $self->__new_feature( "IO::Async::SignalProxy" );
    $sigproxy->detach( $signal );
 
    # TODO: Consider "refcount" signals and cleanup if zero. How do we know if
