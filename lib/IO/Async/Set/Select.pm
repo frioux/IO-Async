@@ -9,10 +9,6 @@ use strict;
 
 our $VERSION = '0.10';
 
-use base qw( IO::Async::Loop::Select IO::Async::Set );
-
-use warnings qw();
-
 =head1 NAME
 
 C<IO::Async::Set::Select> - backward-compatibility wrapper around
@@ -20,9 +16,8 @@ C<IO::Async::Loop::Select>
 
 =head1 SYNOPSIS
 
-This class should not be used in new code, and is provided for backward
-compatibility for older applications that still use it. It has been renamed
-to C<IO::Async::Loop::Select>. Any application using this class should simply
+This class should not be used in new code. It has been renamed to
+C<IO::Async::Loop::Select>. Any application using this class should simply
 change
 
  use IO::Async::Set::Select;
@@ -39,29 +34,7 @@ The behaviour has not otherwise changed.
 
 =cut
 
-=head1 CONSTRUCTOR
-
-=cut
-
-=head2 $set = IO::Async::Set::Select->new( %params )
-
-This function wraps a call to C<< IO::Async::Set::Select->new() >>.
-
-=cut
-
-sub new
-{
-   my $class = shift;
-   my ( %params ) = @_;
-
-   warnings::warnif 'deprecated',
-      "Use of IO::Async::Set::Select is deprecated; use IO::Async::Loop::Select instead";
-
-   return $class->SUPER::new( %params );
-}
-
-# Keep perl happy; keep Britain tidy
-1;
+die "IO::Async::Set::Select is now deprecated. Please use IO::Async::Loop::Select instead\n";
 
 __END__
 
