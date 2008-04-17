@@ -9,7 +9,7 @@ use strict;
 
 our $VERSION = '0.13';
 
-use Socket::GetAddrInfo qw( getaddrinfo getnameinfo );
+use Socket::GetAddrInfo qw( :Socket6api getaddrinfo getnameinfo );
 
 use Carp;
 

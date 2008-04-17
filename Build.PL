@@ -9,7 +9,7 @@ my $build = Module::Build->new
    requires => {
                  'Heap'                => 0,
                  'IO::Poll'            => 0,
-                 'Socket::GetAddrInfo' => 0,
+                 'Socket::GetAddrInfo' => '0.08',
                  'Storable'            => 0,
                },
    build_requires => {

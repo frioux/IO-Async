@@ -7,7 +7,7 @@ use IO::Async::Test;
 use Test::More tests => 5;
 use Test::Exception;
 
-use Socket::GetAddrInfo qw( getaddrinfo );
+use Socket::GetAddrInfo qw( :Socket6api getaddrinfo );
 
 use IO::Async::Loop::IO_Poll;
 

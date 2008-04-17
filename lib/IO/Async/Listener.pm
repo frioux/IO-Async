@@ -13,7 +13,7 @@ use IO::Async::Notifier;
 
 use POSIX qw( EAGAIN );
 use IO::Socket; # For the actual sockets that are created
-use Socket::GetAddrInfo qw( AI_PASSIVE );
+use Socket::GetAddrInfo qw( :Socket6api AI_PASSIVE );
 
 use Carp;
 
