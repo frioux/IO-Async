@@ -402,6 +402,10 @@ The file descriptor will not be closed; it will be left as-is.
 
 =back
 
+A non-reference value may be passed as a shortcut, where it would contain the
+name of the operation with no arguments (i.e. for the C<close> and C<keep>
+operations).
+
 =item fdI<n> => IO
 
 A shortcut for the C<dup> case given above.
@@ -450,7 +454,7 @@ sub _check_setup_and_canonicise
          my $ref = ref $value;
 
          if( !$ref ) {
-            croak "Operation for file descriptor $fd must be a reference";
+            $value = [ $value ];
          }
          elsif( $ref eq "ARRAY" ) {
             # Already OK

@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 87;
+use Test::More tests => 96;
 use Test::Exception;
 
 use File::Temp qw( tmpnam );
@@ -131,6 +131,20 @@ my $ret;
 
    is( $ret, 4,         '$pipe_r->read() after keep pipe open' );
    is( $buffer, 'test', '$buffer after keep pipe open' );
+
+   TEST "pipe keep shortcut",
+      setup => [ "fd$pipe_w_fileno" => 'keep' ],
+      code  => sub { $pipe_w->autoflush(1); $pipe_w->print( "test" ) },
+
+      exitstatus => 1,
+      dollarat   => '';
+
+   undef $buffer;
+   $ret = read_timeout( $pipe_r, $buffer, 4, 0.1 );
+
+   is( $ret, 4,         '$pipe_r->read() after keep pipe open' );
+   is( $buffer, 'test', '$buffer after keep pipe open' );
+
 
    TEST "pipe dup to stdout",
       setup => [ stdout => [ 'dup', $pipe_w ] ],
@@ -264,6 +278,14 @@ my $ret;
 
 TEST "stdout close",
    setup => [ stdout => [ 'close' ] ],
+   code => sub { print "test"; },
+
+   exitstatus => 255,
+   dollarbang => EBADF,
+   dollarat   => '';
+
+TEST "stdout close shortcut",
+   setup => [ stdout => 'close' ],
    code => sub { print "test"; },
 
    exitstatus => 255,
