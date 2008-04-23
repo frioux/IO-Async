@@ -250,19 +250,24 @@ sub _detach_child
 
    my $loop = $inner->{loop};
 
-   my $kid = $loop->detach_child(
+   my $fdread  = "fd" . fileno( $childread ); # TODO: Make this neater
+   my $fdwrite = "fd" . fileno( $childwrite );
+
+   my $kid = $loop->spawn_child(
       code => sub { 
-         foreach( 0 .. IO::Async::ChildManager::OPEN_MAX_FD() ) {
-            next if $_ == 2;
-            next if $_ == fileno $childread;
-            next if $_ == fileno $childwrite;
-
-            POSIX::close( $_ );
-         }
-
          $self->_child_loop( $childread, $childwrite, $inner ),
       },
-      on_exit => sub { _child_error( $inner, 'exit', @_ ) },
+      setup => [
+         stdin  => 'close',
+         stdout => 'close',
+         # stderr is kept by default
+         $fdread  => 'keep',
+         $fdwrite => 'keep',
+      ],
+      on_exit => sub { 
+         my ( $pid, $exitcode, undef, undef ) = @_;
+         _child_error( $inner, 'exit', $pid, $exitcode );
+      },
    );
 
    $inner->{kid} = $kid;
