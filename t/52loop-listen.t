@@ -24,6 +24,7 @@ $loop->listen(
    family   => AF_INET,
    socktype => SOCK_STREAM,
    service  => 0, # Ask the kernel to allocate a port for us
+   host     => "localhost",
 
    on_resolve_error => sub { die "Test died early - resolve error $_[0]\n"; },
 
@@ -44,7 +45,7 @@ ok( defined $listenaddr, '$listensock has address' );
 
 my ( $listenport, $listen_inaddr ) = unpack_sockaddr_in( $listenaddr );
 
-is( $listen_inaddr, "\0\0\0\0", '$listenaddr is INADDR_ANY' );
+is( $listen_inaddr, "\x7f\0\0\1", '$listenaddr is INADDR_LOOPBACK' );
 
 my $clientsock = IO::Socket->new(
    Domain => AF_INET,
