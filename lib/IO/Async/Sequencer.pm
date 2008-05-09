@@ -163,6 +163,10 @@ C<incoming_request()> or C<incoming_response()> methods when appropriate,
 after having parsed the incoming stream. See the SYNOPSIS or EXAMPLES sections
 for more detail.
 
+Each request can optionally provide its own handler for reading its response,
+using the C<on_read> key to the C<request()> method. The handler provided to
+the constructor is only used if this is not provided.
+
 =item on_request => CODE
 
 A callback that is invoked when the C<incoming_request()> method is called
@@ -202,7 +206,31 @@ sub new
       ( defined $params{read_handle} and defined $params{write_handle} ) or
       croak "Sequencer requires both a reading and a writing handle"; # TODO: this message sucks
 
-   my $self = $class->SUPER::new( %params );
+   my $on_read = delete $params{on_read};
+   ref $on_read eq "CODE" or croak "Expected 'on_read' as a CODE reference";
+
+   my $self = $class->SUPER::new(
+      %params,
+
+      on_read => sub {
+         my ( $self, $buffref, $closed ) = @_;
+
+         my $front = $self->{client_queue}[0];
+
+         if( $front and $front->[1] ) {
+            # Delegate to the one provided by the request
+            my $delegated_on_read = $front->[1];
+            shift @{ $self->{client_queue} };
+            return $delegated_on_read;
+         }
+
+         # Perhaps we got switched back after delegated handler returned undef
+         return 0 unless length $$buffref;
+
+         # No delegation to perform, instead just call the provided one
+         goto &$on_read;
+      },
+   );
 
    $self->{marshall_request}  = $params{marshall_request};
    $self->{marshall_response} = $params{marshall_response};
@@ -213,7 +241,7 @@ sub new
    $self->{server_queue} = []; # element is: $streamed_response
 
    # Queue to use in client mode - stores pending on_response handlers to be called
-   $self->{client_queue} = []; # element is: $on_response
+   $self->{client_queue} = []; # element is: [ $on_response, $delegated_on_read ]
 
    return $self;
 }
@@ -272,7 +300,10 @@ sub incoming_response
    my $self = shift;
    my ( $response ) = @_;
 
-   my $on_response = shift @{ $self->{client_queue} };
+   my $cq = shift @{ $self->{client_queue} };
+   my $on_response = $cq->[0];
+
+   defined $on_response or croak "Cannot 'incoming_response' without a stored 'on_response' handler";
 
    $on_response->( $response );
 }
@@ -287,7 +318,10 @@ subclass of this class.
 =head2 $sequencer->request( %params )
 
 Called in client mode, this method sends a request upstream, and awaits a
-response to it.
+response to it. Can be called in one of two ways; either giving a specific
+C<on_read> handler to be used when the response to this request is expected,
+or by providing an C<on_response> handler for when the default handler invokes
+C<incoming_response()>.
 
 The C<%params> hash takes the following arguments:
 
@@ -304,7 +338,23 @@ server. It will be invoked as
 
  $on_response->( $response );
 
+=item on_read => CODE
+
+A callback to use to parse the incoming stream while the response to this
+particular request is expected. It will be invoked the same as for
+C<IO::Async::Stream>; i.e.
+
+ $on_read->( $self, $buffref, $closed )
+
+This handler should return C<undef> when it has finished handling the
+response, so that the next one queued can be invoked (or the default if none
+exists). It MUST NOT call C<incoming_response()>.
+
 =back
+
+If the C<on_read> key is used, it is intended that a specific subclass that
+implements a specific protocol would construct the callback code in a method
+it provides, intended for the using code to call.
 
 =cut
 
@@ -318,9 +368,18 @@ sub request
    defined( $self->{marshall_request} ) or
       croak "Cannot send request without a 'marshall_request' callback";
 
+   my $on_response = $params{on_response};
+   my $on_read     = $params{on_read};
+
+   defined $on_response and defined $on_read and
+      croak "Cannot pass both 'on_response' and 'on_read'";
+
+   defined $on_response or defined $on_read or
+      croak "Need one of 'on_response' or 'on_read'";
+
    $self->write( $self->{marshall_request}->( $self, $request ) );
 
-   push @{ $self->{client_queue} }, $params{on_response};
+   push @{ $self->{client_queue} }, [ $on_response, $on_read ];
 }
 
 =head2 $sequencer->respond( $token, $response )
@@ -405,6 +464,46 @@ would perform much more work than this, and only call C<< $self->respond() >>
 in an eventual continuation at the end of performing its work. The C<$token>
 is used to identify the request that the response responds to, so that it can
 be sent in the correct order.
+
+=head2 Per-request C<on_read> handler
+
+If an C<on_read> handler is provided to the C<request()> method in client
+mode, then that handler will be used when the response to that request is
+expected to arrive. This will be used instead of the C<incoming_response()>
+method and the C<on_response> handler. If every request provides its own
+handler, then the one in the constructor would only be used for unrequested
+input from the server - perhaps to generate an error condition of some kind.
+
+ my $sequencer = IO::Async::Sequencer->new(
+    ...
+
+    on_read => sub {
+       my ( $self, $buffref, $closed ) = @_;
+
+       print STDERR "Spurious input: $$buffref\n";
+       $self->close;
+       return 0;
+    },
+
+    marshall_request => sub {
+       my ( $self, $request ) = @_;
+       return "GET $request" . $CRLF;
+    },
+ );
+
+ $sequencer->request(
+    request => "some key",
+    on_read => sub {
+       my ( $self, $buffref, $closed ) = @_;
+
+       return 0 unless $$buffref =~ s/^(.*)$CRLF//;
+       my $line = $1;
+
+       print STDERR "Got response: $1\n" if $line =~ m/^HAVE (.*)$/;
+
+       return undef; # To indicate that this response is finished
+    }
+ );
 
 =head1 TODO
 

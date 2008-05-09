@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 7;
+use Test::More tests => 9;
 
 use IO::Socket::UNIX;
 
@@ -90,3 +90,48 @@ wait_for { defined $response[0] and defined $response[1] };
 
 is( $response[0], "0", 'Response to [0] of ordered pair' );
 is( $response[1], "1", 'Response to [1] of ordered pair' );
+
+$loop->remove( $sequencer );
+
+# Now lets try passing on_read to each call instead
+
+$sequencer = IO::Async::Sequencer->new(
+   handle => $S1,
+
+   on_read => sub {
+      # Since we expect the requests always to provide one, this ought not be
+      # invoked
+      die "Test died early";
+   },
+
+   marshall_request => sub {
+      my ( $self, $req ) = @_;
+      return "GET $req\n";
+   },
+);
+
+$loop->add( $sequencer );
+
+my $line;
+
+$sequencer->request(
+   request => "hello",
+   on_read => sub {
+      my ( $self, $buffref, $closed ) = @_;
+      return 0 unless $$buffref =~ s/^(.*)\n//;
+      $line = $1;
+      return undef;
+   },
+);
+
+$serverbuffer = "";
+
+wait_for_stream { $serverbuffer =~ m/\n/ } $S2 => $serverbuffer;
+
+is( $serverbuffer, "GET hello\n", 'Server buffer after on_read-provided request' );
+
+$S2->write( "Your thing here\n" );
+
+wait_for { defined $line };
+
+is( $line, "Your thing here", 'Client response after reply to on_read' );
