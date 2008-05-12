@@ -7,7 +7,7 @@ package IO::Async::Connector;
 
 use strict;
 
-our $VERSION = '0.14_1';
+our $VERSION = '0.14_2';
 
 use IO::Async::Notifier;
 

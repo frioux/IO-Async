@@ -7,7 +7,7 @@ package IO::Async::Resolver;
 
 use strict;
 
-our $VERSION = '0.14_1';
+our $VERSION = '0.14_2';
 
 use Socket::GetAddrInfo qw( :Socket6api getaddrinfo getnameinfo );
 

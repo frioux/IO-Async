@@ -7,7 +7,7 @@ package IO::Async::Loop;
 
 use strict;
 
-our $VERSION = '0.14_1';
+our $VERSION = '0.14_2';
 
 use Carp;
 
