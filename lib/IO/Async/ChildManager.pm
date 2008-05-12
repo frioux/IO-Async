@@ -19,7 +19,10 @@ use Fcntl qw( F_GETFL F_SETFL FD_CLOEXEC );
 use POSIX qw( WNOHANG _exit sysconf _SC_OPEN_MAX dup2 );
 
 use constant LENGTH_OF_I => length( pack( "I", 0 ) );
-use constant OPEN_MAX_FD => sysconf(_SC_OPEN_MAX);
+
+# Win32 [and maybe other places] don't have an _SC_OPEN_MAX. About the best we
+# can do really is just make up some largeish number and hope for the best.
+use constant OPEN_MAX_FD => eval { sysconf(_SC_OPEN_MAX) } || 1024;
 
 =head1 NAME
 
