@@ -128,6 +128,12 @@ is a subclass that overrides the method. I.e. if only a C<read_handle> is
 given, then C<on_write_ready> can be absent. If C<handle> is used as a
 shortcut, then both read and write-ready callbacks or methods are required.
 
+If no IO handles are provided at construction time, the object is still
+created but will not yet be fully-functional as a Notifier. IO handles can
+be assigned later using the C<set_handle> or C<set_handles> methods. This may
+be useful when constructing an object to represent a network connection,
+before the C<connect()> has actually been performed yet.
+
 =cut
 
 sub new
@@ -166,9 +172,6 @@ sub new
       $read_handle  = $handle;
       $write_handle = $handle;
    }
-   else {
-      croak "Expected either 'handle' or 'read_handle' and 'write_handle' keys";
-   }
 
    if( defined $read_handle ) {
       if( !$params{on_read_ready} and $class->can( 'on_read_ready' ) == \&on_read_ready ) {
@@ -205,6 +208,71 @@ sub new
 =head1 METHODS
 
 =cut
+
+=head2 $notifier->set_handles( %params )
+
+This method stores new reading or writing handles in the object, as if they
+had been passed as the C<read_handle> or C<write_handle> arguments to the
+constructor. The C<%params> hash takes the following keys:
+
+=over 8
+
+=item read_handle => IO
+
+A new IO handle for reading, or C<undef> to remove the old one.
+
+=item write_handle => IO
+
+A new IO handle for writing, or C<undef> to remove the old one.
+
+=back
+
+=cut
+
+sub set_handles
+{
+   my $self = shift;
+   my %params = @_;
+
+   if( defined $params{read_handle} ) {
+      unless( defined eval { $params{read_handle}->fileno } ) {
+         croak 'Expected that read_handle can fileno()';
+      }
+   }
+
+   if( defined $params{write_handle} ) {
+      unless( defined eval { $params{write_handle}->fileno } ) {
+         croak 'Expected that write_handle can fileno()';
+      }
+   }
+
+   if( exists $params{read_handle} ) {
+      $self->{read_handle} = $params{read_handle};
+   }
+
+   if( exists $params{write_handle} ) {
+      $self->{write_handle} = $params{write_handle};
+   }
+}
+
+=head2 $notifier->set_handle( $handle )
+
+Shortcut for
+
+ $notifier->set_handles( read_handle => $handle, write_handle => $handle )
+
+=cut
+
+sub set_handle
+{
+   my $self = shift;
+   my ( $handle ) = @_;
+
+   $self->set_handles(
+      read_handle  => $handle,
+      write_handle => $handle,
+   );
+}
 
 =head2 $notifier->close
 

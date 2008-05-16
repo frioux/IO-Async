@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 29;
+use Test::More tests => 34;
 use Test::Exception;
 
 use IO::Socket::UNIX;
@@ -120,3 +120,24 @@ $ioan = IO::Async::Notifier->new(
 );
 
 ok( defined $ioan, 'defined $ioan for only write_handle/on_write_ready' );
+
+### Late-binding of handle
+
+$ioan = IO::Async::Notifier->new(
+   want_writeready => 0,
+   on_read_ready  => sub { $readready  = 1 },
+   on_write_ready => sub { $writeready = 1 },
+);
+
+ok( defined $ioan, '$ioan defined' );
+
+ok( !defined $ioan->read_handle,  '->read_handle not defined' );
+ok( !defined $ioan->write_handle, '->write_handle not defined' );
+
+( $S1, $S2 ) = IO::Socket::UNIX->socketpair( AF_UNIX, SOCK_STREAM, PF_UNSPEC ) or
+   die "Cannot create socket pair - $!";
+
+$ioan->set_handle( $S1 );
+
+is( $ioan->read_handle,  $S1, '->read_handle now S1' );
+is( $ioan->write_handle, $S1, '->write_handle now S1' );
