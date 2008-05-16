@@ -248,6 +248,9 @@ sub set_handles
 
    if( exists $params{read_handle} ) {
       $self->{read_handle} = $params{read_handle};
+
+      # Register interest in readability with the underlying loop
+      $self->want_readready( defined $self->{read_handle} );
    }
 
    if( exists $params{write_handle} ) {

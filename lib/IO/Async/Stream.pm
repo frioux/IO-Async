@@ -230,6 +230,10 @@ reference is passed, or that the object provides an C<on_read> method. It is
 optional whether either is true for C<on_outgoing_empty>; if neither is
 supplied then no action will be taken when the writing buffer becomes empty.
 
+An C<on_read> callback may be supplied even if no read handle is yet given, to
+be used when a read handle is eventually provided by the C<set_handles>
+method.
+
 =cut
 
 sub new
@@ -239,16 +243,14 @@ sub new
 
    my $self = $class->SUPER::new( %params );
 
-   if( $params{handle} or $params{read_handle} ) {
-      if( $params{on_read} ) {
-         $self->{on_read} = $params{on_read};
-      }
-      elsif( $self->can( 'on_read' ) ) {
-         # That's fine
-      }
-      else {
-         croak 'Expected either an on_read callback or to be able to ->on_read';
-      }
+   if( $params{on_read} ) {
+      $self->{on_read} = $params{on_read};
+   }
+   elsif( $self->can( 'on_read' ) ) {
+      # That's fine
+   }
+   else {
+      croak 'Expected either an on_read callback or to be able to ->on_read' if $params{handle} or $params{read_handle};
    }
 
    for (qw( on_outgoing_empty on_read_error on_write_error )) {
@@ -295,6 +297,7 @@ sub write
    my ( $data ) = @_;
 
    carp "Cannot write data to a Stream that is closing", return if $self->{closing};
+   croak "Cannot write data to a Stream with no write_handle" unless $self->write_handle;
 
    $self->{writebuff} .= $data;
 
