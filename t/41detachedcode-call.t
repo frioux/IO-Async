@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 37;
+use Test::More tests => 38;
 use Test::Exception;
 
 use File::Temp qw( tempdir );
@@ -348,3 +348,24 @@ wait_for { keys %ret == 3 };
 is_deeply( \%ret, { 1 => 1, 2 => 2, 3 => 3 }, 'ret keys after parallel run' );
 
 is( scalar $code->workers, 3, '$code->workers is still 3' );
+
+$code = $loop->detach_code(
+   code => sub {
+      return $ENV{$_[0]};
+   },
+
+   setup => [
+      env => { FOO => "Here is a random string" },
+   ],
+);
+
+$code->call(
+   args => [ "FOO" ],
+   on_return => sub { $result = shift },
+   on_error  => sub { die "Test failed early - @_" },
+);
+
+undef $result;
+wait_for { defined $result };
+
+is( $result, "Here is a random string", '$result after call with modified ENV' );
