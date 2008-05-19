@@ -1,5 +1,29 @@
 Revision history for IO-Async
 
+0.14    REMOVALS:
+         * IO::Async::Set subclasses and IO::Async::Buffer are now completely
+           deprecated. Any attempt to use them will fail immediately.
+
+        ADDITIONS:
+         * 'keep' ChildManager operation
+         * IO::Async::Test::wait_for_stream()
+         * Loop->listen()
+         * IO::Async::Sequencer class
+
+        CHANGES:
+         * Support dynamic swapping of temporary 'on_read' handlers in Stream
+         * Now requires Socket::GetAddrInfo >= 0.08
+         * Further shortcuts in ChildManager setup keys - IO references and
+           simple string operation names
+         * Support handle-less IO::Async::Notifiers that have IO handles added
+           to them later
+         * Allow 'setup' key to Loop->detach_code()
+         * Various documentation updates
+
+        BUGFIXES:
+         * Allow the same filehandle to be 'dup'ed more than once in
+           ChildManager
+
 0.13    CHANGES:
          * Flush all awaiting data from Stream when it becomes writeready
          * Supply a real IO::Async::Test module to allow testing in 3rd party
