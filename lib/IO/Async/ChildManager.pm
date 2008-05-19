@@ -409,6 +409,14 @@ A non-reference value may be passed as a shortcut, where it would contain the
 name of the operation with no arguments (i.e. for the C<close> and C<keep>
 operations).
 
+=item IO => ARRAY
+
+Shortcut for passing C<fdI<n>>, where I<n> is the fileno of the IO
+reference. In this case, the key must be a reference that implements the
+C<fileno> method. This is mostly useful for
+
+ $handle => 'keep'
+
 =item fdI<n> => IO
 
 A shortcut for the C<dup> case given above.
@@ -451,6 +459,9 @@ sub _check_setup_and_canonicise
       $key eq "stdin"  and $key = "fd0";
       $key eq "stdout" and $key = "fd1";
       $key eq "stderr" and $key = "fd2";
+
+      # Rewrite other filehandles
+      ref $key and eval { $key->fileno; 1 } and $key = "fd" . $key->fileno;
 
       if( $key =~ m/^fd(\d+)$/ ) {
          my $fd = $1;
