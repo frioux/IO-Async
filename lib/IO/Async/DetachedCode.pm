@@ -250,9 +250,6 @@ sub _detach_child
 
    my $loop = $inner->{loop};
 
-   my $fdread  = "fd" . fileno( $childread ); # TODO: Make this neater
-   my $fdwrite = "fd" . fileno( $childwrite );
-
    my $kid = $loop->spawn_child(
       code => sub { 
          $self->_child_loop( $childread, $childwrite, $inner ),
@@ -261,8 +258,8 @@ sub _detach_child
          stdin  => 'close',
          stdout => 'close',
          # stderr is kept by default
-         $fdread  => 'keep',
-         $fdwrite => 'keep',
+         $childread  => 'keep',
+         $childwrite => 'keep',
       ],
       on_exit => sub { 
          my ( $pid, $exitcode, undef, undef ) = @_;
