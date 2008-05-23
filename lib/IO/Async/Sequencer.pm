@@ -202,9 +202,10 @@ sub new
    my $class = shift;
    my %params = @_;
 
-   defined $params{handle} or
-      ( defined $params{read_handle} and defined $params{write_handle} ) or
+   if(  defined $params{read_handle} and !defined $params{write_handle} or
+       !defined $params{read_handle} and  defined $params{write_handle} ) {
       croak "Sequencer requires both a reading and a writing handle"; # TODO: this message sucks
+   }
 
    my $on_read = delete $params{on_read};
    ref $on_read eq "CODE" or croak "Expected 'on_read' as a CODE reference";
