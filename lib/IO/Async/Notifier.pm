@@ -288,7 +288,7 @@ sub close
 {
    my $self = shift;
 
-   $self->{on_closed}->( $self ) if $self->{on_closed};
+   return unless defined $self->read_handle or defined $self->write_handle;
 
    if( my $loop = $self->{loop} ) {
       $loop->remove( $self );
@@ -299,6 +299,8 @@ sub close
 
    my $write_handle = delete $self->{write_handle};
    $write_handle->close if defined $write_handle and ( not defined $read_handle or $write_handle != $read_handle );
+
+   $self->{on_closed}->( $self ) if $self->{on_closed};
 }
 
 =head2 $handle = $notifier->read_handle
