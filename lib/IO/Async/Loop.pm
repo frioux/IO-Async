@@ -436,7 +436,7 @@ sub _adjust_timeout
    if( $timer_delay < 0 ) {
       $$timeref = 0;
    }
-   elsif( $timer_delay < \$timeref ) {
+   elsif( !defined $$timeref or $timer_delay < $$timeref ) {
       $$timeref = $timer_delay;
    }
 }
