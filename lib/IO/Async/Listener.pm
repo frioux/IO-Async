@@ -191,6 +191,11 @@ arguments that were passed to it, and the error generated. I.e.
 Optional. The queue size to pass to the C<listen()> calls. If not supplied,
 then 3 will be given instead.
 
+=item reuseaddr => BOOL
+
+Optional. If true or not supplied then the C<SO_REUSEADDR> socket option will
+be set. To prevent this, pass a false value such as 0.
+
 =back
 
 If more than one address is provided or resolved, then a separate listening
@@ -222,6 +227,9 @@ sub listen
    }
 
    if( my $addrlist = $params{addrs} ) {
+      my $reuseaddr = 1;
+      $reuseaddr = 0 if defined $params{reuseaddr} and not $params{reuseaddr};
+
       foreach my $addr ( @$addrlist ) {
          my ( $family, $socktype, $proto, $address ) = @$addr;
 
@@ -230,6 +238,13 @@ sub listen
          unless( $sock->socket( $family, $socktype, $proto ) ) {
             $on_error->( "socket", $family, $socktype, $proto, $! );
             next;
+         }
+
+         if( $reuseaddr ) {
+            unless( $sock->sockopt( SO_REUSEADDR, 1 ) ) {
+               $on_error->( "sockopt", $sock, SO_REUSEADDR, 1 );
+               next;
+            }
          }
 
          unless( $sock->bind( $address ) ) {
