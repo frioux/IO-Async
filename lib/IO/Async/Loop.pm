@@ -205,6 +205,12 @@ sub __new_feature
    ( my $filename = "$classname.pm" ) =~ s{::}{/}g;
    require $filename;
 
+   # These features aren't supposed to be "user visible", so if methods called
+   # on it carp or croak, the shortmess line ought to skip IO::Async::Loop and
+   # go on report its caller. To make this work, add the feature class to our
+   # @CARP_NOT list.
+   push our(@CARP_NOT), $classname;
+
    return $classname->new( loop => $self );
 }
 
