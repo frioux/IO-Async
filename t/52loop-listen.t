@@ -4,7 +4,8 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 7;
+use Test::More tests => 10;
+use Test::Exception;
 
 use IO::Socket::INET;
 
@@ -17,8 +18,52 @@ $loop->enable_childmanager;
 
 testing_loop( $loop );
 
+# pipes aren't sockets, so definitely we can't listen() on them
+pipe( my ( $P1, $P2 ) ) or die "Cannot pipe() - $!";
+
+dies_ok( sub {
+      $loop->listen(
+         handle => $P1,
+         on_accept => sub { die "Test died early - accepted connection on a pipe"; },
+      );
+   }, 'Listening on a non-socket handle fails' );
+
+my $S1 = IO::Socket::INET->new( LocalPort => 0 ) or die "Cannot socket() - $!";
+
+dies_ok( sub {
+      $loop->listen(
+         handle => $S1,
+         on_accept => sub { die "Test died early - accepted connection on non-listening socket"; },
+      );
+   }, 'Listening on a non-listening socket fails' );
+
 my $listensock;
+
+$listensock = IO::Socket::INET->new( Type => SOCK_STREAM, Listen => 1 )
+   or die "Cannot socket() - $!";
+
 my $newclient;
+
+$loop->listen(
+   handle => $listensock,
+
+   on_accept => sub { $newclient = $_[0]; },
+);
+
+my $clientsock = IO::Socket::INET->new( Type => SOCK_STREAM )
+   or die "Cannot socket() - $!";
+
+$clientsock->connect( $listensock->sockname ) or die "Cannot connect() - $!";
+
+ok( defined $clientsock->peername, '$clientsock is connected' );
+
+wait_for { defined $newclient };
+
+is( $newclient->peername, $clientsock->sockname, '$newclient peer is correct' );
+
+undef $listensock;
+undef $clientsock;
+undef $newclient;
 
 $loop->listen(
    family   => AF_INET,
@@ -47,14 +92,10 @@ my ( $listenport, $listen_inaddr ) = unpack_sockaddr_in( $listenaddr );
 
 is( $listen_inaddr, "\x7f\0\0\1", '$listenaddr is INADDR_LOOPBACK' );
 
-my $clientsock = IO::Socket->new(
-   Domain => AF_INET,
-   Type  => SOCK_STREAM,
-) or die "Cannot socket() - $!";
+$clientsock = IO::Socket::INET->new( Type => SOCK_STREAM )
+   or die "Cannot socket() - $!";
 
 $clientsock->connect( $listenaddr ) or die "Cannot connect() - $!";
-
-ok( defined $clientsock->peername, '$clientsock is connected' );
 
 is( (unpack_sockaddr_in( $clientsock->peername ))[0], $listenport, '$clientsock on the correct port' );
 

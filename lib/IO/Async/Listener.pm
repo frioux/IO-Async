@@ -95,7 +95,8 @@ sub new
 This method sets up a listening socket per address it is given, and will
 invoke a callback each time a new connection is accepted on a socket.
 Addresses may be given directly, or they may be looked up using the
-system's name resolver.
+system's name resolver. As a convenience, an existing listening socket
+can be passed directly instead.
 
 In plain address mode, the C<%params> hash takes the following keys:
 
@@ -155,6 +156,17 @@ invoked in the same way as the C<on_error> callback for the C<resolve> method.
 
 =back
 
+To pass an existing socket handle, the C<%params> hash takes the following
+keys:
+
+=over 8
+
+=item handle => IO
+
+The IO handle containing an existing listen-mode socket.
+
+=back
+
 In either case, the following keys are also taken:
 
 =over 8
@@ -211,6 +223,23 @@ sub listen
    my $on_accept = $params{on_accept};
    ref $on_accept eq "CODE" or croak "Expected 'on_accept' as CODE reference";
 
+   # Shortcut
+   if( $params{addr} and not $params{addrs} ) {
+      $params{addrs} = [ delete $params{addr} ];
+   }
+
+   if( my $handle = $params{handle} ) {
+      defined eval { $handle->sockname } or croak "IO handle $handle does not have a sockname";
+
+      # So now we know it's at least some kind of socket. Is it listening?
+      my $acceptconn = $handle->sockopt( SO_ACCEPTCONN );
+      defined $acceptconn or croak "Cannot getsockopt(SO_ACCEPTCONN) - $!";
+      $acceptconn or croak "Socket is not accepting connections";
+
+      $self->_listen_sock( $handle, $on_accept );
+      return;
+   }
+
    my $on_listen = $params{on_listen}; # optional
    !defined $on_listen or ref $on_listen eq "CODE" or croak "Expected 'on_listen' to be a CODE reference";
 
@@ -220,11 +249,6 @@ sub listen
    my $queuesize = $params{queuesize} || 3;
 
    my $loop = $self->{loop};
-
-   # Shortcut
-   if( $params{addr} and not $params{addrs} ) {
-      $params{addrs} = [ delete $params{addr} ];
-   }
 
    if( my $addrlist = $params{addrs} ) {
       my $reuseaddr = 1;
@@ -259,18 +283,7 @@ sub listen
 
          $on_listen->( $sock ) if defined $on_listen;
 
-         my $notifier = IO::Async::Notifier->new(
-            read_handle => $sock,
-            on_read_ready => sub {
-               my $newclient = $sock->accept();
-               defined $newclient or $! == EAGAIN or die "Cannot accept - $!";
-
-               $on_accept->( $newclient );
-               # TODO: Consider what it might return
-            },
-         );
-
-         $loop->add( $notifier );
+         $self->_listen_sock( $sock, $on_accept );
       }
    }
 
@@ -307,6 +320,27 @@ sub listen
    else {
       croak "Expected either 'service' or 'addrs' or 'addr' arguments";
    }
+}
+
+sub _listen_sock
+{
+   my $self = shift;
+   my ( $sock, $on_accept ) = @_;
+
+   my $loop = $self->{loop};
+
+   my $notifier = IO::Async::Notifier->new(
+      read_handle => $sock,
+      on_read_ready => sub {
+         my $newclient = $sock->accept();
+         defined $newclient or $! == EAGAIN or die "Cannot accept - $!";
+
+         $on_accept->( $newclient );
+         # TODO: Consider what it might return
+      },
+   );
+
+   $loop->add( $notifier );
 }
 
 # Keep perl happy; keep Britain tidy
