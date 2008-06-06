@@ -10,6 +10,7 @@ use strict;
 our $VERSION = '0.14';
 
 use Carp;
+
 use Heap::Fibonacci;
 
 use IO::Async::TimeQueue::Elem;
