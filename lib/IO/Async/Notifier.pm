@@ -291,7 +291,10 @@ sub close
 
    return unless defined $self->read_handle or defined $self->write_handle;
 
-   if( my $loop = $self->{loop} ) {
+   if( my $parent = $self->{parent} ) {
+      $parent->remove_child( $self );
+   }
+   elsif( my $loop = $self->{loop} ) {
       $loop->remove( $self );
    }
 
