@@ -34,7 +34,9 @@ IO
           handle => $socket,
 
           on_read => sub {
-             return 0 unless( $$_[0] =~ s/^(.*\n)// );
+             my ( $self, $buffref, $closed ) = @_;
+
+             return 0 unless( $buffref =~ s/^(.*\n)// );
 
              print "Received a line $1";
 
