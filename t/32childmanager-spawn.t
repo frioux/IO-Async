@@ -16,7 +16,6 @@ use IO::Async::Loop::IO_Poll;
 use constant ENOENT_MESSAGE => do { local $! = ENOENT; "$!" };
 
 my $loop = IO::Async::Loop::IO_Poll->new();
-$loop->enable_childmanager;
 
 testing_loop( $loop );
 

@@ -12,7 +12,6 @@ use POSIX qw( WIFEXITED WEXITSTATUS );
 use IO::Async::Loop::IO_Poll;
 
 my $loop = IO::Async::Loop::IO_Poll->new();
-$loop->enable_childmanager;
 
 testing_loop( $loop );
 

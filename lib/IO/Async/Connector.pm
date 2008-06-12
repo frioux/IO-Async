@@ -31,8 +31,6 @@ This object is used indirectly via an C<IO::Async::Loop>:
  use IO::Async::Loop::IO_Poll;
  my $loop = IO::Async::Loop::IO_Poll->new();
 
- $loop->enable_childmanager;
-
  $loop->connect(
     host     => "www.example.com",
     service  => "http",

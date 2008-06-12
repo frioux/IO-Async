@@ -87,7 +87,6 @@ test_marshall_args( $marshaller, "storable" );
 test_marshall_args_ref( $marshaller, "storable" );
 
 my $loop = IO::Async::Loop::IO_Poll->new();
-$loop->enable_childmanager;
 
 my $record = IO::Async::DetachedCode::_marshall_record( 'c', 1, "call data here" );
 my ( $type, $id, $data ) = IO::Async::DetachedCode::_unmarshall_record( $record );

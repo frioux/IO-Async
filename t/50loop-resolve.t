@@ -12,7 +12,6 @@ use Socket::GetAddrInfo qw( :Socket6api getaddrinfo );
 use IO::Async::Loop::IO_Poll;
 
 my $loop = IO::Async::Loop::IO_Poll->new();
-$loop->enable_childmanager;
 
 testing_loop( $loop );
 

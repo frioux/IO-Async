@@ -13,7 +13,6 @@ use Socket qw( AF_UNIX pack_sockaddr_un );
 use IO::Async::Loop::IO_Poll;
 
 my $loop = IO::Async::Loop::IO_Poll->new();
-$loop->enable_childmanager;
 
 testing_loop( $loop );
 
