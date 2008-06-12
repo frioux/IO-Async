@@ -230,6 +230,12 @@ A CODE reference to the handling function.
 
 =back
 
+Attaching to C<SIGCHLD> is not recommended because of the way all child
+processes use it to report their termination. Instead, the C<watch_child>
+method should be used to watch for termination of a given child process. A
+warning will be printed if C<SIGCHLD> is passed here, but in future versions
+of C<IO::Async> this behaviour may be disallowed altogether.
+
 See also L<POSIX> for the C<SIGI<name>> constants.
 
 =cut

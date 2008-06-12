@@ -137,6 +137,12 @@ sub attach
    my $self = shift;
    my ( $signal, $code ) = @_;
 
+   if( $signal eq "CHLD" ) {
+      # We make special exception to allow the ChildManager to do this
+      caller(1) eq "IO::Async::ChildManager" or
+         carp "Attaching to SIGCHLD is not advised - use the IO::Async::ChildManager instead";
+   }
+
    exists $SIG{$signal} or croak "Unrecognised signal name $signal";
 
    # Don't allow anyone to trash an existing signal handler
