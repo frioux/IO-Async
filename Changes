@@ -1,5 +1,24 @@
 Revision history for IO-Async
 
+0.15    REMOVALS:
+         * IO::Async::Set subclasses and IO::Async::Buffer have now been
+           entirely removed.
+
+        CHANGES:
+         * Support handle-less IO::Async::Sequencer, like ::Notifier
+         * Set SO_REUSEADDR on listening sockets by default
+         * Allow Loop->listen() on a plain filehandle containing a socket
+         * No longer any need to explcitly call Loop->enable_childmanager
+
+        BUGFIXES:
+         * IO::Async::Loop->_adjust_timeout actually works properly
+         * Notifier->close() only runs on_closed callback if it actually 
+           closed - allows for neater cross-connected Notifiers
+         * Made Notifier->want_{read,write}ready more efficient
+         * Notifier->close() on a child notifier works
+         * Loop->listen() should take the first successful address, rather
+           than trying them all
+
 0.14    REMOVALS:
          * IO::Async::Set subclasses and IO::Async::Buffer are now completely
            deprecated. Any attempt to use them will fail immediately.
