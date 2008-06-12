@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 22;
+use Test::More tests => 20;
 use Test::Exception;
 
 use IO::Async::ChildManager;
@@ -33,18 +33,13 @@ if( $kid == 0 ) {
 
 my $exitcode;
 
-sub wait_for_exit
-{
-   undef $exitcode;
-   return wait_for { defined $exitcode };
-}
-
 $manager->watch_child( $kid => sub { ( undef, $exitcode ) = @_; } );
 
 ok( $manager->is_watching( $kid ), 'is_watching after adding $kid' );
 is_deeply( [ $manager->list_watching ], [ $kid ], 'list_watching after adding $kid' );
 
-wait_for_exit;
+undef $exitcode;
+wait_for { defined $exitcode };
 
 ok( WIFEXITED($exitcode),      'WIFEXITED($exitcode) after child exit' );
 is( WEXITSTATUS($exitcode), 3, 'WEXITSTATUS($exitcode) after child exit' );
@@ -73,7 +68,8 @@ is_deeply( [ $manager->list_watching ], [ $kid ], 'list_watching after loop' );
 
 kill SIGTERM, $kid;
 
-wait_for_exit;
+undef $exitcode;
+wait_for { defined $exitcode };
 
 ok( WIFSIGNALED($exitcode),          'WIFSIGNALED($exitcode) after SIGTERM' );
 is( WTERMSIG($exitcode),    SIGTERM, 'WTERMSIG($exitcode) after SIGTERM' );
@@ -86,13 +82,7 @@ is_deeply( [ $manager->list_watching ], [], 'list_watching after child SIGTERM' 
 $loop->detach_signal( 'CHLD' );
 undef $manager;
 
-dies_ok( sub { $loop->watch_child( 1234 => sub { "DUMMY" } ) },
-         'watch_child() before enable_childmanager() fails' );
-
 $loop->enable_childmanager;
-
-dies_ok( sub { $loop->enable_childmanager; },
-         'enable_childmanager() again fails' );
 
 $kid = fork();
 defined $kid or die "Cannot fork() - $!";
@@ -103,12 +93,11 @@ if( $kid == 0 ) {
 
 $loop->watch_child( $kid => sub { ( undef, $exitcode ) = @_; } );
 
-wait_for_exit;
+undef $exitcode;
+wait_for { defined $exitcode };
 
 ok( WIFEXITED($exitcode),      'WIFEXITED($exitcode) after child exit for loop' );
 is( WEXITSTATUS($exitcode), 5, 'WEXITSTATUS($exitcode) after child exit for loop' );
 
-$loop->disable_childmanager;
-
-dies_ok( sub { $loop->disable_childmanager; },
-         'disable_childmanager() again fails' );
+lives_ok( sub { $loop->disable_childmanager },
+          'child manager can be disabled' );
