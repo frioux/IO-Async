@@ -52,7 +52,7 @@ This object is used indirectly via an C<IO::Async::Loop>:
     },
 
     on_resolve_error => sub { print STDERR "Cannot resolve - $_[0]\n"; },
-    on_error         => sub { print STDERR "Cannot $_[0] - $_[-1]\n"; },
+    on_listen_error  => sub { print STDERR "Cannot listen\n"; },
  );
 
  $loop->loop_forever;
@@ -90,11 +90,14 @@ sub new
 
 =head2 $loop->listen( %params )
 
-This method sets up a listening socket per address it is given, and will
-invoke a callback each time a new connection is accepted on a socket.
+This method sets up a listening socket using the addresses given, and will
+invoke a callback each time a new connection is accepted on the socket.
 Addresses may be given directly, or they may be looked up using the
 system's name resolver. As a convenience, an existing listening socket
 can be passed directly instead.
+
+If multiple addresses are given, or resolved from the service and hostname,
+then each will be attempted in turn until one succeeds.
 
 In plain address mode, the C<%params> hash takes the following keys:
 
@@ -102,9 +105,9 @@ In plain address mode, the C<%params> hash takes the following keys:
 
 =item addrs => ARRAY
 
-Reference to an array of (possibly-multiple) address structures to listen on.
-Each should be in the layout described for C<addr>. Such a layout is returned
-by the C<getaddrinfo> named resolver.
+Reference to an array of (possibly-multiple) address structures to attempt to
+listen on. Each should be in the layout described for C<addr>. Such a layout
+is returned by the C<getaddrinfo> named resolver.
 
 =item addr => ARRAY
 
@@ -171,30 +174,37 @@ In either case, the following keys are also taken:
 
 =item on_accept => CODE
 
-A callback that is invoked whenever a new client connects to any of the
-sockets being listened on. It is passed the new socket handle
+A callback that is invoked whenever a new client connects to the socket. It is
+passed the new socket handle
 
  $on_accept->( $clientsocket );
 
 =item on_listen => CODE
 
-Optional. A callback that is invoked when each listening socket is ready.
+Optional. A callback that is invoked when the listening socket is ready.
 Typically this would be used in the name resolver case, in order to inspect
 the socket's sockname address, or otherwise inspect the filehandle.
 
  $on_listen->( $listensocket );
 
-=item on_error => CODE
+=item on_listen_error => CODE
 
-A callback that is invoked if a syscall fails while attempting to create the
-listening sockets. It is passed the name of the syscall that failed, the
-arguments that were passed to it, and the error generated. I.e.
+A callback this is invoked after all of the addresses have been tried, and
+none of them succeeded. Becasue there is no one error message that stands out
+as particularly noteworthy, none is given to this callback. To track
+individual errors, see the C<on_fail> callback.
 
- $on_error->( "socket", $family, $socktype, $protocol, $! );
+=item on_fail => CODE
 
- $on_error->( "bind", $sock, $address, $! );
+Optional. A callback that is invoked if a syscall fails while attempting to
+create a listening sockets. It is passed the name of the syscall that failed,
+the arguments that were passed to it, and the error generated. I.e.
 
- $on_error->( "listen", $sock, $queuesize, $! );
+ $on_fail->( "socket", $family, $socktype, $protocol, $! );
+
+ $on_fail->( "bind", $sock, $address, $! );
+
+ $on_fail->( "listen", $sock, $queuesize, $! );
 
 =item queuesize => INT
 
@@ -241,8 +251,16 @@ sub listen
    my $on_listen = $params{on_listen}; # optional
    !defined $on_listen or ref $on_listen eq "CODE" or croak "Expected 'on_listen' to be a CODE reference";
 
-   my $on_error = $params{on_error};
-   ref $on_error eq "CODE" or croak "Expected 'on_error' as a CODE reference";
+   if( $params{on_error} ) {
+      carp "'on_error' is now deprecated, use 'on_listen_error' instead";
+      $params{on_listen_error} = delete $params{on_error};
+   }
+
+   my $on_listen_error = $params{on_listen_error};
+   ref $on_listen_error eq "CODE" or croak "Expected 'on_listen_error' as a CODE reference";
+
+   my $on_fail = $params{on_fail};
+   !defined $on_fail or ref $on_fail eq "CODE" or croak "Expected 'on_fail' to be a CODE reference";
 
    my $queuesize = $params{queuesize} || 3;
 
@@ -258,31 +276,36 @@ sub listen
          my $sock = IO::Socket->new();
 
          unless( $sock->socket( $family, $socktype, $proto ) ) {
-            $on_error->( "socket", $family, $socktype, $proto, $! );
+            $on_fail->( "socket", $family, $socktype, $proto, $! );
             next;
          }
 
          if( $reuseaddr ) {
             unless( $sock->sockopt( SO_REUSEADDR, 1 ) ) {
-               $on_error->( "sockopt", $sock, SO_REUSEADDR, 1 );
+               $on_fail->( "sockopt", $sock, SO_REUSEADDR, 1 );
                next;
             }
          }
 
          unless( $sock->bind( $address ) ) {
-            $on_error->( "bind", $sock, $address, $! );
+            $on_fail->( "bind", $sock, $address, $! );
             next;
          }
 
          unless( $sock->listen( $queuesize ) ) {
-            $on_error->( "listen", $sock, $queuesize, $! );
+            $on_fail->( "listen", $sock, $queuesize, $! );
             next;
          }
 
          $on_listen->( $sock ) if defined $on_listen;
 
          $self->_listen_sock( $sock, $on_accept );
+
+         return;
       }
+
+      # If we got this far, then none of the addresses succeeded
+      $on_listen_error->();
    }
 
    elsif( defined $params{service} ) {

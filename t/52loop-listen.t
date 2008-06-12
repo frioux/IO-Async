@@ -76,7 +76,7 @@ $loop->listen(
 
    on_accept => sub { $newclient = $_[0]; },
 
-   on_error => sub { die "Test died early - $_[0] - $_[-1]\n"; },
+   on_listen_error => sub { die "Test died early - $_[0] - $_[-1]\n"; },
 );
 
 wait_for { defined $listensock };
@@ -115,6 +115,8 @@ SKIP: {
 
    my ( $failcall, @failargs, $failbang );
 
+   my $errored = 0;
+
    $loop->listen(
       family   => AF_INET,
       socktype => SOCK_STREAM,
@@ -126,10 +128,11 @@ SKIP: {
 
       on_accept => sub { "DUMMY" }, # really hope this doesn't happen ;)
 
-      on_error => sub { $failbang = pop; ( $failcall, @failargs ) = @_; },
+      on_fail => sub { $failbang = pop; ( $failcall, @failargs ) = @_; },
+      on_listen_error => sub { $errored = 1 },
    );
 
-   wait_for { defined $failcall };
+   wait_for { $errored };
 
    # We hope it's the bind() call that failed. Not quite sure what bang might
    # be. EPERM or EADDRINUSE or various things. Best not to be sensitive on it
