@@ -27,7 +27,7 @@ dies_ok( sub {
       );
    }, 'Listening on a non-socket handle fails' );
 
-my $S1 = IO::Socket::INET->new( LocalPort => 0 ) or die "Cannot socket() - $!";
+my $S1 = IO::Socket::INET->new( Type => SOCK_STREAM, LocalPort => 0 ) or die "Cannot socket() - $!";
 
 dies_ok( sub {
       $loop->listen(
@@ -108,7 +108,7 @@ is( $newclient->peername, $clientsock->sockname, '$newclient peer is correct' );
 # it's likely we'll fail to bind TCP port 22 or 80.
 
 my $badport;
-IO::Socket::INET->new( LocalPort => $_, Listen => 1 ) or $badport = $_, last for 22, 80;
+IO::Socket::INET->new( Type => SOCK_STREAM, LocalPort => $_, Listen => 1 ) or $badport = $_, last for 22, 80;
 
 SKIP: {
    skip "No bind()-failing ports found", 1 unless defined $badport;
