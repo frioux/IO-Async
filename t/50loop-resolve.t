@@ -7,6 +7,7 @@ use IO::Async::Test;
 use Test::More tests => 5;
 use Test::Exception;
 
+use Socket qw( AF_INET SOCK_STREAM );
 use Socket::GetAddrInfo qw( :Socket6api getaddrinfo );
 
 use IO::Async::Loop::IO_Poll;
@@ -87,13 +88,17 @@ SKIP: {
 
 # getaddrinfo is a little more difficult, as it will mangle the result
 
-my @gai = getaddrinfo( "localhost", "www" );
+# Also, some systems seem to mangle the order of results between PF_INET and
+# PF_INET6 depending on who asks. We'll hint AF_INET + SOCK_STREAM to minimise
+# the risk of a spurious test failure because of ordering issues
+
+my @gai = getaddrinfo( "localhost", "www", AF_INET, SOCK_STREAM );
 
 undef $result;
 
 $loop->resolve(
    type => 'getaddrinfo',
-   data => [ "localhost", "www" ],
+   data => [ "localhost", "www", AF_INET, SOCK_STREAM ],
    on_resolved => sub { $result = [ 'resolved', @_ ] },
    on_error    => sub { $result = [ 'error',    @_ ] },
 );
