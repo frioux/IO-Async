@@ -276,24 +276,24 @@ sub listen
          my $sock = IO::Socket->new();
 
          unless( $sock->socket( $family, $socktype, $proto ) ) {
-            $on_fail->( "socket", $family, $socktype, $proto, $! );
+            $on_fail->( "socket", $family, $socktype, $proto, $! ) if $on_fail;
             next;
          }
 
          if( $reuseaddr ) {
             unless( $sock->sockopt( SO_REUSEADDR, 1 ) ) {
-               $on_fail->( "sockopt", $sock, SO_REUSEADDR, 1 );
+               $on_fail->( "sockopt", $sock, SO_REUSEADDR, 1 ) if $on_fail;
                next;
             }
          }
 
          unless( $sock->bind( $address ) ) {
-            $on_fail->( "bind", $sock, $address, $! );
+            $on_fail->( "bind", $sock, $address, $! ) if $on_fail;
             next;
          }
 
          unless( $sock->listen( $queuesize ) ) {
-            $on_fail->( "listen", $sock, $queuesize, $! );
+            $on_fail->( "listen", $sock, $queuesize, $! ) if $on_fail;
             next;
          }
 
