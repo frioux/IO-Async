@@ -202,6 +202,8 @@ the arguments that were passed to it, and the error generated. I.e.
 
  $on_fail->( "socket", $family, $socktype, $protocol, $! );
 
+ $on_fail->( "sockopt", $sock, $optname, $optval, $! );
+
  $on_fail->( "bind", $sock, $address, $! );
 
  $on_fail->( "listen", $sock, $queuesize, $! );
@@ -282,7 +284,7 @@ sub listen
 
          if( $reuseaddr ) {
             unless( $sock->sockopt( SO_REUSEADDR, 1 ) ) {
-               $on_fail->( "sockopt", $sock, SO_REUSEADDR, 1 ) if $on_fail;
+               $on_fail->( "sockopt", $sock, SO_REUSEADDR, 1, $! ) if $on_fail;
                next;
             }
          }
