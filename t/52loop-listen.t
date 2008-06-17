@@ -27,7 +27,7 @@ dies_ok( sub {
       );
    }, 'Listening on a non-socket handle fails' );
 
-my $S1 = IO::Socket::INET->new( Type => SOCK_STREAM, LocalPort => 0 ) or die "Cannot socket() - $!";
+my $S1 = IO::Socket::INET->new( Type => SOCK_STREAM ) or die "Cannot socket() - $!";
 
 dies_ok( sub {
       $loop->listen(
