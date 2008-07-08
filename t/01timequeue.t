@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 30;
+use Test::More tests => 29;
 use Test::Exception;
 
 use IO::Async::TimeQueue;
@@ -15,15 +15,12 @@ is( ref $queue, "IO::Async::TimeQueue", 'ref $queue is IO::Async::TimeQueue' );
 is( $queue->next_time, undef, '->next_time when empty is undef' );
 
 dies_ok( sub { $queue->enqueue( code => sub { "DUMMY" } ) },
-         'enqueue no time or delay fails' );
+         'enqueue no time fails' );
 
 dies_ok( sub { $queue->enqueue( time => 123 ) },
          'enqueue no code fails' );
 
-dies_ok( sub { $queue->enqueue( delay => 4 ) },
-         'enqueue no code fails (2)' );
-
-dies_ok( sub { $queue->enqueue( delay => 5, code => 'HELLO' ) },
+dies_ok( sub { $queue->enqueue( time => 123, code => 'HELLO' ) },
          'enqueue code not CODE ref fails' );
 
 $queue->enqueue( time => 1000, code => sub { "DUMMY" } );

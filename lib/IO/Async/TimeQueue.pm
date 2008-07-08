@@ -91,43 +91,13 @@ The C<%params> takes the following keys:
 
 The absolute system timestamp to run the event.
 
-=item delay => NUM
-
-The delay after now at which to run the event.
-
-=item now => NUM
-
-The time to consider as now; defaults to C<time()> if not specified.
-
 =item code => CODE
 
 CODE reference to the callback function to run at the allotted time.
 
 =back
 
-Either C<time> or C<delay> must be specified.
-
 =cut
-
-sub __build_time
-{
-   my %params = @_;
-
-   my $time;
-   if( exists $params{time} ) {
-      $time = $params{time};
-   }
-   elsif( exists $params{delay} ) {
-      my $now = exists $params{now} ? $params{now} : time();
-
-      $time = $now + $params{delay};
-   }
-   else {
-      croak "Expected either 'time' or 'delay' keys";
-   }
-
-   return $time;
-}
 
 sub enqueue
 {
@@ -137,7 +107,8 @@ sub enqueue
    my $code = delete $params{code};
    ref $code eq "CODE" or croak "Expected 'code' to be a CODE reference";
 
-   my $time = __build_time( %params );
+   defined $params{time} or croak "Expected 'time'";
+   my $time = $params{time};
 
    my $heap = $self->{heap};
 
@@ -181,7 +152,8 @@ sub requeue
    my $self = shift;
    my ( $id, %params ) = @_;
 
-   my $time = __build_time( %params );
+   defined $params{time} or croak "Expected 'time'";
+   my $time = $params{time};
 
    my $heap = $self->{heap};
    my $elem = $heap->delete( $id );

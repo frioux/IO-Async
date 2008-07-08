@@ -456,6 +456,28 @@ sub _adjust_timeout
    }
 }
 
+# For subclasses to call
+sub _build_time
+{
+   my $self = shift;
+   my %params = @_;
+
+   my $time;
+   if( exists $params{time} ) {
+      $time = $params{time};
+   }
+   elsif( exists $params{delay} ) {
+      my $now = exists $params{now} ? $params{now} : time();
+
+      $time = $now + $params{delay};
+   }
+   else {
+      croak "Expected either 'time' or 'delay' keys";
+   }
+
+   return $time;
+}
+
 =head2 $id = $loop->enqueue_timer( %params )
 
 This method installs a callback which will be called at the specified time.
@@ -505,6 +527,8 @@ sub enqueue_timer
 
    my $timequeue = $self->{timequeue} ||= $self->__new_feature( "IO::Async::TimeQueue" );
 
+   $params{time} = $self->_build_time( %params );
+
    $timequeue->enqueue( %params );
 }
 
@@ -544,6 +568,8 @@ sub requeue_timer
    my ( $id, %params ) = @_;
 
    my $timequeue = $self->{timequeue} ||= $self->__new_feature( "IO::Async::TimeQueue" );
+
+   $params{time} = $self->_build_time( %params );
 
    $timequeue->requeue( $id, %params );
 }
