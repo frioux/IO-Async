@@ -109,26 +109,35 @@ Either C<time> or C<delay> must be specified.
 
 =cut
 
-sub enqueue
+sub __build_time
 {
-   my $self = shift;
-   my ( %params ) = @_;
+   my %params = @_;
 
    my $time;
    if( exists $params{time} ) {
-      $time = delete $params{time};
+      $time = $params{time};
    }
    elsif( exists $params{delay} ) {
       my $now = exists $params{now} ? $params{now} : time();
 
-      $time = $now + delete $params{delay};
+      $time = $now + $params{delay};
    }
    else {
       croak "Expected either 'time' or 'delay' keys";
    }
 
+   return $time;
+}
+
+sub enqueue
+{
+   my $self = shift;
+   my ( %params ) = @_;
+
    my $code = delete $params{code};
    ref $code eq "CODE" or croak "Expected 'code' to be a CODE reference";
+
+   my $time = __build_time( %params );
 
    my $heap = $self->{heap};
 
@@ -151,6 +160,38 @@ sub cancel
 
    my $heap = $self->{heap};
    $heap->delete( $id );
+}
+
+=head2 $newid = $queue->requeue( $id, %params )
+
+Reschedule an existing timer, moving it to a new time. The old timer is
+removed and will not be invoked.
+
+The C<%params> hash takes the same keys as C<enqueue()>, except for the
+C<code> argument.
+
+The requeue operation may be implemented as a cancel + enqueue, which may
+mean the ID changes. Be sure to store the returned C<$newid> value if it is
+required.
+
+=cut
+
+sub requeue
+{
+   my $self = shift;
+   my ( $id, %params ) = @_;
+
+   my $time = __build_time( %params );
+
+   my $heap = $self->{heap};
+   my $elem = $heap->delete( $id );
+   defined $elem or croak "No such enqueued timer";
+
+   $elem->time( $time );
+
+   $heap->add( $elem );
+
+   return $elem;
 }
 
 =head2 $count = $queue->fire( %params )

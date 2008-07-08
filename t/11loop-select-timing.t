@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 7;
+use Test::More tests => 9;
 
 use Time::HiRes qw( time );
 
@@ -53,13 +53,37 @@ $loop->post_select( $rvec, $evec, $wvec );
 # select() might have returned just a little early, such that the TimerQueue
 # doesn't think anything is ready yet. We need to handle that case.
 while( !$done ) {
+   die "It should have been ready by now" if( time - $now > 5 );
+
    $timeout = 0.1;
 
    $loop->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
    select( $rvec, $wvec, $evec, $timeout );
    $loop->post_select( $rvec, $evec, $wvec );
-
-   die "It should have been ready by now" if( time - $now > 5 );
 }
 
 is( $done, 1, '$done after post_select while waiting for timer' );
+
+$id = $loop->enqueue_timer( delay => 1, code => sub { $done = 2; } );
+$id = $loop->requeue_timer( $id, delay => 2 );
+
+$done = 0;
+$now = time;
+
+$loop->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
+select( $rvec, $wvec, $evec, 1.5 );
+$loop->post_select( $rvec, $evec, $wvec );
+
+is( $done, 0, '$done still 0 before timeout' );
+
+while( !$done ) {
+   die "It should have been ready by now" if( time - $now > 5 );
+
+   $timeout = 0.1;
+
+   $loop->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
+   select( $rvec, $wvec, $evec, $timeout );
+   $loop->post_select( $rvec, $evec, $wvec );
+}
+
+is( $done, 2, '$done is 2 after timeout' );

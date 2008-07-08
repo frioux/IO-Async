@@ -524,6 +524,30 @@ sub cancel_timer
    $timequeue->cancel( $id );
 }
 
+=head2 $newid = $loop->requeue_timer( $id, %params )
+
+Reschedule an existing timer, moving it to a new time. The old timer is
+removed and will not be invoked.
+
+The C<%params> hash takes the same keys as C<enqueue_timer()>, except for the
+C<code> argument.
+
+The requeue operation may be implemented as a cancel + enqueue, which may
+mean the ID changes. Be sure to store the returned C<$newid> value if it is
+required.
+
+=cut
+
+sub requeue_timer
+{
+   my $self = shift;
+   my ( $id, %params ) = @_;
+
+   my $timequeue = $self->{timequeue} ||= $self->__new_feature( "IO::Async::TimeQueue" );
+
+   $timequeue->requeue( $id, %params );
+}
+
 =head2 $loop->resolve( %params )
 
 This method performs a single name resolution operation. It uses an

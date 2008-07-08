@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 6;
+use Test::More tests => 8;
 
 use Time::HiRes qw( time );
 
@@ -64,7 +64,7 @@ my $done = 0;
 
 $loop->enqueue_timer( delay => 2, code => sub { $done = 1; } );
 
-my $id = $loop->enqueue_timer( delay => 5, code => sub { die "This timer should have been cancelled" } );
+my $id = $loop->enqueue_timer( delay => 3, code => sub { die "This timer should have been cancelled" } );
 $loop->cancel_timer( $id );
 
 undef $id;
@@ -76,8 +76,8 @@ $loop->loop_once( 5 );
 # poll() might have returned just a little early, such that the TimerQueue
 # doesn't think anything is ready yet. We need to handle that case.
 while( !$done ) {
-   $loop->loop_once( 0.1 );
    die "It should have been ready by now" if( time - $now > 5 );
+   $loop->loop_once( 0.1 );
 }
 
 $took = time - $now;
@@ -88,3 +88,23 @@ if( $took > 2.5 ) {
    diag( "loop_once(2) while waiting for timer took more than 2.5 seconds.\n" .
          "This is not itself a bug, and may just be an indication of a busy testing machine" );
 }
+
+$id = $loop->enqueue_timer( delay => 1, code => sub { $done = 2; } );
+$id = $loop->requeue_timer( $id, delay => 2 );
+
+$done = 0;
+
+$loop->loop_once( 1 );
+
+is( $done, 0, '$done still 0 so far' );
+
+$loop->loop_once( 5 );
+
+# poll() might have returned just a little early, such that the TimerQueue
+# doesn't think anything is ready yet. We need to handle that case.
+while( !$done ) {
+   die "It should have been ready by now" if( time - $now > 5 );
+   $loop->loop_once( 0.1 );
+}
+
+is( $done, 2, '$done is 2 after requeued timer' );

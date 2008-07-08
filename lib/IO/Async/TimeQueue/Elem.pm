@@ -26,6 +26,7 @@ sub new
 sub time
 {
    my $self = shift;
+   $self->val->{time} = $_[0] if @_;
    return $self->val->{time};
 }
 
