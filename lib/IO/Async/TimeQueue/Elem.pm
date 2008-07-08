@@ -8,39 +8,7 @@ package IO::Async::TimeQueue::Elem;
 use strict;
 use base qw( Heap::Elem );
 
-# The internal implementation of Heap::Elem changed at 0.80 to be an ARRAY
-# typed object, with a 'val' accessor for the user data, where before it's a
-# plain HASH to be accessed directly. We therefore supply two sets of methods
-# here, and set up the right ones depending on the version.
-
-sub new_HASH
-{
-   my $self = shift;
-   my $class = ref $self || $self;
-
-   my ( $time, $code ) = @_;
-
-   my $new = $class->SUPER::new();
-
-   $new->{time} = $time;
-   $new->{code} = $code;
-
-   return $new;
-}
-
-sub time_HASH
-{
-   my $self = shift;
-   return $self->{time};
-}
-
-sub code_HASH
-{
-   my $self = shift;
-   return $self->{code};
-}
-
-sub new_VAL
+sub new
 {
    my $self = shift;
    my $class = ref $self || $self;
@@ -55,27 +23,16 @@ sub new_VAL
    return $new;
 }
 
-sub time_VAL
+sub time
 {
    my $self = shift;
    return $self->val->{time};
 }
 
-sub code_VAL
+sub code
 {
    my $self = shift;
    return $self->val->{code};
-}
-
-if( $Heap::Elem::VERSION < 0.80 ) {
-  *new  = \&new_HASH;
-  *time = \&time_HASH;
-  *code = \&code_HASH;
-}
-else {
-  *new  = \&new_VAL;
-  *time = \&time_VAL;
-  *code = \&code_VAL;
 }
 
 # This only uses methods so is transparent to HASH or ARRAY
