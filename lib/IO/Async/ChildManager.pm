@@ -545,8 +545,6 @@ sub _spawn_in_parent
                local $! = $dollarbang;
                $on_exit->( $kid, $exitcode, $!, $dollarat );
             }
-
-            $loop->remove( $self );
          }
 
          return 0;
