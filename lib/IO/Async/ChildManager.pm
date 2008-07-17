@@ -15,6 +15,7 @@ use IO::Async::Stream;
 use IO::Async::MergePoint;
 
 use Carp;
+use Scalar::Util qw( weaken );
 
 use Fcntl qw( F_GETFL F_SETFL FD_CLOEXEC );
 use POSIX qw( WNOHANG _exit sysconf _SC_OPEN_MAX dup2 );
@@ -69,6 +70,8 @@ sub new
       childdeathhandlers => {},
       loop => $loop,
    }, $class;
+
+   weaken( $self->{loop} );
 
    $loop->attach_signal( CHLD => sub { $self->SIGCHLD } );
 

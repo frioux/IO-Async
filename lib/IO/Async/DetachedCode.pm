@@ -12,6 +12,7 @@ our $VERSION = '0.15';
 use IO::Async::Stream;
 
 use Carp;
+use Scalar::Util qw( weaken );
 
 use Socket;
 
@@ -246,6 +247,11 @@ sub _detach_child
       exit_on_die    => $self->{exit_on_die},
    };
 
+   weaken( $inner->{loop} );
+
+   # Not required to keep Loop's refcount happy; but does break a cycle here
+   #weaken( $inner->{inners} );
+
    my ( $childread, $mywrite );
    my ( $myread, $childwrite );
 
@@ -293,6 +299,9 @@ sub _detach_child
    );
 
    $inner->{iostream} = $iostream;
+
+   # Not required to keep Loop's refcount happy; but does break a cycle here
+   #weaken( $inner->{iostream} );
 
    $loop->add( $iostream );
 

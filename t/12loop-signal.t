@@ -2,8 +2,9 @@
 
 use strict;
 
-use Test::More tests => 11;
+use Test::More tests => 13;
 use Test::Exception;
+use Test::Refcount;
 
 use POSIX qw( SIGUSR1 SIGUSR2 SIGTERM );
 
@@ -15,6 +16,8 @@ my $caught = "";
 
 $loop->attach_signal( USR1 => sub { $caught .= "1" } );
 $loop->attach_signal( USR2 => sub { $caught .= "2" } );
+
+is_oneref( $loop, '$loop has refcount 1' );
 
 my $ready;
 
@@ -83,3 +86,5 @@ is( $caught, "", '$caught empty after dynamic removal of SIGTERM' );
 
 dies_ok( sub { $loop->detach_signal( "INT" ); },
          'Detachment of non-attached signal fails' );
+
+is_oneref( $loop, '$loop has refcount 1 at EOF' );

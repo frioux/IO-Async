@@ -2,8 +2,9 @@
 
 use strict;
 
-use Test::More tests => 39;
+use Test::More tests => 43;
 use Test::Exception;
+use Test::Refcount;
 
 use IO::Socket::UNIX;
 use IO::Async::Notifier;
@@ -34,6 +35,8 @@ my $loop = IO::Async::Loop::IO_Poll->new( poll => $poll );
 ok( defined $loop, '$loop defined' );
 is( ref $loop, "IO::Async::Loop::IO_Poll", 'ref $loop is IO::Async::Loop::IO_Poll' );
 
+is_oneref( $loop, '$loop has refcount 1' );
+
 # Empty
 
 my @handles;
@@ -49,6 +52,8 @@ is( $count, 0, '$count while empty' );
 $loop->add( $notifier );
 
 is( $notifier->get_loop, $loop, '$notifier->__memberof_loop == $loop' );
+
+is_oneref( $loop, '$loop has refcount 1 adding Notifier' );
 
 dies_ok( sub { $loop->add( $notifier ) }, 'adding again produces error' );
 
@@ -131,6 +136,8 @@ alarm( 0 );
 is( $writeready, 1, '$writeready after loop_forever' );
 
 $loop->remove( $stdout_notifier );
+
+is_oneref( $loop, '$loop has refcount 1 after removing cyclic Notifier' );
 
 @handles = $poll->handles();
 is_deeply( \@handles, [ $S1 ], '@handles after removing stdout_notifier' );
@@ -251,3 +258,5 @@ $writeready = 0;
 $ready = $loop->loop_once( 0.1 );
 is( $ready, 2, '$ready after loop_once with implied IO::Poll' );
 is( $writeready, 1, '$writeready after loop_once with implied IO::Poll' );
+
+is_oneref( $loop, '$loop has refcount 1 at EOF' );

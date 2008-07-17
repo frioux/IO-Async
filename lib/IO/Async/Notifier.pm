@@ -10,6 +10,7 @@ use strict;
 our $VERSION = '0.15';
 
 use Carp;
+use Scalar::Util qw( weaken );
 
 =head1 NAME
 
@@ -369,6 +370,7 @@ sub __set_loop
    my $self = shift;
    my ( $loop ) = @_;
    $self->{loop} = $loop;
+   weaken( $self->{loop} ); # To avoid a cycle
 }
 
 =head2 $value = $notifier->want_readready

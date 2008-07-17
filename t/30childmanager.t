@@ -4,8 +4,9 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 20;
+use Test::More tests => 24;
 use Test::Exception;
+use Test::Refcount;
 
 use IO::Async::ChildManager;
 
@@ -14,13 +15,17 @@ use POSIX qw( SIGTERM WIFEXITED WEXITSTATUS WIFSIGNALED WTERMSIG );
 use IO::Async::Loop::IO_Poll;
 
 my $loop = IO::Async::Loop::IO_Poll->new();
+is_oneref( $loop, '$loop has refcount 1' );
 
 testing_loop( $loop );
+is_refcount( $loop, 2, '$loop has refcount 2 after adding to IO::Async::Test' );
 
 my $manager = IO::Async::ChildManager->new( loop => $loop );
 
 ok( defined $manager, '$manager defined' );
 is( ref $manager, "IO::Async::ChildManager", 'ref $manager is IO::Async::ChildManager' );
+
+is_refcount( $loop, 2, '$loop has refcount 2 after constructing ChildManager' );
 
 is_deeply( [ $manager->list_watching ], [], 'list_watching while idle' );
 
@@ -101,3 +106,5 @@ is( WEXITSTATUS($exitcode), 5, 'WEXITSTATUS($exitcode) after child exit for loop
 
 lives_ok( sub { $loop->disable_childmanager },
           'child manager can be disabled' );
+
+is_refcount( $loop, 2, '$loop has refcount 2 at EOF' );

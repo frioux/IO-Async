@@ -4,8 +4,9 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 38;
+use Test::More tests => 42;
 use Test::Exception;
+use Test::Refcount;
 
 use File::Temp qw( tempdir );
 use Time::HiRes qw( sleep );
@@ -17,6 +18,7 @@ use IO::Async::Loop::IO_Poll;
 my $loop = IO::Async::Loop::IO_Poll->new();
 
 testing_loop( $loop );
+is_refcount( $loop, 2, '$loop has refcount 2 after adding to IO::Async::Test' );
 
 my $code = IO::Async::DetachedCode->new(
    loop => $loop,
@@ -25,6 +27,8 @@ my $code = IO::Async::DetachedCode->new(
 
 ok( defined $code, '$code defined' );
 is( ref $code, "IO::Async::DetachedCode", 'ref $code is IO::Async::DetachedCode' );
+
+is_oneref( $code, '$code has refcount 1' );
 
 is( scalar $code->workers, 1, '$code->workers is 1' );
 my @workers = $code->workers;
@@ -368,3 +372,8 @@ undef $result;
 wait_for { defined $result };
 
 is( $result, "Here is a random string", '$result after call with modified ENV' );
+
+is_oneref( $code, '$code has refcount 1 at EOF' );
+undef $code;
+
+is_refcount( $loop, 2, '$loop has refcount 2 at EOF' );

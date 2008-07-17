@@ -2,7 +2,8 @@
 
 use strict;
 
-use Test::More tests => 2;
+use Test::More tests => 4;
+use Test::Refcount;
 use IO::Async::Test;
 
 use IO::Socket::UNIX;
@@ -11,7 +12,12 @@ use IO::Async::Stream;
 use IO::Async::Loop::IO_Poll;
 
 my $loop = IO::Async::Loop::IO_Poll->new();
+
+is_oneref( $loop, '$loop has refcount 1' );
+
 testing_loop( $loop );
+
+is_refcount( $loop, 2, '$loop has refcount 2 after adding to IO::Async::Test' );
 
 ( my $S1, my $S2 ) = IO::Socket::UNIX->socketpair( AF_UNIX, SOCK_STREAM, PF_UNSPEC ) or
    die "Cannot create socket pair - $!";
