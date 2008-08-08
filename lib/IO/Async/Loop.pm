@@ -21,6 +21,15 @@ use Carp;
 # run when the XS function returns. 
 our $MAX_SIGWAIT_TIME = 1;
 
+# Maybe our calling program will have a suggested hint of a specific Loop
+# class or list of classes to use
+our $LOOP;
+
+# Undocumented; used only by the test scripts.
+# Setting this value true will avoid the IO::Async::Loop::$^O candidate in the
+# magic constructor
+our $LOOP_NO_OS;
+
 BEGIN {
    if ( eval { Time::HiRes::time(); 1 } ) {
       Time::HiRes->import( qw( time ) );
@@ -71,6 +80,87 @@ sub __new
    }, $class;
 
    return $self;
+}
+
+=head1 MAGIC CONSTRUCTOR
+
+=head2 $loop = IO::Async::Loop->new()
+
+This function attempts to find a good subclass to use, then calls its
+constructor. It works by making a list of likely candidate classes, then
+trying each one in turn, C<require>ing the module then calling its C<new>
+method. If either of these operations fails, the next subclass is tried. If
+no class was successful, then an exception is thrown.
+
+The list of candidates is formed from the following choices, in this order:
+
+=over 4
+
+=item * $ENV{IO_ASYNC_LOOP}
+
+If this environment variable is set, it should contain a comma-separated list
+of subclass names. These names may or may not be fully-qualified; if a name
+does not contain C<::> then it will have C<IO::Async::Loop::> prepended to it.
+This allows the end-user to specify a particular choice to fit the needs of
+his use of a program using C<IO::Async>.
+
+=item * $IO::Async::Loop::LOOP
+
+If this scalar is set, it should contain a comma-separated list of subclass
+names. These may or may not be fully-qualified, as with the above case. This
+allows a program author to suggest a loop module to use.
+
+In cases where the module subclass is a hard requirement, such as GTK programs
+using C<Glib>, it would be better to use the module specifically and invoke
+its constructor directly.
+
+=item * $^O
+
+The module called C<IO::Async::Loop::$^O> is tried next. This allows specific
+OSes, such as the ever-tricky C<MSWin32>, to provide an implementation that
+might be more efficient than the generic ones, or even work at all.
+
+=item IO_Poll and Select
+
+Finally, if no other choice has been made by now, the built-in C<IO_Poll>
+module is chosen. This should always work, but in case it doesn't, the
+C<Select> module will be chosen afterwards as a last-case attempt. If this
+also fails, then the magic constructor itself will throw an exception.
+
+=back
+
+=cut
+
+sub new
+{
+   shift;  # We're going to ignore the class name actually given
+
+   my @candidates;
+
+   push @candidates, split( m/,/, $ENV{IO_ASYNC_LOOP} ) if defined $ENV{IO_ASYNC_LOOP};
+
+   push @candidates, split( m/,/, $LOOP ) if defined $LOOP;
+
+   push @candidates, "$^O" unless $LOOP_NO_OS;
+
+   push @candidates, "IO_Poll", "Select";
+
+   $_ =~ m/::/ or $_ = "IO::Async::Loop::$_" for @candidates;
+
+   foreach my $class ( @candidates ) {
+      ( my $file = "$class.pm" ) =~ s{::}{/}g;
+
+      eval { require $file } or next;
+
+      my $self;
+      $self = eval { $class->new } and return $self;
+
+      # Oh dear. We've loaded the code OK but for some reason the constructor
+      # wasn't happy. Being polite we ought really to unload the file again,
+      # but perl doesn't actually provide us a way to do this.
+   }
+
+   croak "Cannot find a suitable candidate class";
 }
 
 =head1 METHODS
