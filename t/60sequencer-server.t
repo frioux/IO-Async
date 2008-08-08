@@ -46,7 +46,7 @@ my $sequencer = IO::Async::Sequencer->new(
 );
 
 ok( defined $sequencer, 'defined $sequencer' );
-ok( $sequencer->isa( "IO::Async::Sequencer" ), '$sequencer isa IO::Async::Sequencer' );
+isa_ok( $sequencer, "IO::Async::Sequencer", '$sequencer isa IO::Async::Sequencer' );
 
 $loop->add( $sequencer );
 

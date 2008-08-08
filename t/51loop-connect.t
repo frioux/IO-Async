@@ -34,7 +34,7 @@ $loop->connect(
 
 wait_for { $sock };
 
-ok( $sock->isa( "IO::Socket" ), 'by addr: $sock isa IO::Socket' );
+isa_ok( $sock, "IO::Socket", 'by addr: $sock isa IO::Socket' );
 is( $sock->peername, $addr, 'by addr: $sock->getpeername is $addr' );
 
 $listensock->accept; # Throw it away
@@ -53,7 +53,7 @@ $loop->connect(
 
 wait_for { $sock };
 
-ok( $sock->isa( "IO::Socket" ), 'by host/service: $sock isa IO::Socket' );
+isa_ok( $sock, "IO::Socket", 'by host/service: $sock isa IO::Socket' );
 is( $sock->peername, $addr, 'by host/service: $sock->getpeername is $addr' );
 
 $listensock->accept; # Throw it away
