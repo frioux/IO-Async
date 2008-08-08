@@ -26,8 +26,8 @@ C<IO::Async::DetachedCode> - execute code asynchronously in child processes
 
 This object is used indirectly via an C<IO::Async::Loop>:
 
- use IO::Async::Loop::IO_Poll;
- my $loop = IO::Async::Loop::IO_Poll->new();
+ use IO::Async::Loop;
+ my $loop = IO::Async::Loop->new();
 
  my $code = $loop->detach_code(
     code => sub {

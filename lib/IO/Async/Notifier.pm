@@ -21,8 +21,8 @@ C<IO::Async::Notifier> - event callbacks for a non-blocking file descriptor
  use IO::Socket::INET;
  use IO::Async::Notifier;
 
- use IO::Async::Loop::IO_Poll;
- my $loop = IO::Async::Loop::IO_Poll->new();
+ use IO::Async::Loop;
+ my $loop = IO::Async::Loop->new();
 
  my $socket = IO::Socket::INET->new( LocalPort => 1234, Listen => 1 );
 

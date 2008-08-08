@@ -42,7 +42,25 @@ C<IO::Async::Loop> - core loop of the C<IO::Async> framework
 
 =head1 SYNOPSIS
 
-This module would not be used directly; see the subclasses:
+ use IO::Async::Loop;
+
+ my $loop = IO::Async::Loop->new();
+
+ $loop->add( ... );
+
+ $loop->loop_forever();
+
+=head1 DESCRIPTION
+
+This module provides an abstract class which implements the core loop of the
+C<IO::Async> framework. Its primary purpose is to store a set of
+C<IO::Async::Notifier> objects or subclasses of them. It handles all of the
+lower-level set manipulation actions, and leaves the actual IO readiness 
+testing/notification to the concrete class that implements it. It also
+provides other functionallity such as signal handling, child process managing,
+and timers.
+
+See also the two bundled Loop subclasses:
 
 =over 4
 
@@ -54,16 +72,6 @@ This module would not be used directly; see the subclasses:
 
 Or other subclasses that may appear on CPAN which are not part of the core
 C<IO::Async> distribution.
-
-=head1 DESCRIPTION
-
-This module provides an abstract class which implements the core loop of the
-C<IO::Async> framework. Its primary purpose is to store a set of
-C<IO::Async::Notifier> objects or subclasses of them. It handles all of the
-lower-level set manipulation actions, and leaves the actual IO readiness 
-testing/notification to the concrete class that implements it. It also
-provides other functionallity such as signal handling, child process managing,
-and timers.
 
 =cut
 
@@ -120,7 +128,7 @@ The module called C<IO::Async::Loop::$^O> is tried next. This allows specific
 OSes, such as the ever-tricky C<MSWin32>, to provide an implementation that
 might be more efficient than the generic ones, or even work at all.
 
-=item IO_Poll and Select
+=item * IO_Poll and Select
 
 Finally, if no other choice has been made by now, the built-in C<IO_Poll>
 module is chosen. This should always work, but in case it doesn't, the

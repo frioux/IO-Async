@@ -28,8 +28,8 @@ This object is used indirectly via an C<IO::Async::Loop>:
 
  use Socket qw( SOCK_STREAM );
 
- use IO::Async::Loop::IO_Poll;
- my $loop = IO::Async::Loop::IO_Poll->new();
+ use IO::Async::Loop;
+ my $loop = IO::Async::Loop->new();
 
  $loop->connect(
     host     => "www.example.com",

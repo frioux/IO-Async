@@ -21,11 +21,11 @@ IO
 =head1 SYNOPSIS
 
  use IO::Async::Stream;
- use IO::Async::Loop::IO_Poll;
+ use IO::Async::Loop;
 
  use Socket qw( SOCK_STREAM );
 
- my $loop = IO::Async::Loop::IO_Poll->new();
+ my $loop = IO::Async::Loop->new();
 
  $loop->connect(
     host     => "some.other.host",

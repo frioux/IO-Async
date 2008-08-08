@@ -21,8 +21,8 @@ C<IO::Async::Sequencer> - handle a serial pipeline of requests / responses (EXPE
 
 When used as a client:
 
- use IO::Async::Loop::IO_Poll;
- my $loop = IO::Async::Loop::IO_Poll->new();
+ use IO::Async::Loop;
+ my $loop = IO::Async::Loop->new();
 
  my $sock = ...
 
