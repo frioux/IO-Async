@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 5;
+use Test::More tests => 6;
 use Test::Exception;
 
 use Socket qw( AF_INET SOCK_STREAM );
@@ -106,9 +106,21 @@ $loop->resolve(
 wait_for { $result };
 
 if( @gai == 1 ) {
-   is_deeply( $result, [ error => "$gai[0]\n" ], 'getaddrinfo - error' );
+   is( $result->[0], "error", 'getaddrinfo - error' );
+   is_deeply( $result->[1], "$gai[0]\n", 'getaddrinfo - error message' );
 }
 else {
+   is( $result->[0], "resolved", 'getaddrinfo - resolved' );
+   my @addrs = @{$result}[1..$#$result];
+
    my @expect = map { [ splice @gai, 0, 5 ] } ( 0 .. $#gai/5 );
-   is_deeply( $result, [ resolved => @expect ], 'getaddrinfo - result' );
+
+   # There's a chance that system resolvers have randomised the order in these
+   # results, in order to roundrobin properly. We should sort them so we get
+   # consistent results
+
+   @addrs  = sort { $a->[0] <=> $b->[0] or $a->[1] <=> $b->[1] or $a->[2] <=> $b->[2] or $a->[3] <=> $b->[3] } @addrs;
+   @expect = sort { $a->[0] <=> $b->[0] or $a->[1] <=> $b->[1] or $a->[2] <=> $b->[2] or $a->[3] <=> $b->[3] } @expect;
+
+   is_deeply( \@addrs, \@expect, 'getaddrinfo - resolved addresses' );
 }
