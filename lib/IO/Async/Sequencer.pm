@@ -204,7 +204,7 @@ sub new
 
    if(  defined $params{read_handle} and !defined $params{write_handle} or
        !defined $params{read_handle} and  defined $params{write_handle} ) {
-      croak "Sequencer requires both a reading and a writing handle"; # TODO: this message sucks
+      croak "Sequencer requires both a reading and a writing handle";
    }
 
    my $on_read = delete $params{on_read};
