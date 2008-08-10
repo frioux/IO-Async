@@ -119,8 +119,8 @@ else {
    # results, in order to roundrobin properly. We should sort them so we get
    # consistent results
 
-   @addrs  = sort { $a->[0] <=> $b->[0] or $a->[1] <=> $b->[1] or $a->[2] <=> $b->[2] or $a->[3] <=> $b->[3] } @addrs;
-   @expect = sort { $a->[0] <=> $b->[0] or $a->[1] <=> $b->[1] or $a->[2] <=> $b->[2] or $a->[3] <=> $b->[3] } @expect;
+   @addrs  = sort { $a->[0] <=> $b->[0] or $a->[1] <=> $b->[1] or $a->[2] <=> $b->[2] or $a->[3] cmp $b->[3] } @addrs;
+   @expect = sort { $a->[0] <=> $b->[0] or $a->[1] <=> $b->[1] or $a->[2] <=> $b->[2] or $a->[3] cmp $b->[3] } @expect;
 
    is_deeply( \@addrs, \@expect, 'getaddrinfo - resolved addresses' );
 }
