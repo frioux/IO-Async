@@ -369,8 +369,11 @@ sub detach_signal
    my $sigproxy = $self->{sigproxy} ||= $self->__new_feature( "IO::Async::SignalProxy" );
    $sigproxy->detach( $signal );
 
-   # TODO: Consider "refcount" signals and cleanup if zero. How do we know if
-   # anyone else has a reference to the signal proxy though? Tricky...
+   if( !$sigproxy->signals ) {
+      $self->remove( $sigproxy );
+      undef $sigproxy;
+      undef $self->{sigproxy};
+   }
 }
 
 =head2 $loop->enable_childmanager

@@ -88,3 +88,6 @@ dies_ok( sub { $loop->detach_signal( "INT" ); },
          'Detachment of non-attached signal fails' );
 
 is_oneref( $loop, '$loop has refcount 1 at EOF' );
+
+$loop->detach_signal( "USR1" );
+$loop->detach_signal( "USR2" );

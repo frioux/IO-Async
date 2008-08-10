@@ -197,6 +197,13 @@ sub detach
    $SIG{$signal} = $restore_SIG->{$signal} || 'DEFAULT';
 
    delete $restore_SIG->{$signal};
+   delete $self->{callbacks}->{$signal};
+}
+
+sub signals
+{
+   my $self = shift;
+   return keys %{ $self->{callbacks} };
 }
 
 # Keep perl happy; keep Britain tidy
