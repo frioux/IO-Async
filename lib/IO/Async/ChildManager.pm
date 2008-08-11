@@ -439,6 +439,10 @@ A reference to a hash to set as the child process's environment.
 
 Change the child process's scheduling priority using C<POSIX::nice()>.
 
+=item chdir => STRING
+
+Change the child process's working directory using C<chdir()>.
+
 =back
 
 If no directions for what to do with C<stdin>, C<stdout> and C<stderr> are
@@ -495,6 +499,12 @@ sub _check_setup_and_canonicise
       }
       elsif( $key eq "nice" ) {
          $value =~ m/^\d+$/ or croak "Expected integer for 'nice' setup key";
+      }
+      elsif( $key eq "chdir" ) {
+         # This isn't a purely watertight test, but it does guard against
+         # silly things like passing a reference - directories such as
+         # ARRAY(0x12345) are unlikely to exist
+         -d $value or croak "Working directory '$value' does not exist";
       }
       else {
          croak "Unrecognised setup operation '$key'";
@@ -672,6 +682,9 @@ sub _spawn_in_child
             }
             elsif( $key eq "nice" ) {
                nice( $value ) or die "Cannot nice($value) - $!";
+            }
+            elsif( $key eq "chdir" ) {
+               chdir( $value ) or die "Cannot chdir('$value') - $!";
             }
          }
       }

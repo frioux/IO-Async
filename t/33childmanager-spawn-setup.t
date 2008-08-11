@@ -4,11 +4,11 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 104;
+use Test::More tests => 107;
 use Test::Exception;
 
 use File::Temp qw( tmpnam );
-use POSIX qw( WIFEXITED WEXITSTATUS ENOENT EBADF );
+use POSIX qw( WIFEXITED WEXITSTATUS ENOENT EBADF getcwd );
 
 use IO::Async::Loop::IO_Poll;
 
@@ -367,10 +367,17 @@ SKIP: {
    # clamped. Just skip the tests if it's too high before we start.
    skip "getpriority() is already above 15, so I won't try renicing upwards", 3 if $prio_now > 15;
 
-   TEST "nice() works",
+   TEST "nice works",
       setup => [ nice => 3 ],
       code  => sub { return getpriority(0,0) == $prio_now + 3 ? 0 : 1 },
 
       exitstatus => 0,
       dollarat   => '';
 }
+
+TEST "chdir works",
+   setup => [ chdir => "/" ],
+   code  => sub { return getcwd() eq "/" ? 0 : 1 },
+
+   exitstatus => 0,
+   dollarat   => '';
