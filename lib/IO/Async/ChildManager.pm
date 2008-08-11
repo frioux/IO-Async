@@ -18,7 +18,7 @@ use Carp;
 use Scalar::Util qw( weaken );
 
 use Fcntl qw( F_GETFL F_SETFL FD_CLOEXEC );
-use POSIX qw( WNOHANG _exit sysconf _SC_OPEN_MAX dup2 );
+use POSIX qw( WNOHANG _exit sysconf _SC_OPEN_MAX dup2 nice );
 
 use constant LENGTH_OF_I => length( pack( "I", 0 ) );
 
@@ -435,6 +435,10 @@ Shortcuts for C<fd0>, C<fd1> and C<fd2> respectively.
 
 A reference to a hash to set as the child process's environment.
 
+=item nice => INT
+
+Change the child process's scheduling priority using C<POSIX::nice()>.
+
 =back
 
 If no directions for what to do with C<stdin>, C<stdout> and C<stderr> are
@@ -488,6 +492,9 @@ sub _check_setup_and_canonicise
       }
       elsif( $key eq "env" ) {
          ref $value eq "HASH" or croak "Expected HASH reference for 'env' setup key";
+      }
+      elsif( $key eq "nice" ) {
+         $value =~ m/^\d+$/ or croak "Expected integer for 'nice' setup key";
       }
       else {
          croak "Unrecognised setup operation '$key'";
@@ -662,6 +669,9 @@ sub _spawn_in_child
             }
             elsif( $key eq "env" ) {
                %ENV = %$value;
+            }
+            elsif( $key eq "nice" ) {
+               nice( $value ) or die "Cannot nice($value) - $!";
             }
          }
       }
