@@ -7,7 +7,7 @@ package IO::Async::Notifier;
 
 use strict;
 
-our $VERSION = '0.15';
+our $VERSION = '0.16';
 
 use Carp;
 use Scalar::Util qw( weaken );

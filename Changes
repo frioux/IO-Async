@@ -1,5 +1,21 @@
 Revision history for IO-Async
 
+0.16    ADDITIONS:
+         * Loop->requeue_timer()
+         * Magic constructor in IO::Async::Loop which tries to find the best
+           subclass
+         * 'chdir' and 'nice' ChildManager operations
+
+        CHANGES:
+         * Make sure that top-level objects are refcount-clean by using
+           Test::Refcount, and Scalar::Util::weaken()
+
+        BUGFIXES:
+         * Keep perl 5.6.1 happy by not passing LocalPort => 0 when
+           constructing IO::Socket::INETs
+         * Pass the Type option to IO::Socket::INET constructor in test
+           scripts
+
 0.15    REMOVALS:
          * IO::Async::Set subclasses and IO::Async::Buffer have now been
            entirely removed.

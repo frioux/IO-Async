@@ -7,7 +7,7 @@ package IO::Async::Loop::Select;
 
 use strict;
 
-our $VERSION = '0.15';
+our $VERSION = '0.16';
 
 use base qw( IO::Async::Loop );
 
