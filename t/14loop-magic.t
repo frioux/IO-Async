@@ -7,7 +7,7 @@ use Test::More tests => 4;
 use IO::Async::Loop;
 
 $IO::Async::Loop::LOOP_NO_OS = 1;
-undef $ENV{IO_ASYNC_LOOP}; # Just in case it was already set
+delete $ENV{IO_ASYNC_LOOP}; # Just in case it was already set
 
 my $loop;
 
