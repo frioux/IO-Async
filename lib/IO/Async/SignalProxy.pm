@@ -148,6 +148,8 @@ sub attach
    # Don't allow anyone to trash an existing signal handler
    !defined $SIG{$signal} or !ref $SIG{$signal} or croak "Cannot override signal handler for $signal";
 
+   ref $code eq "CODE" or croak 'Expected $code as a CODE reference';
+
    $self->{callbacks}->{$signal} = $code;
 
    $self->{restore_SIG}->{$signal} = $SIG{$signal};
