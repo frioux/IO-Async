@@ -128,6 +128,12 @@ sub on_read_ready
 
    foreach( @caught_signals ) {
       my $callback = $self->{callbacks}->{$_};
+      # This shouldn't fail, but I've seen what looked like a race condition
+      # failure on a Solaris 8 + perl 5.6.1 machine here. This message should
+      # at least help find the problem
+      defined $callback or croak "Undefined callback for signal $_";
+      ref $callback eq "CODE" or croak "Callback for signal $_ is not a CODE ref";
+
       $callback->();
    }
 }
