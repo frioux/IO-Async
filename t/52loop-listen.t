@@ -108,7 +108,12 @@ is( $newclient->peername, $clientsock->sockname, '$newclient peer is correct' );
 # it's likely we'll fail to bind TCP port 22 or 80.
 
 my $badport;
-IO::Socket::INET->new( Type => SOCK_STREAM, LocalPort => $_, Listen => 1 ) or $badport = $_, last for 22, 80;
+foreach my $port ( 22, 80 ) {
+   IO::Socket::INET->new( Type => SOCK_STREAM, LocalPort => $port, Listen => 1, ReuseAddr => 1 ) and next;
+      
+   $badport = $port;
+   last;
+}
 
 SKIP: {
    skip "No bind()-failing ports found", 1 unless defined $badport;
