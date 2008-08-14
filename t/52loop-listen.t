@@ -124,7 +124,7 @@ SKIP: {
 
       on_resolve_error => sub { die "Test died early - resolve error $_[0]\n"; },
 
-      on_listen => sub { die "Test died early - listen actually succeeded\n"; },
+      on_listen => sub { die "Test died early - listen on port $badport actually succeeded\n"; },
 
       on_accept => sub { "DUMMY" }, # really hope this doesn't happen ;)
 
