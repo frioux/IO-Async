@@ -19,8 +19,11 @@ testing_loop( $loop );
 
 my $listensock;
 
-$listensock = IO::Socket::INET->new( Type => SOCK_STREAM, Listen => 1 )
-   or die "Cannot socket() - $!";
+$listensock = IO::Socket::INET->new(
+   LocalAddr => "localhost",
+   Type      => SOCK_STREAM,
+   Listen    => 1,
+) or die "Cannot socket() - $!";
 
 my $newclient;
 
