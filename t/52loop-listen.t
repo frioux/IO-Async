@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 10;
+use Test::More tests => 8;
 use Test::Exception;
 
 use IO::Socket::INET;
@@ -16,25 +16,6 @@ use IO::Async::Loop::IO_Poll;
 my $loop = IO::Async::Loop::IO_Poll->new();
 
 testing_loop( $loop );
-
-# pipes aren't sockets, so definitely we can't listen() on them
-pipe( my ( $P1, $P2 ) ) or die "Cannot pipe() - $!";
-
-dies_ok( sub {
-      $loop->listen(
-         handle => $P1,
-         on_accept => sub { die "Test died early - accepted connection on a pipe"; },
-      );
-   }, 'Listening on a non-socket handle fails' );
-
-my $S1 = IO::Socket::INET->new( Type => SOCK_STREAM ) or die "Cannot socket() - $!";
-
-dies_ok( sub {
-      $loop->listen(
-         handle => $S1,
-         on_accept => sub { die "Test died early - accepted connection on non-listening socket"; },
-      );
-   }, 'Listening on a non-listening socket fails' );
 
 my $listensock;
 

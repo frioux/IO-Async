@@ -242,9 +242,10 @@ sub listen
       defined eval { $handle->sockname } or croak "IO handle $handle does not have a sockname";
 
       # So now we know it's at least some kind of socket. Is it listening?
-      my $acceptconn = $handle->sockopt( SO_ACCEPTCONN );
-      defined $acceptconn or croak "Cannot getsockopt(SO_ACCEPTCONN) - $!";
-      $acceptconn or croak "Socket is not accepting connections";
+      # SO_ACCEPTCONN would tell us, but not all OSes implement it. Since it's
+      # only a best-effort sanity check, we won't mind if the OS doesn't.
+      my $acceptconn = eval { $handle->sockopt( SO_ACCEPTCONN ) };
+      !defined $acceptconn or $acceptconn or croak "Socket is not accepting connections";
 
       $self->_listen_sock( $handle, $on_accept );
       return;
