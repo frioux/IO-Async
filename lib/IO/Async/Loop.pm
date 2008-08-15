@@ -11,6 +11,9 @@ our $VERSION = '0.16';
 
 use Carp;
 
+use Socket;
+use IO::Socket;
+
 # Never sleep for more than 1 second if a signal proxy is registered, to avoid
 # a borderline race condition.
 # There is a race condition in perl involving signals interacting with XS code
@@ -784,6 +787,88 @@ sub loop_stop
    my $self = shift;
    
    $self->{still_looping} = 0;
+}
+
+=head1 OS ABSTRACTIONS
+
+Because the Magic Constructor searches for OS-specific subclasses of the Loop,
+several abstractions of OS services are provided, in case specific OSes need
+to give different implementations on that OS.
+
+=cut
+
+=head2 ( $S1, $S2 ) = $loop->socketpair( $family, $socktype, $proto )
+
+An abstraction of the C<socketpair()> syscall, where any argument may be
+missing (or given as C<undef>).
+
+If C<$family> is not provided, a suitable value will be provided by the OS
+(likely C<AF_UNIX> on POSIX-based platforms). If C<$socktype> is not provided,
+then C<SOCK_STREAM> will be used.
+
+=cut
+
+sub socketpair
+{
+   my $self = shift;
+   my ( $family, $socktype, $proto ) = @_;
+
+   # PF_UNSPEC and undef are both false
+   $family ||= AF_UNIX;
+
+   # SOCK_STREAM is the most likely
+   defined $socktype or $socktype = SOCK_STREAM;
+
+   defined $proto or $proto = 0;
+
+   return IO::Socket->new->socketpair( $family, $socktype, $proto );
+}
+
+=head2 ( $rd, $wr ) = $loop->pipepair()
+
+An abstraction of the C<pipe()> syscall, which returns the two new handles.
+
+=cut
+
+sub pipepair
+{
+   my $self = shift;
+
+   pipe( my ( $rd, $wr ) ) or return;
+   return ( $rd, $wr );
+}
+
+=head2 ( $rdA, $wrA, $rdB, $wrB ) = $loop->pipequad()
+
+This method is intended for creating two pairs of filehandles that are linked
+together, suitable for passing as the STDIN/STDOUT pair to a child process.
+After this function returns, C<$rdA> and C<$wrA> will be a linked pair, as
+will C<$rdB> and C<$wrB>.
+
+On platforms that support C<socketpair()>, this implementation will be
+preferred, in which case C<$rdA> and C<$wrB> will actually be the same
+filehandle, as will C<$rdB> and C<$wrA>. This saves a file descriptor in the
+parent process.
+
+When creating a C<IO::Async::Stream> or subclass of it, the C<read_handle>
+and C<write_handle> parameters should always be used.
+
+=cut
+
+sub pipequad
+{
+   my $self = shift;
+
+   # Prefer socketpair()
+   if( my ( $S1, $S2 ) = $self->socketpair() ) {
+      return ( $S1, $S2, $S2, $S1 );
+   }
+
+   # Can't do that, fallback on pipes
+   my ( $rdA, $wrA ) = $self->pipepair() or return;
+   my ( $rdB, $wrB ) = $self->pipepair() or return;
+
+   return ( $rdA, $wrA, $rdB, $wrB );
 }
 
 # Keep perl happy; keep Britain tidy
