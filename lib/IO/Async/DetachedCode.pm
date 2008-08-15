@@ -14,8 +14,6 @@ use IO::Async::Stream;
 use Carp;
 use Scalar::Util qw( weaken );
 
-use Socket;
-
 use constant LENGTH_OF_I => length( pack( "I", 0 ) );
 
 =head1 NAME
@@ -114,7 +112,7 @@ provided to the C<call()> method.
 Optional string, specifies which sort of stream will be used to attach to each
 worker. C<socket> uses only one file descriptor per worker in the parent
 process, but not all systems may be able to use it. If the system does not
-allow C<PF_UNIX> socket pairs, then C<pipe> can be used instead. This will use
+support C<socketpair()>, then C<pipe> can be used instead. This will use
 two file descriptors per worker in the parent process, however.
 
 If not supplied, the C<socket> method is used.
@@ -236,9 +234,11 @@ sub _detach_child
 {
    my $self = shift;
 
+   my $loop = $self->{loop};
+
    # The inner object needs references to some members of the outer object
    my $inner = {
-      loop           => $self->{loop},
+      loop           => $loop,
       result_handler => {},
       marshaller     => $self->{marshaller},
       busy           => 0,
@@ -258,18 +258,16 @@ sub _detach_child
    my $streamtype = $self->{streamtype};
 
    if( $streamtype eq "socket" ) {
-      socketpair( my $myend, my $childend, PF_UNIX, SOCK_STREAM, 0 ) or
-         croak "Cannot socketpair(PF_UNIX) - $!";
+      my ( $myend, $childend ) = $loop->socketpair() or
+         croak "Cannot socketpair() - $!";
 
       $mywrite = $myread = $myend;
       $childwrite = $childread = $childend;
    }
    elsif( $streamtype eq "pipe" ) {
-      pipe( $childread, $mywrite ) or croak "Cannot pipe() - $!";
-      pipe( $myread, $childwrite ) or croak "Cannot pipe() - $!";
+      ( $childread, $mywrite ) = $loop->pipepair() or croak "Cannot pipe() - $!";
+      ( $myread, $childwrite ) = $loop->pipepair() or croak "Cannot pipe() - $!";
    }
-
-   my $loop = $inner->{loop};
 
    my $kid = $loop->spawn_child(
       code => sub { 

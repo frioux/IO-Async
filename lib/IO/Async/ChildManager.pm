@@ -339,7 +339,9 @@ sub spawn_child
 
    my @setup = defined $setup ? $self->_check_setup_and_canonicise( $setup ) : ();
 
-   pipe( my $readpipe, my $writepipe ) or croak "Cannot pipe() - $!";
+   my $loop = $self->{loop};
+
+   my ( $readpipe, $writepipe ) = $loop->pipepair() or croak "Cannot pipe() - $!";
 
    my $flags = fcntl( $writepipe, F_GETFL, 0 ) or 
       croak "Cannot fcntl(F_GETFL) - $!";
@@ -355,8 +357,6 @@ sub spawn_child
          return;
       };
    }
-
-   my $loop = $self->{loop};
 
    my $kid = $loop->detach_child( 
       code => sub {
@@ -803,6 +803,8 @@ sub open_child
       delete $params{setup};
    }
 
+   my $loop = $self->{loop};
+
    foreach my $key ( keys %params ) {
       my $value = $params{$key};
 
@@ -816,7 +818,7 @@ sub open_child
       if( $key =~  m/^fd\d+$/ ) {
          ref $value eq "HASH" or croak "Expected '$orig_key' to be a HASH ref";
 
-         pipe( my ( $pipe_r, $pipe_w ) ) or croak "Unable to pipe() - $!";
+         my ( $pipe_r, $pipe_w ) = $loop->pipepair() or croak "Unable to pipe() - $!";
 
          my ( $myfd, $childfd );
 
@@ -868,8 +870,6 @@ sub open_child
          }
       },
    );
-
-   my $loop = $self->{loop};
 
    $pid = $loop->spawn_child( %subparams, 
       setup => \@setup,
