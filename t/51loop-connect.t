@@ -20,8 +20,6 @@ testing_loop( $loop );
 my $listensock = IO::Socket::INET->new( LocalAddr => 'localhost', Listen => 1 ) or
    die "Cannot create listensock - $!";
 
-printf "Have a testing socket listening on %s:%d\n", $listensock->sockhost, $listensock->sockport;
-
 my $addr = $listensock->sockname;
 
 my $sock;
