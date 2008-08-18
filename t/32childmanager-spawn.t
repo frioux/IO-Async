@@ -145,7 +145,7 @@ is( $dollarbang+0,           0, '$dollarbang after spawn ARRAY' );
 is( $dollarat,              '', '$dollarat after spawn ARRAY' );
 
 {
-   pipe( my( $pipe_r, $pipe_w ) ) or die "Cannot pipe() - $!";
+   my( $pipe_r, $pipe_w ) = $loop->pipepair() or die "Cannot pipepair - $!";
 
    $spawned_pid = $loop->spawn_child(
       code => sub { return $pipe_w->syswrite( "test" ); },

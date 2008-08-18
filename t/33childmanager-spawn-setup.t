@@ -76,7 +76,7 @@ my $buffer;
 my $ret;
 
 {
-   pipe( my( $pipe_r, $pipe_w ) ) or die "Cannot pipe() - $!";
+   my( $pipe_r, $pipe_w ) = $loop->pipepair() or die "Cannot pipepair - $!";
 
    TEST "pipe dup to fd1",
       setup => [ fd1 => [ 'dup', $pipe_w ] ],
@@ -252,7 +252,7 @@ my $ret;
    is( $ret, 4,         '$pipe_r->read() after writepipe clash' );
    is( $buffer, 'test', '$buffer after writepipe clash' );
 
-   pipe( my( $pipe2_r, $pipe2_w ) ) or die "Cannot pipe() - $!";
+   my( $pipe2_r, $pipe2_w ) = $loop->pipepair() or die "Cannot pipepair - $!";
    $pipe2_r->blocking( 0 );
 
    TEST "pipe dup to stdout and stderr",

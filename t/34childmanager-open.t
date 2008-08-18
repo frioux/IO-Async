@@ -112,7 +112,7 @@ sub child_out_reader
    return 0;
 }
 
-pipe( my $syncpipe_r, my $syncpipe_w ) or die "Cannot pipe - $!";
+my( $syncpipe_r, $syncpipe_w ) = $loop->pipepair() or die "Cannot pipepair - $!";
 $syncpipe_w->autoflush;
 
 $loop->open_child(
