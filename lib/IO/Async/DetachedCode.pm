@@ -115,7 +115,8 @@ process, but not all systems may be able to use it. If the system does not
 support C<socketpair()>, then C<pipe> can be used instead. This will use
 two file descriptors per worker in the parent process, however.
 
-If not supplied, the C<socket> method is used.
+If not supplied, the underlying Loop's C<pipequad()> method is used, which
+will select an appropriate method. Usually this default will be sufficient.
 
 =item marshaller => STRING: C<flat> or C<storable>
 
@@ -191,9 +192,9 @@ sub new
       croak "Unrecognised marshaller type '$params{marshaller}'";
    }
 
-   my $streamtype = $params{stream} || "socket";
+   my $streamtype = $params{stream};
 
-   $streamtype eq "socket" or $streamtype eq "pipe" or
+   !defined $streamtype or $streamtype eq "socket" or $streamtype eq "pipe" or
       croak "Unrecognised stream type '$streamtype'";
 
    my $workers = $params{workers} || 1;
@@ -257,7 +258,11 @@ sub _detach_child
 
    my $streamtype = $self->{streamtype};
 
-   if( $streamtype eq "socket" ) {
+   if( !defined $streamtype ) {
+      ( $childread, $mywrite, $myread, $childwrite ) = $loop->pipequad() or
+         croak "Cannot pipequad() - $!";
+   }
+   elsif( $streamtype eq "socket" ) {
       my ( $myend, $childend ) = $loop->socketpair() or
          croak "Cannot socketpair() - $!";
 
@@ -653,10 +658,6 @@ object.
 =item *
 
 Dynamic pooling of multiple worker processes, with min/max watermarks.
-
-=item *
-
-Fall back on a pipe pair if socketpair doesn't work.
 
 =back
 
