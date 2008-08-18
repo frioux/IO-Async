@@ -5,15 +5,17 @@ use strict;
 use Test::More tests => 20;
 use Test::Exception;
 
-use IO::Socket::UNIX;
 use IO::Poll;
 
 use IO::Async::Notifier;
 
 use IO::Async::Loop::IO_Poll;
 
-( my $S1, my $S2 ) = IO::Socket::UNIX->socketpair( AF_UNIX, SOCK_STREAM, PF_UNSPEC ) or
-   die "Cannot create socket pair - $!";
+my $poll = IO::Poll->new();
+
+my $loop = IO::Async::Loop::IO_Poll->new( poll => $poll );
+
+my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
 
 # Need sockets in nonblocking mode
 $S1->blocking( 0 );
@@ -46,10 +48,6 @@ $parent->remove_child( $child );
 
 @children = $parent->children;
 is( scalar @children, 0, '@children after remove_child()' );
-
-my $poll = IO::Poll->new();
-
-my $loop = IO::Async::Loop::IO_Poll->new( poll => $poll );
 
 $loop->add( $parent );
 

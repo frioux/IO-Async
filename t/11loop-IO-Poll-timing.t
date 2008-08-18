@@ -6,13 +6,13 @@ use Test::More tests => 8;
 
 use Time::HiRes qw( time );
 
-use IO::Socket::UNIX;
 use IO::Async::Notifier;
 
 use IO::Async::Loop::IO_Poll;
 
-( my $S1, my $S2 ) = IO::Socket::UNIX->socketpair( AF_UNIX, SOCK_STREAM, PF_UNSPEC ) or
-   die "Cannot create socket pair - $!";
+my $loop = IO::Async::Loop::IO_Poll->new();
+
+my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
 
 # Need sockets in nonblocking mode
 $S1->blocking( 0 );
@@ -25,8 +25,6 @@ my $notifier = IO::Async::Notifier->new( handle => $S1,
    on_read_ready  => sub { $readready = 1 },
    on_write_ready => sub { $writeready = 1 },
 );
-
-my $loop = IO::Async::Loop::IO_Poll->new();
 
 # loop_once
 

@@ -5,13 +5,16 @@ use strict;
 use Test::More tests => 33;
 use Test::Exception;
 
-use IO::Socket::UNIX;
 use IO::Async::Notifier;
 
 use IO::Async::Loop::Select;
 
-( my $S1, my $S2 ) = IO::Socket::UNIX->socketpair( AF_UNIX, SOCK_STREAM, PF_UNSPEC ) or
-   die "Cannot create socket pair - $!";
+my $loop = IO::Async::Loop::Select->new();
+
+ok( defined $loop, '$loop defined' );
+is( ref $loop, "IO::Async::Loop::Select", 'ref $loop is IO::Async::Loop::Select' );
+
+my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
 
 # Need sockets in nonblocking mode
 $S1->blocking( 0 );
@@ -24,11 +27,6 @@ my $notifier = IO::Async::Notifier->new( handle => $S1,
    on_read_ready  => sub { $readready = 1; return 0 },
    on_write_ready => sub { $writeready = 1; return 0 },
 );
-
-my $loop = IO::Async::Loop::Select->new();
-
-ok( defined $loop, '$loop defined' );
-is( ref $loop, "IO::Async::Loop::Select", 'ref $loop is IO::Async::Loop::Select' );
 
 my $testvec = '';
 vec( $testvec, $S1->fileno, 1 ) = 1;

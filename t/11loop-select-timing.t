@@ -6,8 +6,6 @@ use Test::More tests => 9;
 
 use Time::HiRes qw( time );
 
-use IO::Socket::UNIX;
-
 use IO::Async::Loop::Select;
 
 my $loop = IO::Async::Loop::Select->new();

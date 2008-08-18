@@ -5,19 +5,19 @@ use strict;
 use Test::More tests => 3;
 
 use POSIX qw( EAGAIN );
-use IO::Socket::UNIX;
 
+use IO::Async::Loop;
 use IO::Async::Stream;
 
 # 4 ends of sockets:
 #  test => notifier ; notifier => test
 #  S[0]    S[1]       S[2]        S[3]
 
+my $loop = IO::Async::Loop->new;
+
 my @S;
-@S[0,1] = IO::Socket::UNIX->socketpair( AF_UNIX, SOCK_STREAM, PF_UNSPEC ) or
-   die "Cannot create socket pair - $!";
-@S[2,3] = IO::Socket::UNIX->socketpair( AF_UNIX, SOCK_STREAM, PF_UNSPEC ) or
-   die "Cannot create socket pair - $!";
+@S[0,1] = $loop->socketpair() or die "Cannot create socket pair - $!";
+@S[2,3] = $loop->socketpair() or die "Cannot create socket pair - $!";
 
 # Want all pipes to be nonblocking, autoflushing
 for ( @S ) {

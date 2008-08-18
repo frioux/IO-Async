@@ -5,8 +5,7 @@ use strict;
 use Test::More tests => 34;
 use Test::Exception;
 
-use IO::Socket::UNIX;
-
+use IO::Async::Loop;
 use IO::Async::Notifier;
 
 use IO::Handle;
@@ -16,8 +15,9 @@ use POSIX qw( EAGAIN );
 dies_ok( sub { IO::Async::Notifier->new( handle => "Hello" ) },
          'Not a socket' );
 
-( my $S1, my $S2 ) = IO::Socket::UNIX->socketpair( AF_UNIX, SOCK_STREAM, PF_UNSPEC ) or
-   die "Cannot create socket pair - $!";
+my $loop = IO::Async::Loop->new;
+
+my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
 
 # Need sockets in nonblocking mode
 $S1->blocking( 0 );
@@ -134,8 +134,7 @@ ok( defined $ioan, '$ioan defined' );
 ok( !defined $ioan->read_handle,  '->read_handle not defined' );
 ok( !defined $ioan->write_handle, '->write_handle not defined' );
 
-( $S1, $S2 ) = IO::Socket::UNIX->socketpair( AF_UNIX, SOCK_STREAM, PF_UNSPEC ) or
-   die "Cannot create socket pair - $!";
+( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
 
 $ioan->set_handle( $S1 );
 
