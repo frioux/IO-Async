@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 31;
+use Test::More tests => 40;
 use Test::Exception;
 
 use POSIX qw( EAGAIN ECONNRESET );
@@ -146,6 +146,59 @@ $S2->syswrite( "hi again" );
 
 $countedstream->on_read_ready;
 is( $called, 3, '$called after count=3 call' );
+
+# Dynamic 'on_read' swapping
+
+my $outer_count = 0;
+my $inner_count = 0;
+
+my $record;
+
+my $dynamicstream = IO::Async::Stream->new(
+   handle => $S1,
+   on_read => sub {
+      my ( $self, $buffref, $closed ) = @_;
+      $outer_count++;
+
+      return 0 unless $$buffref =~ s/^(.*\n)//;
+
+      my $length = $1;
+
+      return sub {
+         my ( $self, $buffref, $closed ) = @_;
+         $inner_count++;
+
+         return 0 unless length $$buffref >= $length;
+
+         $record = substr( $$buffref, 0, $length, "" );
+
+         return undef;
+      }
+   },
+);
+
+$S2->write( "11" ); # No linefeed yet
+$dynamicstream->on_read_ready;
+is( $outer_count, 1, '$outer_count after idle' );
+is( $inner_count, 0, '$inner_count after idle' );
+
+$S2->write( "\n" );
+$dynamicstream->on_read_ready;
+is( $outer_count, 2, '$outer_count after received length' );
+is( $inner_count, 1, '$inner_count after received length' );
+
+$S2->write( "Hello " );
+$dynamicstream->on_read_ready;
+is( $outer_count, 2, '$outer_count after partial body' );
+is( $inner_count, 2, '$inner_count after partial body' );
+
+$S2->write( "world" );
+$dynamicstream->on_read_ready;
+is( $outer_count, 3, '$outer_count after complete body' );
+is( $inner_count, 3, '$inner_count after complete body' );
+is( $record, "Hello world", '$record after complete body' );
+
+undef $dynamicstream;
 
 package ErrorSocket;
 
