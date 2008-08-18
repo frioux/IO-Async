@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 40;
+use Test::More tests => 43;
 use Test::Exception;
 
 use POSIX qw( EAGAIN ECONNRESET );
@@ -199,6 +199,47 @@ is( $inner_count, 3, '$inner_count after complete body' );
 is( $record, "Hello world", '$record after complete body' );
 
 undef $dynamicstream;
+
+@received = ();
+
+my $cornerstream = IO::Async::Stream->new(
+   handle => $S1,
+   on_read => sub {
+      my ( $self, $buffref, $closed ) = @_;
+
+      return 0 unless( $$buffref =~ s/^(.*\n)// );
+
+      push @received, $1;
+      return 1;
+   },
+);
+
+# First corner case - byte at a time
+
+foreach( split( m//, "my line here" ) ) {
+   $S2->syswrite( $_ );
+
+   $cornerstream->on_read_ready;
+}
+
+is( scalar @received, 0, 'scalar @received no data yet' );
+
+$S2->syswrite( "\n" );
+$cornerstream->on_read_ready;
+
+is_deeply( \@received, [ "my line here\n" ], '@received 1 line' );
+
+@received = ();
+
+# Second corner case - multiple lines at once
+
+$S2->syswrite( "my\nlines\nhere\n" );
+
+$cornerstream->on_read_ready;
+
+is_deeply( \@received, [ "my\n", "lines\n", "here\n" ], '@received 3 lines' );
+
+undef $cornerstream;
 
 package ErrorSocket;
 
