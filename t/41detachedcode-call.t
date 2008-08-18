@@ -26,7 +26,7 @@ my $code = IO::Async::DetachedCode->new(
 );
 
 ok( defined $code, '$code defined' );
-is( ref $code, "IO::Async::DetachedCode", 'ref $code is IO::Async::DetachedCode' );
+isa_ok( $code, "IO::Async::DetachedCode", '$code isa IO::Async::DetachedCode' );
 
 is_oneref( $code, '$code has refcount 1' );
 

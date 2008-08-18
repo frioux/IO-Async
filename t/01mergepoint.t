@@ -28,7 +28,7 @@ my $merge = IO::Async::MergePoint->new(
 );
 
 ok( defined $merge, '$merge defined' );
-is( ref $merge, "IO::Async::MergePoint", 'ref $merge is IO::Async::MergePoint' );
+isa_ok( $merge, "IO::Async::MergePoint", '$merge isa IO::Async::MergePoint' );
 
 is_deeply( \%items, {}, '%items before done of one item' );
 

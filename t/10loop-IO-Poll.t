@@ -16,7 +16,7 @@ my $poll = IO::Poll->new();
 my $loop = IO::Async::Loop::IO_Poll->new( poll => $poll );
 
 ok( defined $loop, '$loop defined' );
-is( ref $loop, "IO::Async::Loop::IO_Poll", 'ref $loop is IO::Async::Loop::IO_Poll' );
+isa_ok( $loop, "IO::Async::Loop::IO_Poll", '$loop isa IO::Async::Loop::IO_Poll' );
 
 is_oneref( $loop, '$loop has refcount 1' );
 

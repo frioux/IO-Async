@@ -65,7 +65,7 @@ sub test_marshall_args_ref
 my $marshaller = IO::Async::DetachedCode::FlatMarshaller->new();
 
 ok( defined $marshaller, '$marshaller defined' );
-is( ref $marshaller, "IO::Async::DetachedCode::FlatMarshaller", 'ref $marshaller is IO::Async::DetachedCode::FlatMarshaller' );
+isa_ok( $marshaller, "IO::Async::DetachedCode::FlatMarshaller", '$marshaller isa IO::Async::DetachedCode::FlatMarshaller' );
 
 test_marshall_args( $marshaller, "flat" );
 
@@ -81,7 +81,7 @@ dies_ok( sub { $marshaller->marshall_args( 2, [ { a => 'A' } ] ); },
 $marshaller = IO::Async::DetachedCode::StorableMarshaller->new();
 
 ok( defined $marshaller, '$marshaller defined' );
-is( ref $marshaller, "IO::Async::DetachedCode::StorableMarshaller", 'ref $marshaller is IO::Async::DetachedCode::StorableMarshaller' );
+isa_ok( $marshaller, "IO::Async::DetachedCode::StorableMarshaller", '$marshaller isa IO::Async::DetachedCode::StorableMarshaller' );
 
 test_marshall_args( $marshaller, "storable" );
 test_marshall_args_ref( $marshaller, "storable" );

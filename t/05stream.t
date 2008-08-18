@@ -64,7 +64,7 @@ my $stream = IO::Async::Stream->new(
 );
 
 ok( defined $stream, '$stream defined' );
-is( ref $stream, "IO::Async::Stream", 'ref $stream is IO::Async::Stream' );
+isa_ok( $stream, "IO::Async::Stream", '$stream isa IO::Async::Stream' );
 
 # Writing
 

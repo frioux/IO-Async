@@ -10,7 +10,7 @@ use IO::Async::TimeQueue;
 my $queue = IO::Async::TimeQueue->new();
 
 ok( defined $queue, '$queue defined' );
-is( ref $queue, "IO::Async::TimeQueue", 'ref $queue is IO::Async::TimeQueue' );
+isa_ok( $queue, "IO::Async::TimeQueue", '$queue isa IO::Async::TimeQueue' );
 
 is( $queue->next_time, undef, '->next_time when empty is undef' );
 

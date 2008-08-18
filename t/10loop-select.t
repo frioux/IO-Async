@@ -12,7 +12,7 @@ use IO::Async::Loop::Select;
 my $loop = IO::Async::Loop::Select->new();
 
 ok( defined $loop, '$loop defined' );
-is( ref $loop, "IO::Async::Loop::Select", 'ref $loop is IO::Async::Loop::Select' );
+isa_ok( $loop, "IO::Async::Loop::Select", '$loop isa IO::Async::Loop::Select' );
 
 my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
 

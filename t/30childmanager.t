@@ -23,7 +23,7 @@ is_refcount( $loop, 2, '$loop has refcount 2 after adding to IO::Async::Test' );
 my $manager = IO::Async::ChildManager->new( loop => $loop );
 
 ok( defined $manager, '$manager defined' );
-is( ref $manager, "IO::Async::ChildManager", 'ref $manager is IO::Async::ChildManager' );
+isa_ok( $manager, "IO::Async::ChildManager", '$manager isa IO::Async::ChildManager' );
 
 is_refcount( $loop, 2, '$loop has refcount 2 after constructing ChildManager' );
 

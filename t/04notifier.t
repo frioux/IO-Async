@@ -35,7 +35,7 @@ my $ioan = IO::Async::Notifier->new( handle => $S1, want_writeready => 0,
 );
 
 ok( defined $ioan, '$ioan defined' );
-is( ref $ioan, "IO::Async::Notifier", 'ref $ioan is IO::Async::Notifier' );
+isa_ok( $ioan, "IO::Async::Notifier", '$ioan isa IO::Async::Notifier' );
 
 is( $ioan->read_handle,  $S1, '->read_handle returns S1' );
 is( $ioan->write_handle, $S1, '->write_handle returns S1' );
