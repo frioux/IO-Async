@@ -12,8 +12,9 @@ our $VERSION = '0.16';
 use IO::Async::Notifier;
 
 use POSIX qw( EAGAIN );
-use IO::Socket; # For the actual sockets that are created
 use Socket::GetAddrInfo qw( :Socket6api AI_PASSIVE );
+
+use Socket qw( SO_ACCEPTCONN SO_REUSEADDR );
 
 use Carp;
 
@@ -276,9 +277,9 @@ sub listen
       foreach my $addr ( @$addrlist ) {
          my ( $family, $socktype, $proto, $address ) = @$addr;
 
-         my $sock = IO::Socket->new();
+         my $sock;
 
-         unless( $sock->socket( $family, $socktype, $proto ) ) {
+         unless( $sock = $loop->socket( $family, $socktype, $proto ) ) {
             $on_fail->( "socket", $family, $socktype, $proto, $! ) if $on_fail;
             next;
          }

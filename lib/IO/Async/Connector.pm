@@ -14,8 +14,6 @@ use IO::Async::Notifier;
 use POSIX qw( EINPROGRESS );
 use Socket qw( SOL_SOCKET SO_ERROR );
 
-use IO::Socket; # For the actual connections that are created
-
 use Carp;
 
 =head1 NAME
@@ -139,14 +137,15 @@ sub _connect_addresses
    my $self = shift;
    my ( $addrlist, $on_connected, $on_connect_error, $on_fail ) = @_;
 
+   my $loop = $self->{loop};
+
    my $sock;
    my $address;
 
    while( my $addr = shift @$addrlist ) {
       ( my ( $family, $socktype, $proto ), $address ) = @$addr;
 
-      $sock = IO::Socket->new();
-      $sock->socket( $family, $socktype, $proto ) and last;
+      $sock = $loop->socket( $family, $socktype, $proto ) and last;
 
       undef $sock;
       $on_fail->( "socket", $family, $socktype, $proto, $! ) if $on_fail;
@@ -174,8 +173,6 @@ sub _connect_addresses
    }
 
    # Now we'll set up a Notifier for a one-shot check on it being writable.
-
-   my $loop = $self->{loop};
 
    my $notifier = IO::Async::Notifier->new(
       write_handle => $sock,

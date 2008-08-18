@@ -797,6 +797,23 @@ to give different implementations on that OS.
 
 =cut
 
+# This one isn't documented because it's not really overridable. It's largely
+# here just for completeness
+sub socket
+{
+   my $self = shift;
+   my ( $family, $socktype, $proto ) = @_;
+
+   croak "Cannot create a new socket() without a family" unless $family;
+
+   # SOCK_STREAM is the most likely
+   defined $socktype or $socktype = SOCK_STREAM;
+
+   defined $proto or $proto = 0;
+
+   return IO::Socket->new->socket( $family, $socktype, $proto );
+}
+
 =head2 ( $S1, $S2 ) = $loop->socketpair( $family, $socktype, $proto )
 
 An abstraction of the C<socketpair()> syscall, where any argument may be
