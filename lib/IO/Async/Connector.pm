@@ -12,7 +12,7 @@ our $VERSION = '0.16';
 use IO::Async::Notifier;
 
 use POSIX qw( EINPROGRESS );
-use Socket qw( SOL_SOCKET SO_ERROR );
+use Socket qw( SO_ERROR );
 
 use Carp;
 
@@ -99,7 +99,7 @@ sub _get_sock_err
 {
    my ( $sock ) = @_;
 
-   my $err_packed = getsockopt( $sock, SOL_SOCKET, SO_ERROR );
+   my $err_packed = $sock->sockopt( SO_ERROR );
 
    if( defined $err_packed ) {
       my $err = unpack( "I", $err_packed );
