@@ -7,7 +7,7 @@ package IO::Async::Sequencer;
 
 use strict;
 
-our $VERSION = '0.16';
+our $VERSION = '0.16.001';
 
 use base qw( IO::Async::Stream );
 

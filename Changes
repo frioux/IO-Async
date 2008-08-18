@@ -1,5 +1,12 @@
 Revision history for IO-Async
 
+0.16.001: CHANGES:
+         * Added OS abstractions of socketpair() and pipe()
+
+        BUGFIXES:
+         * Various CPAN testers somketest bug fixes
+         * (probable) fix for http://rt.cpan.org/Ticket/Display.html?id=38476
+
 0.16    ADDITIONS:
          * Loop->requeue_timer()
          * Magic constructor in IO::Async::Loop which tries to find the best

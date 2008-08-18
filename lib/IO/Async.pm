@@ -11,7 +11,7 @@ use strict;
 # It is provided simply to keep CPAN happy:
 #   cpan -i IO::Async
 
-our $VERSION = '0.16';
+our $VERSION = '0.16.001';
 
 =head1 NAME
 
