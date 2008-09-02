@@ -267,13 +267,58 @@ sub new
 
 =cut
 
+=head2 $stream->close
+
+A synonym for C<close_when_empty>. This should not be used when the deferred
+wait behaviour is required, as the behaviour of C<close> may change in a
+future version of C<IO::Async>. Instead, call C<close_when_empty> directly.
+
+=cut
+
 sub close
+{
+   my $self = shift;
+   $self->close_when_empty;
+}
+
+=head2 $stream->close_when_empty
+
+If the write buffer is empty, this method calls C<close> on the underlying IO
+handles, and removes the stream from its containing loop. If the write buffer
+still contains data, then this is deferred until the buffer is empty. This is
+intended for "write-then-close" one-shot streams.
+
+ $stream->write( "Here is my final data\n" );
+ $stream->close;
+
+Because of this deferred nature, it may not be suitable for error handling.
+See instead the C<close_now> method.
+
+=cut
+
+sub close_when_empty
 {
    my $self = shift;
 
    return $self->SUPER::close if length( $self->{writebuff} ) == 0;
 
    $self->{closing} = 1;
+}
+
+=head2 $stream->close_now
+
+This method immediately closes the underlying IO handles and removes the
+stream from the containing loop. It will not wait to flush the remaining data
+in the write buffer.
+
+=cut
+
+sub close_now
+{
+   my $self = shift;
+
+   $self->{writebuff} = "";
+   $self->SUPER::close;
 }
 
 =head2 $stream->write( $data )
@@ -326,7 +371,7 @@ sub on_read_ready
          $self->on_read_error( $errno );
       }
       else {
-         $self->close();
+         $self->close_now;
       }
 
       return;
@@ -365,7 +410,7 @@ sub on_read_ready
       last if !$again;
    }
 
-   $self->close() if $handleclosed;
+   $self->close_now if $handleclosed;
 }
 
 # protected
@@ -390,14 +435,14 @@ sub on_write_ready
             $self->on_write_error( $errno );
          }
          else {
-            $self->close();
+            $self->close_now;
          }
 
          return;
       }
 
       if( $len == 0 ) {
-         $self->close();
+         $self->close_now;
          return;
       }
 
@@ -415,7 +460,7 @@ sub on_write_ready
          $self->on_outgoing_empty();
       }
 
-      $self->close if $self->{closing};
+      $self->close_now if $self->{closing};
    }
 }
 

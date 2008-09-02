@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 43;
+use Test::More tests => 48;
 use Test::Exception;
 
 use POSIX qw( EAGAIN ECONNRESET );
@@ -241,6 +241,43 @@ $cornerstream->on_read_ready;
 is_deeply( \@received, [ "my\n", "lines\n", "here\n" ], '@received 3 lines' );
 
 undef $cornerstream;
+
+my ( $closeSR, $closeSW ) = $loop->pipepair() or die "Cannot pipepair - $!";
+
+my $closestream = IO::Async::Stream->new(
+   write_handle => $closeSW,
+);
+
+$closestream->write( "Hello world\n" );
+$closestream->close_when_empty;
+
+ok( defined( fileno $closeSW ), '$S1 still open' );
+
+$closestream->on_write_ready;
+
+ok( !defined( fileno $closeSW ), '$S1 now closed' );
+is( read_data( $closeSR ), "Hello world\n", 'stream data got written' );
+
+{
+   my $SIGPIPE = 0;
+
+   local $SIG{PIPE} = sub { $SIGPIPE++ };
+
+   my ( $sigpipeSR, $sigpipeSW ) = $loop->pipepair() or die "Cannot pipepair - $!";
+
+   my $sigpipestream = IO::Async::Stream->new(
+      write_handle => $sigpipeSW,
+   );
+
+   undef $sigpipeSR;
+
+   $sigpipestream->write( "Hello world\n" );
+
+   $sigpipestream->on_write_ready;
+
+   is( $SIGPIPE, 1, 'Received SIGPIPE during closed write' );
+   ok( !defined( fileno $sigpipeSW ), '$S1 now closed after EPIPE' );
+}
 
 package ErrorSocket;
 
