@@ -7,7 +7,7 @@ package IO::Async::Stream;
 
 use strict;
 
-our $VERSION = '0.16.001';
+our $VERSION = '0.160002';
 
 use base qw( IO::Async::Notifier );
 
