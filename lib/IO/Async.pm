@@ -65,35 +65,32 @@ This collection of modules allows programs to be written that perform
 asynchronous filehandle IO operations. A typical program using them would
 consist of a single subclass of C<IO::Async::Loop> to act as a container for a
 number of C<IO::Async::Notifier> objects (or subclasses thereof). The loop
-itself is responsible for checking read- or write-readiness, and informing the
-notifiers of these conditions. The notifiers then perform whatever work is
-required on these conditions, by using subclass methods or callback functions.
+itself is responsible for performing the lower level OS interactions. The
+notifiers then perform whatever work is required on these conditions, by using
+subclass methods or callback functions.
 
 =head2 Notifiers
 
-A L<IO::Async::Notifier> object represents a single IO stream that is being
+A L<IO::Async::Notifier> object represents a single IO handle that is being
 managed. While in most cases it will represent a single filehandle, such as a
 socket (for example, an C<IO::Socket::INET> connection), it is possible to
 have separate reading and writing handles (most likely for a program's
-C<STDIN> and C<STDOUT> streams). Subclass methods or callback functions are
-then used by the containing C<IO::Async::Loop> object, to inform the notifier
-when the handles are read- or write-ready.
+C<STDIN> and C<STDOUT> streams, or a pair of pipes connected to a child
+process).
 
 The L<IO::Async::Stream> class is a subclass of C<IO::Async::Notifier> which
 maintains internal incoming and outgoing data buffers. In this way, it
 implements bidirectional buffering of a byte stream, such as a TCP socket. The
-class automatically handles reading of incoming data into the incoming buffer
-whenever it is notified as being read-ready, and writing of the outgoing
-buffer when it is notified as write-ready. Methods or callbacks are used to
-inform when new incoming data is available, or when the outgoing buffer is
-empty.
+class automatically handles reading of incoming data into the incoming buffer,
+and writing of the outgoing buffer. Methods or callbacks are used to inform
+when new incoming data is available, or when the outgoing buffer is empty.
 
 =head2 Loops
 
 The L<IO::Async::Loop> object class represents an abstract collection of
-C<IO::Async::Notifier> objects. It performs all of the low-level set
-management tasks, and leaves the actual determination of read- or write-
-readiness of filehandles to a particular subclass for the purpose.
+C<IO::Async::Notifier> objects. It performs all of the abstract set
+management tasks, and leaves the actual OS interactions to a particular
+subclass for the purpose.
 
 L<IO::Async::Loop::IO_Poll> uses an C<IO::Poll> object for this test.
 
@@ -118,11 +115,11 @@ a detached child process.
 
 =head2 Timers
 
-Each of the L<IO::Async::Loop> subclasses supports a pair of methods for
-installing and cancelling timers. These are callbacks invoked at some fixed
-future time. Once installed, a timer will be called at or after its expiry
-time, which may be absolute, or relative to the time it was installed. An
-installed timer which has not yet expired may be cancelled.
+The L<IO::Async::Loop> supports a pair of methods for installing and
+cancelling timers. These are callbacks invoked at some fixed future time.
+Once installed, a timer will be called at or after its expiry time, which may
+be absolute, or relative to the time it was installed. An installed timer
+which has not yet expired may be cancelled.
 
 =head2 Merge Points
 
@@ -143,28 +140,6 @@ The L<IO::Async::Connector> extension allows socket connections to be
 established asynchronously, perhaps via the use of the resolver to first
 resolve names into addresses.
 
-=head1 MOTIVATION
-
-The purpose of this distribution is two-fold.
-
-The first reason is to allow programs to be written that perform multiplexed
-asynchronous IO from within one thread. This is a useful programming model
-because it avoids a lot of the problems created by multi-threading or other
-techniques, such as the potential for race conditions or deadlocks. The
-downside to this approach is the extra complexity in dealing with events
-asynchronously, handling incoming data as it arrives, even if it is as-yet
-incomplete. This distribution aims to provide abstractions that minimise the
-effort required here, through such objects as C<IO::Async::Stream>.
-
-The second reason is to act as a base-layer API, that can be extended while
-still remaining generic. The split between notifiers and sets allows new
-subclasses of notifer to be derived from the C<IO::Async::Notifier> or
-C<IO::Async::Stream> classes without regard for how they will interact with
-the actual looping constructs emplyed by the containing program. Similarly,
-new subclasses of C<IO::Async::Loop> can be developed to interact with
-existing programs written for other styles of asynchronous IO loop, without
-requiring detailed knowledge of the way the notifiers work.
-
 =head1 TODO
 
 This collection of modules is still very much in development. As a result,
@@ -183,12 +158,14 @@ anything that might be useful on Win32.
 A consideration on how to provide per-OS versions of the utility classes. For
 example, Win32 would probably need an extensively-different C<ChildManager>,
 or OSes may have specific ways to perform asynchronous name resolution
-operations better than the generic C<DetachedCode> approach.
+operations better than the generic C<DetachedCode> approach. This should be
+easier to implement now that the C<IO::Async::Loop> magic constructor looks
+for OS-specific subclasses first.
 
 =item *
 
 A consideration of whether it is useful and possible to provide integration
-with L<POE>.
+with L<POE> or L<AnyEvent>.
 
 =back
 

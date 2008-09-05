@@ -93,7 +93,7 @@ The absolute system timestamp to run the event.
 
 =item code => CODE
 
-CODE reference to the callback function to run at the allotted time.
+CODE reference to the continuation to run at the allotted time.
 
 =back
 
@@ -168,8 +168,8 @@ sub requeue
 
 =head2 $count = $queue->fire( %params )
 
-Call all the event callbacks that should have run by now. The number of
-callbacks actually invoked will be returned.
+Call all the event continuations that should have run by now. The number of
+continuations actually invoked will be returned.
 
 The C<%params> hash takes the following keys:
 

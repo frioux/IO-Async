@@ -64,7 +64,7 @@ perhaps some IPv4 ones.
 
 For this reason, the error reporting cannot report which failure is
 responsible for the failure to connect. On success, the C<on_connected>
-callback is invoked with a connected socket. When all addresses have been
+continuation is invoked with a connected socket. When all addresses have been
 tried and failed, C<on_connect_error> is invoked, though no error string can
 be provided, as there isn't a "clear winner" which is responsible for the
 failure.
@@ -211,7 +211,7 @@ sub _connect_addresses
 =head2 $loop->connect( %params )
 
 This method performs a non-blocking connection to a given address or set of
-addresses, and invokes a callback when the socket is connected.
+addresses, and invokes a continuation when the socket is connected.
 
 In plain address mode, the C<%params> hash takes the following keys:
 
@@ -239,15 +239,15 @@ trailing elements will be ignored.
 
 =item on_connected => CODE
 
-A callback that is invoked on a successful C<connect()> call to a valid
+A continuation that is invoked on a successful C<connect()> call to a valid
 socket. It will be passed the connected socket handle, as an C<IO::Socket>
 object.
 
 =item on_connect_error => CODE
 
-A callback that is invoked after all of the addresses have been tried, and
+A continuation that is invoked after all of the addresses have been tried, and
 none of them succeeded. Because there is no one error message that stands out
-as particularly noteworthy, none is given to this callback. To track
+as particularly noteworthy, none is given to this continuation. To track
 individual errors, see the C<on_fail> callback.
 
 =item on_fail => CODE
@@ -290,8 +290,9 @@ C<getaddrinfo()> call.
 
 =item on_resolve_error => CODE
 
-A callback that is invoked when the name resolution attempt fails. This is
-invoked in the same way as the C<on_error> callback for the C<resolve> method.
+A continuation that is invoked when the name resolution attempt fails. This is
+invoked in the same way as the C<on_error> continuation for the C<resolve>
+method.
 
 =back
 

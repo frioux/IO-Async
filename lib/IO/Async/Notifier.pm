@@ -18,6 +18,11 @@ C<IO::Async::Notifier> - event callbacks for a non-blocking file descriptor
 
 =head1 SYNOPSIS
 
+This class is likely not to be used directly, because subclasses of it exist
+to handle more specific cases. Here is an example of how it would be used to
+watch a listening socket for new connections. In real code, it is likely that
+the C<< Loop->listen() >> method would be used instead.
+
  use IO::Socket::INET;
  use IO::Async::Notifier;
 
@@ -43,9 +48,8 @@ stream, the C<IO::Async::Stream> class is likely to be more suitable.
 =head1 DESCRIPTION
 
 This module provides a base class for implementing non-blocking IO on file
-descriptors. The object provides ways to integrate with existing asynchronous
-IO handling code, by way of the various C<IO::Async::Loop::*> collection
-classes.
+descriptors. The object interacts with the actual OS by being part of the
+C<IO::Async::Loop> object it has been added to.
 
 This object may be used in one of two ways; with callback functions, or as a
 base class.
@@ -63,7 +67,7 @@ called when the underlying IO handle becomes readable or writable:
  $on_write_ready->( $self )
 
 Optionally, an C<on_closed> key can also be specified, which will be called
-when the C<close> method is invoked. This is intended for subclasses.
+when the C<close> method is invoked.
 
  $on_closed->( $self )
 
@@ -80,7 +84,8 @@ should not call the C<SUPER::> versions of those methods.
 =back
 
 If either of the readyness methods calls the C<close()> method, then
-the handle is internally marked as closed within the object.
+the handle is internally marked as closed within the object and will be
+removed from its containing loop, if it is within one.
 
 =cut
 
@@ -113,19 +118,19 @@ as above. Must implement C<fileno> method in way that C<IO::Handle> does.
 
 =item on_write_ready => CODE
 
-CODE references to handlers for when the handle becomes read-ready or
+CODE references to callbacks for when the handle becomes read-ready or
 write-ready. If these are not supplied, subclass methods will be called
 instead.
 
 =item on_closed => CODE
 
-CODE reference to the handler for when the handle becomes closed.
+CODE reference to the callback for when the handle becomes closed.
 
 =back
 
-It is required that at C<on_read_ready> or C<on_write_ready> are provided for
-any handle that is provided; either as a callback reference or that the object
-is a subclass that overrides the method. I.e. if only a C<read_handle> is
+It is required that a matching C<on_read_ready> or C<on_write_ready> are
+available for any handle that is provided; either passed as a callback CODE
+reference or as an overridden the method. I.e. if only a C<read_handle> is
 given, then C<on_write_ready> can be absent. If C<handle> is used as a
 shortcut, then both read and write-ready callbacks or methods are required.
 
@@ -281,7 +286,7 @@ sub set_handle
 
 =head2 $notifier->close
 
-This method calls C<close> on the underlying IO handles. This method will will
+This method calls C<close> on the underlying IO handles. This method will then
 remove the notifier from its containing loop.
 
 =cut

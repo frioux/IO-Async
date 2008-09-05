@@ -114,13 +114,13 @@ specific function chosen by the C<type>; see BUILT-IN RESOLVERS.
 
 =item on_resolved => CODE
 
-A callback that is invoked when the resolver function returns a successful
+A continuation that is invoked when the resolver function returns a successful
 result. It will be passed the array returned by the resolver function.
 
 =item on_error => CODE
 
-A callback that is invoked when the resolver function fails. It will be passed
-the exception thrown by the function.
+A continuation that is invoked when the resolver function fails. It will be
+passed the exception thrown by the function.
 
 =back
 
@@ -171,7 +171,9 @@ used by the C<type> argument to the C<resolve()> method, to identify it.
 A CODE reference to the resolver function body. It will be called in list
 context, being passed the list of arguments given in the C<data> argument to
 the C<resolve()> method. The returned list will be passed to the
-C<on_resolved> callback.
+C<on_resolved> callback. If the code throws an exception at call time, it will
+be passed to the C<on_error> continuation. If it returns normally, the list of
+values it returns will be passed to C<on_resolved>.
 
 =back
 

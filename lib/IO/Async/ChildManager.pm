@@ -39,22 +39,73 @@ This object is used indirectly via an C<IO::Async::Loop>:
 
  ...
 
- $loop->watch_child( 1234 => sub { print "Child 1234 exited\n" } );
+ $loop->run_child(
+    command => "/bin/ps",
+
+    on_finish => sub {
+       my ( $pid, $exitcode, $stdout, $stderr ) = @_;
+       print "ps [PID $pid] exited with code $exitcode\n";
+    },
+ );
+
+ $loop->open_child(
+    command => [ "/bin/ping", "-c4", "some.host" ],
+
+    stdout => {
+       on_read => sub {
+          my ( $stream, $buffref, $closed ) = @_;
+          if( $buffref =~ s/^(.*)\n// ) {
+             print "PING wrote: $1\n";
+             return 1;
+          }
+          return 0;
+       },
+    },
+
+    on_finish => sub {
+       my ( $pid, $exitcode ) = @_;
+       ...
+    },
+ );
+
+ my ( $pipeRd, $pipeWr ) = $loop->pipepair;
+ $loop->spawn_child(
+    command => "/usr/bin/my-command",
+
+    setup => [
+       stdin  => [ "open", "<", "/dev/null" ],
+       stdout => $pipeWr,
+       stderr => [ "open", ">>", "/var/log/mycmd.log" ],
+       chdir  => "/",
+    ]
+
+    on_exit => sub {
+       my ( $pid, $exitcode ) = @_;
+       print "Command exited with code $exitcode\n";
+    },
+ );
 
  $loop->spawn_child(
-    command => "/usr/bin/something",
-    on_exit => \&exit_handler,
-    setup => [
-       stdout => $pipe,
-    ]
+    code => sub {
+       do_something(); # executes in a child process
+       return 1;
+    },
+
+    on_exit => sub {
+       my ( $pid, $exitcode, $dollarbang, $dollarat ) = @_;
+       print "Child process exited with code $exitcode\n";
+       print " OS error was $dollarbang, exception was $dollarat\n";
+    },
  );
 
 =head1 DESCRIPTION
 
 This module extends the functionallity of the containing C<IO::Async::Loop> to
 manage the execution of child processes. It acts as a central point to store
-PID values of currently-running children, and to call the appropriate callback
-handler code when the process terminates.
+PID values of currently-running children, and to call the appropriate
+continuation handler code when the process terminates. It provides useful
+wrapper methods that set up filehandles and other child process details, and
+to capture the child process's STDOUT and STDERR streams.
 
 =cut
 
@@ -133,7 +184,7 @@ The PID to watch.
 
 =item $code
 
-A CODE reference to the handling function. It will be invoked as
+A CODE reference to the exit handler. It will be invoked as
 
  $code->( $pid, $? )
 
@@ -212,8 +263,8 @@ thows an exception).
 
 =item on_exit => CODE
 
-A optional callback function to be called when the child processes exits. It
-will be invoked in the following way:
+A optional continuation to be called when the child processes exits. It will
+be invoked in the following way:
 
  $on_exit->( $pid, $exitcode )
 
@@ -288,8 +339,8 @@ process before running the code or command. See below.
 
 =item on_exit => CODE
 
-A callback function to be called when the child processes exits. It will be
-invoked in the following way:
+A continuation to be called when the child processes exits. It will be invoked
+in the following way:
 
  $on_exit->( $pid, $exitcode, $dollarbang, $dollarat )
 
@@ -311,9 +362,10 @@ exception).
  $code returns   |     return value       |     $!      |    ""
  $code dies      |         255            |     $!      |    $@
 
-It is usually more convenient to use the C<open()> method in simple cases
+It is usually more convenient to use the C<open_child> method in simple cases
 where an external program is being started in order to interact with it via
-file IO.
+file IO, or even C<run_child> when only the final result is required, rather
+than interaction while it is running.
 
 =cut
 
@@ -717,22 +769,22 @@ The command or code to run in the child process (as per the C<spawn> method)
 
 =item on_finish => CODE
 
-A callback function to be called when the child process exits and has closed
-all of the filehandles that were set up for it. It will be invoked in the
-following way:
+A continuation to be called when the child process exits and has closed all of
+the filehandles that were set up for it. It will be invoked in the following
+way:
 
  $on_finish->( $pid, $exitcode )
 
 =item on_error => CODE
 
-Optional callback to be called when the child code block throws an exception,
-or the command could not be C<exec()>ed. It will be invoked in the following
-way (as per C<spawn>)
+Optional continuation to be called when the child code block throws an
+exception, or the command could not be C<exec()>ed. It will be invoked in the
+following way (as per C<spawn>)
 
  $on_error->( $pid, $exitcode, $dollarbang, $dollarat )
 
-If this callback is not supplied, then C<on_finish> is used instead. The value
-of C<$!> and C<$@> will not be reported.
+If this continuation is not supplied, then C<on_finish> is used instead. The
+value of C<$!> and C<$@> will not be reported.
 
 =item setup => ARRAY
 
@@ -928,8 +980,8 @@ sub open_child
 =head2 $pid = $loop->run_child( %params )
 
 This creates a new child process to run the given code block or command,
-capturing its STDOUT and STDERR streams. When the process exits, the callback
-is invoked being passed the exitcode, and content of the streams.
+capturing its STDOUT and STDERR streams. When the process exits, a
+continuation is invoked being passed the exitcode, and content of the streams.
 
 =over 8
 
@@ -941,8 +993,8 @@ The command or code to run in the child process (as per the C<spawn> method)
 
 =item on_finish => CODE
 
-A callback function to be called when the child process exits and closed its
-STDOUT and STDERR streams. It will be invoked in the following way:
+A continuation to be called when the child process exits and closed its STDOUT
+and STDERR streams. It will be invoked in the following way:
 
  $on_finish->( $pid, $exitcode, $stdout, $stderr )
 
@@ -952,8 +1004,8 @@ Optional. String to pass in to the child process's STDIN stream.
 
 =back
 
-This function is intended mainly as an IO::Async-compatible replacement for
-the perl C<readpipe> function (`backticks`), allowing it to replace
+This method is intended mainly as an IO::Async-compatible replacement for the
+perl C<readpipe> function (`backticks`), allowing it to replace
 
   my $output = `command here`;
 

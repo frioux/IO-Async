@@ -98,13 +98,14 @@ Or
 This module provides a subclass of C<IO::Async::Notifier> which implements
 asynchronous communications buffers around stream handles. It provides
 buffering for both incoming and outgoing data, which are transferred to or
-from the actual handle when it is read- or write-ready.
+from the actual OS-level filehandle as controlled by the containing Loop.
 
 Data can be added to the outgoing buffer at any time using the C<write()>
 method, and will be flushed whenever the underlying handle is notified as
 being write-ready. Whenever the handle is notified as being read-ready, the
 data is read in from the handle, and the C<on_read> code is called to indicate
-the data is available.
+the data is available. The code can then inspect the buffer and possibly
+consume any input it considers ready.
 
 This object may be used in one of two ways; with a callback function, or as a
 base class.
@@ -289,7 +290,7 @@ still contains data, then this is deferred until the buffer is empty. This is
 intended for "write-then-close" one-shot streams.
 
  $stream->write( "Here is my final data\n" );
- $stream->close;
+ $stream->close_when_empty;
 
 Because of this deferred nature, it may not be suitable for error handling.
 See instead the C<close_now> method.

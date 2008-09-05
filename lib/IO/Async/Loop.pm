@@ -49,7 +49,25 @@ C<IO::Async::Loop> - core loop of the C<IO::Async> framework
 
  my $loop = IO::Async::Loop->new();
 
- $loop->add( ... );
+ $loop->enqueue_timer(
+    delay => 10,
+    code  => sub { print "10 seconds have passed\n" },
+ );
+
+ $loop->add( IO::Async::Stream->new(
+    read_handle => \*STDIN,
+
+    on_read => sub {
+       my ( $self, $buffref, $closed ) = @_;
+
+       if( $$buffref =~ s/^(.*)\n// ) {
+          print "You typed a line $1\n";
+          return 1;
+       }
+
+       return 0;
+    },
+ );
 
  $loop->loop_forever();
 
@@ -327,7 +345,7 @@ The name of the signal to attach to. This should be a bare name like C<TERM>.
 
 =item $code
 
-A CODE reference to the handling function.
+A CODE reference to the handling callback.
 
 =back
 
@@ -516,8 +534,8 @@ sub open_child
 =head2 $loop->run_child( %params )
 
 This method creates a new child process to run the given code block or command,
-captures its STDOUT and STDERR streams, and passes them to the given callback
-function. For more detail see the C<run_child()> method on the
+captures its STDOUT and STDERR streams, and passes them to the given
+continuation. For more detail see the C<run_child()> method on the
 L<IO::Async::ChildManager> class.
 
 =cut
@@ -611,7 +629,7 @@ The time to consider as now; defaults to C<time()> if not specified.
 
 =item code => CODE
 
-CODE reference to the callback function to run at the allotted time.
+CODE reference to the continuation to run at the allotted time.
 
 =back
 
@@ -869,6 +887,21 @@ parent process.
 
 When creating a C<IO::Async::Stream> or subclass of it, the C<read_handle>
 and C<write_handle> parameters should always be used.
+
+ my ( $childRd, $myWr, $myRd, $childWr ) = $loop->pipequad();
+
+ $loop->open_child(
+    stdin  => $childRd,
+    stdout => $childWr,
+    ...
+ );
+
+ my $str = IO::Async::Stream->new(
+    read_handle  => $myRd,
+    write_handle => $myWr,
+    ...
+ );
+ $loop->add( $str );
 
 =cut
 

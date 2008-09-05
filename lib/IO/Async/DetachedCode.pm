@@ -52,12 +52,12 @@ This object is used indirectly via an C<IO::Async::Loop>:
 This module provides a class that allows a block of code to "detach" from the
 main process, and execute independently in its own child processes. The object
 itself acts as a proxy to this code block, allowing arguments to be passed to
-it each time it is called, and returning results back to a callback function
-in the main process.
+it each time it is called, and returning results back to a continuation in the
+main process.
 
 The object represents the code block itself, rather than one specific
 invocation of it. It can be called multiple times, by the C<call()> method.
-Multiple outstanding invocations can be called; they will be executed in
+Multiple outstanding invocations can be called; they will be dispatched in
 the order they were queued. If only one worker process is used then results
 will be returned in the order they were called. If multiple are used, then
 each request will be sent in the order called, but timing differences between
@@ -67,7 +67,8 @@ The default marshalling code can only cope with plain scalars or C<undef>
 values; no references, objects, or IO handles may be passed to the function
 each time it is called. If references are required then code based on
 L<Storable> may be used instead to pass these. See the documentation on the
-C<marshaller> parameter of C<new()> method.
+C<marshaller> parameter of C<new()> method. Beware that, because the code
+executes in a child process, passing such items as IO handles will not work.
 
 The C<IO::Async> framework generally provides mechanisms for multiplexing IO
 tasks between different handles, so there aren't many occasions when such
@@ -83,7 +84,8 @@ When a large amount of computationally-intensive work needs to be performed
 =item 2.
 
 When a blocking OS syscall or library-level function needs to be called, and
-no nonblocking or asynchronous version is supplied.
+no nonblocking or asynchronous version is supplied. This is used by
+C<IO::Async::Resolver>.
 
 =back
 
@@ -104,8 +106,8 @@ The C<%params> hash takes the following keys:
 
 A block of code to call in the child process. It will be invoked in list
 context each time the C<call()> method is is called, passing in the arguments
-given. The result will be given to the C<on_result> or C<on_return> callback
-provided to the C<call()> method.
+given. The result will be given to the C<on_result> or C<on_return>
+continuation provided to the C<call()> method.
 
 =item stream => STRING: C<socket> or C<pipe>
 
@@ -121,10 +123,10 @@ will select an appropriate method. Usually this default will be sufficient.
 =item marshaller => STRING: C<flat> or C<storable>
 
 Optional string, specifies the way that call arguments and return values are
-marshalled over the stream that connects the worker and parent processes.
-The C<flat> method is small, simple and fast, but can only cope with strings
-or C<undef>; cannot cope with any references. The C<storable> method uses the
-L<Storable> module to marshall arbitrary reference structures.
+marshalled over the stream that connects the worker and parent processes. The
+C<flat> marshaller is small, simple and fast, but can only cope with strings
+or C<undef>; cannot cope with any references. The C<storable> marshaller uses
+the L<Storable> module to marshall arbitrary reference structures.
 
 If not supplied, the C<flat> method is used.
 
@@ -348,7 +350,7 @@ A reference to the array of arguments to pass to the code.
 
 =item on_result => CODE
 
-A callback that is invoked when the code has been executed. If the code
+A continuation that is invoked when the code has been executed. If the code
 returned normally, it is called as:
 
  $on_result->( 'return', @values )
@@ -366,8 +368,8 @@ or
 
 =item on_return => CODE and on_error => CODE
 
-Two callbacks to use in either of the circumstances given above. They will be
-called directly, without the leading 'return' or 'error' value.
+Two continuations to use in either of the circumstances given above. They will
+be called directly, without the leading 'return' or 'error' value.
 
 =back
 

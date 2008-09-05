@@ -261,7 +261,7 @@ To be called from the C<on_read> callback.
 
 This method informs the sequencer that a new request has arrived. It will
 invoke the C<on_request> callback, passing in a token to identify the
-request, for stream ordering purposes, and the request itself.
+request for stream ordering purposes, and the request itself.
 
 =cut
 
@@ -334,8 +334,8 @@ The request value to pass to the C<marshall_request> callback.
 
 =item on_response => CODE
 
-A callback to invoke when a response to this request arrives from the upstream
-server. It will be invoked as
+A continuation to invoke when a response to this request arrives from the
+upstream server. It will be invoked as
 
  $on_response->( $response );
 
@@ -349,7 +349,8 @@ C<IO::Async::Stream>; i.e.
 
 This handler should return C<undef> when it has finished handling the
 response, so that the next one queued can be invoked (or the default if none
-exists). It MUST NOT call C<incoming_response()>.
+exists). It MUST NOT call C<incoming_response()>. Instead, the code should
+directly implement the behaviour for receipt of a response.
 
 =back
 

@@ -153,8 +153,9 @@ C<getaddrinfo()> call.
 
 =item on_resolve_error => CODE
 
-A callback that is invoked when the name resolution attempt fails. This is
-invoked in the same way as the C<on_error> callback for the C<resolve> method.
+A continuation that is invoked when the name resolution attempt fails. This is
+invoked in the same way as the C<on_error> continuation for the C<resolve>
+method.
 
 =back
 
@@ -190,9 +191,9 @@ the socket's sockname address, or otherwise inspect the filehandle.
 
 =item on_listen_error => CODE
 
-A callback this is invoked after all of the addresses have been tried, and
+A continuation this is invoked after all of the addresses have been tried, and
 none of them succeeded. Becasue there is no one error message that stands out
-as particularly noteworthy, none is given to this callback. To track
+as particularly noteworthy, none is given to this continuation. To track
 individual errors, see the C<on_fail> callback.
 
 =item on_fail => CODE
