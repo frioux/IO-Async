@@ -7,7 +7,7 @@ package IO::Async::TimeQueue;
 
 use strict;
 
-our $VERSION = '0.160002';
+our $VERSION = '0.17';
 
 use Carp;
 
