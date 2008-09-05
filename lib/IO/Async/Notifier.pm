@@ -147,54 +147,7 @@ sub new
    my $class = shift;
    my ( %params ) = @_;
 
-   my ( $read_handle, $write_handle );
-
-   if( defined $params{read_handle} or defined $params{write_handle} ) {
-      # Test if we've got a fileno. We put it in an eval block in case what
-      # we were passed in can't do fileno. We can't just test if 
-      # $read_handle->can( "fileno" ) because this is not true for bare
-      # filehandles like \*STDIN, whereas STDIN->fileno still works.
-
-      $read_handle  = $params{read_handle};
-      if( defined $read_handle ) {
-         unless( defined eval { $read_handle->fileno } ) {
-            croak 'Expected that read_handle can fileno()';
-         }
-      }
-
-      $write_handle = $params{write_handle};
-      if( defined $write_handle ) {
-         unless( defined eval { $write_handle->fileno } ) {
-            croak 'Expected that write_handle can fileno()';
-         }
-      }
-   }
-   elsif( defined $params{handle} ) {
-      my $handle = $params{handle};
-      unless( defined eval { $handle->fileno } ) {
-         croak 'Expected that handle can fileno()';
-      }
-
-      $read_handle  = $handle;
-      $write_handle = $handle;
-   }
-
-   if( defined $read_handle ) {
-      if( !$params{on_read_ready} and $class->can( 'on_read_ready' ) == \&on_read_ready ) {
-         croak 'Expected either a on_read_ready callback or an ->on_read_ready method';
-      }
-   }
-
-   if( defined $write_handle ) {
-      if( !$params{on_write_ready} and $class->can( 'on_write_ready' ) == \&on_write_ready ) {
-         # This used not to be fatal. Make it just a warning for now.
-         carp 'A write handle was provided but neither a on_write_ready callback nor an ->on_write_ready method were. Perhaps you mean \'read_handle\' instead?';
-      }
-   }
-
    my $self = bless {
-      read_handle     => $read_handle,
-      write_handle    => $write_handle,
       want_readready  => 0,
       want_writeready => 0,
       children        => [],
@@ -205,8 +158,18 @@ sub new
    $self->{on_write_ready} = $params{on_write_ready} if defined $params{on_write_ready};
    $self->{on_closed}      = $params{on_closed}      if defined $params{on_closed};
 
+   if( defined $params{read_handle} or defined $params{write_handle} ) {
+      $self->set_handles(
+         read_handle  => $params{read_handle},
+         write_handle => $params{write_handle},
+      );
+   }
+   elsif( defined $params{handle} ) {
+      $self->set_handle( $params{handle} );
+   }
+
    # Slightly asymmetric
-   $self->want_readready( defined $read_handle );
+   $self->want_readready( $self->read_handle );
    $self->want_writeready( $params{want_writeready} || 0 );
 
    return $self;
@@ -241,27 +204,38 @@ sub set_handles
    my $self = shift;
    my %params = @_;
 
-   if( defined $params{read_handle} ) {
-      unless( defined eval { $params{read_handle}->fileno } ) {
+   my ( $read_handle, $write_handle );
+
+   if( defined( $read_handle = $params{read_handle} ) ) {
+      unless( defined eval { $read_handle->fileno } ) {
          croak 'Expected that read_handle can fileno()';
+      }
+
+      if( !$self->{on_read_ready} and $self->can( 'on_read_ready' ) == \&on_read_ready ) {
+         croak 'Expected either a on_read_ready callback or an ->on_read_ready method';
       }
    }
 
-   if( defined $params{write_handle} ) {
-      unless( defined eval { $params{write_handle}->fileno } ) {
+   if( defined( $write_handle = $params{write_handle} ) ) {
+      unless( defined eval { $write_handle->fileno } ) {
          croak 'Expected that write_handle can fileno()';
+      }
+
+      if( !$self->{on_write_ready} and $self->can( 'on_write_ready' ) == \&on_write_ready ) {
+         # This used not to be fatal. Make it just a warning for now.
+         carp 'A write handle was provided but neither a on_write_ready callback nor an ->on_write_ready method were. Perhaps you mean \'read_handle\' instead?';
       }
    }
 
    if( exists $params{read_handle} ) {
-      $self->{read_handle} = $params{read_handle};
+      $self->{read_handle} = $read_handle;
 
       # Register interest in readability with the underlying loop
-      $self->want_readready( defined $self->{read_handle} );
+      $self->want_readready( defined $read_handle );
    }
 
    if( exists $params{write_handle} ) {
-      $self->{write_handle} = $params{write_handle};
+      $self->{write_handle} = $write_handle;
    }
 }
 
