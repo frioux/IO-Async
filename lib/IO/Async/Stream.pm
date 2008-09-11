@@ -383,16 +383,11 @@ sub on_read_ready
    $self->{readbuff} .= $data if( !$handleclosed );
 
    while(1) {
-      my $callback = $self->{current_on_read} || $self->{on_read};
+      my $on_read = $self->{current_on_read}
+                     || $self->{on_read}
+                     || $self->can( "on_read" );
 
-      my $ret;
-
-      if( defined $callback ) {
-         $ret = $callback->( $self, \$self->{readbuff}, $handleclosed );
-      }
-      else {
-         $ret = $self->on_read( \$self->{readbuff}, $handleclosed );
-      }
+      my $ret = $on_read->( $self, \$self->{readbuff}, $handleclosed );
 
       my $again;
 
@@ -454,12 +449,10 @@ sub on_write_ready
    if( length( $self->{writebuff} ) == 0 ) {
       $self->want_writeready( 0 );
 
-      if( defined( my $callback = $self->{on_outgoing_empty} ) ) {
-         $callback->( $self );
-      }
-      elsif( $self->can( 'on_outgoing_empty' ) ) {
-         $self->on_outgoing_empty();
-      }
+      my $on_outgoing_empty = $self->{on_outgoing_empty}
+                               || $self->can( "on_outgoing_empty" );
+
+      $on_outgoing_empty->( $self ) if $on_outgoing_empty;
 
       $self->close_now if $self->{closing};
    }
