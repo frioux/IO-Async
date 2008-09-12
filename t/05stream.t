@@ -178,22 +178,22 @@ my $dynamicstream = IO::Async::Stream->new(
    },
 );
 
-$S2->write( "11" ); # No linefeed yet
+$S2->syswrite( "11" ); # No linefeed yet
 $dynamicstream->on_read_ready;
 is( $outer_count, 1, '$outer_count after idle' );
 is( $inner_count, 0, '$inner_count after idle' );
 
-$S2->write( "\n" );
+$S2->syswrite( "\n" );
 $dynamicstream->on_read_ready;
 is( $outer_count, 2, '$outer_count after received length' );
 is( $inner_count, 1, '$inner_count after received length' );
 
-$S2->write( "Hello " );
+$S2->syswrite( "Hello " );
 $dynamicstream->on_read_ready;
 is( $outer_count, 2, '$outer_count after partial body' );
 is( $inner_count, 2, '$inner_count after partial body' );
 
-$S2->write( "world" );
+$S2->syswrite( "world" );
 $dynamicstream->on_read_ready;
 is( $outer_count, 3, '$outer_count after complete body' );
 is( $inner_count, 3, '$inner_count after complete body' );
