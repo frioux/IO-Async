@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 9;
+use Test::More tests => 13;
 
 use IO::Async::Loop;
 
@@ -132,3 +132,59 @@ $S2->write( "Your thing here\n" );
 wait_for { defined $line };
 
 is( $line, "Your thing here", 'Client response after reply to on_read' );
+
+$loop->remove( $sequencer );
+
+# And now try out the subclassing behaviour
+
+$sequencer = Test::Sequencer->new(
+   handle => $S1,
+);
+
+ok( defined $sequencer, 'defined $sequencer' );
+isa_ok( $sequencer, "IO::Async::Sequencer", '$sequencer isa IO::Async::Sequencer' );
+
+$loop->add( $sequencer );
+
+$sequencer->request(
+   request => "hello",
+   on_response => sub { ( $response ) = @_ },
+);
+
+$serverbuffer = "";
+wait_for_stream { $serverbuffer =~ m/\n/ } $S2 => $serverbuffer;
+
+is( $serverbuffer, "REQUEST:hello\n", 'Server buffer after request in subclass' );
+
+$S2->write( "RESPONSE:hello\n" );
+
+undef $response;
+wait_for { defined $response };
+
+is( $response, "hello", 'Response to request in subclass' );
+
+exit 0;
+
+package Test::Sequencer;
+
+use strict;
+use base qw( IO::Async::Sequencer );
+
+sub on_read
+{
+   my $self = shift;
+   my ( $buffref, $closed ) = @_;
+
+   return 0 unless $$buffref =~ s/^(.*)\n//;
+   $self->incoming_response( $1 ), return 1 if $1 =~ m/^RESPONSE:(.*)$/;
+   die;
+}
+
+sub marshall_request
+{
+   my $self = shift;
+   my ( $req ) = @_;
+   return "REQUEST:$req\n";
+}
+
+1;

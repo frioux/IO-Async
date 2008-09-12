@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 10;
+use Test::More tests => 14;
 
 use IO::Async::Loop;
 
@@ -100,3 +100,64 @@ wait_for_stream { $clientbuffer =~ m/\n.*\n/ } $S2 => $clientbuffer;
 
 # Check these come back right
 is( $clientbuffer, "RESP:2\nRESP:3\n", 'Client buffer after unordered pair' );
+
+$loop->remove( $sequencer );
+
+# And now try out the subclassing behaviour
+
+$sequencer = Test::Sequencer->new(
+   handle => $S1,
+);
+
+ok( defined $sequencer, 'defined $sequencer' );
+isa_ok( $sequencer, "IO::Async::Sequencer", '$sequencer isa IO::Async::Sequencer' );
+
+$loop->add( $sequencer );
+
+$S2->write( "REQUEST:hello\n" );
+
+undef @requests;
+wait_for { @requests == 1 };
+
+is( $requests[0]->[1], "hello", 'Request in subclass' );
+
+$sequencer->respond( $requests[0]->[0], "hello" );
+
+$clientbuffer = "";
+wait_for_stream { $clientbuffer =~ m/\n/ } $S2 => $clientbuffer;
+
+is( $clientbuffer, "RESPONSE:hello\n", 'Client buffer after response in subclass' );
+
+exit 0;
+
+package Test::Sequencer;
+
+use strict;
+use base qw( IO::Async::Sequencer );
+
+sub on_read
+{
+   my $self = shift;
+   my ( $buffref, $closed ) = @_;
+
+   return 0 unless $$buffref =~ s/^(.*)\n//;
+   $self->incoming_request( $1 ), return 1 if $1 =~ m/^REQUEST:(.*)$/;
+   die;
+}
+
+sub on_request
+{
+   my $self = shift;
+   my ( $token, $request ) = @_;
+
+   push @requests, [ $token, $request ];
+}
+
+sub marshall_response
+{
+   my $self = shift;
+   my ( $resp ) = @_;
+   return "RESPONSE:$resp\n";
+}
+
+1;

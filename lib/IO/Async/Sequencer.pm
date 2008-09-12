@@ -113,7 +113,7 @@ Objects in this class can operate in any of three ways:
 =item * A pure client
 
 The object is asked to send requests by the containing code and invokes
-response callbacks when responses arrive.
+response handling code when responses arrive.
 
 =item * A pure server
 
@@ -128,9 +128,14 @@ responding to those of its peer connection.
 =back
 
 The exact mode of operation of any object is not declared explicitly, but
-instead is an artefact of the set of callbacks provided to the constructor,
-and the methods called on the object. Certain callbacks or methods only make
-sense for one mode or the other.
+instead is an artefact of the set of callbacks provided to the constructor or
+methods defined by the subclass. Certain callbacks or methods only make sense
+for one mode or the other.
+
+The various operations required can each be provided as callback functions
+given in keys to the constructor, or as object methods on a subclass of this
+class. Keys passed to the constructor will take precidence over defined
+methods.
 
 As it is still EXPERIMENTAL, any details of this class are liable to change in
 future versions. It shouldn't yet be relied upon as a stable interface.
@@ -208,7 +213,8 @@ sub new
    }
 
    my $on_read = delete $params{on_read};
-   ref $on_read eq "CODE" or croak "Expected 'on_read' as a CODE reference";
+   ref $on_read eq "CODE" or $class->can( "on_read" ) 
+      or croak "Expected 'on_read' as a CODE reference, or to be a class that can ->on_read";
 
    my $self = $class->SUPER::new(
       %params,
@@ -229,7 +235,7 @@ sub new
          return 0 unless length $$buffref;
 
          # No delegation to perform, instead just call the provided one
-         goto &$on_read;
+         goto &{ $on_read || $self->can( "on_read" ) };
       },
    );
 
@@ -257,11 +263,11 @@ subclass, rather than the containing application code.
 
 =head2 $sequencer->incoming_request( $request )
 
-To be called from the C<on_read> callback.
+To be called from C<on_read>.
 
 This method informs the sequencer that a new request has arrived. It will
-invoke the C<on_request> callback, passing in a token to identify the
-request for stream ordering purposes, and the request itself.
+invoke C<on_request>, passing in a token to identify the request for stream
+ordering purposes, and the request itself.
 
 =cut
 
@@ -270,10 +276,16 @@ sub incoming_request
    my $self = shift;
    my ( $request ) = @_;
 
+   my $on_request = $self->{on_request}
+                    || $self->can( "on_request" );
+
+   defined $on_request or
+      croak "Cannot process incoming request without an 'on_request'";
+
    push @{ $self->{server_queue} }, undef;
    my $token = \$self->{server_queue}[-1];
 
-   $self->{on_request}->( $self, $token, $request );
+   $on_request->( $self, $token, $request );
 }
 
 sub _flush_server_queue
@@ -288,11 +300,11 @@ sub _flush_server_queue
 
 =head2 $sequencer->incoming_response( $response )
 
-To be called from the C<on_read> callback.
+To be called from C<on_read>.
 
-This method informs the sequencer that a response has arrived. It will
-invoke the C<on_response> callback that had been passed to the C<request>
-method that sent the original request.
+This method informs the sequencer that a response has arrived. It will invoke
+C<on_response> that had been passed to the C<request> method that sent the
+original request.
 
 =cut
 
@@ -330,7 +342,7 @@ The C<%params> hash takes the following arguments:
 
 =item request => SCALAR
 
-The request value to pass to the C<marshall_request> callback.
+The request value to pass to C<marshall_request>.
 
 =item on_response => CODE
 
@@ -367,8 +379,11 @@ sub request
 
    my $request = $params{request};
 
-   defined( $self->{marshall_request} ) or
-      croak "Cannot send request without a 'marshall_request' callback";
+   my $marshall_request = $self->{marshall_request}
+                           || $self->can( "marshall_request" );
+
+   defined $marshall_request or
+      croak "Cannot send request without a 'marshall_request'";
 
    my $on_response = $params{on_response};
    my $on_read     = $params{on_read};
@@ -379,16 +394,16 @@ sub request
    defined $on_response or defined $on_read or
       croak "Need one of 'on_response' or 'on_read'";
 
-   $self->write( $self->{marshall_request}->( $self, $request ) );
+   $self->write( $marshall_request->( $self, $request ) );
 
    push @{ $self->{client_queue} }, [ $on_response, $on_read ];
 }
 
 =head2 $sequencer->respond( $token, $response )
 
-Called in server mode, usually at the end of the C<on_request> callback, or
-some continuation created within it, this method sends a response back
-downstream to a client that had earlier requested it.
+Called in server mode, usually at the end of C<on_request>, or some
+continuation created within it, this method sends a response back downstream
+to a client that had earlier requested it.
 
 =over 8
 
@@ -399,7 +414,7 @@ sent in the right order.
 
 =item $response
 
-The response value to pass to the C<marshall_response> callback.
+The response value to pass to C<marshall_response>.
 
 =back
 
@@ -410,10 +425,13 @@ sub respond
    my $self = shift;
    my ( $token, $response ) = @_;
 
-   defined( $self->{marshall_response} ) or
-      croak "Cannot send response without a 'marshall_response' callback";
+   my $marshall_response = $self->{marshall_response} 
+                            || $self->can( "marshall_response" );
 
-   my $response_stream = $self->{marshall_response}->( $self, $response );
+   defined $marshall_response or
+      croak "Cannot send response without a 'marshall_response'";
+
+   my $response_stream = $marshall_response->( $self, $response );
 
    $$token = $response_stream;
 
@@ -432,34 +450,40 @@ __END__
 The following sequencer implements a simple server which takes and responds
 with CRLF-delimited lines.
 
+ package LineSequencer;
+
+ use base qw( IO::Async::Sequencer );
+
  my $CRLF = "\x0d\x0a"; # More portable than \r\n
 
- my $sequencer = IO::Async::Sequencer->new(
-    ...
+ sub on_read {
+    my ( $self, $buffref, $closed ) = @_;
 
-    on_read => sub {
-       my ( $self, $buffref, $closed ) = @_;
+    $buffref =~ s/^(.*)$CRLF// and
+       $self->incoming_request( $1 ), return 1;
 
-       $buffref =~ s/^(.*)$CRLF// and
-          $self->incoming_request( $1 ), return 1;
+    return 0;
+ }
 
-       return 0;
-    }
+ sub marshall_response {
+    my ( $self, $response ) = @_;
+    return $response . $CRLF;
+ }
 
-    marshall_response => sub {
-       my ( $self, $response ) = @_;
-       return $response . $CRLF;
-    }
- );
+ 1;
 
 The server could then be used, for example, as a simple echo server that
 replies whatever the client said, in uppercase. This would be done using an
-C<on_request> callback like the following.
+C<on_request> like the following.
 
- on_request => sub {
-    my ( $self, $token, $request ) = @_;
-    $self->respond( $token, uc $request );
- }
+ my $linesequencer = LineSequencer->new(
+    handle => ...
+
+    on_request => sub {
+       my ( $self, $token, $request ) = @_;
+       $self->respond( $token, uc $request );
+    }
+ );
 
 It is likely, however, that any real use of the server in a non-trivial way
 would perform much more work than this, and only call C<< $self->respond() >>
@@ -513,15 +537,9 @@ input from the server - perhaps to generate an error condition of some kind.
 
 =item *
 
-Some consideration of streaming errors. How does the C<on_read> callback
-signal to the containing object that a stream error has occured? Is it fatal?
-Can resynchronisation be attempted later?
-
-=item *
-
-More support for actually being a subclass, with methods for
-C<marshall_request> and C<marshall_response> in the way that C<on_read> can
-be.
+Some consideration of streaming errors. How does the C<on_read> signal to the
+containing object that a stream error has occured? Is it fatal?  Can
+resynchronisation be attempted later?
 
 =item *
 
