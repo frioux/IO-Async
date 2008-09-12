@@ -198,6 +198,14 @@ write to the underlying file handle.
 
 These are used respectively by the client and server modes.
 
+=item pipeline => BOOL
+
+Optional. Controls whether requests will be pipelined; that is, all requests
+will be sent by the client before responses are received. If this option is
+disabled, only the first request will be sent. Other requests will be queued
+internally, and each will be sent when the response to the previous has been
+received. Defaults enabled; supply a defined but false value to disable.
+
 =back
 
 =cut
@@ -216,6 +224,9 @@ sub new
    ref $on_read eq "CODE" or $class->can( "on_read" ) 
       or croak "Expected 'on_read' as a CODE reference, or to be a class that can ->on_read";
 
+   my $pipeline = $params{pipeline};
+   defined $pipeline or $pipeline = 1; # default on
+
    my $self = $class->SUPER::new(
       %params,
 
@@ -223,6 +234,12 @@ sub new
          my ( $self, $buffref, $closed ) = @_;
 
          my $front = $self->{client_queue}[0];
+
+         if( !$self->{pipeline} and $front and defined $front->[2] ) {
+            # Next request needs sending
+            $self->write( $front->[2] );
+            undef $front->[2];
+         }
 
          if( $front and $front->[1] ) {
             # Delegate to the one provided by the request
@@ -243,6 +260,8 @@ sub new
    $self->{marshall_response} = $params{marshall_response};
 
    $self->{on_request} = $params{on_request};
+
+   $self->{pipeline} = $pipeline;
 
    # Queue to use in server mode - stores pending responses to be sent
    $self->{server_queue} = []; # element is: $streamed_response
@@ -313,10 +332,20 @@ sub incoming_response
    my $self = shift;
    my ( $response ) = @_;
 
-   my $cq = shift @{ $self->{client_queue} };
+   my $client_queue = $self->{client_queue};
+
+   my $cq = shift @$client_queue;
    my $on_response = $cq->[0];
 
    defined $on_response or croak "Cannot 'incoming_response' without a stored 'on_response' handler";
+
+   my $front = $self->{client_queue}[0];
+
+   # Send the next request if there's one queued
+   if( !$self->{pipeline} and $front and defined $front->[2] ) {
+      $self->write( $front->[2] );
+      undef $front->[2];
+   }
 
    $on_response->( $response );
 }
@@ -394,9 +423,19 @@ sub request
    defined $on_response or defined $on_read or
       croak "Need one of 'on_response' or 'on_read'";
 
-   $self->write( $marshall_request->( $self, $request ) );
+   my $client_queue = $self->{client_queue};
 
-   push @{ $self->{client_queue} }, [ $on_response, $on_read ];
+   my $request_encoded = $marshall_request->( $self, $request );
+
+   if( $self->{pipeline} or not @$client_queue ) {
+      # Clear to send
+      $self->write( $request_encoded );
+      push @{ $self->{client_queue} }, [ $on_response, $on_read, undef ];
+   }
+   else {
+      # Have to wait
+      push @{ $self->{client_queue} }, [ $on_response, $on_read, $request_encoded ];
+   }
 }
 
 =head2 $sequencer->respond( $token, $response )
