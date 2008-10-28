@@ -71,6 +71,10 @@ when the C<close> method is invoked.
 
  $on_closed->( $self )
 
+This callback is invoked before the filehandles are closed and the Notifier
+removed from its containing Loop. The C<get_loop> will still return the
+containing Loop object.
+
 =item Base Class
 
 If a subclass is built, then it can override the C<on_read_ready> or
@@ -237,6 +241,9 @@ sub set_handles
    if( exists $params{write_handle} ) {
       $self->{write_handle} = $write_handle;
    }
+
+   # In case someone has reopened the filehandles during an on_close handler
+   undef $self->{notifier_closing};
 }
 
 =head2 $notifier->set_handle( $handle )
@@ -269,7 +276,11 @@ sub close
 {
    my $self = shift;
 
-   return unless defined $self->read_handle or defined $self->write_handle;
+   # Prevent infinite loops if there's two crosslinked notifiers
+   return if $self->{notifier_closing};
+   $self->{notifier_closing} = 1;
+
+   $self->{on_closed}->( $self ) if $self->{on_closed};
 
    if( my $parent = $self->{parent} ) {
       $parent->remove_child( $self );
@@ -283,8 +294,6 @@ sub close
 
    my $write_handle = delete $self->{write_handle};
    $write_handle->close if defined $write_handle and ( not defined $read_handle or $write_handle != $read_handle );
-
-   $self->{on_closed}->( $self ) if $self->{on_closed};
 }
 
 =head2 $handle = $notifier->read_handle

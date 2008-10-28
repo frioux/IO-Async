@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 3;
+use Test::More tests => 4;
 use Test::Exception;
 
 use IO::Async::Loop;
@@ -17,10 +17,15 @@ $S1->blocking( 0 );
 $S2->blocking( 0 );
 
 my $closed = 0;
+my $loop_during_closed;
 
 my $stream = IO::Async::Stream->new( handle => $S1,
    on_read   => sub { },
-   on_closed => sub { $closed = 1 },
+   on_closed => sub {
+      my ( $self ) = @_;
+      $closed = 1;
+      $loop_during_closed = $self->get_loop;
+   },
 );
 
 $stream->write( "hello" );
@@ -36,3 +41,4 @@ is( $closed, 0, 'closed after close' );
 $loop->loop_once( 1 ) or die "Nothing ready after 1 second";
 
 is( $closed, 1, 'closed after wait' );
+is( $loop_during_closed, $loop, 'loop during closed' );
