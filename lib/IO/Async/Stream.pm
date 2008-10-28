@@ -303,7 +303,7 @@ sub close_when_empty
 
    return $self->SUPER::close if length( $self->{writebuff} ) == 0;
 
-   $self->{closing} = 1;
+   $self->{stream_closing} = 1;
 }
 
 =head2 $stream->close_now
@@ -342,7 +342,7 @@ sub write
    my $self = shift;
    my ( $data ) = @_;
 
-   carp "Cannot write data to a Stream that is closing", return if $self->{closing};
+   carp "Cannot write data to a Stream that is closing", return if $self->{stream_closing};
    croak "Cannot write data to a Stream with no write_handle" unless $self->write_handle;
 
    $self->{writebuff} .= $data;
@@ -454,7 +454,7 @@ sub on_write_ready
 
       $on_outgoing_empty->( $self ) if $on_outgoing_empty;
 
-      $self->close_now if $self->{closing};
+      $self->close_now if $self->{stream_closing};
    }
 }
 
