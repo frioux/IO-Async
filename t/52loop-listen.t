@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 8;
+use Test::More tests => 10;
 use Test::Exception;
 
 use IO::Socket::INET;
@@ -66,6 +66,7 @@ $loop->listen(
 wait_for { defined $listensock };
 
 ok( defined $listensock->fileno, '$listensock has a fileno' );
+isa_ok( $listensock, "IO::Socket::INET", '$listenaddr isa IO::Socket::INET' );
 
 my $listenaddr = $listensock->sockname;
 
@@ -83,6 +84,8 @@ $clientsock->connect( $listenaddr ) or die "Cannot connect() - $!";
 is( (unpack_sockaddr_in( $clientsock->peername ))[0], $listenport, '$clientsock on the correct port' );
 
 wait_for { defined $newclient };
+
+isa_ok( $newclient, "IO::Socket::INET", '$newclient isa IO::Socket::INET' );
 
 is( $newclient->peername, $clientsock->sockname, '$newclient peer is correct' );
 
