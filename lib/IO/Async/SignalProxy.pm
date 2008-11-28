@@ -180,12 +180,7 @@ sub attach
       push @$signal_queue, $signal;
    };
 
-   my $signum;
-   {
-      no strict 'refs';
-      local @_;
-      $signum = &{"POSIX::SIG$signal"};
-   }
+   my $signum = signame2num( $signal );
 
    my $sigset_block = $self->{sigset_block};
    $sigset_block->addset( $signum );
@@ -212,6 +207,48 @@ sub signals
 {
    my $self = shift;
    return keys %{ $self->{callbacks} };
+}
+
+=head1 FUNCTIONS
+
+=cut
+
+=head2 $signum = IO::Async::SignalProxy::signame2num( $signame )
+
+This utility function converts a signal name (such as "TERM") into its system-
+specific signal number. This may be useful to pass to C<POSIX::SigSet> or use
+in other places which use numbers instead of symbolic names.
+
+Note that this function is not an object method, and is not exported.
+
+=cut
+
+# Our interface uses signal names, but POSIX::SigSet wants numbers
+my %sig_num;
+
+sub signame2num
+{
+   # JUST A FUNCTION - i.e. not a method
+   my ( $signame ) = @_;
+   return $sig_num{$signame};
+}
+
+# Just initialise once on startup
+{
+   # Copypasta from Config.pm's documentation
+   use Config;
+
+   my @sig_name;
+   unless($Config{sig_name} && $Config{sig_num}) {
+      die "No signals found";
+   }
+   else {
+      my @names = split ' ', $Config{sig_name};
+      @sig_num{@names} = split ' ', $Config{sig_num};
+      foreach (@names) {
+         $sig_name[$sig_num{$_}] ||= $_;
+      }   
+   }
 }
 
 # Keep perl happy; keep Britain tidy
