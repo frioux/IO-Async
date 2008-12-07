@@ -7,7 +7,7 @@ package IO::Async::Loop::IO_Poll;
 
 use strict;
 
-our $VERSION = '0.17';
+our $VERSION = '0.18';
 
 use base qw( IO::Async::Loop );
 
