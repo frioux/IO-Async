@@ -342,7 +342,7 @@ sub write
    my $self = shift;
    my ( $data ) = @_;
 
-   carp "Cannot write data to a Stream that is closing", return if $self->{stream_closing};
+   carp "Cannot write data to a Stream that is closing" and return if $self->{stream_closing};
    croak "Cannot write data to a Stream with no write_handle" unless $self->write_handle;
 
    $self->{writebuff} .= $data;
