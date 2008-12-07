@@ -294,6 +294,11 @@ sub close
 
    my $write_handle = delete $self->{write_handle};
    $write_handle->close if defined $write_handle and ( not defined $read_handle or $write_handle != $read_handle );
+
+   # Clear the want* states, so if we get a new handle and are re-opened,
+   # we'll rearm the underlying loop
+   $self->{want_readready} = 0;
+   $self->{want_writeready} = 0;
 }
 
 =head2 $handle = $notifier->read_handle

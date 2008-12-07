@@ -34,7 +34,7 @@ $loop->add( $stream );
 
 is( $closed, 0, 'closed before close' );
 
-$stream->close;
+$stream->close_when_empty;
 
 is( $closed, 0, 'closed after close' );
 

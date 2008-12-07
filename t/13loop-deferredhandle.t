@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 3;
+use Test::More tests => 5;
 use Test::Exception;
 
 use IO::Async::Loop;
@@ -16,6 +16,7 @@ my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
 $S1->blocking( 0 );
 $S2->blocking( 0 );
 
+my $closed;
 my $buffer = "";
 
 my $stream = IO::Async::Stream->new(
@@ -25,6 +26,10 @@ my $stream = IO::Async::Stream->new(
       $buffer .= $$buffref;
       $$buffref =  "";
       return 0;
+   },
+   on_closed => sub {
+      my ( $self ) = @_;
+      $closed = 1;
    },
 );
 
@@ -49,3 +54,29 @@ $S2->syswrite( "more text" );
 $loop->loop_once( 0.1 );
 
 is( $buffer, "more text", 'stream-read text appears' );
+
+$stream->close_when_empty;
+
+is( $closed, 1, 'closed after close' );
+
+# Now try re-opening the stream with a new handle, and check it continues to
+# work
+
+( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
+
+# Need sockets in nonblocking mode
+$S1->blocking( 0 );
+$S2->blocking( 0 );
+
+$loop->add( $stream );
+
+$stream->set_handle( $S1 );
+
+$stream->write( "more text" );
+
+$loop->loop_once( 0.1 );
+
+undef $buffer2;
+$S2->sysread( $buffer2, 8192 );
+
+is( $buffer2, "more text", 'stream-written text appears after reopen' );

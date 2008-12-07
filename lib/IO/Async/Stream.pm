@@ -319,6 +319,8 @@ sub close_now
    my $self = shift;
 
    $self->{writebuff} = "";
+   undef $self->{stream_closing};
+
    $self->SUPER::close;
 }
 
