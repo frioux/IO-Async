@@ -13,6 +13,8 @@ use Carp;
 
 use Socket;
 use IO::Socket;
+# Try to load IO::Socket::INET6 but don't worry if we don't have it
+eval { require IO::Socket::INET6 };
 
 # Never sleep for more than 1 second if a signal proxy is registered, to avoid
 # a borderline race condition.
