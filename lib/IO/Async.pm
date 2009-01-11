@@ -94,8 +94,7 @@ subclass for the purpose.
 
 L<IO::Async::Loop::IO_Poll> uses an C<IO::Poll> object for this test.
 
-L<IO::Async::Loop::Select> provides methods to prepare and test three
-bitvectors for a C<select()> syscall.
+L<IO::Async::Loop::Select> uses the C<select()> syscall.
 
 Other subclasses of loop may appear on CPAN under their own dists; such
 as L<IO::Async::Loop::Glib> which acts as a proxy for the C<Glib::MainLoop> of
