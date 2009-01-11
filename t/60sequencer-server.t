@@ -47,7 +47,7 @@ isa_ok( $sequencer, "IO::Async::Sequencer", '$sequencer isa IO::Async::Sequencer
 
 $loop->add( $sequencer );
 
-$S2->write( "REQ:hello\n" );
+$S2->syswrite( "REQ:hello\n" );
 
 wait_for { @requests == 1 };
 
@@ -61,7 +61,7 @@ wait_for_stream { $clientbuffer =~ m/\n/ } $S2 => $clientbuffer;
 
 is( $clientbuffer, "RESP:hello\n", 'Client buffer after first response' );
 
-$S2->write( "REQ:zero\nREQ:one\n" );
+$S2->syswrite( "REQ:zero\nREQ:one\n" );
 
 undef @requests;
 
@@ -82,7 +82,7 @@ wait_for_stream { $clientbuffer =~ m/\n.*\n/ } $S2 => $clientbuffer;
 is( $clientbuffer, "RESP:0\nRESP:1\n", 'Client buffer after ordered pair' );
 
 # Now we'll see how it copes with out-of-order responses
-$S2->write( "REQ:two\nREQ:three\n" );
+$S2->syswrite( "REQ:two\nREQ:three\n" );
 
 wait_for { @requests == 4 };
 
@@ -114,7 +114,7 @@ isa_ok( $sequencer, "IO::Async::Sequencer", '$sequencer isa IO::Async::Sequencer
 
 $loop->add( $sequencer );
 
-$S2->write( "REQUEST:hello\n" );
+$S2->syswrite( "REQUEST:hello\n" );
 
 undef @requests;
 wait_for { @requests == 1 };

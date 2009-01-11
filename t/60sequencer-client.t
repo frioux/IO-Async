@@ -54,7 +54,7 @@ wait_for_stream { $serverbuffer =~ m/\n/ } $S2 => $serverbuffer;
 
 is( $serverbuffer, "REQ:hello\n", 'Server buffer after first request' );
 
-$S2->write( "RESP:hello\n" );
+$S2->syswrite( "RESP:hello\n" );
 
 wait_for { defined $response };
 
@@ -81,7 +81,7 @@ wait_for_stream { $serverbuffer =~ m/\n.*\n/ } $S2 => $serverbuffer; # Wait for 
 # Check they're in order
 is( $serverbuffer, "REQ:zero\nREQ:one\n", 'Server buffer after ordered pair' );
 
-$S2->write( "RESP:0\nRESP:1\n" );
+$S2->syswrite( "RESP:0\nRESP:1\n" );
 
 wait_for { defined $response[0] and defined $response[1] };
 
@@ -127,7 +127,7 @@ wait_for_stream { $serverbuffer =~ m/\n/ } $S2 => $serverbuffer;
 
 is( $serverbuffer, "GET hello\n", 'Server buffer after on_read-provided request' );
 
-$S2->write( "Your thing here\n" );
+$S2->syswrite( "Your thing here\n" );
 
 wait_for { defined $line };
 
@@ -156,7 +156,7 @@ wait_for_stream { $serverbuffer =~ m/\n/ } $S2 => $serverbuffer;
 
 is( $serverbuffer, "REQUEST:hello\n", 'Server buffer after request in subclass' );
 
-$S2->write( "RESPONSE:hello\n" );
+$S2->syswrite( "RESPONSE:hello\n" );
 
 undef $response;
 wait_for { defined $response };
