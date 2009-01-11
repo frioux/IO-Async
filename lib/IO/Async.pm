@@ -63,13 +63,15 @@ IO
 
 This collection of modules allows programs to be written that perform
 asynchronous filehandle IO operations. A typical program using them would
-consist of a single subclass of C<IO::Async::Loop> to act as a container for a
-number of C<IO::Async::Notifier> objects (or subclasses thereof). The loop
-itself is responsible for performing the lower level OS interactions. The
-notifiers then perform whatever work is required on these conditions, by using
-subclass methods or callback functions.
+consist of a single subclass of C<IO::Async::Loop> to act as a container o
+other objects, which perform the actual IO work required by the program. As
+as IO handles, the loop also supports timers and signal handlers, and
+includes more higher-level functionallity built on top of these basic parts.
 
-=head2 Notifiers
+Because there are a lot of classes in this collection, the following overview
+gives a brief description of each.
+
+=head2 File Handle IO
 
 A L<IO::Async::Notifier> object represents a single IO handle that is being
 managed. While in most cases it will represent a single filehandle, such as a
@@ -88,9 +90,10 @@ when new incoming data is available, or when the outgoing buffer is empty.
 =head2 Loops
 
 The L<IO::Async::Loop> object class represents an abstract collection of
-C<IO::Async::Notifier> objects. It performs all of the abstract set
-management tasks, and leaves the actual OS interactions to a particular
-subclass for the purpose.
+C<IO::Async::Notifier> objects, timers, signal handlers, and other
+functionallity. It performs all of the abstract collection management tasks,
+and leaves the actual OS interactions to a particular subclass for the
+purpose.
 
 L<IO::Async::Loop::IO_Poll> uses an C<IO::Poll> object for this test.
 
@@ -101,24 +104,51 @@ as L<IO::Async::Loop::Glib> which acts as a proxy for the C<Glib::MainLoop> of
 a L<Glib>-based program, or L<IO::Async::Loop::IO_Ppoll> which uses the
 L<IO::Ppoll> object to handle signals safely on Linux.
 
+As well as these general-purpose classes, the C<IO::Async::Loop> constructor
+also supports looking for OS-specific subclasses, in case a more efficient
+implementation exists for the specific OS it runs on.
+
+=head2 Child Processes
+
+The C<IO::Async::Loop> object provides a number of methods to facilitate the
+running of child processes. C<spawn_child> is primarily a wrapper around the
+typical C<fork()>/C<exec()> style of starting child processes, C<open_child>
+builds on this to provide management of child process file handles and streams
+connected to them, and finally C<run_child> builds on that to provide a method
+similar to perl's C<readpipe()> (which is used to implement backticks C<``>).
+
 =head2 Detached Code
 
 The C<IO::Async> framework generally provides mechanisms for multiplexing IO
-tasks between different handles, so there aren't many occasions when such
-detached code is necessary. Two cases where this does become useful are when
-a large amount of computationally-intensive work needs to be performed, or
-when an OS or library-level function needs to be called, that will block, and
-no asynchronous version is supplied. For these cases, an instance of
-L<IO::Async::DetachedCode> can be used around a code block, to execute it in
-a detached child process.
+tasks between different handles, so there aren't many occasions when it is
+necessary to run code in another thread or process. Two cases where this does
+become useful are when:
+
+=over 4
+
+=item *
+
+A large amount of computationally-intensive work needs to be performed.
+
+=item * 
+
+An OS or library-level function needs to be called, that will block, and
+no asynchronous version is supplied.
+
+=back
+
+For these cases, an instance of L<IO::Async::DetachedCode> can be used around
+a code block, to execute it in a detached child process. The code in the
+sub-process runs isolated from the main program, communicating only by
+function call arguments and return values.
 
 =head2 Timers
 
-The L<IO::Async::Loop> supports a pair of methods for installing and
-cancelling timers. These are callbacks invoked at some fixed future time.
-Once installed, a timer will be called at or after its expiry time, which may
-be absolute, or relative to the time it was installed. An installed timer
-which has not yet expired may be cancelled.
+The L<IO::Async::Loop> supports methods for managing timers. These are
+callbacks invoked at some fixed future time. Once installed, a timer will be
+called at or after its expiry time. This time may be absolute, or relative to
+the time it was installed. An installed timer which has not yet expired may be
+cancelled or rescheduled.
 
 =head2 Merge Points
 
@@ -127,17 +157,13 @@ completion of multiple seperate subtasks. It allows for each subtask to return
 some data, which will be collected and given to the callback provided to the
 merge point, which is called when every subtask has completed.
 
-=head2 Resolver
+=head2 Networking
 
-The L<IO::Async::Resolver> extension to the C<IO::Async::Loop> allows
-asynchronous use of any name resolvers the system provides; such as
-C<getaddrinfo> for resolving host/service names into connectable addresses.
-
-=head2 Connector
-
-The L<IO::Async::Connector> extension allows socket connections to be
-established asynchronously, perhaps via the use of the resolver to first
-resolve names into addresses.
+The C<IO::Async::Loop> provides several methods for performing network-based
+tasks. Primarily, the C<connect> and C<listen> methods allow the creation of
+client or server network sockets. Additionally, the C<resolve> method allows
+the use of the system's name resolvers in an asynchronous way, to resolve
+names into addresses, or vice versa.
 
 =head1 TODO
 
