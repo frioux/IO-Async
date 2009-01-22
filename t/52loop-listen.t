@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 10;
+use Test::More tests => 14;
 use Test::Exception;
 
 use IO::Socket::INET;
@@ -18,6 +18,7 @@ my $loop = IO::Async::Loop::IO_Poll->new();
 testing_loop( $loop );
 
 my $listensock;
+my $notifier;
 
 $listensock = IO::Socket::INET->new(
    LocalAddr => "localhost",
@@ -30,8 +31,13 @@ my $newclient;
 $loop->listen(
    handle => $listensock,
 
+   on_notifier => sub { $notifier = $_[0]; },
+
    on_accept => sub { $newclient = $_[0]; },
 );
+
+ok( defined $notifier, 'on_notifier fired synchronously' );
+isa_ok( $notifier, "IO::Async::Notifier", 'synchronous on_notifier given a Notifier' );
 
 my $clientsock = IO::Socket::INET->new( Type => SOCK_STREAM )
    or die "Cannot socket() - $!";
@@ -47,6 +53,7 @@ is( $newclient->peername, $clientsock->sockname, '$newclient peer is correct' );
 undef $listensock;
 undef $clientsock;
 undef $newclient;
+undef $notifier;
 
 $loop->listen(
    family   => AF_INET,
@@ -58,6 +65,8 @@ $loop->listen(
 
    on_listen => sub { $listensock = $_[0]; },
 
+   on_notifier => sub { $notifier = $_[0]; },
+
    on_accept => sub { $newclient = $_[0]; },
 
    on_listen_error => sub { die "Test died early - $_[0] - $_[-1]\n"; },
@@ -67,6 +76,11 @@ wait_for { defined $listensock };
 
 ok( defined $listensock->fileno, '$listensock has a fileno' );
 isa_ok( $listensock, "IO::Socket::INET", '$listenaddr isa IO::Socket::INET' );
+
+wait_for { defined $notifier };
+
+ok( defined $notifier, 'on_notifier fired asynchronously' );
+isa_ok( $notifier, "IO::Async::Notifier", 'asynchronous on_notifier given a Notifier' );
 
 my $listenaddr = $listensock->sockname;
 

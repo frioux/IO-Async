@@ -189,6 +189,15 @@ the socket's sockname address, or otherwise inspect the filehandle.
 
  $on_listen->( $listensocket );
 
+=item on_notifier => CODE
+
+Optional. A callback that is invoked when a C<IO::Async::Notifier> object has
+been constructed around the listening socket, and added to the underlying
+C<IO::Async::Loop> object. Typically this can be used to store a reference to
+the notifier so that it can later be removed from the loop.
+
+ $on_notifier->( $notifier )
+
 =item on_listen_error => CODE
 
 A continuation this is invoked after all of the addresses have been tried, and
@@ -240,6 +249,9 @@ sub listen
       $params{addrs} = [ delete $params{addr} ];
    }
 
+   my $on_notifier = $params{on_notifier}; # optional
+   !defined $on_notifier or ref $on_notifier eq "CODE" or croak "Expected 'on_notifier' to be a CODE reference";
+
    if( my $handle = $params{handle} ) {
       defined eval { $handle->sockname } or croak "IO handle $handle does not have a sockname";
 
@@ -249,7 +261,9 @@ sub listen
       my $acceptconn = eval { $handle->sockopt( SO_ACCEPTCONN ) };
       !defined $acceptconn or $acceptconn or croak "Socket is not accepting connections";
 
-      $self->_listen_sock( $handle, $on_accept );
+      my $notifier = $self->_listen_sock( $handle, $on_accept );
+      $on_notifier->( $notifier ) if defined $on_notifier;
+
       return;
    }
 
@@ -304,7 +318,8 @@ sub listen
 
          $on_listen->( $sock ) if defined $on_listen;
 
-         $self->_listen_sock( $sock, $on_accept );
+         my $notifier = $self->_listen_sock( $sock, $on_accept );
+         $on_notifier->( $notifier ) if defined $on_notifier;
 
          return;
       }
@@ -374,6 +389,8 @@ sub _listen_sock
    );
 
    $loop->add( $notifier );
+
+   return $notifier;
 }
 
 # Keep perl happy; keep Britain tidy
