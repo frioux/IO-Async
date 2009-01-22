@@ -1002,6 +1002,10 @@ and STDERR streams. It will be invoked in the following way:
 
 Optional. String to pass in to the child process's STDIN stream.
 
+=item setup => ARRAY
+
+Optional reference to an array to pass to the underlying C<spawn> method.
+
 =back
 
 This method is intended mainly as an IO::Async-compatible replacement for the
@@ -1041,6 +1045,7 @@ sub run_child
 
    $subparams{code}    = delete $params{code};
    $subparams{command} = delete $params{command};
+   $subparams{setup}   = delete $params{setup};
 
    croak "Unrecognised parameters " . join( ", ", keys %params ) if keys %params;
 
