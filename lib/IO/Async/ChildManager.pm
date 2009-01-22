@@ -495,11 +495,30 @@ Change the child process's scheduling priority using C<POSIX::nice()>.
 
 Change the child process's working directory using C<chdir()>.
 
+=item setuid => INT
+
+=item setgid => INT
+
+Change the child process's effective UID or GID.
+
+=item setgroups => ARRAY
+
+Change the child process's groups list, to those groups whose numbers are
+given in the ARRAY reference.
+
+On most systems, only the privileged superuser change user or group IDs.
+C<IO::Async> will B<NOT> check before detaching the child process whether
+this is the case.
+
 =back
 
 If no directions for what to do with C<stdin>, C<stdout> and C<stderr> are
 given, a default of C<keep> is implied. All other file descriptors will be
 closed, unless a C<keep> operation is given for them.
+
+If C<setuid> is used, be sure to place it after any other operations that
+might require superuser privileges, such as C<setgid> or opening special
+files.
 
 =cut
 
@@ -557,6 +576,16 @@ sub _check_setup_and_canonicise
          # silly things like passing a reference - directories such as
          # ARRAY(0x12345) are unlikely to exist
          -d $value or croak "Working directory '$value' does not exist";
+      }
+      elsif( $key eq "setuid" ) {
+         $value =~ m/^\d+$/ or croak "Expected integer for 'setuid' setup key";
+      }
+      elsif( $key eq "setgid" ) {
+         $value =~ m/^\d+$/ or croak "Expected integer for 'setgid' setup key";
+      }
+      elsif( $key eq "setgroups" ) {
+         ref $value eq "ARRAY" or croak "Expected ARRAY reference for 'setgroups' setup key";
+         m/^\d+$/ or croak "Expected integer in 'setgroups' array" for @$value;
       }
       else {
          croak "Unrecognised setup operation '$key'";
@@ -737,6 +766,17 @@ sub _spawn_in_child
             }
             elsif( $key eq "chdir" ) {
                chdir( $value ) or die "Cannot chdir('$value') - $!";
+            }
+            elsif( $key eq "setuid" ) {
+               $> = $value or die "Cannot setuid('$value') - $!";
+            }
+            elsif( $key eq "setgid" ) {
+               $) = $value or die "Cannot setgid('$value') - $!";
+            }
+            elsif( $key eq "setgroups" ) {
+               my $gid = $)+0;
+               my $groups = join( " ", @$value );
+               $) = "$gid $groups" or die "Cannot setgroups('$groups') - $!";
             }
          }
       }
