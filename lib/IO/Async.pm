@@ -175,8 +175,8 @@ some of the potentially-useful parts or features currently missing are:
 =item *
 
 A C<IO::Async::Loop> subclass to perform integration with L<Event>. Consider
-further ideas on Linux's I<epoll>, Solaris' I<ports>, BSD's I<Kevents> and
-anything that might be useful on Win32.
+further ideas on Solaris' I<ports>, BSD's I<Kevents> and anything that might
+be useful on Win32.
 
 =item *
 
