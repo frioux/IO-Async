@@ -7,7 +7,7 @@ package IO::Async::SignalProxy;
 
 use strict;
 
-our $VERSION = '0.18';
+our $VERSION = '0.19';
 
 use base qw( IO::Async::Notifier );
 
