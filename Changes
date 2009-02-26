@@ -1,6 +1,6 @@
 Revision history for IO-Async
 
-0.18:   CHANGES:
+0.18    CHANGES:
          * Allow Sequencer to be a base class as well as using constructor
            callbacks
          * Use signal names from Config.pm rather than relying on POSIX.pm.
@@ -10,7 +10,7 @@ Revision history for IO-Async
          * Gracefully handle accept() returning EAGAIN
          * Fixed handling of IO::Socket->getsockopt( SOL_SOCKET, SO_ERROR )
 
-0.17:   CHANGES:
+0.17    CHANGES:
          * Added Stream->close_when_empty and ->close_now. Added docs
          * Added OS abstractions of socketpair() and pipe()
          * Many documentation changes and updates
