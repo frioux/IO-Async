@@ -35,6 +35,8 @@ C<IO::Async::ChildManager> - facilitates the execution of child processes
 This object is used indirectly via an C<IO::Async::Loop>:
 
  use IO::Async::Loop;
+ use POSIX qw( WEXITSTATUS );
+
  my $loop = IO::Async::Loop->new();
 
  ...
@@ -44,7 +46,8 @@ This object is used indirectly via an C<IO::Async::Loop>:
 
     on_finish => sub {
        my ( $pid, $exitcode, $stdout, $stderr ) = @_;
-       print "ps [PID $pid] exited with code $exitcode\n";
+       my $status = WEXITSTATUS( $exitcode );
+       print "ps [PID $pid] exited with status $status\n";
     },
  );
 
@@ -64,6 +67,7 @@ This object is used indirectly via an C<IO::Async::Loop>:
 
     on_finish => sub {
        my ( $pid, $exitcode ) = @_;
+       my $status = WEXITSTATUS( $exitcode );
        ...
     },
  );
@@ -81,7 +85,8 @@ This object is used indirectly via an C<IO::Async::Loop>:
 
     on_exit => sub {
        my ( $pid, $exitcode ) = @_;
-       print "Command exited with code $exitcode\n";
+       my $status = WEXITSTATUS( $exitcode );
+       print "Command exited with status $status\n";
     },
  );
 
@@ -93,7 +98,8 @@ This object is used indirectly via an C<IO::Async::Loop>:
 
     on_exit => sub {
        my ( $pid, $exitcode, $dollarbang, $dollarat ) = @_;
-       print "Child process exited with code $exitcode\n";
+       my $status = WEXITSTATUS( $exitcode );
+       print "Child process exited with status $status\n";
        print " OS error was $dollarbang, exception was $dollarat\n";
     },
  );
@@ -188,6 +194,9 @@ A CODE reference to the exit handler. It will be invoked as
 
  $code->( $pid, $? )
 
+The second argument is passed the plain perl C<$?> value. To use that
+usefully, see C<WEXITSTATUS()> and others from C<POSIX>.
+
 After invocation, the handler is automatically removed from the manager.
 
 =back
@@ -268,6 +277,9 @@ be invoked in the following way:
 
  $on_exit->( $pid, $exitcode )
 
+The second argument is passed the plain perl C<$?> value. To use that
+usefully, see C<WEXITSTATUS()> and others from C<POSIX>.
+
 This key is optional; if not supplied, the calling code should install a
 handler using the C<watch_child()> method.
 
@@ -343,6 +355,9 @@ A continuation to be called when the child processes exits. It will be invoked
 in the following way:
 
  $on_exit->( $pid, $exitcode, $dollarbang, $dollarat )
+
+The second argument is passed the plain perl C<$?> value. To use that
+usefully, see C<WEXITSTATUS()> and others from C<POSIX>.
 
 =back
 
@@ -815,6 +830,9 @@ way:
 
  $on_finish->( $pid, $exitcode )
 
+The second argument is passed the plain perl C<$?> value. To use that
+usefully, see C<WEXITSTATUS()> and others from C<POSIX>.
+
 =item on_error => CODE
 
 Optional continuation to be called when the child code block throws an
@@ -1037,6 +1055,9 @@ A continuation to be called when the child process exits and closed its STDOUT
 and STDERR streams. It will be invoked in the following way:
 
  $on_finish->( $pid, $exitcode, $stdout, $stderr )
+
+The second argument is passed the plain perl C<$?> value. To use that
+usefully, see C<WEXITSTATUS()> and others from C<POSIX>.
 
 =item stdin => STRING
 
