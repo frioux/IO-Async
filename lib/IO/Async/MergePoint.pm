@@ -11,6 +11,8 @@ our $VERSION = '0.19';
 
 use Carp;
 
+use base qw( Async::MergePoint );
+
 =head1 NAME
 
 C<IO::Async::MergePoint> - resynchronise diverged control flow
@@ -94,26 +96,6 @@ passed as a list, not as a HASH reference.
 
 =cut
 
-sub new
-{
-   my $class = shift;
-   my ( %params ) = @_;
-
-   ref $params{needs} eq 'ARRAY' or croak "Expected 'needs' to be an ARRAY ref";
-   ref $params{on_finished} eq 'CODE' or croak "Expected 'on_finished' to be a CODE ref";
-
-   # Store these as a hash for ease of deletion
-   my %needs = map { $_ => 1 } @{ $params{needs} };
-
-   my $self = bless {
-      needs => \%needs,
-      items => {},
-      on_finished => $params{on_finished},
-   }, $class;
-
-   return $self;
-}
-
 =head1 METHODS
 
 =cut
@@ -127,21 +109,6 @@ C<on_finished> continuation is called within it, and the method will not
 return until it has completed.
 
 =cut
-
-sub done
-{
-   my $self = shift;
-   my ( $item, $value ) = @_;
-
-   exists $self->{needs}->{$item} or croak "$self does not need $item";
-
-   delete $self->{needs}->{$item};
-   $self->{items}->{$item} = $value;
-
-   if( !keys %{ $self->{needs} } ) {
-      $self->{on_finished}->( %{$self->{items}} );
-   }
-}
 
 # Keep perl happy; keep Britain tidy
 1;
