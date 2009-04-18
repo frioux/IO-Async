@@ -13,6 +13,8 @@ use Carp;
 
 use Socket;
 use IO::Socket;
+use Time::HiRes qw( time );
+
 # Try to load IO::Socket::INET6 but don't worry if we don't have it
 eval { require IO::Socket::INET6 };
 
@@ -34,12 +36,6 @@ our $LOOP;
 # Setting this value true will avoid the IO::Async::Loop::$^O candidate in the
 # magic constructor
 our $LOOP_NO_OS;
-
-BEGIN {
-   if ( eval { Time::HiRes::time(); 1 } ) {
-      Time::HiRes->import( qw( time ) );
-   }
-}
 
 =head1 NAME
 
@@ -634,13 +630,6 @@ The time to consider as now; defaults to C<time()> if not specified.
 CODE reference to the continuation to run at the allotted time.
 
 =back
-
-If the C<Time::HiRes> module is loaded, then it is used to obtain the current
-time which is used for the delay calculation. If this behaviour is required,
-the C<Time::HiRes> module must be loaded before C<IO::Async::Loop>:
-
- use Time::HiRes;
- use IO::Async::Loop;
 
 =cut
 

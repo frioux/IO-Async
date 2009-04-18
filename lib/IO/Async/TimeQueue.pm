@@ -12,14 +12,9 @@ our $VERSION = '0.19';
 use Carp;
 
 use Heap::Fibonacci;
+use Time::HiRes qw( time );
 
 use IO::Async::TimeQueue::Elem;
-
-BEGIN {
-   if ( eval { Time::HiRes::time(); 1 } ) {
-      Time::HiRes->import( qw( time ) );
-   }
-}
 
 =head1 NAME
 
