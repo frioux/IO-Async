@@ -362,8 +362,45 @@ sub __set_loop
 {
    my $self = shift;
    my ( $loop ) = @_;
+
+   # early exit if no change
+   return if !$loop and !$self->{loop} or
+             $loop and $self->{loop} and $loop == $self->{loop};
+
+   if( my $oldloop = $self->{loop} ) {
+      if( my $handle = $self->read_handle ) {
+         $oldloop->unwatch_io(
+            handle => $handle,
+            on_read_ready => 1,
+         );
+      }
+
+      if( my $handle = $self->write_handle ) {
+         $oldloop->unwatch_io(
+            handle => $handle,
+            on_write_ready => 1,
+         );
+      }
+   }
+
    $self->{loop} = $loop;
    weaken( $self->{loop} ); # To avoid a cycle
+
+   if( $loop ) {
+      if( $self->want_readready ) {
+         $loop->watch_io( 
+            handle => $self->read_handle,
+            on_read_ready => sub { $self->on_read_ready },
+         );
+      }
+
+      if( $self->want_writeready ) {
+         $loop->watch_io(
+            handle => $self->write_handle,
+            on_write_ready => sub { $self->on_write_ready },
+         );
+      }
+   }
 }
 
 =head2 $value = $notifier->want_readready

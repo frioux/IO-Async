@@ -244,20 +244,6 @@ sub _add_noparentcheck
 
    $notifier->__set_loop( $self );
 
-   if( $notifier->want_readready ) {
-      $self->watch_io( 
-         handle => $notifier->read_handle,
-         on_read_ready => sub { $notifier->on_read_ready },
-      );
-   }
-
-   if( $notifier->want_writeready ) {
-      $self->watch_io(
-         handle => $notifier->write_handle,
-         on_write_ready => sub { $notifier->on_write_ready },
-      );
-   }
-
    $self->_add_noparentcheck( $_ ) for $notifier->children;
 
    return;
@@ -293,20 +279,6 @@ sub _remove_noparentcheck
    delete $self->{notifiers}->{$nkey};
 
    $notifier->__set_loop( undef );
-
-   if( my $handle = $notifier->read_handle ) {
-      $self->unwatch_io(
-         handle => $handle,
-         on_read_ready => 1,
-      );
-   }
-
-   if( my $handle = $notifier->write_handle ) {
-      $self->unwatch_io(
-         handle => $handle,
-         on_write_ready => 1,
-      );
-   }
 
    $self->_remove_noparentcheck( $_ ) for $notifier->children;
 
