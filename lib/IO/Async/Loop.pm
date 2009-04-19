@@ -294,18 +294,6 @@ sub _remove_noparentcheck
 
    $notifier->__set_loop( undef );
 
-   $self->_notifier_removed( $notifier );
-
-   $self->_remove_noparentcheck( $_ ) for $notifier->children;
-
-   return;
-}
-
-sub _notifier_removed
-{
-   my $self = shift;
-   my ( $notifier ) = @_;
-
    if( my $handle = $notifier->read_handle ) {
       $self->unwatch_io(
          handle => $handle,
@@ -319,6 +307,10 @@ sub _notifier_removed
          on_write_ready => 1,
       );
    }
+
+   $self->_remove_noparentcheck( $_ ) for $notifier->children;
+
+   return;
 }
 
 =head2 $loop->watch_io( %params )
