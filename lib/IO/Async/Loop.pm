@@ -101,6 +101,7 @@ sub __new
 
    my $self = bless {
       notifiers    => {}, # {nkey} = notifier
+      iowatches    => {}, # {fd} = [ onread, onwrite ] - TODO
       sigproxy     => undef,
       childmanager => undef,
       timequeue    => undef,
@@ -243,8 +244,19 @@ sub _add_noparentcheck
 
    $notifier->__set_loop( $self );
 
-   $self->__notifier_want_readready(  $notifier, $notifier->want_readready  );
-   $self->__notifier_want_writeready( $notifier, $notifier->want_writeready );
+   if( $notifier->want_readready ) {
+      $self->watch_io( 
+         handle => $notifier->read_handle,
+         on_read_ready => sub { $notifier->on_read_ready },
+      );
+   }
+
+   if( $notifier->want_writeready ) {
+      $self->watch_io(
+         handle => $notifier->write_handle,
+         on_write_ready => sub { $notifier->on_write_ready },
+      );
+   }
 
    $self->_add_noparentcheck( $_ ) for $notifier->children;
 
@@ -289,25 +301,124 @@ sub _remove_noparentcheck
    return;
 }
 
-# Default 'do-nothing' implementation - meant for subclasses to override
 sub _notifier_removed
 {
-   # Ignore
+   my $self = shift;
+   my ( $notifier ) = @_;
+
+   if( my $handle = $notifier->read_handle ) {
+      $self->unwatch_io(
+         handle => $handle,
+         on_read_ready => 1,
+      );
+   }
+
+   if( my $handle = $notifier->write_handle ) {
+      $self->unwatch_io(
+         handle => $handle,
+         on_write_ready => 1,
+      );
+   }
 }
 
-# For ::Notifier to call
-sub __notifier_want_readready
+=head2 $loop->watch_io( %params )
+
+This method installs callback functions which will be invoked when the given
+IO handle becomes read- or write-ready.
+
+The C<%params> hash takes the following keys:
+
+=over 8
+
+=item handle => IO
+
+The IO handle to watch.
+
+=item on_read_ready => CODE
+
+Optional. A CODE reference to call when the handle becomes read-ready.
+
+=item on_write_ready => CODE
+
+Optional. A CODE reference to call when the handle becomes write-ready.
+
+=back
+
+There can only be one filehandle of any given fileno registered at any one
+time. For any one filehandle, there can only be one read- or write-readiness
+callback. Registering a new one will remove an existing one.
+
+This method is intended for internal purposes, and as a method for C<Loop>
+subclasses to implemente functionallity. It is not recommended for
+applications to use; use a L<IO::Async::Notifier> instead.
+
+=cut
+
+sub watch_io
 {
    my $self = shift;
-   my ( $notifier, $want_readready ) = @_;
-   # Ignore
+   my %params = @_;
+
+   my $handle = $params{handle} or croak "Expected 'handle'";
+
+   my $watch = ( $self->{iowatches}->{$handle->fileno} ||= [] );
+
+   $watch->[0] = $handle;
+
+   if( $params{on_read_ready} ) {
+      $watch->[1] = $params{on_read_ready};
+   }
+
+   if( $params{on_write_ready} ) {
+      $watch->[2] = $params{on_write_ready};
+   }
 }
 
-sub __notifier_want_writeready
+=head2 $loop->unwatch_io( %params )
+
+This method removes a watch on an IO handle which was previously installed by
+C<watch_io>.
+
+The C<%params> hash takes the following keys:
+
+=over 8
+
+=item handle => IO
+
+The IO handle to remove the watch for.
+
+=item on_read_ready => BOOL
+
+If true, remove the watch for read-readiness.
+
+=item on_write_ready => BOOL
+
+If true, remove the watch for write-readiness.
+
+=back
+
+=cut
+
+sub unwatch_io
 {
    my $self = shift;
-   my ( $notifier, $want_writeready ) = @_;
-   # Ignore
+   my %params = @_;
+
+   my $handle = $params{handle} or croak "Expected 'handle'";
+
+   my $watch = $self->{iowatches}->{$handle->fileno} or return;
+
+   if( $params{on_read_ready} ) {
+      undef $watch->[1];
+   }
+
+   if( $params{on_write_ready} ) {
+      undef $watch->[2];
+   }
+
+   if( not $watch->[1] and not $watch->[2] ) {
+      delete $self->{iowatches}->{$handle->fileno};
+   }
 }
 
 ############

@@ -397,8 +397,19 @@ sub want_readready
       my $old = $self->{want_readready};
       $self->{want_readready} = $new;
 
-      if( $self->{loop} ) {
-         $self->{loop}->__notifier_want_readready( $self, $self->{want_readready} );
+      my $loop = $self->{loop} or return $old;
+
+      if( $new ) {
+         $loop->watch_io(
+            handle => $self->read_handle,
+            on_read_ready => sub { $self->on_read_ready },
+         );
+      }
+      else {
+         $loop->unwatch_io(
+            handle => $self->read_handle,
+            on_read_ready => 1,
+         );
       }
 
       return $old;
@@ -425,8 +436,19 @@ sub want_writeready
       my $old = $self->{want_writeready};
       $self->{want_writeready} = $new;
 
-      if( $self->{loop} ) {
-         $self->{loop}->__notifier_want_writeready( $self, $self->{want_writeready} );
+      my $loop = $self->{loop} or return $old;
+
+      if( $new ) {
+         $loop->watch_io(
+            handle => $self->write_handle,
+            on_write_ready => sub { $self->on_write_ready },
+         );
+      }
+      else {
+         $loop->unwatch_io(
+            handle => $self->write_handle,
+            on_write_ready => 1,
+         );
       }
 
       return $old;

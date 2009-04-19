@@ -2,10 +2,8 @@
 
 use strict;
 
-use Test::More tests => 33;
+use Test::More tests => 25;
 use Test::Exception;
-
-use IO::Async::Notifier;
 
 use IO::Async::Loop::Select;
 
@@ -19,14 +17,6 @@ my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
 # Need sockets in nonblocking mode
 $S1->blocking( 0 );
 $S2->blocking( 0 );
-
-my $readready = 0;
-my $writeready = 0;
-
-my $notifier = IO::Async::Notifier->new( handle => $S1,
-   on_read_ready  => sub { $readready = 1; return 0 },
-   on_write_ready => sub { $writeready = 1; return 0 },
-);
 
 my $testvec = '';
 vec( $testvec, $S1->fileno, 1 ) = 1;
@@ -43,13 +33,15 @@ is( $evec, '', '$evec idling pre_select' );
 
 is( $timeout, undef, '$timeout idling pre_select' );
 
-$loop->add( $notifier );
+my $readready = 0;
 
-is( $notifier->get_loop, $loop, '$notifier->__memberof_loop == $loop' );
-
-dies_ok( sub { $loop->add( $notifier ) }, 'adding again produces error' );
+$loop->watch_io(
+   handle => $S1,
+   on_read_ready => sub { $readready = 1 },
+);
 
 # Read-ready
+
 $loop->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
 
 is( $rvec, $testvec, '$rvec readready pre_select' );
@@ -59,7 +51,14 @@ is( $evec, '',       '$evec readready pre_select' );
 is( $timeout, undef, '$timeout readready pre_select' );
 
 # Write-ready
-$notifier->want_writeready( 1 );
+
+my $writeready = 0;
+
+$loop->watch_io(
+   handle => $S1,
+   on_write_ready => sub { $writeready = 1 },
+);
+
 $loop->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
 
 is( $rvec, $testvec, '$rvec writeready pre_select' );
@@ -97,7 +96,6 @@ $readready = 0;
 # loop_once
 
 $writeready = 0;
-$notifier->want_writeready( 1 );
 
 my $ready;
 $ready = $loop->loop_once( 0.1 );
@@ -107,12 +105,10 @@ is( $writeready, 1, '$writeready after loop_once' );
 
 # loop_forever
 
-my $stdout_notifier = IO::Async::Notifier->new( handle => \*STDOUT,
-   on_read_ready => sub { },
+$loop->watch_io(
+   handle => \*STDOUT,
    on_write_ready => sub { $loop->loop_stop() },
-   want_writeready => 1,
 );
-$loop->add( $stdout_notifier );
 
 $writeready = 0;
 
@@ -125,13 +121,18 @@ alarm( 0 );
 
 is( $writeready, 1, '$writeready after loop_forever' );
 
-$loop->remove( $stdout_notifier );
+$loop->unwatch_io(
+   handle => \*STDOUT,
+   on_write_ready => 1,
+);
 
 # Removal
 
-$loop->remove( $notifier );
-
-is( $notifier->get_loop, undef, '$notifier->__memberof_loop is undef' );
+$loop->unwatch_io(
+   handle => $S1,
+   on_read_ready => 1,
+   on_write_ready => 1,
+);
 
 $rvec = '';
 $wvec = '';
@@ -145,37 +146,3 @@ is( $wvec, '', '$wvec idling pre_select' );
 is( $evec, '', '$evec idling pre_select' );
 
 is( $timeout, undef, '$timeout idling pre_select' );
-
-# Write-only
-
-my $write_only_notifier = IO::Async::Notifier->new(
-   write_handle => $S1,
-   want_writeready => 1,
-   on_write_ready => sub { $writeready = 1 },
-);
-
-$testvec = '';
-vec( $testvec, $S1->fileno, 1 ) = 1;
-
-$loop->add( $write_only_notifier );
-
-$rvec = '';
-$wvec = '';
-$evec = '';
-$timeout = undef;
-
-$loop->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
-
-is( $rvec, '',       '$rvec writeonly preselect' );
-is( $wvec, $testvec, '$wvec writeonly preselect' );
-is( $evec, '',       '$evec writeonly preselect' );
-
-is( $timeout, undef, '$timeout writeonly preselect' );
-
-$writeready = 0;
-
-$loop->loop_once( 0 );
-
-is( $writeready, 1, '$writeready after writeonly notifier' );
-
-$loop->remove( $write_only_notifier );

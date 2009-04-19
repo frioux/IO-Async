@@ -114,13 +114,14 @@ sub pre_select
    my $self = shift;
    my ( $readref, $writeref, $exceptref, $timeref ) = @_;
 
-   my $notifiers = $self->{notifiers};
+   my $iowatches = $self->{iowatches};
 
-   foreach my $nkey ( keys %$notifiers ) {
-      my $notifier = $notifiers->{$nkey};
+   foreach my $nkey ( keys %$iowatches ) {
+      my $watch = $iowatches->{$nkey};
+      my $fileno = $watch->[0]->fileno;
 
-      vec( $$readref,  $notifier->read_fileno,  1 ) = 1 if $notifier->want_readready;
-      vec( $$writeref, $notifier->write_fileno, 1 ) = 1 if $notifier->want_writeready;
+      vec( $$readref,  $fileno, 1 ) = 1 if $watch->[1];
+      vec( $$writeref, $fileno, 1 ) = 1 if $watch->[2];
    }
 
    $self->_adjust_timeout( $timeref );
@@ -152,30 +153,28 @@ sub post_select
    my $self = shift;
    my ( $readvec, $writevec, $exceptvec ) = @_;
 
-   # Build a list of the notifiers that are ready, then fire the callbacks
-   # afterwards. This avoids races and other bad effects if any of the
-   # callbacks happen to change the notifiers in the set
-   my @readready;
-   my @writeready;
+   my $iowatches = $self->{iowatches};
 
-   my $notifiers = $self->{notifiers};
-   foreach my $nkey ( keys %$notifiers ) {
-      my $notifier = $notifiers->{$nkey};
+   # Build a list of the callbacks to fire, then fire them afterwards.
+   # This avoids races and other bad effects if any of the callbacks happen
+   # to change any state.
+   my @ready;
 
-      my $rfileno = $notifier->read_fileno;
-      my $wfileno = $notifier->write_fileno;
+   foreach my $fd ( keys %$iowatches ) {
+      my $watch = $iowatches->{$fd};
 
-      if( defined $rfileno and vec( $readvec, $rfileno, 1 ) ) {
-         push @readready, $notifier;
+      my $fileno = $watch->[0]->fileno;
+
+      if( vec( $readvec, $fileno, 1 ) ) {
+         push @ready, $watch->[1] if defined $watch->[1];
       }
 
-      if( defined $wfileno and vec( $writevec, $wfileno, 1 ) ) {
-         push @writeready, $notifier;
+      if( vec( $writevec, $fileno, 1 ) ) {
+         push @ready, $watch->[2] if defined $watch->[2];
       }
    }
 
-   $_->on_read_ready foreach @readready;
-   $_->on_write_ready foreach @writeready;
+   $_->() foreach @ready;
 
    # Since we have no way to know if the timeout occured, we'll have to
    # attempt to fire any waiting timeout events anyway
