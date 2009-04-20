@@ -119,8 +119,8 @@ sub new
 This method checks the returned event list from a C<IO::Poll::poll()> call,
 and calls any of the notification methods or callbacks that are appropriate.
 It returns the total number of callbacks that were invoked; that is, the
-total number of C<on_read_ready> and C<on_write_ready> methods on Notifiers,
-and the total number of TimeQueue event callbacks.
+total number of C<on_read_ready> and C<on_write_ready> callbacks for 
+C<watch_io>, and C<enqueue_timer> event callbacks.
 
 =over 8
 
