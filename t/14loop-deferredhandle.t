@@ -10,11 +10,16 @@ use IO::Async::Stream;
 
 my $loop = IO::Async::Loop->new();
 
+# Make two sets of sockets now, so that we know they'll definitely have
+# different FDs
 my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
+my ( $S3, $S4 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
 
 # Need sockets in nonblocking mode
 $S1->blocking( 0 );
 $S2->blocking( 0 );
+$S3->blocking( 0 );
+$S4->blocking( 0 );
 
 my $closed;
 my $buffer = "";
@@ -62,21 +67,15 @@ is( $closed, 1, 'closed after close' );
 # Now try re-opening the stream with a new handle, and check it continues to
 # work
 
-( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
-
-# Need sockets in nonblocking mode
-$S1->blocking( 0 );
-$S2->blocking( 0 );
-
 $loop->add( $stream );
 
-$stream->set_handle( $S1 );
+$stream->set_handle( $S3 );
 
 $stream->write( "more text" );
 
 $loop->loop_once( 0.1 );
 
 undef $buffer2;
-$S2->sysread( $buffer2, 8192 );
+$S4->sysread( $buffer2, 8192 );
 
 is( $buffer2, "more text", 'stream-written text appears after reopen' );
