@@ -179,6 +179,46 @@ sub new
    return $self;
 }
 
+sub _add_to_loop
+{
+   my $self = shift;
+   my ( $loop ) = @_;
+
+   if( $self->want_readready ) {
+      $loop->watch_io( 
+         handle => $self->read_handle,
+         on_read_ready => sub { $self->on_read_ready },
+      );
+   }
+
+   if( $self->want_writeready ) {
+      $loop->watch_io(
+         handle => $self->write_handle,
+         on_write_ready => sub { $self->on_write_ready },
+      );
+   }
+}
+
+sub _remove_from_loop
+{
+   my $self = shift;
+   my ( $loop ) = @_;
+
+   if( my $handle = $self->read_handle ) {
+      $loop->unwatch_io(
+         handle => $handle,
+         on_read_ready => 1,
+      );
+   }
+
+   if( my $handle = $self->write_handle ) {
+      $loop->unwatch_io(
+         handle => $handle,
+         on_write_ready => 1,
+      );
+   }
+}
+
 =head1 METHODS
 
 =cut
@@ -367,40 +407,12 @@ sub __set_loop
    return if !$loop and !$self->{loop} or
              $loop and $self->{loop} and $loop == $self->{loop};
 
-   if( my $oldloop = $self->{loop} ) {
-      if( my $handle = $self->read_handle ) {
-         $oldloop->unwatch_io(
-            handle => $handle,
-            on_read_ready => 1,
-         );
-      }
-
-      if( my $handle = $self->write_handle ) {
-         $oldloop->unwatch_io(
-            handle => $handle,
-            on_write_ready => 1,
-         );
-      }
-   }
+   $self->_remove_from_loop( $self->{loop} ) if $self->{loop};
 
    $self->{loop} = $loop;
    weaken( $self->{loop} ); # To avoid a cycle
 
-   if( $loop ) {
-      if( $self->want_readready ) {
-         $loop->watch_io( 
-            handle => $self->read_handle,
-            on_read_ready => sub { $self->on_read_ready },
-         );
-      }
-
-      if( $self->want_writeready ) {
-         $loop->watch_io(
-            handle => $self->write_handle,
-            on_write_ready => sub { $self->on_write_ready },
-         );
-      }
-   }
+   $self->_add_to_loop( $self->{loop} ) if $self->{loop};
 }
 
 =head2 $value = $notifier->want_readready
