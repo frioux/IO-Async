@@ -9,8 +9,6 @@ use strict;
 
 our $VERSION = '0.19';
 
-use IO::Async::Notifier;
-
 use POSIX qw( EINPROGRESS );
 use Socket qw( SOL_SOCKET SO_ERROR );
 
@@ -171,20 +169,14 @@ sub _connect_addresses
       return;
    }
 
-   # Now we'll set up a Notifier for a one-shot check on it being writable.
-
-   my $notifier = IO::Async::Notifier->new(
-      write_handle => $sock,
-
-      want_writeready => 1,
+   $loop->watch_io(
+      handle => $sock,
 
       on_write_ready => sub {
-         my ( $notifier ) = @_;
-
-         # Whatever happens we want to remove this notifier, it's now done its job.
+         # Whatever happens we want to remove this watch, it's now done its job.
          # Do it early before we forget
 
-         $loop->remove( $notifier );
+         $loop->unwatch_io( handle => $sock, on_write_ready => 1 );
 
          my $err = _get_sock_err( $sock );
 
@@ -200,8 +192,6 @@ sub _connect_addresses
          return;
       },
    );
-
-   $loop->add( $notifier );
 
    # All done for now; all we can do is wait on that to complete
    return;
