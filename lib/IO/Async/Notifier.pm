@@ -179,24 +179,62 @@ sub new
    return $self;
 }
 
+# We'll be calling these any of three times
+#   adding to/removing from loop
+#   caller en/disables readiness checking
+#   changing filehandle
+
+sub _watch_read
+{
+   my $self = shift;
+   my ( $want ) = @_;
+
+   my $loop = $self->get_loop or return;
+   my $handle = $self->read_handle or return;
+
+   if( $want ) {
+      $loop->watch_io(
+         handle => $handle,
+         on_read_ready => sub { $self->on_read_ready },
+      );
+   }
+   else {
+      $loop->unwatch_io(
+         handle => $handle,
+         on_read_ready => 1,
+      );
+   }
+}
+
+sub _watch_write
+{
+   my $self = shift;
+   my ( $want ) = @_;
+
+   my $loop = $self->get_loop or return;
+   my $handle = $self->write_handle or return;
+
+   if( $want ) {
+      $loop->watch_io(
+         handle => $handle,
+         on_write_ready => sub { $self->on_write_ready },
+      );
+   }
+   else {
+      $loop->unwatch_io(
+         handle => $handle,
+         on_write_ready => 1,
+      );
+   }
+}
+
 sub _add_to_loop
 {
    my $self = shift;
    my ( $loop ) = @_;
 
-   if( $self->want_readready ) {
-      $loop->watch_io( 
-         handle => $self->read_handle,
-         on_read_ready => sub { $self->on_read_ready },
-      );
-   }
-
-   if( $self->want_writeready ) {
-      $loop->watch_io(
-         handle => $self->write_handle,
-         on_write_ready => sub { $self->on_write_ready },
-      );
-   }
+   $self->_watch_read(1)  if $self->want_readready;
+   $self->_watch_write(1) if $self->want_writeready;
 }
 
 sub _remove_from_loop
@@ -204,19 +242,8 @@ sub _remove_from_loop
    my $self = shift;
    my ( $loop ) = @_;
 
-   if( my $handle = $self->read_handle ) {
-      $loop->unwatch_io(
-         handle => $handle,
-         on_read_ready => 1,
-      );
-   }
-
-   if( my $handle = $self->write_handle ) {
-      $loop->unwatch_io(
-         handle => $handle,
-         on_write_ready => 1,
-      );
-   }
+   $self->_watch_read(0);
+   $self->_watch_write(0);
 }
 
 =head1 METHODS
@@ -446,20 +473,7 @@ sub want_readready
       my $old = $self->{want_readready};
       $self->{want_readready} = $new;
 
-      my $loop = $self->{loop} or return $old;
-
-      if( $new ) {
-         $loop->watch_io(
-            handle => $self->read_handle,
-            on_read_ready => sub { $self->on_read_ready },
-         );
-      }
-      else {
-         $loop->unwatch_io(
-            handle => $self->read_handle,
-            on_read_ready => 1,
-         );
-      }
+      $self->_watch_read( $new );
 
       return $old;
    }
@@ -485,20 +499,7 @@ sub want_writeready
       my $old = $self->{want_writeready};
       $self->{want_writeready} = $new;
 
-      my $loop = $self->{loop} or return $old;
-
-      if( $new ) {
-         $loop->watch_io(
-            handle => $self->write_handle,
-            on_write_ready => sub { $self->on_write_ready },
-         );
-      }
-      else {
-         $loop->unwatch_io(
-            handle => $self->write_handle,
-            on_write_ready => 1,
-         );
-      }
+      $self->_watch_write( $new );
 
       return $old;
    }
