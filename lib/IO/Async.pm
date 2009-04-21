@@ -73,19 +73,24 @@ gives a brief description of each.
 
 =head2 File Handle IO
 
-A L<IO::Async::Notifier> object represents a single IO handle that is being
+A L<IO::Async::Handle> object represents a single IO handle that is being
 managed. While in most cases it will represent a single filehandle, such as a
 socket (for example, an C<IO::Socket::INET> connection), it is possible to
 have separate reading and writing handles (most likely for a program's
 C<STDIN> and C<STDOUT> streams, or a pair of pipes connected to a child
 process).
 
-The L<IO::Async::Stream> class is a subclass of C<IO::Async::Notifier> which
+The L<IO::Async::Stream> class is a subclass of C<IO::Async::Handle> which
 maintains internal incoming and outgoing data buffers. In this way, it
 implements bidirectional buffering of a byte stream, such as a TCP socket. The
 class automatically handles reading of incoming data into the incoming buffer,
 and writing of the outgoing buffer. Methods or callbacks are used to inform
 when new incoming data is available, or when the outgoing buffer is empty.
+
+Both of the above are subclasses of L<IO::Async::Notifier>, which does not
+perform any IO operations itself, but instead acts to coordinate a collection
+of other Notifiers, or act as a base class to build the specific IO
+functionallity upon.
 
 =head2 Loops
 

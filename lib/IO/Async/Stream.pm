@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2006-2008 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2006-2009 -- leonerd@leonerd.org.uk
 
 package IO::Async::Stream;
 
@@ -9,7 +9,7 @@ use strict;
 
 our $VERSION = '0.19';
 
-use base qw( IO::Async::Notifier );
+use base qw( IO::Async::Handle );
 
 use POSIX qw( EAGAIN EWOULDBLOCK );
 
@@ -95,7 +95,7 @@ Or
 
 =head1 DESCRIPTION
 
-This module provides a subclass of C<IO::Async::Notifier> which implements
+This module provides a subclass of C<IO::Async::Handle> which implements
 asynchronous communications buffers around stream handles. It provides
 buffering for both incoming and outgoing data, which are transferred to or
 from the actual OS-level filehandle as controlled by the containing Loop.

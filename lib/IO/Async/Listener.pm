@@ -9,7 +9,7 @@ use strict;
 
 our $VERSION = '0.19';
 
-use IO::Async::Notifier;
+use IO::Async::Handle;
 
 use POSIX qw( EAGAIN );
 use Socket::GetAddrInfo qw( :Socket6api AI_PASSIVE );
@@ -191,7 +191,7 @@ the socket's sockname address, or otherwise inspect the filehandle.
 
 =item on_notifier => CODE
 
-Optional. A callback that is invoked when a C<IO::Async::Notifier> object has
+Optional. A callback that is invoked when a C<IO::Async::Handle> object has
 been constructed around the listening socket, and added to the underlying
 C<IO::Async::Loop> object. Typically this can be used to store a reference to
 the notifier so that it can later be removed from the loop.
@@ -370,7 +370,7 @@ sub _listen_sock
 
    my $loop = $self->{loop};
 
-   my $notifier = IO::Async::Notifier->new(
+   my $notifier = IO::Async::Handle->new(
       read_handle => $sock,
       on_read_ready => sub {
          my $newclient = $sock->accept();
