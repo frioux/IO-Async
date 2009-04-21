@@ -309,110 +309,6 @@ sub _remove_noparentcheck
    return;
 }
 
-=head2 $loop->watch_io( %params )
-
-This method installs callback functions which will be invoked when the given
-IO handle becomes read- or write-ready.
-
-The C<%params> hash takes the following keys:
-
-=over 8
-
-=item handle => IO
-
-The IO handle to watch.
-
-=item on_read_ready => CODE
-
-Optional. A CODE reference to call when the handle becomes read-ready.
-
-=item on_write_ready => CODE
-
-Optional. A CODE reference to call when the handle becomes write-ready.
-
-=back
-
-There can only be one filehandle of any given fileno registered at any one
-time. For any one filehandle, there can only be one read- or write-readiness
-callback. Registering a new one will remove an existing one.
-
-This method is intended for internal purposes, and as a method for C<Loop>
-subclasses to implemente functionallity. It is not recommended for
-applications to use; use a L<IO::Async::Notifier> instead.
-
-=cut
-
-# This class specifically does NOT implement this method, so that subclasses
-# are forced to. The constructor will be checking....
-# This is done so that we can recognise and abort on a pre-0.20 Loop
-# implementation.
-sub __watch_io
-{
-   my $self = shift;
-   my %params = @_;
-
-   my $handle = $params{handle} or croak "Expected 'handle'";
-
-   my $watch = ( $self->{iowatches}->{$handle->fileno} ||= [] );
-
-   $watch->[0] = $handle;
-
-   if( $params{on_read_ready} ) {
-      $watch->[1] = $params{on_read_ready};
-   }
-
-   if( $params{on_write_ready} ) {
-      $watch->[2] = $params{on_write_ready};
-   }
-}
-
-=head2 $loop->unwatch_io( %params )
-
-This method removes a watch on an IO handle which was previously installed by
-C<watch_io>.
-
-The C<%params> hash takes the following keys:
-
-=over 8
-
-=item handle => IO
-
-The IO handle to remove the watch for.
-
-=item on_read_ready => BOOL
-
-If true, remove the watch for read-readiness.
-
-=item on_write_ready => BOOL
-
-If true, remove the watch for write-readiness.
-
-=back
-
-=cut
-
-sub __unwatch_io
-{
-   my $self = shift;
-   my %params = @_;
-
-   my $handle = $params{handle} or croak "Expected 'handle'";
-
-   my $watch = $self->{iowatches}->{$handle->fileno} or return;
-
-   if( $params{on_read_ready} ) {
-      undef $watch->[1];
-   }
-
-   if( $params{on_write_ready} ) {
-      undef $watch->[2];
-   }
-
-   if( not $watch->[1] and not $watch->[2] ) {
-      delete $self->{iowatches}->{$handle->fileno};
-   }
-}
-
 ############
 # Features #
 ############
@@ -1027,6 +923,118 @@ sub pipequad
    my ( $rdB, $wrB ) = $self->pipepair() or return;
 
    return ( $rdA, $wrA, $rdB, $wrB );
+}
+
+=head1 SUBCLASS METHODS
+
+As C<IO::Async::Loop> is an abstract base class, specific subclasses of it are
+required to implement certain methods that form the base level of
+functionallity. They are not recommended for applications to use; see instead
+the various event objects or higher level methods listed above.
+
+=cut
+
+=head2 $loop->watch_io( %params )
+
+This method installs callback functions which will be invoked when the given
+IO handle becomes read- or write-ready.
+
+The C<%params> hash takes the following keys:
+
+=over 8
+
+=item handle => IO
+
+The IO handle to watch.
+
+=item on_read_ready => CODE
+
+Optional. A CODE reference to call when the handle becomes read-ready.
+
+=item on_write_ready => CODE
+
+Optional. A CODE reference to call when the handle becomes write-ready.
+
+=back
+
+There can only be one filehandle of any given fileno registered at any one
+time. For any one filehandle, there can only be one read- or write-readiness
+callback. Registering a new one will remove an existing one.
+
+Applications should use a C<IO::Async::Handle> or C<IO::Async::Stream> instead
+of using this method.
+
+=cut
+
+# This class specifically does NOT implement this method, so that subclasses
+# are forced to. The constructor will be checking....
+# This is done so that we can recognise and abort on a pre-0.20 Loop
+# implementation.
+sub __watch_io
+{
+   my $self = shift;
+   my %params = @_;
+
+   my $handle = $params{handle} or croak "Expected 'handle'";
+
+   my $watch = ( $self->{iowatches}->{$handle->fileno} ||= [] );
+
+   $watch->[0] = $handle;
+
+   if( $params{on_read_ready} ) {
+      $watch->[1] = $params{on_read_ready};
+   }
+
+   if( $params{on_write_ready} ) {
+      $watch->[2] = $params{on_write_ready};
+   }
+}
+
+=head2 $loop->unwatch_io( %params )
+
+This method removes a watch on an IO handle which was previously installed by
+C<watch_io>.
+
+The C<%params> hash takes the following keys:
+
+=over 8
+
+=item handle => IO
+
+The IO handle to remove the watch for.
+
+=item on_read_ready => BOOL
+
+If true, remove the watch for read-readiness.
+
+=item on_write_ready => BOOL
+
+If true, remove the watch for write-readiness.
+
+=back
+
+=cut
+
+sub __unwatch_io
+{
+   my $self = shift;
+   my %params = @_;
+
+   my $handle = $params{handle} or croak "Expected 'handle'";
+
+   my $watch = $self->{iowatches}->{$handle->fileno} or return;
+
+   if( $params{on_read_ready} ) {
+      undef $watch->[1];
+   }
+
+   if( $params{on_write_ready} ) {
+      undef $watch->[2];
+   }
+
+   if( not $watch->[1] and not $watch->[2] ) {
+      delete $self->{iowatches}->{$handle->fileno};
+   }
 }
 
 # Keep perl happy; keep Britain tidy
