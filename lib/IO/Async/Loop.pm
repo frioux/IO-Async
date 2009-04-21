@@ -157,11 +157,38 @@ also fails, then the magic constructor itself will throw an exception.
 
 =back
 
+If any of the explicitly-requested loop types (C<$ENV{IO_ASYNC_LOOP}> or
+C<$IO::Async::Loop::LOOP>) fails to load then a warning is printed detailing
+the error.
+
 =cut
+
+sub __try_new
+{
+   my ( $class ) = @_;
+
+   ( my $file = "$class.pm" ) =~ s{::}{/}g;
+
+   eval {
+      local $SIG{__WARN__} = sub {};
+      require $file;
+   } or return;
+
+   my $self;
+   $self = eval { $class->new } and return $self;
+
+   # Oh dear. We've loaded the code OK but for some reason the constructor
+   # wasn't happy. Being polite we ought really to unload the file again,
+   # but perl doesn't actually provide us a way to do this.
+
+   return undef;
+}
 
 sub new
 {
    shift;  # We're going to ignore the class name actually given
+
+   my $self;
 
    my @candidates;
 
@@ -169,24 +196,18 @@ sub new
 
    push @candidates, split( m/,/, $LOOP ) if defined $LOOP;
 
-   push @candidates, "$^O" unless $LOOP_NO_OS;
-
-   push @candidates, "IO_Poll", "Select";
-
-   $_ =~ m/::/ or $_ = "IO::Async::Loop::$_" for @candidates;
-
    foreach my $class ( @candidates ) {
-      ( my $file = "$class.pm" ) =~ s{::}{/}g;
+      $class =~ m/::/ or $class = "IO::Async::Loop::$class";
+      $self = __try_new( $class ) and return $self;
 
-      eval { require $file } or next;
-
-      my $self;
-      $self = eval { $class->new } and return $self;
-
-      # Oh dear. We've loaded the code OK but for some reason the constructor
-      # wasn't happy. Being polite we ought really to unload the file again,
-      # but perl doesn't actually provide us a way to do this.
+      my ( $topline ) = split m/\n/, $@; # Ignore all the other lines; they'll be require's verbose output
+      warn "Unable to use $class - $topline\n";
    }
+
+   $self = __try_new( "IO::Async::Loop::$^O" ) and return $self unless $LOOP_NO_OS;
+
+   $self = __try_new( "IO::Async::Loop::IO_Poll" ) and return $self;
+   $self = __try_new( "IO::Async::Loop::Select" )  and return $self;
 
    croak "Cannot find a suitable candidate class";
 }
