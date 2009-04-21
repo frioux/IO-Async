@@ -213,13 +213,12 @@ sub loop_once
    return $ret;
 }
 
-# override
 sub watch_io
 {
    my $self = shift;
    my %params = @_;
 
-   $self->SUPER::watch_io( %params );
+   $self->__watch_io( %params );
 
    my $fileno = $params{handle}->fileno;
 
@@ -227,13 +226,12 @@ sub watch_io
    vec( $self->{wvec}, $fileno, 1 ) = 1 if $params{on_write_ready};
 }
 
-# override
 sub unwatch_io
 {
    my $self = shift;
    my %params = @_;
 
-   $self->SUPER::unwatch_io( %params );
+   $self->__unwatch_io( %params );
 
    my $fileno = $params{handle}->fileno;
 

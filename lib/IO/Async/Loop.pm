@@ -99,6 +99,9 @@ sub __new
 {
    my $class = shift;
 
+   # We've changed interface since 0.19; detect that this Loop implementation is compatible.
+   $class->can( "watch_io" ) or die "$class is too old for IO::Async $VERSION; consider upgrading it\n";
+
    my $self = bless {
       notifiers    => {}, # {nkey} = notifier
       iowatches    => {}, # {fd} = [ onread, onwrite ] - TODO
@@ -339,7 +342,11 @@ applications to use; use a L<IO::Async::Notifier> instead.
 
 =cut
 
-sub watch_io
+# This class specifically does NOT implement this method, so that subclasses
+# are forced to. The constructor will be checking....
+# This is done so that we can recognise and abort on a pre-0.20 Loop
+# implementation.
+sub __watch_io
 {
    my $self = shift;
    my %params = @_;
@@ -384,7 +391,7 @@ If true, remove the watch for write-readiness.
 
 =cut
 
-sub unwatch_io
+sub __unwatch_io
 {
    my $self = shift;
    my %params = @_;

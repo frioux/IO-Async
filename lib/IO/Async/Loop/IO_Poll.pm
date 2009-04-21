@@ -225,13 +225,12 @@ sub loop_once
    return $self->post_poll();
 }
 
-# override
 sub watch_io
 {
    my $self = shift;
    my %params = @_;
 
-   $self->SUPER::watch_io( %params );
+   $self->__watch_io( %params );
 
    my $poll = $self->{poll};
 
@@ -246,13 +245,12 @@ sub watch_io
    $poll->mask( $handle, $mask ) if $mask != $curmask;
 }
 
-# override
 sub unwatch_io
 {
    my $self = shift;
    my %params = @_;
 
-   $self->SUPER::unwatch_io( %params );
+   $self->__unwatch_io( %params );
 
    my $poll = $self->{poll};
 
