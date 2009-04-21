@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 34;
+use Test::More tests => 38;
 use Test::Exception;
 
 use IO::Async::Loop;
@@ -140,3 +140,17 @@ $handle->set_handle( $S1 );
 
 is( $handle->read_handle,  $S1, '->read_handle now S1' );
 is( $handle->write_handle, $S1, '->write_handle now S1' );
+
+# Legacy upgrade from IO::Async::Notifier
+
+my $notifier = IO::Async::Notifier->new(
+   read_handle => $S1,
+   on_read_ready => sub {},
+);
+
+ok( defined $notifier, '$notifier defined' );
+isa_ok( $notifier, "IO::Async::Handle", '$notifier isa IO::Async::Handle' );
+
+is( $notifier->read_handle, $S1, '->read_handle returns S1' );
+
+is( $notifier->read_fileno, fileno($S1), '->read_fileno returns fileno(S1)' );

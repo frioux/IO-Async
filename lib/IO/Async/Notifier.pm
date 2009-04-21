@@ -54,15 +54,38 @@ For more detail, see the SYNOPSIS section in one of the above.
 
 =cut
 
-=head2 $notifier = IO::Async::Notifier->new()
+=head2 $notifier = IO::Async::Notifier->new( %params )
 
 This function returns a new instance of a C<IO::Async::Notifier> object.
+
+Up until C<IO::Async> version 0.19, this module used to implement the IO
+handle features now found in the C<IO::Async::Handle> subclass. To allow for a
+smooth upgrade of existing code, this constructor check for any C<%params> key
+which looks like it belongs there instead. These keys are C<handle>,
+C<read_handle>, C<write_handle>, C<on_read_ready> and C<on_write_ready>. If
+any of these keys are present, then a C<IO::Async::Handle> is returned.
+
+Do not rely on this feature in new code.  This logic exists purely to provide
+an upgrade path from older code that still expects C<IO::Async::Notifier> to
+provide filehandle operations. This will eventually produce a deprecation
+warning at some point in the future, and removed at some point beyond that.
 
 =cut
 
 sub new
 {
    my $class = shift;
+   my %params = @_;
+
+   if( $class eq __PACKAGE__ ) {
+      # TODO: This is temporary. Eventually, throw a deprecation warning.
+      foreach my $key ( keys %params ) {
+         if( grep { $key eq $_ } qw( handle read_handle write_handle on_read_ready on_write_ready ) ) {
+            require IO::Async::Handle;
+            return IO::Async::Handle->new( %params );
+         }
+      }
+   }
 
    my $self = bless {
       children => [],
