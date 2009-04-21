@@ -76,7 +76,13 @@ It takes no special arguments.
 sub new
 {
    my $class = shift;
-   return $class->__new( @_ );
+
+   my $self = $class->__new( @_ );
+
+   $self->{rvec} = '';
+   $self->{wvec} = '';
+
+   return $self;
 }
 
 =head1 METHODS
@@ -114,15 +120,9 @@ sub pre_select
    my $self = shift;
    my ( $readref, $writeref, $exceptref, $timeref ) = @_;
 
-   my $iowatches = $self->{iowatches};
-
-   foreach my $nkey ( keys %$iowatches ) {
-      my $watch = $iowatches->{$nkey};
-      my $fileno = $watch->[0]->fileno;
-
-      vec( $$readref,  $fileno, 1 ) = 1 if $watch->[1];
-      vec( $$writeref, $fileno, 1 ) = 1 if $watch->[2];
-   }
+   # BITWISE operations
+   $$readref  |= $self->{rvec};
+   $$writeref |= $self->{wvec};
 
    $self->_adjust_timeout( $timeref );
 
@@ -211,6 +211,38 @@ sub loop_once
    }
 
    return $ret;
+}
+
+# override
+sub watch_io
+{
+   my $self = shift;
+   my %params = @_;
+
+   $self->SUPER::watch_io( %params );
+
+   my $fileno = $params{handle}->fileno;
+
+   vec( $self->{rvec}, $fileno, 1 ) = 1 if $params{on_read_ready};
+   vec( $self->{wvec}, $fileno, 1 ) = 1 if $params{on_write_ready};
+}
+
+# override
+sub unwatch_io
+{
+   my $self = shift;
+   my %params = @_;
+
+   $self->SUPER::unwatch_io( %params );
+
+   my $fileno = $params{handle}->fileno;
+
+   vec( $self->{rvec}, $fileno, 1 ) = 0 if $params{on_read_ready};
+   vec( $self->{wvec}, $fileno, 1 ) = 0 if $params{on_write_ready};
+
+   # vec() will grow a bit vector as needed, but never shrink it. We'll trim
+   # trailing null bytes
+   $_ =~s/\0+\z// for $self->{rvec}, $self->{wvec};
 }
 
 # Keep perl happy; keep Britain tidy
