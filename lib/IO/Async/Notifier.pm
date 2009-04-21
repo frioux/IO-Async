@@ -44,6 +44,10 @@ L<IO::Async::Stream> - read and write buffers around an IO handle
 
 L<IO::Async::Sequencer> - handle a serial pipeline of requests / responses (EXPERIMENTAL)
 
+=item *
+
+L<IO::Async::Timer> - event callback after some timed delay
+
 =back
 
 For more detail, see the SYNOPSIS section in one of the above.

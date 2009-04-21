@@ -149,11 +149,12 @@ function call arguments and return values.
 
 =head2 Timers
 
-The L<IO::Async::Loop> supports methods for managing timers. These are
-callbacks invoked at some fixed future time. Once installed, a timer will be
-called at or after its expiry time. This time may be absolute, or relative to
-the time it was installed. An installed timer which has not yet expired may be
-cancelled or rescheduled.
+A L<IO::Async::Timer> object represents a counttime timer, which will invoke
+a callback after a given delay. It can be stopped and restarted.
+
+The L<IO::Async::Loop> also supports methods for managing timed events on a
+lower level. Events may be absolute, or relative in time to the time they are
+installed.
 
 =head2 Merge Points
 

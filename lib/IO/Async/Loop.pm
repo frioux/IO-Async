@@ -43,14 +43,17 @@ C<IO::Async::Loop> - core loop of the C<IO::Async> framework
 
 =head1 SYNOPSIS
 
+ use IO::Async::Stream;
+ use IO::Async::Timer;
+
  use IO::Async::Loop;
 
  my $loop = IO::Async::Loop->new();
 
- $loop->enqueue_timer(
+ $loop->add( IO::Async::Timer->new(
     delay => 10,
-    code  => sub { print "10 seconds have passed\n" },
- );
+    on_expire => sub { print "10 seconds have passed\n" },
+ ) );
 
  $loop->add( IO::Async::Stream->new(
     read_handle => \*STDIN,
@@ -65,7 +68,7 @@ C<IO::Async::Loop> - core loop of the C<IO::Async> framework
 
        return 0;
     },
- );
+ ) );
 
  $loop->loop_forever();
 
@@ -629,6 +632,10 @@ The time to consider as now; defaults to C<time()> if not specified.
 CODE reference to the continuation to run at the allotted time.
 
 =back
+
+For more powerful timer functionallity as a C<IO::Async::Notifier> (so it can
+be used as a child within another Notifier), see instead the
+L<IO::Async::Timer> object.
 
 =cut
 
