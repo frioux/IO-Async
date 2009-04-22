@@ -197,6 +197,7 @@ sub add_child
 
    push @{ $self->{children} }, $child;
    $child->{parent} = $self;
+   weaken( $child->{parent} );
 
    return;
 }
