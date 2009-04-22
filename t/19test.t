@@ -6,7 +6,6 @@ use Test::More tests => 4;
 use Test::Refcount;
 use IO::Async::Test;
 
-use IO::Async::Stream;
 use IO::Async::Loop;
 
 my $loop = IO::Async::Loop->new();
@@ -21,16 +20,12 @@ my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
 
 my $readbuffer = "";
 
-my $stream = IO::Async::Stream->new( 
+$loop->watch_io(
    handle => $S1,
-   on_read => sub {
-      my ( $stream, $buffref, $closed ) = @_;
-      $readbuffer .= $$buffref;
-      $$buffref = "";
+   on_read_ready => sub {
+      $S1->sysread( $readbuffer, 8192, length $readbuffer ) or die "Test failed early";
    },
 );
-
-$loop->add( $stream );
 
 # This is just a token "does it run once?" test. A test of a test script. 
 # Mmmmmm. Meta-testing.
@@ -45,7 +40,10 @@ wait_for { $readbuffer =~ m/\n/ };
 
 is( $readbuffer, "A line\n", 'Single-wait' );
 
-$loop->remove( $stream );
+$loop->unwatch_io(
+   handle => $S1,
+   on_read_ready => 1,
+);
 
 # Now the automatic version
 

@@ -137,25 +137,29 @@ the loop.
 
 sub wait_for_stream(&$$)
 {
-   my ( $cond, $handle, $DUMMY ) = @_;
+   my ( $cond, $handle, undef ) = @_;
    my $varref = \$_[2]; # So that we can modify it from the on_read callback
 
-   my $stream = IO::Async::Stream->new(
-      read_handle => $handle,
-
-      on_read => sub {
-         $$varref .= ${$_[1]};
-         ${$_[1]} = "";
-         return 0;
+   $loop->watch_io(
+      handle => $handle,
+      on_read_ready => sub {
+         my $ret = $handle->sysread( $$varref, 8192, length $$varref );
+         if( !defined $ret ) {
+            die "Read failed on $handle - $!\n";
+         }
+         elsif( $ret == 0 ) {
+            die "Read returned EOF on $handle\n";
+         }
       }
    );
-
-   $loop->add( $stream );
 
    # Have to defeat the prototype... grr I hate these
    &wait_for( $cond );
 
-   $loop->remove( $stream );
+   $loop->unwatch_io(
+      handle => $handle,
+      on_read_ready => 1,
+   );
 }
 
 # Keep perl happy; keep Britain tidy
