@@ -2,20 +2,15 @@
 
 use strict;
 
-use Test::More tests => 38;
+use Test::More tests => 36;
 use Test::Exception;
+use Test::Refcount;
 
 use IO::Async::Loop;
+
 use IO::Async::Handle;
 
-use IO::Handle;
-
-use POSIX qw( EAGAIN );
-
-dies_ok( sub { IO::Async::Handle->new( handle => "Hello" ) },
-         'Not a socket' );
-
-my $loop = IO::Async::Loop->new;
+my $loop = IO::Async::Loop->new();
 
 my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
 
@@ -23,13 +18,14 @@ my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
 $S1->blocking( 0 );
 $S2->blocking( 0 );
 
+dies_ok( sub { IO::Async::Handle->new( handle => "Hello" ) },
+         'Not a filehandle' );
+
 my $readready = 0;
 my $writeready = 0;
 
-dies_ok( sub { IO::Async::Handle->new( handle => $S1 ) },
-         'No on_read_ready' );
-
-my $handle = IO::Async::Handle->new( handle => $S1, want_writeready => 0,
+my $handle = IO::Async::Handle->new(
+   handle => $S1,
    on_read_ready  => sub { $readready = 1 },
    on_write_ready => sub { $writeready = 1 },
 );
@@ -37,72 +33,83 @@ my $handle = IO::Async::Handle->new( handle => $S1, want_writeready => 0,
 ok( defined $handle, '$handle defined' );
 isa_ok( $handle, "IO::Async::Handle", '$handle isa IO::Async::Handle' );
 
+is_oneref( $handle, '$handle has refcount 1 initially' );
+
 is( $handle->read_handle,  $S1, '->read_handle returns S1' );
 is( $handle->write_handle, $S1, '->write_handle returns S1' );
 
-is( $handle->read_fileno,  fileno($S1), '->read_fileno returns fileno(S1)' );
-is( $handle->write_fileno, fileno($S1), '->write_fileno returns fileno(S1)' );
+is( $handle->read_fileno,  $S1->fileno, '->read_fileno returns fileno(S1)' );
+is( $handle->write_fileno, $S1->fileno, '->write_fileno returns fileno(S1)' );
 
-is( $handle->want_writeready, 0, 'wantwriteready 0' );
+ok( $handle->want_readready,   'want_readready true' );
+ok( !$handle->want_writeready, 'want_writeready false' );
 
-is( $handle->get_loop, undef, '__memberof_loop undef' );
+$loop->add( $handle );
+
+$loop->loop_once( 0.1 );
+
+is( $readready,  0, '$readready while idle' );
+is( $writeready, 0, '$writeready while idle' );
+
+# Read-ready
+
+$S2->syswrite( "data\n" );
+
+$loop->loop_once( 0.1 );
+
+is( $readready,  1, '$readready while readable' );
+is( $writeready, 0, '$writeready while readable' );
+
+$readready = 0;
+
+# Ready $S1 to clear the data
+$S1->getline(); # ignore return
 
 $handle->want_writeready( 1 );
-is( $handle->want_writeready, 1, 'wantwriteready 1' );
 
-is( $readready, 0, '$readready before call' );
-$handle->on_read_ready;
-is( $readready, 1, '$readready after call' );
+$loop->loop_once( 0.1 );
 
-is( $writeready, 0, '$writeready before call' );
-$handle->on_write_ready;
-is( $writeready, 1, '$writeready after call' );
+is( $readready,  0, '$readready while writeable' );
+is( $writeready, 1, '$writeready while writeable' );
 
-my $ret = $S2->sysread( my $b, 1 );
-my $errno = $!;
-is( $ret, undef,  '$S2 not readable before close...' );
-is( $!+0, EAGAIN, '$S2 read error is EAGAIN before close' );
+$loop->remove( $handle );
 
-$handle->close;
-
-$ret = $S2->sysread( $b, 1 );
-is( $ret, 0, '$S2 gives EOF after close' );
+is_oneref( $handle, '$handle has refcount 1 finally' );
 
 undef $handle;
+
 $handle = IO::Async::Handle->new(
-   read_handle  => IO::Handle->new_from_fd(fileno(STDIN),  'r'),
-   write_handle => IO::Handle->new_from_fd(fileno(STDOUT), 'w'),
-   want_writeready => 0,
+   read_handle  => \*STDIN,
+   write_handle => \*STDOUT,
    on_read_ready  => sub {},
    on_write_ready => sub {},
 );
 
 ok( defined $handle, 'defined $handle around STDIN/STDOUT' );
-is( $handle->read_fileno,  fileno(STDIN),  '->read_fileno returns fileno(STDIN)' );
-is( $handle->write_fileno, fileno(STDOUT), '->write_fileno returns fileno(STDOUT)' );
-
-$handle->want_writeready( 1 );
-is( $handle->want_writeready, 1, 'wantwriteready STDOUT 1' );
+is( $handle->read_handle,  \*STDIN,  '->read_handle returns STDIN' );
+is( $handle->write_handle, \*STDOUT, '->write_handle returns STDOUT' );
 
 undef $handle;
+
 $handle = IO::Async::Handle->new(
    read_handle  => \*STDIN,
-   want_writeready => 0,
    on_read_ready  => sub {},
 );
 
 ok( defined $handle, 'defined $handle around STDIN/undef' );
-is( $handle->read_fileno,  fileno(STDIN), '->read_fileno returns fileno(STDIN)' );
-is( $handle->write_fileno, undef,         '->write_fileno returns undef' );
+is( $handle->read_handle,  \*STDIN, '->read_handle returns STDIN' );
+is( $handle->write_handle, undef,   '->write_handle returns undef' );
 
 dies_ok( sub { $handle->want_writeready( 1 ); },
          'setting want_writeready with write_handle == undef dies' );
-is( $handle->want_writeready, 0, 'wantwriteready write_handle == undef 1' );
+ok( !$handle->want_writeready, 'wantwriteready write_handle == undef false' );
+
+undef $handle;
 
 my $closed = 0;
 
 $handle = IO::Async::Handle->new(
-   read_handle => \*STDIN,
+   read_handle => $S1,
    want_writeready => 0,
    on_read_ready => sub {},
    on_closed => sub { $closed = 1 },
@@ -113,8 +120,12 @@ $handle->close;
 is( $closed, 1, '$closed after ->close' );
 
 undef $handle;
+
+# Reopen the testing sockets since we just broke them
+( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
+
 $handle = IO::Async::Handle->new(
-   write_handle => \*STDOUT,
+   write_handle => $S1,
    want_writeready => 1,
    on_write_ready => sub {},
 );
@@ -134,8 +145,6 @@ ok( defined $handle, '$handle defined' );
 ok( !defined $handle->read_handle,  '->read_handle not defined' );
 ok( !defined $handle->write_handle, '->write_handle not defined' );
 
-( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
-
 $handle->set_handle( $S1 );
 
 is( $handle->read_handle,  $S1, '->read_handle now S1' );
@@ -153,4 +162,4 @@ isa_ok( $notifier, "IO::Async::Handle", '$notifier isa IO::Async::Handle' );
 
 is( $notifier->read_handle, $S1, '->read_handle returns S1' );
 
-is( $notifier->read_fileno, fileno($S1), '->read_fileno returns fileno(S1)' );
+is( $notifier->read_fileno, $S1->fileno, '->read_fileno returns fileno(S1)' );
