@@ -11,6 +11,7 @@ use base qw( IO::Async::Notifier );
 our $VERSION = '0.19';
 
 use Carp;
+use Scalar::Util qw( weaken );
 
 =head1 NAME
 
@@ -142,12 +143,19 @@ sub start
 
    defined $self->{id} and croak "Cannot start a Timer that is already running";
 
+   if( !$self->{cb} ) {
+      weaken( my $weakself = $self );
+      my $on_expire = $self->{on_expire};
+
+      $self->{cb} = sub {
+         undef $weakself->{id};
+         $on_expire->();
+      };
+   }
+
    $self->{id} = $loop->enqueue_timer(
       delay => $self->{delay},
-      code => sub {
-         undef $self->{id};
-         $self->{on_expire}->();
-      },
+      code => $self->{cb},
    );
 }
 

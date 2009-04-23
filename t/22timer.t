@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 16;
+use Test::More tests => 19;
 use Test::Exception;
 use Test::Refcount;
 
@@ -30,10 +30,8 @@ sub time_between
 }
 
 my $loop = IO::Async::Loop::IO_Poll->new();
-is_oneref( $loop, '$loop has refcount 1' );
 
 testing_loop( $loop );
-is_refcount( $loop, 2, '$loop has refcount 2 after adding to IO::Async::Test' );
 
 my $expired;
 
@@ -47,12 +45,18 @@ my $timer = IO::Async::Timer->new(
 ok( defined $timer, '$timer defined' );
 isa_ok( $timer, "IO::Async::Timer", '$timer isa IO::Async::Timer' );
 
+is_oneref( $timer, '$timer has refcount 1 initially' );
+
 dies_ok( sub { $timer->start },
          '$timer->start not in a loop dies' );
 
 $loop->add( $timer );
 
+is_refcount( $timer, 2, '$timer has refcount 2 after adding to Loop' );
+
 $timer->start;
+
+is_refcount( $timer, 2, '$timer has refcount 2 after starting' );
 
 ok( $timer->is_running, 'Started Timer is running' );
 
@@ -61,7 +65,16 @@ time_between( sub { wait_for { $expired } },
 
 ok( !$timer->is_running, 'Expired Timer is no longer running' );
 
+is_refcount( $timer, 2, '$timer has refcount 2 before removing from Loop' );
+
+$loop->remove( $timer );
+
+is_oneref( $timer, '$timer has refcount 1 after removing from Loop' );
+
 undef $expired;
+
+$loop->add( $timer );
+
 $timer->start;
 
 time_between( sub { wait_for { $expired } },
