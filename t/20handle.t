@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 36;
+use Test::More tests => 43;
 use Test::Exception;
 use Test::Refcount;
 
@@ -46,6 +46,8 @@ ok( !$handle->want_writeready, 'want_writeready false' );
 
 $loop->add( $handle );
 
+is_refcount( $handle, 2, '$handle has refcount 2 after adding to Loop' );
+
 $loop->loop_once( 0.1 );
 
 is( $readready,  0, '$readready while idle' );
@@ -72,6 +74,8 @@ $loop->loop_once( 0.1 );
 is( $readready,  0, '$readready while writeable' );
 is( $writeready, 1, '$writeready while writeable' );
 
+is_refcount( $handle, 2, '$handle has refcount 2 before removing from Loop' );
+
 $loop->remove( $handle );
 
 is_oneref( $handle, '$handle has refcount 1 finally' );
@@ -89,6 +93,8 @@ ok( defined $handle, 'defined $handle around STDIN/STDOUT' );
 is( $handle->read_handle,  \*STDIN,  '->read_handle returns STDIN' );
 is( $handle->write_handle, \*STDOUT, '->write_handle returns STDOUT' );
 
+is_oneref( $handle, '$handle around STDIN/STDOUT has refcount 1' );
+
 undef $handle;
 
 $handle = IO::Async::Handle->new(
@@ -99,6 +105,8 @@ $handle = IO::Async::Handle->new(
 ok( defined $handle, 'defined $handle around STDIN/undef' );
 is( $handle->read_handle,  \*STDIN, '->read_handle returns STDIN' );
 is( $handle->write_handle, undef,   '->write_handle returns undef' );
+
+is_oneref( $handle, '$handle around STDIN/undef has refcount 1' );
 
 dies_ok( sub { $handle->want_writeready( 1 ); },
          'setting want_writeready with write_handle == undef dies' );
@@ -145,10 +153,14 @@ ok( defined $handle, '$handle defined' );
 ok( !defined $handle->read_handle,  '->read_handle not defined' );
 ok( !defined $handle->write_handle, '->write_handle not defined' );
 
+is_oneref( $handle, '$handle latebount has refcount 1 initially' );
+
 $handle->set_handle( $S1 );
 
 is( $handle->read_handle,  $S1, '->read_handle now S1' );
 is( $handle->write_handle, $S1, '->write_handle now S1' );
+
+is_oneref( $handle, '$handle latebount has refcount 1 after set_handle' );
 
 # Legacy upgrade from IO::Async::Notifier
 
@@ -163,3 +175,5 @@ isa_ok( $notifier, "IO::Async::Handle", '$notifier isa IO::Async::Handle' );
 is( $notifier->read_handle, $S1, '->read_handle returns S1' );
 
 is( $notifier->read_fileno, $S1->fileno, '->read_fileno returns fileno(S1)' );
+
+is_oneref( $notifier, '$notifier has refcount 1' );

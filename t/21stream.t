@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 43;
+use Test::More tests => 62;
 use Test::Exception;
 use Test::Refcount;
 
@@ -64,6 +64,8 @@ is_oneref( $stream, 'reading $stream has refcount 1 initially' );
 
 $loop->add( $stream );
 
+is_refcount( $stream, 2, 'reading $stream has refcount 2 after adding to Loop' );
+
 $S2->syswrite( "message\n" );
 
 is_deeply( \@received, [], '@received before loop_once' );
@@ -93,6 +95,8 @@ $S2->syswrite( "hello\nworld\n" );
 $loop->loop_once( 0.1 );
 
 is_deeply( \@received, [ "hello\n", "world\n" ], '@received two at once' );
+
+is_refcount( $stream, 2, 'reading $stream has refcount 2 before removing from Loop' );
 
 $loop->remove( $stream );
 
@@ -130,6 +134,8 @@ $stream = IO::Async::Stream->new(
    },
 );
 
+is_oneref( $stream, 'dynamic reading $stream has refcount 1 initially' );
+
 $loop->add( $stream );
 
 $S2->syswrite( "11" ); # No linefeed yet
@@ -153,6 +159,10 @@ is( $outer_count, 3, '$outer_count after complete body' );
 is( $inner_count, 3, '$inner_count after complete body' );
 is( $record, "Hello world", '$record after complete body' );
 
+$loop->remove( $stream );
+
+is_oneref( $stream, 'dynamic reading $stream has refcount 1 finally' );
+
 undef $stream;
 
 # Writing
@@ -171,6 +181,8 @@ is_oneref( $stream, 'writing $stream has refcount 1 initially' );
 
 $loop->add( $stream );
 
+is_refcount( $stream, 2, 'writing $stream has refcount 2 after adding to Loop' );
+
 is( $stream->want_writeready, 0, 'want_writeready before write' );
 $stream->write( "message\n" );
 
@@ -182,6 +194,8 @@ is( $stream->want_writeready, 0, 'want_writeready after loop_once' );
 is( $empty, 1, '$empty after writing buffer' );
 
 is( read_data( $S2 ), "message\n", 'data after writing buffer' );
+
+is_refcount( $stream, 2, 'writing $stream has refcount 2 before removing from Loop' );
 
 $loop->remove( $stream );
 
@@ -210,9 +224,13 @@ $stream = IO::Async::Stream->new(
    },
 );
 
+is_oneref( $stream, 'split read/write $stream has refcount 1 initially' );
+
 undef @received;
 
 $loop->add( $stream );
+
+is_refcount( $stream, 2, 'split read/write $stream has refcount 2 after adding to Loop' );
 
 $stream->write( "message\n" );
 
@@ -227,7 +245,11 @@ $loop->loop_once( 0.1 );
 
 is_deeply( \@received, [ "reverse\n" ], '@received on response to split stream' );
 
+is_refcount( $stream, 2, 'split read/write $stream has refcount 2 before removing from Loop' );
+
 $loop->remove( $stream );
+
+is_oneref( $stream, 'split read/write $stream refcount 1 finally' );
 
 undef $stream;
 
@@ -245,9 +267,13 @@ $stream = IO::Async::Stream->new( handle => $S1,
    },
 );
 
+is_oneref( $stream, 'closing $stream has refcount 1 initially' );
+
 $stream->write( "hello" );
 
 $loop->add( $stream );
+
+is_refcount( $stream, 2, 'closing $stream has refcount 2 after adding to Loop' );
 
 is( $closed, 0, 'closed before close' );
 
@@ -259,6 +285,12 @@ $loop->loop_once( 1 ) or die "Nothing ready after 1 second";
 
 is( $closed, 1, 'closed after wait' );
 is( $loop_during_closed, $loop, 'loop during closed' );
+
+ok( !defined $stream->get_loop, 'Stream no longer member of Loop' );
+
+is_oneref( $stream, 'closing $stream refcount 1 finally' );
+
+undef $stream;
 
 # Make two sets of sockets now, so that we know they'll definitely have
 # different FDs
@@ -284,12 +316,18 @@ $stream = IO::Async::Stream->new(
    },
 );
 
+is_oneref( $stream, 'latehandle $stream has refcount 1 initially' );
+
 $loop->add( $stream );
+
+is_refcount( $stream, 2, 'latehandle $stream has refcount 2 after adding to Loop' );
 
 dies_ok( sub { $stream->write( "some text" ) },
          '->write on stream with no IO handle fails' );
 
 $stream->set_handle( $S1 );
+
+is_refcount( $stream, 2, 'latehandle $stream has refcount 2 after setting a handle' );
 
 $stream->write( "some text" );
 
@@ -309,6 +347,10 @@ is( $buffer, "more text", 'stream-read text appears' );
 $stream->close_when_empty;
 
 is( $closed, 1, 'closed after close' );
+
+ok( !defined $stream->get_loop, 'Stream no longer member of Loop' );
+
+is_oneref( $stream, 'latehandle $stream refcount 1 finally' );
 
 # Now try re-opening the stream with a new handle, and check it continues to
 # work

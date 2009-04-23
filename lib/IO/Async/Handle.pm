@@ -11,6 +11,7 @@ use base qw( IO::Async::Notifier );
 our $VERSION = '0.19';
 
 use Carp;
+use Scalar::Util qw( weaken );
 
 =head1 NAME
 
@@ -192,7 +193,7 @@ sub _watch_read
    if( $want ) {
       $loop->watch_io(
          handle => $fh,
-         on_read_ready => sub { $self->on_read_ready },
+         on_read_ready => $self->{on_read_ready},
       );
    }
    else {
@@ -214,7 +215,7 @@ sub _watch_write
    if( $want ) {
       $loop->watch_io(
          handle => $fh,
-         on_write_ready => sub { $self->on_write_ready },
+         on_write_ready => $self->{on_write_ready},
       );
    }
    else {
@@ -282,6 +283,11 @@ sub set_handles
       if( !$self->{on_read_ready} and $self->can( 'on_read_ready' ) == \&on_read_ready ) {
          croak 'Expected either a on_read_ready callback or an ->on_read_ready method';
       }
+
+      if( !$self->{on_read_ready} ) {
+         weaken( my $weakself = $self );
+         $self->{on_read_ready} = sub { $weakself->on_read_ready };
+      }
    }
 
    if( defined( $write_handle = $params{write_handle} ) ) {
@@ -292,6 +298,11 @@ sub set_handles
       if( !$self->{on_write_ready} and $self->can( 'on_write_ready' ) == \&on_write_ready ) {
          # This used not to be fatal. Make it just a warning for now.
          carp 'A write handle was provided but neither a on_write_ready callback nor an ->on_write_ready method were. Perhaps you mean \'read_handle\' instead?';
+      }
+
+      if( !$self->{on_write_ready} ) {
+         weaken( my $weakself = $self );
+         $self->{on_write_ready} = sub { $weakself->on_write_ready };
       }
    }
 
