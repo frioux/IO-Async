@@ -15,7 +15,7 @@ use Scalar::Util qw( weaken );
 
 =head1 NAME
 
-C<IO::Async:Timer> - event callback after some timed delay
+C<IO::Async::Timer> - event callback after some timed delay
 
 =head1 SYNOPSIS
 
@@ -90,7 +90,7 @@ sub new
    $mode eq "countdown" or croak "Expected 'mode' to be 'countdown'";
 
    my $on_expire = delete $params{on_expire};
-   ref $on_expire eq "CODE" or croak "Expected 'expire' as a CODE reference";
+   ref $on_expire eq "CODE" or croak "Expected 'on_expire' as a CODE reference";
 
    my $delay = delete $params{delay};
    $delay > 0 or croak "Expected a 'delay' as a positive number";
