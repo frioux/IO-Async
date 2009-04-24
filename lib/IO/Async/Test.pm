@@ -113,14 +113,19 @@ sub wait_for(&)
 
    my ( undef, $callerfile, $callerline ) = caller();
 
-   while( !$cond->() ) {
-      my $retries = 10; # Give code a generous 10 seconds to do something
-      while( $retries-- ) {
-         my $subcount = $loop->loop_once( 1 );
-         last if $subcount;
+   my $timedout = 0;
+   my $timerid = $loop->enqueue_timer(
+      delay => 10,
+      code => sub { $timedout = 1 },
+   );
 
-         die "Nothing was ready after 10 second wait; called at $callerfile line $callerline\n" if $retries == 0;
-      }
+   $loop->loop_once( 1 ) while !$cond->() and !$timedout;
+
+   if( $timedout ) {
+      die "Nothing was ready after 10 second wait; called at $callerfile line $callerline\n";
+   }
+   else {
+      $loop->cancel_timer( $timerid );
    }
 }
 
