@@ -48,6 +48,10 @@ L<IO::Async::Sequencer> - handle a serial pipeline of requests / responses (EXPE
 
 L<IO::Async::Timer> - event callback after some timed delay
 
+=item *
+
+L<IO::Async::Signal> - event callback on receipt of a POSIX signal
+
 =back
 
 For more detail, see the SYNOPSIS section in one of the above.

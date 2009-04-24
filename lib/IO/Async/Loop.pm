@@ -357,6 +357,9 @@ of C<IO::Async> this behaviour may be disallowed altogether.
 
 See also L<POSIX> for the C<SIGI<name>> constants.
 
+For a more flexible way to use signals from within Notifiers, see instead the
+L<IO::Async::Signal> object.
+
 =cut
 
 sub attach_signal
