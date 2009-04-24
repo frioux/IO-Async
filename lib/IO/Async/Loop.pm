@@ -367,8 +367,13 @@ sub attach_signal
    my $self = shift;
    my ( $signal, $code ) = @_;
 
-   my $sigproxy = $self->{sigproxy} ||= $self->__new_feature( "IO::Async::SignalProxy" );
-   $sigproxy->attach( $signal, $code );
+   if( $signal eq "CHLD" ) {
+      # We make special exception to allow the ChildManager to do this
+      caller eq "IO::Async::ChildManager" or
+         carp "Attaching to SIGCHLD is not advised - use the IO::Async::ChildManager instead";
+   }
+
+   $self->watch_signal( $signal, $code );
 }
 
 =head2 $loop->detach_signal( $signal )
@@ -390,14 +395,7 @@ sub detach_signal
    my $self = shift;
    my ( $signal ) = @_;
 
-   my $sigproxy = $self->{sigproxy} ||= $self->__new_feature( "IO::Async::SignalProxy" );
-   $sigproxy->detach( $signal );
-
-   if( !$sigproxy->signals ) {
-      $self->remove( $sigproxy );
-      undef $sigproxy;
-      undef $self->{sigproxy};
-   }
+   $self->unwatch_signal( $signal );
 }
 
 =head2 $loop->enable_childmanager
@@ -1044,6 +1042,68 @@ sub __unwatch_io
 
    if( not $watch->[1] and not $watch->[2] ) {
       delete $self->{iowatches}->{$handle->fileno};
+   }
+}
+
+=head2 $loop->watch_signal( $signal, $code )
+
+This method adds a new signal handler to watch the given signal.
+
+=over 8
+
+=item $signal
+
+The name of the signal to watch to. This should be a bare name like C<TERM>.
+
+=item $code
+
+A CODE reference to the handling callback.
+
+=back
+
+There can only be one callback per signal name. Registering a new one will
+remove an existing one.
+
+Applications should use a C<IO::Async::Signal> object, or call
+C<attach_signal> instead of using this method.
+
+=cut
+
+sub watch_signal
+{
+   my $self = shift;
+   my ( $signal, $code ) = @_;
+
+   my $sigproxy = $self->{sigproxy} ||= $self->__new_feature( "IO::Async::SignalProxy" );
+   $sigproxy->watch( $signal, $code );
+}
+
+=head2 $loop->unwatch_signal( $signal )
+
+This method removes the signal callback for the given signal.
+
+=over 8
+
+=item $signal
+
+The name of the signal to watch to. This should be a bare name like C<TERM>.
+
+=back
+
+=cut
+
+sub unwatch_signal
+{
+   my $self = shift;
+   my ( $signal ) = @_;
+
+   my $sigproxy = $self->{sigproxy} ||= $self->__new_feature( "IO::Async::SignalProxy" );
+   $sigproxy->unwatch( $signal );
+
+   if( !$sigproxy->signals ) {
+      $self->remove( $sigproxy );
+      undef $sigproxy;
+      undef $self->{sigproxy};
    }
 }
 

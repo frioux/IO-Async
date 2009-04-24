@@ -14,8 +14,8 @@ my $loop = IO::Async::Loop::Select->new();
 
 my $caught = "";
 
-$loop->attach_signal( USR1 => sub { $caught .= "1" } );
-$loop->attach_signal( USR2 => sub { $caught .= "2" } );
+$loop->watch_signal( USR1 => sub { $caught .= "1" } );
+$loop->watch_signal( USR2 => sub { $caught .= "2" } );
 
 is_oneref( $loop, '$loop has refcount 1' );
 
@@ -63,18 +63,16 @@ kill SIGUSR1, $$;
 $ready = $loop->loop_once( 0.1 );
 is( $caught, "21", '$caught after second order test' );
 
-# Dynamic attachment
-
-$loop->attach_signal( TERM => sub { $caught .= "T" } );
+$loop->watch_signal( TERM => sub { $caught .= "T" } );
 
 $caught = "";
 
 kill SIGTERM, $$;
 
 $ready = $loop->loop_once( 0.1 );
-is( $caught, "T", '$caught after dynamic attachment of SIGTERM' );
+is( $caught, "T", '$caught after dynamic watch of SIGTERM' );
 
-$loop->detach_signal( "TERM" );
+$loop->unwatch_signal( "TERM" );
 $SIG{TERM} = "IGNORE";
 
 $caught = "";
@@ -84,10 +82,10 @@ kill SIGTERM, $$;
 $ready = $loop->loop_once( 0.1 );
 is( $caught, "", '$caught empty after dynamic removal of SIGTERM' );
 
-dies_ok( sub { $loop->detach_signal( "INT" ); },
-         'Detachment of non-attached signal fails' );
+dies_ok( sub { $loop->unwatch_signal( "INT" ); },
+         'unwatch of non-watched signal fails' );
 
 is_oneref( $loop, '$loop has refcount 1 at EOF' );
 
-$loop->detach_signal( "USR1" );
-$loop->detach_signal( "USR2" );
+$loop->unwatch_signal( "USR1" );
+$loop->unwatch_signal( "USR2" );
