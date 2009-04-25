@@ -145,9 +145,6 @@ sub watch
 
    exists $SIG{$signal} or croak "Unrecognised signal name $signal";
 
-   # Don't allow anyone to trash an existing signal handler
-   !defined $SIG{$signal} or !ref $SIG{$signal} or croak "Cannot override signal handler for $signal";
-
    ref $code eq "CODE" or croak 'Expected $code as a CODE reference';
 
    $self->{callbacks}->{$signal} = $code;

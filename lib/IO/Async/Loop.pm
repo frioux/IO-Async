@@ -108,6 +108,7 @@ sub __new
    my $self = bless {
       notifiers    => {}, # {nkey} = notifier
       iowatches    => {}, # {fd} = [ onread, onwrite ] - TODO
+      sigattaches  => {}, # {sig} => \@callbacks
       sigproxy     => undef,
       childmanager => undef,
       timequeue    => undef,
@@ -333,9 +334,14 @@ sub __new_feature
    return $classname->new( loop => $self );
 }
 
-=head2 $loop->attach_signal( $signal, $code )
+=head2 $id = $loop->attach_signal( $signal, $code )
 
 This method adds a new signal handler to watch the given signal.
+
+The returned C<$id> value can be used to identify the signal handler in case
+it needs to be removed by the C<detach_signal()> method. Note that this value
+may be an object reference, so if it is stored, it should be released after it
+cancelled, so the object itself can be freed.
 
 =over 8
 
@@ -373,18 +379,30 @@ sub attach_signal
          carp "Attaching to SIGCHLD is not advised - use the IO::Async::ChildManager instead";
    }
 
-   $self->watch_signal( $signal, $code );
+   if( not $self->{sigattaches}->{$signal} ) {
+      my $attaches = $self->{sigattaches}->{$signal} = [];
+      $self->watch_signal( $signal, sub { $_->() for @$attaches } );
+   }
+
+   push @{ $self->{sigattaches}->{$signal} }, $code;
+
+   return \$self->{sigattaches}->{$signal}->[-1];
 }
 
-=head2 $loop->detach_signal( $signal )
+=head2 $loop->detach_signal( $signal, $id )
 
-This method removes the signal handler for the given signal.
+Removes a previously-attached signal handler.
 
 =over 8
 
 =item $signal
 
-The name of the signal to attach to. This should be a bare name like C<TERM>.
+The name of the signal to remove from. This should be a bare name like
+C<TERM>.
+
+=item $id
+
+The value returned by the C<attach_signal> method.
 
 =back
 
@@ -393,9 +411,15 @@ The name of the signal to attach to. This should be a bare name like C<TERM>.
 sub detach_signal
 {
    my $self = shift;
-   my ( $signal ) = @_;
+   my ( $signal, $id ) = @_;
 
-   $self->unwatch_signal( $signal );
+   @{ $self->{sigattaches}->{$signal} } =
+      grep { \$_ != $id } @{ $self->{sigattaches}->{$signal} };                                         
+
+   if( !@{ $self->{sigattaches}->{$signal} } ) {
+      $self->unwatch_signal( $signal );
+      delete $self->{sigattaches}->{$signal};
+   }
 }
 
 =head2 $loop->enable_childmanager

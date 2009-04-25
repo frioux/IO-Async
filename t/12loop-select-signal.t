@@ -2,90 +2,66 @@
 
 use strict;
 
-use Test::More tests => 13;
+use Test::More tests => 12;
 use Test::Exception;
 use Test::Refcount;
 
-use POSIX qw( SIGUSR1 SIGUSR2 SIGTERM );
+use POSIX qw( SIGTERM );
 
 use IO::Async::Loop::Select;
 
 my $loop = IO::Async::Loop::Select->new();
 
-my $caught = "";
+is_oneref( $loop, '$loop has refcount 1 initally' );
 
-$loop->watch_signal( USR1 => sub { $caught .= "1" } );
-$loop->watch_signal( USR2 => sub { $caught .= "2" } );
+my $caught;
 
-is_oneref( $loop, '$loop has refcount 1' );
+$loop->watch_signal( TERM => sub { $caught = 1 } );
 
-my $ready;
+is_oneref( $loop, '$loop has refcount 1 after watch_signal()' );
 
-# Idle
+$loop->loop_once( 0.1 );
 
-$ready = $loop->loop_once( 0.1 );
-is( $ready,  0,  '$ready idling' );
-is( $caught, "", '$caught idling' );
-
-# Raise
-kill SIGUSR1, $$;
-
-$ready = $loop->loop_once( 0.1 );
-is( $ready,  1,   '$ready after raise' );
-is( $caught, "1", '$caught after raise' );
-
-# Count
-
-$caught = "";
-
-kill SIGUSR1, $$;
-kill SIGUSR1, $$;
-
-$ready = $loop->loop_once( 0.1 );
-is( $ready,  1,    '$ready after double-raise' );
-is( $caught, "11", '$caught after double-raise' );
-
-# Ordering
-
-$caught = "";
-
-kill SIGUSR1, $$;
-kill SIGUSR2, $$;
-
-$ready = $loop->loop_once( 0.1 );
-is( $caught, "12", '$caught after first order test' );
-
-$caught = "";
-
-kill SIGUSR2, $$;
-kill SIGUSR1, $$;
-
-$ready = $loop->loop_once( 0.1 );
-is( $caught, "21", '$caught after second order test' );
-
-$loop->watch_signal( TERM => sub { $caught .= "T" } );
-
-$caught = "";
+is( $caught, undef, '$caught idling' );
 
 kill SIGTERM, $$;
 
-$ready = $loop->loop_once( 0.1 );
-is( $caught, "T", '$caught after dynamic watch of SIGTERM' );
+$loop->loop_once( 0.1 );
 
-$loop->unwatch_signal( "TERM" );
-$SIG{TERM} = "IGNORE";
+is( $caught, 1, '$caught after raise' );
 
-$caught = "";
+is_oneref( $loop, '$loop has refcount 1 before unwatch_signal()' );
+
+$loop->unwatch_signal( 'TERM' );
+
+is_oneref( $loop, '$loop has refcount 1 after unwatch_signal()' );
+
+my ( $cA, $cB );
+
+my $idA = $loop->attach_signal( TERM => sub { $cA = 1 } );
+my $idB = $loop->attach_signal( TERM => sub { $cB = 1 } );
+
+is_oneref( $loop, '$loop has refcount 1 after 2 * attach_signal()' );
 
 kill SIGTERM, $$;
 
-$ready = $loop->loop_once( 0.1 );
-is( $caught, "", '$caught empty after dynamic removal of SIGTERM' );
+$loop->loop_once( 0.1 );
 
-dies_ok( sub { $loop->unwatch_signal( "INT" ); },
-         'unwatch of non-watched signal fails' );
+is( $cA, 1, '$cA after raise' );
+is( $cB, 1, '$cB after raise' );
 
-is_oneref( $loop, '$loop has refcount 1 at EOF' );
+$loop->detach_signal( 'TERM', $idA );
 
-$loop->unwatch_signal( "USR1" );
-$loop->unwatch_signal( "USR2" );
+undef $cA;
+undef $cB;
+
+kill SIGTERM, $$;
+
+$loop->loop_once( 0.1 );
+
+is( $cA, undef, '$cA after raise' );
+is( $cB, 1,     '$cB after raise' );
+
+$loop->detach_signal( 'TERM', $idB );
+
+is_oneref( $loop, '$loop has refcount 1 finally' );

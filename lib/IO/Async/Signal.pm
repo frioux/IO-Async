@@ -93,7 +93,7 @@ sub _add_to_loop
    my $self = shift;
    my ( $loop ) = @_;
 
-   $loop->attach_signal( $self->{name}, $self->{on_receipt} );
+   $self->{id} = $loop->attach_signal( $self->{name}, $self->{on_receipt} );
 }
 
 sub _remove_from_loop
@@ -101,7 +101,7 @@ sub _remove_from_loop
    my $self = shift;
    my ( $loop ) = @_;
 
-   $loop->detach_signal( $self->{name} );
+   $loop->detach_signal( $self->{name}, $self->{id} );
 }
 
 # Keep perl happy; keep Britain tidy

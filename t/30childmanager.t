@@ -84,7 +84,7 @@ is_deeply( [ $manager->list_watching ], [], 'list_watching after child SIGTERM' 
 
 # Now lets test the integration with a ::Loop
 
-$loop->detach_signal( 'CHLD' );
+$manager->disable;
 undef $manager;
 
 $loop->enable_childmanager;
