@@ -336,7 +336,9 @@ sub __new_feature
 
 =head2 $id = $loop->attach_signal( $signal, $code )
 
-This method adds a new signal handler to watch the given signal.
+This method adds a new signal handler to watch the given signal. The same
+signal can be attached to multiple times; its callback functions will all be
+invoked, in no particular order.
 
 The returned C<$id> value can be used to identify the signal handler in case
 it needs to be removed by the C<detach_signal()> method. Note that this value

@@ -90,7 +90,8 @@ when new incoming data is available, or when the outgoing buffer is empty.
 Both of the above are subclasses of L<IO::Async::Notifier>, which does not
 perform any IO operations itself, but instead acts to coordinate a collection
 of other Notifiers, or act as a base class to build the specific IO
-functionallity upon.
+functionallity upon. For other types of C<Notifier>, see Timers and Signals
+below.
 
 =head2 Loops
 
@@ -155,6 +156,13 @@ a callback after a given delay. It can be stopped and restarted.
 The L<IO::Async::Loop> also supports methods for managing timed events on a
 lower level. Events may be absolute, or relative in time to the time they are
 installed.
+
+=head2 Signals
+
+A L<IO::Async::Signal> object represents a POSIX signal, which will invoke a
+callback when the given signal is received by the process. Multiple objects
+watching the same signal can be used; they will all invoke in no particular
+order.
 
 =head2 Merge Points
 

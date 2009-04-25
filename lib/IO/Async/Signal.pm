@@ -41,6 +41,9 @@ C<IO::Async::Signal> - event callback on receipt of a POSIX signal
 This module provides a class of C<IO::Async::Notifier> which invokes its
 callback when a particular POSIX signal is received.
 
+Multiple objects can be added to a C<Loop> that all watch for the same signal.
+The callback functions will all be invoked, in no particular order.
+
 =cut
 
 =head1 CONSTRUCTOR
