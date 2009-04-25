@@ -105,6 +105,12 @@ sub new
    return $self;
 }
 
+sub _add_to_loop
+{
+   my $self = shift;
+   $self->start if delete $self->{pending};
+}
+
 sub _remove_from_loop
 {
    my $self = shift;
@@ -133,13 +139,21 @@ sub is_running
 
 Starts the Timer. Throws an error if it was already running.
 
+If the Timer is not yet in a Loop, the actual start will be deferred until it
+is added. Once added, it will be running, and will expire at the given
+duration after the time it was added.
+
 =cut
 
 sub start
 {
    my $self = shift;
 
-   my $loop = $self->get_loop or croak "Cannot start a Timer that is not in a Loop";
+   my $loop = $self->get_loop;
+   if( !defined $loop ) {
+      $self->{pending} = 1;
+      return;
+   }
 
    defined $self->{id} and croak "Cannot start a Timer that is already running";
 

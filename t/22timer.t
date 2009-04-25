@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 19;
+use Test::More tests => 22;
 use Test::Exception;
 use Test::Refcount;
 
@@ -46,9 +46,6 @@ ok( defined $timer, '$timer defined' );
 isa_ok( $timer, "IO::Async::Timer", '$timer isa IO::Async::Timer' );
 
 is_oneref( $timer, '$timer has refcount 1 initially' );
-
-dies_ok( sub { $timer->start },
-         '$timer->start not in a loop dies' );
 
 $loop->add( $timer );
 
@@ -113,3 +110,16 @@ $loop->remove( $timer );
 $loop->loop_once( 0.3 );
 
 ok( !$expired, "Removed Timer does not expire" );
+
+$timer->start;
+
+$loop->add( $timer );
+
+ok( $timer->is_running, 'Pre-started Timer is running after adding' );
+
+time_between( sub { wait_for { $expired } },
+   0.19, 0.25, 'Pre-started Timer works' );
+
+$loop->remove( $timer );
+
+is_oneref( $timer, 'Timer has refcount 1 finally' );
