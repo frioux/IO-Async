@@ -1,5 +1,22 @@
 Revision history for IO-Async
 
+0.20    CHANGES:
+         * Major reworking of underlying Loop implementation:
+            + Unified low-level IO, timer and signal watches as callbacks
+            + Split IO handle parts of Notifier into new IO::Async::Handle
+              class
+            + Created Timer and Signal subclasses of Notifier
+
+           These changes will require a compatible upgrade to the underlying
+           Loop implementation.
+
+         * Hide SignalProxy and TimeQueue from CPAN's indexer, as they are
+           internal-only details that don't need exposing there.
+         * Loop magic constructor now warns if a specifically-requested class
+           is not available
+         * Allow multiple attachment of signals via Loop->attach_signal or new
+           Signal objects
+
 0.19    CHANGES:
          * Allow control of Sequencer's pipelining
          * Documentation fixes

@@ -7,7 +7,7 @@ package IO::Async::Stream;
 
 use strict;
 
-our $VERSION = '0.19';
+our $VERSION = '0.20';
 
 use base qw( IO::Async::Handle );
 

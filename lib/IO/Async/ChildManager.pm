@@ -7,7 +7,7 @@ package IO::Async::ChildManager;
 
 use strict;
 
-our $VERSION = '0.19';
+our $VERSION = '0.20';
 
 # Not a notifier
 

@@ -7,7 +7,7 @@ package IO::Async::Listener;
 
 use strict;
 
-our $VERSION = '0.19';
+our $VERSION = '0.20';
 
 use IO::Async::Handle;
 
