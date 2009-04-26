@@ -1,9 +1,8 @@
 #!/usr/bin/perl -w
 
 use strict;
-use Test::More tests => 15;
+use Test::More tests => 14;
 
-use_ok( "IO::Async::TimeQueue" );
 use_ok( "IO::Async::MergePoint" );
 
 use_ok( "IO::Async::Notifier" );

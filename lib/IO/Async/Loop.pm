@@ -676,7 +676,7 @@ sub enqueue_timer
    my $self = shift;
    my ( %params ) = @_;
 
-   my $timequeue = $self->{timequeue} ||= $self->__new_feature( "IO::Async::TimeQueue" );
+   my $timequeue = $self->{timequeue} ||= $self->__new_feature( "IO::Async::Internals::TimeQueue" );
 
    $params{time} = $self->_build_time( %params );
 
@@ -694,7 +694,7 @@ sub cancel_timer
    my $self = shift;
    my ( $id ) = @_;
 
-   my $timequeue = $self->{timequeue} ||= $self->__new_feature( "IO::Async::TimeQueue" );
+   my $timequeue = $self->{timequeue} ||= $self->__new_feature( "IO::Async::Internals::TimeQueue" );
 
    $timequeue->cancel( $id );
 }
@@ -718,7 +718,7 @@ sub requeue_timer
    my $self = shift;
    my ( $id, %params ) = @_;
 
-   my $timequeue = $self->{timequeue} ||= $self->__new_feature( "IO::Async::TimeQueue" );
+   my $timequeue = $self->{timequeue} ||= $self->__new_feature( "IO::Async::Internals::TimeQueue" );
 
    $params{time} = $self->_build_time( %params );
 

@@ -5,12 +5,12 @@ use strict;
 use Test::More tests => 29;
 use Test::Exception;
 
-use IO::Async::TimeQueue;
+use IO::Async::Internals::TimeQueue;
 
-my $queue = IO::Async::TimeQueue->new();
+my $queue = IO::Async::Internals::TimeQueue->new();
 
 ok( defined $queue, '$queue defined' );
-isa_ok( $queue, "IO::Async::TimeQueue", '$queue isa IO::Async::TimeQueue' );
+isa_ok( $queue, "IO::Async::Internals::TimeQueue", '$queue isa IO::Async::Internals::TimeQueue' );
 
 is( $queue->next_time, undef, '->next_time when empty is undef' );
 
