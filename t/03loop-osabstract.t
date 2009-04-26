@@ -2,11 +2,13 @@
 
 use strict;
 
-use Test::More tests => 15;
+use Test::More tests => 16;
 
 use IO::Async::Loop::IO_Poll;
 
 use Socket qw( SOCK_STREAM SOCK_DGRAM );
+
+use POSIX qw( SIGTERM );
 
 my $loop = IO::Async::Loop::IO_Poll->new();
 
@@ -61,3 +63,5 @@ my $loop = IO::Async::Loop::IO_Poll->new();
    $wrB->syswrite( "Goodbye" );
    is( do { my $b; $rdB->sysread( $b, 8192 ); $b }, "Goodbye", '$wrB --writes-> $rdB' );
 }
+
+is( $loop->signame2num( 'TERM' ), SIGTERM, '$loop->signame2num' );
