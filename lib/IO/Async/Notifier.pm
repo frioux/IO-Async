@@ -18,7 +18,44 @@ C<IO::Async::Notifier> - base class for C<IO::Async> event objects
 
 =head1 SYNOPSIS
 
- TODO
+Usually not directly used by a program, but one valid use case may be:
+
+ use IO::Async::Notifier;
+
+ use IO::Async::Stream;
+ use IO::Async::Signal;
+
+ use IO::Async::Loop;
+ my $loop = IO::Async::Loop->new();
+
+ my $notifier = IO::Async::Notifier->new();
+
+ $notifier->add_child(
+    IO::Async::Stream->new(
+       read_handle => \*STDIN,
+       on_read => sub {
+          my $self = shift;
+          my ( $buffref, $closed ) = @_;
+          $$buffref =~ s/^(.*)\n// or return 0;
+          print "You said $1\n";
+          return 1;
+       },
+    )
+ );
+
+ $notifier->add_child(
+    IO::Async::Signal->new(
+       name => 'INT',
+       on_receipt => sub {
+          print "Goodbye!\n";
+          $loop->loop_stop;
+       },
+    )
+ );
+
+ $loop->add( $notifier );
+
+ $loop->loop_forever;
 
 =head1 DESCRIPTION
 
@@ -27,8 +64,9 @@ C<IO::Async> program uses. It provides the lowest level of integration with a
 C<IO::Async::Loop> container, and a facility to collect Notifiers together, in
 a tree structure, where any Notifier can contain a collection of children.
 
-This class itself performs no actual IO work, and generates no actual events.
-These are all left to the various subclasses, such as:
+Normally, objects in this class would not be directly used by an end program,
+as it performs no actual IO work, and generates no actual events. These are all
+left to the various subclasses, such as:
 
 =over 4
 
@@ -55,6 +93,13 @@ L<IO::Async::Signal> - event callback on receipt of a POSIX signal
 =back
 
 For more detail, see the SYNOPSIS section in one of the above.
+
+One case where this object class would be used, is when a library wishes to
+provide a sub-component which consists of multiple other C<Notifier>
+subclasses, such as C<Handle>s and C<Timers>, but no particular object is
+suitable to be the root of a tree. In this case, a plain C<Notifier> object
+can be used as the tree root, and all the other notifiers added as children of
+it.
 
 =cut
 

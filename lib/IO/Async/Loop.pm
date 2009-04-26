@@ -243,6 +243,10 @@ sub _nkey
 This method adds another notifier object to the stored collection. The object
 may be a C<IO::Async::Notifier>, or any subclass of it.
 
+When a notifier is added, any children it has are also added, recursively. In
+this way, entire sections of a program may be written within a tree of
+notifier objects, and added or removed on one piece.
+
 =cut
 
 sub add
@@ -279,7 +283,8 @@ sub _add_noparentcheck
 
 =head2 $loop->remove( $notifier )
 
-This method removes a notifier object from the stored collection.
+This method removes a notifier object from the stored collection, and
+recursively and children notifiers it contains.
 
 =cut
 
@@ -966,6 +971,9 @@ required to implement certain methods that form the base level of
 functionallity. They are not recommended for applications to use; see instead
 the various event objects or higher level methods listed above.
 
+These methods should be considered as part of the interface contract required
+to implement a C<IO::Async::Loop> subclass.
+
 =cut
 
 =head2 $loop->watch_io( %params )
@@ -992,8 +1000,9 @@ Optional. A CODE reference to call when the handle becomes write-ready.
 =back
 
 There can only be one filehandle of any given fileno registered at any one
-time. For any one filehandle, there can only be one read- or write-readiness
-callback. Registering a new one will remove an existing one.
+time. For any one filehandle, there can only be one read-readiness and/or one
+write-readiness callback at any one time. Registering a new one will remove an
+existing one of that type. It is not required that both are provided.
 
 Applications should use a C<IO::Async::Handle> or C<IO::Async::Stream> instead
 of using this method.
@@ -1046,6 +1055,11 @@ If true, remove the watch for read-readiness.
 If true, remove the watch for write-readiness.
 
 =back
+
+Either or both callbacks may be removed at once. It is not an error to attempt
+to remove a callback that is not present. If both callbacks were provided to
+the C<watch_io> method and only one is removed by this method, the other shall
+remain.
 
 =cut
 

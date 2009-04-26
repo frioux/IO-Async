@@ -96,10 +96,10 @@ below.
 =head2 Loops
 
 The L<IO::Async::Loop> object class represents an abstract collection of
-C<IO::Async::Notifier> objects, timers, signal handlers, and other
-functionallity. It performs all of the abstract collection management tasks,
-and leaves the actual OS interactions to a particular subclass for the
-purpose.
+C<IO::Async::Notifier> objects, filehandle IO watches, timers, signal
+handlers, and other functionallity. It performs all of the abstract
+collection management tasks, and leaves the actual OS interactions to a
+particular subclass for the purpose.
 
 L<IO::Async::Loop::IO_Poll> uses an C<IO::Poll> object for this test.
 
