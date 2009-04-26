@@ -3,11 +3,10 @@
 #
 #  (C) Paul Evans, 2007-2009 -- leonerd@leonerd.org.uk
 
-package IO::Async::SignalProxy;
+package # hide from CPAN
+  IO::Async::Internals::SignalProxy;
 
 use strict;
-
-our $VERSION = '0.19';
 
 use base qw( IO::Async::Handle );
 
@@ -17,25 +16,6 @@ use POSIX qw( EAGAIN SIG_BLOCK SIG_SETMASK sigprocmask );
 use IO::Handle;
 
 use warnings qw();
-
-=head1 NAME
-
-C<IO::Async::SignalProxy> - handle POSIX signals with C<IO::Async>-based IO
-
-=head1 SYNOPSIS
-
-This object class is for internal use by C<IO::Async::Loop> subclasses. It is
-not intended for use externally.
-
-=head1 DESCRIPTION
-
-This module provides a class that allows POSIX signals to be handled safely
-alongside other IO operations on filehandles in an C<IO::Async::Loop>. Because
-signals could arrive at any time, care must be taken that they do not
-interrupt the normal flow of the program, and are handled at the same time as
-other events in the C<IO::Async::Loop>'s results.
-
-=cut
 
 sub new
 {
@@ -79,7 +59,6 @@ sub DESTROY
    $self->unwatch( $_ ) foreach keys %$restore_SIG;
 }
 
-# protected
 sub on_read_ready
 {
    my $self = shift;
@@ -247,7 +226,3 @@ in the way indicated above, then all that will happen is that the pipe will
 remain non-empty while the signal queue array is empty. In this case, the
 on_read_ready handler will be fired again, read up-to 8192 more bytes, then
 find the queue to be empty, and return again.
-
-=head1 AUTHOR
-
-Paul Evans E<lt>leonerd@leonerd.org.ukE<gt>

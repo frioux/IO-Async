@@ -1153,7 +1153,7 @@ sub watch_signal
    my $self = shift;
    my ( $signal, $code ) = @_;
 
-   my $sigproxy = $self->{sigproxy} ||= $self->__new_feature( "IO::Async::SignalProxy" );
+   my $sigproxy = $self->{sigproxy} ||= $self->__new_feature( "IO::Async::Internals::SignalProxy" );
    $sigproxy->watch( $signal, $code );
 }
 
@@ -1176,7 +1176,7 @@ sub unwatch_signal
    my $self = shift;
    my ( $signal ) = @_;
 
-   my $sigproxy = $self->{sigproxy} ||= $self->__new_feature( "IO::Async::SignalProxy" );
+   my $sigproxy = $self->{sigproxy} ||= $self->__new_feature( "IO::Async::Internals::SignalProxy" );
    $sigproxy->unwatch( $signal );
 
    if( !$sigproxy->signals ) {
