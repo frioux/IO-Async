@@ -19,11 +19,9 @@ sub time_between
 {
    my ( $code, $lower, $upper, $name ) = @_;
 
-   my ( $now, $took );
-
-   $now = time;
+   my $now = time;
    $code->();
-   $took = time - $now;
+   my $took = time - $now;
 
    cmp_ok( $took, '>', $lower, "$name took at least $lower" );
    cmp_ok( $took, '<', $upper, "$name took no more than $upper" );
@@ -93,14 +91,18 @@ $timer->start;
 
 $loop->loop_once( 0.1 );
 
+my $now = time;
 $timer->reset;
 
 $loop->loop_once( 0.15 );
 
 ok( !$expired, "Reset Timer hasn't expired yet" );
 
-time_between( sub { wait_for { $expired } },
-   0.03, 0.1, 'Timer has now expired' );
+wait_for { $expired };
+my $took = time - $now;
+
+cmp_ok( $took, '>', 0.19, "Timer has now expired took at least 0.19" );
+cmp_ok( $took, '<', 0.25, "Timer has now expired took no more than 0.25" );
 
 undef $expired;
 $timer->start;
