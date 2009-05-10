@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 38;
+use Test::More tests => 39;
 use Test::Exception;
 use Test::Refcount;
 
@@ -165,28 +165,32 @@ is( scalar @handles, 0, '@handles after removal' );
 
 # Removal is clean (tests for workaround to bug in IO::Poll version 0.05)
 
+my ( $P1, $P2 ) = $loop->pipepair() or die "Cannot pipepair - $!";
+
+# Just to make the loop non-empty
+$loop->watch_io( handle => $P2, on_read_ready => sub {} );
+
 $loop->watch_io(
    handle => \*STDOUT,
    on_write_ready => sub {}
-); # Just to make the loop non-empty
-
-my ( $P1, $P2 ) = $loop->pipepair() or die "Cannot pipepair - $!";
-
-$loop->watch_io( handle => $_, on_read_ready => sub {} ) for $P1, $P2;
-
-$loop->unwatch_io( handle => $_, on_read_ready => 1 ) for $P1, $P2;
+);
 
 @handles = $poll->handles();
-is( scalar @handles, 1, '@handles before clean removal test' );
-
-$ready = $loop->loop_once( 0 );
-
-is( $ready, 1, '$ready after clean removal test' );
+is( scalar @handles, 2, '@handles before removal in clean removal test' );
 
 $loop->unwatch_io(
    handle => \*STDOUT,
    on_write_ready => 1,
 );
+
+@handles = $poll->handles();
+is( scalar @handles, 1, '@handles after removal in clean removal test' );
+
+$ready = $loop->loop_once( 0 );
+
+is( $ready, 0, '$ready after clean removal test' );
+
+$loop->unwatch_io( handle => $P2, on_read_ready => 1 );
 
 # HUP of pipe
 
