@@ -6,6 +6,7 @@
 package IO::Async::Loop;
 
 use strict;
+use warnings;
 
 our $VERSION = '0.20';
 

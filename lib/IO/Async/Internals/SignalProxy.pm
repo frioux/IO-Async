@@ -7,6 +7,7 @@ package # hide from CPAN
   IO::Async::Internals::SignalProxy;
 
 use strict;
+use warnings;
 
 use base qw( IO::Async::Handle );
 

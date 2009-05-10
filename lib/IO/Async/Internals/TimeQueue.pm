@@ -7,6 +7,7 @@ package # hide from CPAN
   IO::Async::Internals::TimeQueue;
 
 use strict;
+use warnings;
 
 use Carp;
 

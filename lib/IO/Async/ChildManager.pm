@@ -6,6 +6,7 @@
 package IO::Async::ChildManager;
 
 use strict;
+use warnings;
 
 our $VERSION = '0.20';
 

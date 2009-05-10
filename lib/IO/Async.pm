@@ -6,6 +6,7 @@
 package IO::Async;
 
 use strict;
+use warnings;
 
 # This package contains no code other than a declaration of the version.
 # It is provided simply to keep CPAN happy:

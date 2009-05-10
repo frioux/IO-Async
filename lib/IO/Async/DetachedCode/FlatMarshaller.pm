@@ -7,6 +7,7 @@ package # hide from CPAN
   IO::Async::DetachedCode::FlatMarshaller;
 
 use strict;
+use warnings;
 
 use Carp;
 
