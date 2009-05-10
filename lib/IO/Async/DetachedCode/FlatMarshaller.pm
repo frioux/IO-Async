@@ -3,7 +3,8 @@
 #
 #  (C) Paul Evans, 2007 -- leonerd@leonerd.org.uk
 
-package IO::Async::DetachedCode::FlatMarshaller;
+package # hide from CPAN
+  IO::Async::DetachedCode::FlatMarshaller;
 
 use strict;
 
