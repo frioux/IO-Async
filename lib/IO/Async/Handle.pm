@@ -154,9 +154,6 @@ sub new
 
    my $self = $class->SUPER::new( %params );
 
-   $self->{want_readready}  = 0;
-   $self->{want_writeready} = 0;
-
    $self->{on_read_ready}  = $params{on_read_ready}  if defined $params{on_read_ready};
    $self->{on_write_ready} = $params{on_write_ready} if defined $params{on_write_ready};
    $self->{on_closed}      = $params{on_closed}      if defined $params{on_closed};
@@ -372,8 +369,8 @@ sub close
 
    # Clear the want* states, so if we get a new handle and are re-opened,
    # we'll rearm the underlying loop
-   $self->{want_readready} = 0;
-   $self->{want_writeready} = 0;
+   undef $self->{want_readready};
+   undef $self->{want_writeready};
 }
 
 =head2 $handle = $handle->read_handle
@@ -439,8 +436,8 @@ sub want_readready
    if( @_ ) {
       my ( $new ) = @_;
 
-      $new = $new ?1:0; # Squash to boolean
-      return $new if $new == $self->{want_readready};
+      $new = !!$new;
+      return $new if !$new == !$self->{want_readready}; # compare bools
 
       if( $new ) {
          defined $self->read_handle or
@@ -465,8 +462,8 @@ sub want_writeready
    if( @_ ) {
       my ( $new ) = @_;
 
-      $new = $new ?1:0; # Squash to boolean
-      return $new if $new == $self->{want_writeready};
+      $new = !!$new;
+      return $new if !$new == !$self->{want_writeready}; # compare bools
 
       if( $new ) {
          defined $self->write_handle or

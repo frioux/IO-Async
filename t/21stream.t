@@ -183,14 +183,14 @@ $loop->add( $stream );
 
 is_refcount( $stream, 2, 'writing $stream has refcount 2 after adding to Loop' );
 
-is( $stream->want_writeready, 0, 'want_writeready before write' );
+ok( !$stream->want_writeready, 'want_writeready before write' );
 $stream->write( "message\n" );
 
-is( $stream->want_writeready, 1, 'want_writeready after write' );
+ok( $stream->want_writeready, 'want_writeready after write' );
 
 $loop->loop_once( 0.1 );
 
-is( $stream->want_writeready, 0, 'want_writeready after loop_once' );
+ok( !$stream->want_writeready, 'want_writeready after loop_once' );
 is( $empty, 1, '$empty after writing buffer' );
 
 is( read_data( $S2 ), "message\n", 'data after writing buffer' );
