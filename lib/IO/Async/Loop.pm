@@ -421,10 +421,15 @@ sub detach_signal
    my $self = shift;
    my ( $signal, $id ) = @_;
 
-   @{ $self->{sigattaches}->{$signal} } =
-      grep { \$_ != $id } @{ $self->{sigattaches}->{$signal} };                                         
+   # Can't use grep because we have to preserve the addresses
+   my $attaches = $self->{sigattaches}->{$signal};
+   for (my $i = 0; $i < @$attaches; ) {
+      $i++, next unless \$attaches->[$i] == $id;
 
-   if( !@{ $self->{sigattaches}->{$signal} } ) {
+      splice @$attaches, $i, 1, ();
+   }
+
+   if( !@$attaches ) {
       $self->unwatch_signal( $signal );
       delete $self->{sigattaches}->{$signal};
    }
