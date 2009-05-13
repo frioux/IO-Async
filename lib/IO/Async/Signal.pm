@@ -47,20 +47,16 @@ The callback functions will all be invoked, in no particular order.
 
 =cut
 
-=head1 CONSTRUCTOR
+=head1 PARAMETERS
 
-=cut
-
-=head2 $signal = IO::Async::Signal->new( %params )
-
-This function returns a new instance of a C<IO::Async::Signal> object. The
-C<%params> hash takes the following keys:
+The following named parameters may be passed to C<new> or C<configure>:
 
 =over 8
 
 =item name => STRING
 
-The name of the signal to watch. This should be a bare name like C<TERM>.
+The name of the signal to watch. This should be a bare name like C<TERM>. Can
+only be given at construction time.
 
 =item on_receipt => CODE
 
@@ -73,23 +69,35 @@ will work.
 
 =cut
 
-sub new
+sub _init
 {
-   my $class = shift;
-   my %params = @_;
+   my $self = shift;
+   my ( $params ) = @_;
 
-   my $name = delete $params{name} or croak "Expected 'name'";
+   my $name = delete $params->{name} or croak "Expected 'name'";
 
    $name =~ s/^SIG//; # Trim a leading "SIG"
 
-   my $on_receipt = delete $params{on_receipt} or croak "Expected 'on_receipt' as a CODE reference";
-
-   my $self = $class->SUPER::new( %params );
-
    $self->{name} = $name;
-   $self->{on_receipt} = $on_receipt;
 
-   return $self;
+   $self->SUPER::_init( $params );
+}
+
+sub configure
+{
+   my $self = shift;
+   my %params = @_;
+
+   if( exists $params{on_receipt} ) {
+      $self->{on_receipt} = delete $params{on_receipt};
+
+      if( my $loop = $self->get_loop ) {
+         $self->_remove_from_loop( $loop );
+         $self->_add_to_loop( $loop );
+      }
+   }
+
+   $self->SUPER::configure( %params );
 }
 
 sub _add_to_loop
@@ -106,6 +114,7 @@ sub _remove_from_loop
    my ( $loop ) = @_;
 
    $loop->detach_signal( $self->{name}, $self->{id} );
+   undef $self->{id};
 }
 
 # Keep perl happy; keep Britain tidy

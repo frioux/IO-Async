@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 12;
+use Test::More tests => 14;
 use Test::Exception;
 use Test::Refcount;
 
@@ -72,6 +72,17 @@ wait_for { $caught };
 
 is( $caught,  1,     '$caught after raise' );
 is( $caught2, undef, '$caught2 after raise' );
+
+undef $caught;
+my $new_caught;
+$signal->configure( on_receipt => sub { $new_caught++ } );
+
+kill SIGTERM, $$;
+
+wait_for { $new_caught };
+
+is( $caught, undef, '$caught after raise after replace on_receipt' );
+is( $new_caught, 1, '$new_caught after raise after replace on_receipt' );
 
 is_refcount( $signal, 2, '$signal has refcount 2 before removing from Loop' );
 

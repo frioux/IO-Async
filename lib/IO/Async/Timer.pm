@@ -49,21 +49,17 @@ the callback again. A timer that is currently running may be stopped or reset.
 
 =cut
 
-=head1 CONSTRUCTOR
+=head1 PARAMETERS
 
-=cut
-
-=head2 $timer = IO::Async::Timer->new( %params )
-
-This function returns a new instance of a C<IO::Async::Timer> object. The
-C<%params> hash takes the following keys:
+The following named parameters may be passed to C<new> or C<configure>:
 
 =over 8
 
 =item mode => STRING
 
 The type of timer to create. Currently the only allowed mode is C<countdown>
-but more types may be added in the future.
+but more types may be added in the future. Can only be given at construction
+time.
 
 =item on_expire => CODE
 
@@ -71,7 +67,8 @@ CODE reference to callback to invoke when the timer expires.
 
 =item delay => NUM
 
-The delay in seconds after starting the timer until it expires.
+The delay in seconds after starting the timer until it expires. Cannot be
+changed if the timer is running.
 
 =back
 
@@ -80,30 +77,44 @@ will work. It will also need to be started by the C<start> method.
 
 =cut
 
-sub new
+sub _init
 {
-   my $class = shift;
-   my %params = @_;
+   my $self = shift;
+   my ( $params ) = @_;
 
-   my $mode = delete $params{mode} or croak "Expected a 'mode'";
+   my $mode = delete $params->{mode} or croak "Expected a 'mode'";
 
    # Might define some other modes later
    $mode eq "countdown" or croak "Expected 'mode' to be 'countdown'";
 
-   my $on_expire = delete $params{on_expire};
-   ref $on_expire eq "CODE" or croak "Expected 'on_expire' as a CODE reference";
-
-   my $delay = delete $params{delay};
-   $delay > 0 or croak "Expected a 'delay' as a positive number";
-
-   my $self = $class->SUPER::new( %params );
-
    $self->{mode} = $mode;
-   $self->{delay} = $delay;
 
-   $self->{on_expire} = $on_expire;
+   $self->SUPER::_init( $params );
+}
 
-   return $self;
+sub configure
+{
+   my $self = shift;
+   my %params = @_;
+
+   if( exists $params{on_expire} ) {
+      my $on_expire = delete $params{on_expire};
+      ref $on_expire eq "CODE" or croak "Expected 'on_expire' as a CODE reference";
+
+      $self->{on_expire} = $on_expire;
+      undef $self->{cb}; # Will be lazily constructed when needed
+   }
+
+   if( exists $params{delay} ) {
+      $self->is_running and croak "Cannot configure 'delay' of a running timer\n";
+
+      my $delay = delete $params{delay};
+      $delay > 0 or croak "Expected a 'delay' as a positive number";
+
+      $self->{delay} = $delay;
+   }
+
+   $self->SUPER::configure( %params );
 }
 
 sub _add_to_loop
@@ -160,11 +171,10 @@ sub start
 
    if( !$self->{cb} ) {
       weaken( my $weakself = $self );
-      my $on_expire = $self->{on_expire};
 
       $self->{cb} = sub {
          undef $weakself->{id};
-         $on_expire->();
+         $weakself->{on_expire}->();
       };
    }
 

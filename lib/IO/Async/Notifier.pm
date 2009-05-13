@@ -104,13 +104,25 @@ it.
 
 =cut
 
+=head1 PARAMETERS
+
+A specific subclass of C<IO::Async::Notifier> defines named parameters that
+control its behaviour. These may be passed to the C<new> constructor, or to
+the C<configure> method. The documentation on each specific subclass will give
+details on the parameters that exist, and their uses. Some parameters may only
+support being set once at construction time, or only support being changed if
+the object is in a particular state.
+
+=cut
+
 =head1 CONSTRUCTOR
 
 =cut
 
 =head2 $notifier = IO::Async::Notifier->new( %params )
 
-This function returns a new instance of a C<IO::Async::Notifier> object.
+This function returns a new instance of a C<IO::Async::Notifier> object with
+the given initial values of the named parameters.
 
 Up until C<IO::Async> version 0.19, this module used to implement the IO
 handle features now found in the C<IO::Async::Handle> subclass. To allow for a
@@ -146,7 +158,36 @@ sub new
       parent   => undef,
    }, $class;
 
+   $self->_init( \%params );
+
+   $self->configure( %params );
+
    return $self;
+}
+
+# for subclasses to override
+sub _init
+{
+}
+
+=head2 $notifier->configure( %params )
+
+Adjust the named parameters of the C<Notifier> as given by the C<%params>
+hash. 
+
+=cut
+
+# for subclasses to override and call down to
+sub configure
+{
+   my $self = shift;
+   my %params = @_;
+
+   # We don't recognise any configure keys at this level
+   if( keys %params ) {
+      my $class = ref $self;
+      croak "Unrecognised configuration keys for $class - " . join( " ", keys %params );
+   }
 }
 
 =head2 $notifier->get_loop

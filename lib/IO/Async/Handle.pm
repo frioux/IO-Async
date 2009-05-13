@@ -95,14 +95,9 @@ removed from its containing loop, if it is within one.
 
 =cut
 
-=head1 CONSTRUCTOR
+=head1 PARAMETERS
 
-=cut
-
-=head2 $handle = IO::Async::Handle->new( %params )
-
-This function returns a new instance of a C<IO::Async::Handle> object.
-The C<%params> hash takes the following keys:
+The following named parameters may be passed to C<new> or C<configure>:
 
 =over 8
 
@@ -147,32 +142,41 @@ the C<connect()> has actually been performed yet.
 
 =cut
 
-sub new
+sub configure
 {
-   my $class = shift;
-   my ( %params ) = @_;
+   my $self = shift;
+   my %params = @_;
 
-   my $self = $class->SUPER::new( %params );
+   if( exists $params{on_read_ready} ) {
+      $self->{on_read_ready} = delete $params{on_read_ready};
+      $self->_watch_read(0), $self->_watch_read(1) if $self->want_readready;
+   }
 
-   $self->{on_read_ready}  = $params{on_read_ready}  if defined $params{on_read_ready};
-   $self->{on_write_ready} = $params{on_write_ready} if defined $params{on_write_ready};
-   $self->{on_closed}      = $params{on_closed}      if defined $params{on_closed};
+   if( exists $params{on_write_ready} ) {
+      $self->{on_write_ready} = delete $params{on_write_ready};
+      $self->_watch_write(0), $self->_watch_write(1) if $self->want_writeready;
+   }
 
-   if( defined $params{read_handle} or defined $params{write_handle} ) {
+   if( exists $params{on_closed} ) {
+      $self->{on_closed} = delete $params{on_closed};
+   }
+
+   if( exists $params{read_handle} or exists $params{write_handle} ) {
       $self->set_handles(
-         read_handle  => $params{read_handle},
-         write_handle => $params{write_handle},
+         read_handle  => delete $params{read_handle},
+         write_handle => delete $params{write_handle},
       );
    }
-   elsif( defined $params{handle} ) {
-      $self->set_handle( $params{handle} );
+   elsif( exists $params{handle} ) {
+      $self->set_handle( delete $params{handle} );
    }
 
-   # Slightly asymmetric
-   $self->want_readready( $self->read_handle );
-   $self->want_writeready( $params{want_writeready} || 0 );
+   # readready already been done by set_handles()
+   if( exists $params{want_writeready} ) {
+      $self->want_writeready( delete $params{want_writeready} );
+   }
 
-   return $self;
+   $self->SUPER::configure( %params );
 }
 
 # We'll be calling these any of three times
@@ -307,14 +311,14 @@ sub set_handles
    if( exists $params{read_handle} ) {
       $self->{read_handle} = $read_handle;
 
-      $self->_watch_read(1) if $read_handle;
+      $self->want_readready( defined $read_handle );
    }
 
    if( exists $params{write_handle} ) {
       $self->{write_handle} = $write_handle;
    }
 
-   # In case someone has reopened the filehandles during an on_close handler
+   # In case someone has reopened the filehandles during an on_closed handler
    undef $self->{handle_closing};
 }
 

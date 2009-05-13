@@ -143,24 +143,11 @@ future versions. It shouldn't yet be relied upon as a stable interface.
 
 =cut
 
-=head1 CONSTRUCTOR
+=head1 PARAMETERS
 
-=cut
-
-=head2 $sequencer = IO::Async::Sequencer->new( %params )
-
-This function returns a new instance of a C<IO::Async::Sequencer> object. The
-C<%params> hash takes the following keys:
+The following named parameters may be passed to C<new> or C<configure>:
 
 =over 8
-
-=item read_handle => IO
-
-=item write_handle => IO
-
-=item handle => IO
-
-As for L<IO::Async::Stream>.
 
 =item on_read => CODE
 
@@ -225,10 +212,7 @@ sub new
    ref $on_read eq "CODE" or $class->can( "on_read" ) 
       or croak "Expected 'on_read' as a CODE reference, or to be a class that can ->on_read";
 
-   my $pipeline = $params{pipeline};
-   defined $pipeline or $pipeline = 1; # default on
-
-   my $self = $class->SUPER::new(
+   return $class->SUPER::new(
       %params,
 
       on_read => sub {
@@ -256,21 +240,35 @@ sub new
          goto &{ $on_read || $self->can( "on_read" ) };
       },
    );
+}
 
-   $self->{marshall_request}  = $params{marshall_request};
-   $self->{marshall_response} = $params{marshall_response};
+sub _init
+{
+   my $self = shift;
 
-   $self->{on_request} = $params{on_request};
-
-   $self->{pipeline} = $pipeline;
+   $self->{pipeline} = 1; # default on
 
    # Queue to use in server mode - stores pending responses to be sent
    $self->{server_queue} = []; # element is: $streamed_response
 
    # Queue to use in client mode - stores pending on_response handlers to be called
    $self->{client_queue} = []; # element is: [ $on_response, $delegated_on_read ]
+}
 
-   return $self;
+sub configure
+{
+   my $self = shift;
+   my %params = @_;
+
+   foreach (qw( marshall_request marshall_response on_request )) {
+      $self->{$_} = delete $params{$_} if exists $params{$_};
+   }
+
+   if( exists $params{pipeline} ) {
+      $self->{pipeline} = !!delete $params{pipeline};
+   }
+
+   $self->SUPER::configure( %params );
 }
 
 =head1 SUBCLASS METHODS

@@ -185,14 +185,17 @@ The C<on_outgoing_empty> callback is not passed any arguments.
 
 =cut
 
-=head1 CONSTRUCTOR
+sub _init
+{
+   my $self = shift;
 
-=cut
+   $self->{writebuff} = "";
+   $self->{readbuff} = "";
+}
 
-=head2 $stream = IO::Async::Stream->new( %params )
+=head1 PARAMETERS
 
-This function returns a new instance of a C<IO::Async::Stream> object.
-The C<%params> hash takes the following keys:
+The following named parameters may be passed to C<new> or C<configure>:
 
 =over 8
 
@@ -238,31 +241,21 @@ method.
 
 =cut
 
-sub new
+sub configure
 {
-   my $class = shift;
-   my ( %params ) = @_;
+   my $self = shift;
+   my %params = @_;
 
-   my $self = $class->SUPER::new( %params );
-
-   if( $params{on_read} ) {
-      $self->{on_read} = $params{on_read};
-   }
-   elsif( $self->can( 'on_read' ) ) {
-      # That's fine
-   }
-   else {
-      croak 'Expected either an on_read callback or to be able to ->on_read' if $params{handle} or $params{read_handle};
+   for (qw( on_read on_outgoing_empty on_read_error on_write_error )) {
+      $self->{$_} = delete $params{$_} if exists $params{$_};
    }
 
-   for (qw( on_outgoing_empty on_read_error on_write_error )) {
-      $self->{$_} = $params{$_} if $params{$_};
+   $self->SUPER::configure( %params );
+
+   if( defined $self->read_handle ) {
+      $self->{on_read} or $self->can( "on_read" ) or
+         croak 'Expected either an on_read callback or to be able to ->on_read';
    }
-
-   $self->{writebuff} = "";
-   $self->{readbuff} = "";
-
-   return $self;
 }
 
 =head1 METHODS

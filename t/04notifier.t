@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 12;
+use Test::More tests => 14;
 use Test::Exception;
 use Test::Refcount;
 
@@ -34,6 +34,12 @@ dies_ok( sub { $loop->add( $notifier ) }, 'adding again produces error' );
 $loop->remove( $notifier );
 
 is( $notifier->get_loop, undef, '$notifier->get_loop is undef' );
+
+lives_ok( sub { $notifier->configure; },
+          '$notifier->configure no params succeeds' );
+
+dies_ok( sub { $notifier->configure( oranges => 1 ) },
+         '$notifier->configure an unrecognised parameter fails' );
 
 is_oneref( $loop, '$loop has refcount 1 finally' );
 is_oneref( $notifier, '$notifier has refcount 1 finally' );

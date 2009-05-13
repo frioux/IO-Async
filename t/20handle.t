@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 43;
+use Test::More tests => 49;
 use Test::Exception;
 use Test::Refcount;
 
@@ -62,10 +62,28 @@ $loop->loop_once( 0.1 );
 is( $readready,  1, '$readready while readable' );
 is( $writeready, 0, '$writeready while readable' );
 
-$readready = 0;
-
-# Ready $S1 to clear the data
 $S1->getline(); # ignore return
+
+$readready = 0;
+my $new_readready = 0;
+
+$handle->configure( on_read_ready => sub { $new_readready = 1 } );
+
+$loop->loop_once( 0.1 );
+
+is( $readready,     0, '$readready while idle after on_read_ready replace' );
+is( $new_readready, 0, '$new_readready while idle after on_read_ready replace' );
+
+$S2->syswrite( "data\n" );
+
+$loop->loop_once( 0.1 );
+
+is( $readready,     0, '$readready while readable after on_read_ready replace' );
+is( $new_readready, 1, '$new_readready while readable after on_read_ready replace' );
+
+$S1->getline(); # ignore return
+
+# Write-ready
 
 $handle->want_writeready( 1 );
 
@@ -73,6 +91,16 @@ $loop->loop_once( 0.1 );
 
 is( $readready,  0, '$readready while writeable' );
 is( $writeready, 1, '$writeready while writeable' );
+
+$writeready = 0;
+my $new_writeready = 0;
+
+$handle->configure( on_write_ready => sub { $new_writeready = 1 } );
+
+$loop->loop_once( 0.1 );
+
+is( $writeready,     0, '$writeready while writeable after on_write_ready replace' );
+is( $new_writeready, 1, '$new_writeready while writeable after on_write_ready replace' );
 
 is_refcount( $handle, 2, '$handle has refcount 2 before removing from Loop' );
 

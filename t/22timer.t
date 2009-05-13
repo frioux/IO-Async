@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 22;
+use Test::More tests => 27;
 use Test::Exception;
 use Test::Refcount;
 
@@ -123,6 +123,26 @@ ok( $timer->is_running, 'Pre-started Timer is running after adding' );
 
 time_between( sub { wait_for { $expired } },
    1.5, 2.5, 'Pre-started Timer works' );
+
+$timer->configure( delay => 1 * AUT );
+
+undef $expired;
+$timer->start;
+
+time_between( sub { wait_for { $expired } },
+   0.5, 1.5, 'Reconfigured timer delay works' );
+
+my $new_expired;
+$timer->configure( on_expire => sub { $new_expired = 1 } );
+
+$timer->start;
+
+time_between( sub { wait_for { $new_expired } },
+   0.5, 1.5, 'Reconfigured timer on_expire works' );
+
+$timer->start;
+dies_ok( sub { $timer->configure( delay => 5 ); },
+         'Configure a running timer fails' );
 
 $loop->remove( $timer );
 
