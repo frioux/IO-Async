@@ -192,6 +192,11 @@ sub _watch_read
    my $loop = $self->get_loop or return;
    my $fh = $self->read_handle or return;
 
+   if( !$self->{on_read_ready} ) {
+      weaken( my $weakself = $self );
+      $self->{on_read_ready} = sub { $weakself->on_read_ready };
+   }
+
    if( $want ) {
       $loop->watch_io(
          handle => $fh,
@@ -213,6 +218,11 @@ sub _watch_write
 
    my $loop = $self->get_loop or return;
    my $fh = $self->write_handle or return;
+
+   if( !$self->{on_write_ready} ) {
+      weaken( my $weakself = $self );
+      $self->{on_write_ready} = sub { $weakself->on_write_ready };
+   }
 
    if( $want ) {
       $loop->watch_io(
@@ -282,13 +292,8 @@ sub set_handles
          croak 'Expected that read_handle can fileno()';
       }
 
-      if( !$self->{on_read_ready} and $self->can( 'on_read_ready' ) == \&on_read_ready ) {
+      if( !$self->{on_read_ready} and !$self->can( 'on_read_ready' ) ) {
          croak 'Expected either a on_read_ready callback or an ->on_read_ready method';
-      }
-
-      if( !$self->{on_read_ready} ) {
-         weaken( my $weakself = $self );
-         $self->{on_read_ready} = sub { $weakself->on_read_ready };
       }
    }
 
@@ -297,14 +302,9 @@ sub set_handles
          croak 'Expected that write_handle can fileno()';
       }
 
-      if( !$self->{on_write_ready} and $self->can( 'on_write_ready' ) == \&on_write_ready ) {
+      if( !$self->{on_write_ready} and !$self->can( 'on_write_ready' ) ) {
          # This used not to be fatal. Make it just a warning for now.
          carp 'A write handle was provided but neither a on_write_ready callback nor an ->on_write_ready method were. Perhaps you mean \'read_handle\' instead?';
-      }
-
-      if( !$self->{on_write_ready} ) {
-         weaken( my $weakself = $self );
-         $self->{on_write_ready} = sub { $weakself->on_write_ready };
       }
    }
 
@@ -361,7 +361,7 @@ sub close
    if( my $parent = $self->{parent} ) {
       $parent->remove_child( $self );
    }
-   elsif( my $loop = $self->{loop} ) {
+   elsif( my $loop = $self->get_loop ) {
       $loop->remove( $self );
    }
 
@@ -484,22 +484,6 @@ sub want_writeready
    else {
       return $self->{want_writeready};
    }
-}
-
-# For ::Loops to call
-sub on_read_ready
-{
-   my $self = shift;
-   my $callback = $self->{on_read_ready};
-   $callback->( $self ) if defined $callback;
-}
-
-# For ::Loops to call
-sub on_write_ready
-{
-   my $self = shift;
-   my $callback = $self->{on_write_ready};
-   $callback->( $self ) if defined $callback;
 }
 
 # Keep perl happy; keep Britain tidy
