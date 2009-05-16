@@ -161,17 +161,54 @@ sub configure
       $self->{on_closed} = delete $params{on_closed};
    }
 
-   if( exists $params{read_handle} or exists $params{write_handle} ) {
-      $self->set_handles(
-         read_handle  => delete $params{read_handle},
-         write_handle => delete $params{write_handle},
-      );
-   }
-   elsif( exists $params{handle} ) {
-      $self->set_handle( delete $params{handle} );
+   # 'handle' is a shortcut for setting read_ and write_
+   if( exists $params{handle} ) {
+      $params{read_handle}  = $params{handle};
+      $params{write_handle} = $params{handle};
+      delete $params{handle};
    }
 
-   # readready already been done by set_handles()
+   if( exists $params{read_handle} ) {
+      my $read_handle = delete $params{read_handle};
+
+      if( defined $read_handle ) {
+         if( !defined eval { $read_handle->fileno } ) {
+            croak 'Expected that read_handle can fileno()';
+         }
+
+         if( !$self->{on_read_ready} and !$self->can( 'on_read_ready' ) ) {
+            croak 'Expected either a on_read_ready callback or an ->on_read_ready method';
+         }
+      }
+
+      $self->{read_handle} = $read_handle;
+
+      $self->want_readready( defined $read_handle );
+
+      # In case someone has reopened the filehandles during an on_closed handler
+      undef $self->{handle_closing};
+   }
+
+   if( exists $params{write_handle} ) {
+      my $write_handle = delete $params{write_handle};
+
+      if( defined $write_handle ) {
+         if( !defined eval { $write_handle->fileno } ) {
+            croak 'Expected that write_handle can fileno()';
+         }
+
+         if( !$self->{on_write_ready} and !$self->can( 'on_write_ready' ) ) {
+            # This used not to be fatal. Make it just a warning for now.
+            carp 'A write handle was provided but neither a on_write_ready callback nor an ->on_write_ready method were. Perhaps you mean \'read_handle\' instead?';
+         }
+      }
+
+      $self->{write_handle} = $write_handle;
+
+      # In case someone has reopened the filehandles during an on_closed handler
+      undef $self->{handle_closing};
+   }
+
    if( exists $params{want_writeready} ) {
       $self->want_writeready( delete $params{want_writeready} );
    }
@@ -262,21 +299,8 @@ sub _remove_from_loop
 
 =head2 $handle->set_handles( %params )
 
-This method stores new reading or writing handles in the object, as if they
-had been passed as the C<read_handle> or C<write_handle> arguments to the
-constructor. The C<%params> hash takes the following keys:
-
-=over 8
-
-=item read_handle => IO
-
-A new IO handle for reading, or C<undef> to remove the old one.
-
-=item write_handle => IO
-
-A new IO handle for writing, or C<undef> to remove the old one.
-
-=back
+Sets new reading or writing filehandles. Equivalent to calling the
+C<configure> method with the same parameters.
 
 =cut
 
@@ -285,48 +309,17 @@ sub set_handles
    my $self = shift;
    my %params = @_;
 
-   my ( $read_handle, $write_handle );
-
-   if( defined( $read_handle = $params{read_handle} ) ) {
-      unless( defined eval { $read_handle->fileno } ) {
-         croak 'Expected that read_handle can fileno()';
-      }
-
-      if( !$self->{on_read_ready} and !$self->can( 'on_read_ready' ) ) {
-         croak 'Expected either a on_read_ready callback or an ->on_read_ready method';
-      }
-   }
-
-   if( defined( $write_handle = $params{write_handle} ) ) {
-      unless( defined eval { $write_handle->fileno } ) {
-         croak 'Expected that write_handle can fileno()';
-      }
-
-      if( !$self->{on_write_ready} and !$self->can( 'on_write_ready' ) ) {
-         # This used not to be fatal. Make it just a warning for now.
-         carp 'A write handle was provided but neither a on_write_ready callback nor an ->on_write_ready method were. Perhaps you mean \'read_handle\' instead?';
-      }
-   }
-
-   if( exists $params{read_handle} ) {
-      $self->{read_handle} = $read_handle;
-
-      $self->want_readready( defined $read_handle );
-   }
-
-   if( exists $params{write_handle} ) {
-      $self->{write_handle} = $write_handle;
-   }
-
-   # In case someone has reopened the filehandles during an on_closed handler
-   undef $self->{handle_closing};
+   $self->configure(
+      exists $params{read_handle}  ? ( read_handle  => $params{read_handle} )  : (),
+      exists $params{write_handle} ? ( write_handle => $params{write_handle} ) : (),
+   );
 }
 
 =head2 $handle->set_handle( $fh )
 
 Shortcut for
 
- $handle->set_handles( read_handle => $fh, write_handle => $fh )
+ $handle->configure( handle => $fh )
 
 =cut
 
@@ -335,10 +328,7 @@ sub set_handle
    my $self = shift;
    my ( $fh ) = @_;
 
-   $self->set_handles(
-      read_handle  => $fh,
-      write_handle => $fh,
-   );
+   $self->configure( handle => $fh );
 }
 
 =head2 $handle->close
