@@ -1,5 +1,15 @@
 Revision history for IO-Async
 
+0.21    CHANGES:
+         * Added "use warnings" to all modules
+         * Created Notifier->configure method to allow changing properties of
+           a Notifier or subclass after construction
+         * New 'examples' dir with some small example scripts
+
+        BUGFIXES:
+         * More robust timing tests to avoid some spurious test failures due
+           to busy testing servers or other non-issues
+
 0.20    CHANGES:
          * Major reworking of underlying Loop implementation:
             + Unified low-level IO, timer and signal watches as callbacks
