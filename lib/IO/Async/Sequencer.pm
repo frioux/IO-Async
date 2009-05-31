@@ -198,23 +198,23 @@ received. Defaults enabled; supply a defined but false value to disable.
 
 =cut
 
-sub new
+sub _init
 {
-   my $class = shift;
-   my %params = @_;
+   my $self = shift;
+   my ( $params ) = @_;
 
-   if(  defined $params{read_handle} and !defined $params{write_handle} or
-       !defined $params{read_handle} and  defined $params{write_handle} ) {
-      croak "Sequencer requires both a reading and a writing handle";
-   }
+   $self->{pipeline} = 1; # default on
 
-   my $on_read = delete $params{on_read};
-   ref $on_read eq "CODE" or $class->can( "on_read" ) 
-      or croak "Expected 'on_read' as a CODE reference, or to be a class that can ->on_read";
+   # Queue to use in server mode - stores pending responses to be sent
+   $self->{server_queue} = []; # element is: $streamed_response
 
-   return $class->SUPER::new(
-      %params,
+   # Queue to use in client mode - stores pending on_response handlers to be called
+   $self->{client_queue} = []; # element is: [ $on_response, $delegated_on_read ]
 
+   my $on_read = delete $params->{on_read} || $self->can( "on_read" );
+
+   # Since our ->configure() has banned 'on_read', we need to call SUPER one from here
+   $self->SUPER::configure(
       on_read => sub {
          my ( $self, $buffref, $closed ) = @_;
 
@@ -237,28 +237,19 @@ sub new
          return 0 unless length $$buffref;
 
          # No delegation to perform, instead just call the provided one
-         goto &{ $on_read || $self->can( "on_read" ) };
+         goto &$on_read;
       },
    );
-}
-
-sub _init
-{
-   my $self = shift;
-
-   $self->{pipeline} = 1; # default on
-
-   # Queue to use in server mode - stores pending responses to be sent
-   $self->{server_queue} = []; # element is: $streamed_response
-
-   # Queue to use in client mode - stores pending on_response handlers to be called
-   $self->{client_queue} = []; # element is: [ $on_response, $delegated_on_read ]
 }
 
 sub configure
 {
    my $self = shift;
    my %params = @_;
+
+   if( exists $params{on_read} ) {
+      croak "Cannot modify 'on_read' of a " . __PACKAGE__;
+   }
 
    foreach (qw( marshall_request marshall_response on_request )) {
       $self->{$_} = delete $params{$_} if exists $params{$_};
