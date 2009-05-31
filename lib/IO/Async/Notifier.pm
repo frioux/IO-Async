@@ -337,6 +337,18 @@ sub _init
    # empty default
 }
 
+=head2 $notifier->configure( %params )
+
+This method is called by the constructor to set the initial values of named
+parameters, and by users of the object to adjust the values once constructed.
+
+This method should C<delete> from the C<%params> hash any keys it has dealt
+with, then pass the remaining ones to the C<SUPER::configure()>. The base
+class implementation will throw an exception if there are any unrecognised
+keys remaining.
+
+=cut
+
 =head2 $notifier->_add_to_loop( $loop )
 
 This method is called when the Notifier has been added to a Loop; either
