@@ -165,11 +165,6 @@ sub new
    return $self;
 }
 
-# for subclasses to override
-sub _init
-{
-}
-
 =head2 $notifier->configure( %params )
 
 Adjust the named parameters of the C<Notifier> as given by the C<%params>
@@ -200,15 +195,6 @@ sub get_loop
 {
    my $self = shift;
    return $self->{loop}
-}
-
-# for subclasses to override
-sub _add_to_loop
-{
-}
-
-sub _remove_from_loop
-{
 }
 
 # Only called by IO::Async::Loop, not external interface
@@ -322,6 +308,64 @@ sub remove_child
    if( defined( my $loop = $self->{loop} ) ) {
       $loop->remove( $child );
    }
+}
+
+=head1 SUBCLASS METHODS
+
+C<IO::Async::Notifier> is a base class provided so that specific subclasses of
+it provide more specific behaviour. The base class provides a number of
+methods that subclasses may wish to override.
+
+If a subclass implements any of these, be sure to invoke the superclass method
+at some point within the code.
+
+=cut
+
+=head2 $notifier->_init( $paramsref )
+
+This method is called by the constructor just before calling C<configure()>.
+It is passed a reference to the HASH storing the constructor arguments.
+
+This method may initialise internal details of the Notifier as required,
+possibly by using parameters from the HASH. If any parameters are
+construction-only they should be C<delete>d from the hash.
+
+=cut
+
+sub _init
+{
+   # empty default
+}
+
+=head2 $notifier->_add_to_loop( $loop )
+
+This method is called when the Notifier has been added to a Loop; either
+directly, or indirectly through being a child of a Notifer already in a loop.
+
+This method may be used to perform any initial startup activity required for
+the Notifier to be fully functional but which requires a Loop to do so.
+
+=cut
+
+sub _add_to_loop
+{
+   # empty default
+}
+
+=head2 $notifier->_remove_from_loop( $loop )
+
+This method is called when the Notifier has been removed from a Loop; either
+directly, or indirectly through being a child of a Notifier removed from the
+loop.
+
+This method may be used to undo the effects of any setup that the
+C<_add_to_loop> method had originally done.
+
+=cut
+
+sub _remove_from_loop
+{
+   # empty default
 }
 
 # Keep perl happy; keep Britain tidy
