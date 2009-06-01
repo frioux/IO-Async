@@ -929,26 +929,31 @@ sub open_child
       if( $key =~  m/^fd\d+$/ ) {
          ref $value eq "HASH" or croak "Expected '$orig_key' to be a HASH ref";
 
-         my ( $pipe_r, $pipe_w ) = $loop->pipepair() or croak "Unable to pipe() - $!";
-
-         my ( $myfd, $childfd );
+         my $op;
 
          if( exists $value->{on_read} ) {
             ref $value->{on_read} eq "CODE" or croak "Expected 'on_read' for '$orig_key' be a CODE ref";
             scalar keys %$value == 1 or croak "Found other keys than 'on_read' for '$orig_key'";
 
-            $myfd    = $pipe_r;
-            $childfd = $pipe_w;
+            $op = "pipe_read";
          }
          elsif( exists $value->{from} ) {
             ref $value->{from} eq "" or croak "Expected 'from' for '$orig_key' not to be a reference";
             scalar keys %$value == 1 or croak "Found other keys than 'from' for '$orig_key'";
 
-            $myfd    = $pipe_w;
-            $childfd = $pipe_r;
+            $op = "pipe_write";
          }
          else {
             croak "Cannot recognise what to do with '$orig_key'";
+         }
+
+         my ( $myfd, $childfd );
+
+         if( $op eq "pipe_read" ) {
+            ( $myfd, $childfd ) = $loop->pipepair() or croak "Unable to pipe() - $!";
+         }
+         elsif( $op eq "pipe_write" ) {
+            ( $childfd, $myfd ) = $loop->pipepair() or croak "Unable to pipe() - $!";
          }
 
          $filehandles{$key} = [ $myfd, $childfd, $value ];
