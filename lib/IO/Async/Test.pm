@@ -22,7 +22,7 @@ use IO::Async::Stream;
 
 =head1 NAME
 
-C<IO::Async::Test> - Utility functions for use in test scripts
+C<IO::Async::Test> - utility functions for use in test scripts
 
 =head1 SYNOPSIS
 
