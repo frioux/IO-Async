@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2007 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2007,2009 -- leonerd@leonerd.org.uk
 
 package IO::Async::MergePoint;
 
@@ -20,9 +20,15 @@ C<IO::Async::MergePoint> - resynchronise diverged control flow
 
 =head1 SYNOPSIS
 
- use IO::Async::MergePoint;
+This module as now been moved to its own dist of L<Async::MergePoint>.
 
- my $merge = IO::Async::MergePoint->new(
+It is kept here as a trivial subclass for backward compatibilty. Eventually
+this subclass may be removed. Any code using C<IO::Async::MergePoint> should
+instead use L<Async::MergePoint>.
+
+ use Async::MergePoint;
+
+ my $merge = Async::MergePoint->new(
     needs => [ "leaves", "water" ],
 
     on_finished => sub {
@@ -48,9 +54,9 @@ sequentially.
 
 An C<IO::Async>-based program could do this, but if each step involves some IO
 idle time, better overall performance can often be gained by running the steps
-in parallel. A C<IO::Async::MergePoint> object can then be used to wait for
-all of the steps to complete, before passing the combined result of each step
-on to the next stage.
+in parallel. A L<Async::MergePoint> object can then be used to wait for all of
+the steps to complete, before passing the combined result of each step on to
+the next stage.
 
 A merge point maintains a set of outstanding operations it is waiting on;
 these are arbitrary string values provided at the object's construction. Each
@@ -61,53 +67,6 @@ continuation is invoked.
 When an item is marked as complete, a value can also be provided, which would
 contain the results of that step. The C<on_finished> callback is passed a hash
 (in list form, rather than by reference) of the collected item values.
-
-=cut
-
-=head1 CONSTRUCTOR
-
-=cut
-
-=head2 $merge = IO::Async::MergePoint->new( %params )
-
-This function returns a new instance of a C<IO::Async::MergePoint> object. The
-C<%params> hash takes the following keys:
-
-=over 8
-
-=item needs => ARRAY
-
-An array containing unique item names to wait on. The order of this array is
-not significant.
-
-=item on_finished => CODE
-
-CODE reference to the continuation for when the merge point becomes ready.
-
-=back
-
-The C<on_finished> continuation will be called when every key in the C<needs>
-list has been notified by the C<done()> method. It will be called as
-
- $on_finished->( %items )
-
-where the C<%items> hash will contain the item names that were waited on, and
-the values passed to the C<done()> method for each one. Note that this is
-passed as a list, not as a HASH reference.
-
-=cut
-
-=head1 METHODS
-
-=cut
-
-=head2 $merge->done( $item, $value )
-
-This method informs the merge point that the C<$item> is now ready, and
-passes it a value to store, to be passed into the C<on_finished> continuation.
-If this call gives the final remaining item being waited for, the
-C<on_finished> continuation is called within it, and the method will not
-return until it has completed.
 
 =cut
 
