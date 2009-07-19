@@ -1,5 +1,15 @@
 Revision history for IO-Async
 
+0.22    CHANGES:
+         * Added tcp-proxy.pl example
+         * More documentation on IO::Async::Notifier subclass-override methods
+         * Documented that IO::Async::MergePoint is just an Async::MergePoint
+         * Various small updates to keep CPANTS happy
+
+        BUGFIXES:
+         * Don't test Async::MergePoint locally as it's now a separate dist,
+           and the tests here were reporting false negatives.
+
 0.21    CHANGES:
          * Added "use warnings" to all modules
          * Created Notifier->configure method to allow changing properties of
