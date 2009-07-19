@@ -16,8 +16,7 @@ our $VERSION = '0.21';
 
 =head1 NAME
 
-C<IO::Async> - a collection of modules that implement asynchronous filehandle
-IO
+C<IO::Async> - perform asynchronous filehandle IO and other operations
 
 =head1 SYNOPSIS
 
