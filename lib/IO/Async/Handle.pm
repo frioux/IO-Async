@@ -493,4 +493,4 @@ L<IO::Handle> - Supply object methods for I/O handles
 
 =head1 AUTHOR
 
-Paul Evans E<lt>leonerd@leonerd.org.ukE<gt>
+Paul Evans <leonerd@leonerd.org.uk>

@@ -225,7 +225,7 @@ L<POE> - portable multitasking and networking framework for Perl
 
 =head1 AUTHOR
 
-Paul Evans E<lt>leonerd@leonerd.org.ukE<gt>
+Paul Evans <leonerd@leonerd.org.uk>
 
 =cut
 
