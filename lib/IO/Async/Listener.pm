@@ -7,6 +7,7 @@ package IO::Async::Listener;
 
 use strict;
 use warnings;
+use base qw( IO::Async::Handle );
 
 our $VERSION = '0.22';
 
@@ -25,19 +26,15 @@ C<IO::Async::Listener> - listen on network sockets for incoming connections
 
 =head1 SYNOPSIS
 
-This object is used indirectly via an C<IO::Async::Loop>:
-
  use Socket qw( SOCK_STREAM );
 
+ use IO::Async::Listener;
  use IO::Async::Stream;
 
  use IO::Async::Loop;
  my $loop = IO::Async::Loop->new();
 
- $loop->listen(
-    service  => "echo",
-    socktype => SOCK_STREAM,
-
+ my $listener = IO::Async::Listener->new(
     on_accept => sub {
        my ( $newclient ) = @_;
 
@@ -52,6 +49,36 @@ This object is used indirectly via an C<IO::Async::Loop>:
           },
        ) );
     },
+ );
+
+ $loop->add( $listener );
+
+ $listener->listen(
+    service  => "echo",
+    socktype => SOCK_STREAM,
+
+    on_resolve_error => sub { print STDERR "Cannot resolve - $_[0]\n"; },
+    on_listen_error  => sub { print STDERR "Cannot listen\n"; },
+ );
+
+ $loop->loop_forever;
+
+This object can also be used indirectly via an C<IO::Async::Loop>:
+
+ use Socket qw( SOCK_STREAM );
+
+ use IO::Async::Stream;
+
+ use IO::Async::Loop;
+ my $loop = IO::Async::Loop->new();
+
+ $loop->listen(
+    service  => "echo",
+    socktype => SOCK_STREAM,
+
+    on_accept => sub {
+       ...
+    },
 
     on_resolve_error => sub { print STDERR "Cannot resolve - $_[0]\n"; },
     on_listen_error  => sub { print STDERR "Cannot listen\n"; },
@@ -61,42 +88,112 @@ This object is used indirectly via an C<IO::Async::Loop>:
 
 =head1 DESCRIPTION
 
-This module extends an C<IO::Async::Loop> to give it the ability to create
-listening sockets, and accept incoming connections on them.
+This subclass of L<IO::Async::Handle> adds behaviour which watches a socket in
+listening mode, to accept incoming connections on them.
 
-There are two modes of operation. Firstly, a list of addresses can be provided
-which will be listened on. Alternatively as a convenience, if a service name
-is provided instead of a list of addresses, then these will be resolved using
-the underlying loop's C<resolve()> method into a list of addresses.
+A Listener can be constructed and given a existing socket in listening mode.
+Alternatively, the Listener can construct a socket by calling the C<listen>
+method. Either a list of addresses can be provided, or a service name can be
+looked up using the underlying loop's C<resolve> method.
 
 =cut
 
-# Internal constructor
-sub new
+=head1 PARAMETERS
+
+The following named parameters may be passed to C<new> or C<configure>:
+
+=over 8
+
+=item on_accept => CODE
+
+A callback that is invoked whenever a new client connects to the socket. It is
+passed the new socket handle
+
+ $on_accept->( $clientsocket );
+
+=item handle => IO
+
+The IO handle containing an existing listen-mode socket.
+
+=back
+
+=cut
+
+sub configure
 {
-   my $class = shift;
-   my ( %params ) = @_;
+   my $self = shift;
+   my %params = @_;
 
-   my $loop = delete $params{loop} or croak "Expected a 'loop'";
+   if( exists $params{on_accept} ) {
+      $self->{on_accept} = delete $params{on_accept};
+   }
 
-   my $self = bless {
-      loop => $loop,
-   }, $class;
+   croak "Cannot set 'on_read_ready' on a Listener" if exists $params{on_read_ready};
 
-   return $self;
+   if( exists $params{handle} ) {
+      my $handle = delete $params{handle};
+      # Sanity check it
+      defined eval { $handle->sockname } or croak "IO handle $handle does not have a sockname";
+
+      # So now we know it's at least some kind of socket. Is it listening?
+      # SO_ACCEPTCONN would tell us, but not all OSes implement it. Since it's
+      # only a best-effort sanity check, we won't mind if the OS doesn't.
+      my $acceptconn = eval { $handle->sockopt( SO_ACCEPTCONN ) };
+      !defined $acceptconn or $acceptconn or croak "Socket is not accepting connections";
+
+      $self->SUPER::configure( read_handle => $handle );
+   }
+
+   if( keys %params ) {
+      croak "Cannot pass though configuration keys to underlying Handle - " . join( ", ", keys %params );
+   }
+}
+
+sub on_read_ready
+{
+   my $self = shift;
+
+   my $newclient = $self->read_handle->accept();
+
+   if( defined $newclient ) {
+      # TODO: make class/callback
+      $self->{on_accept}->( $newclient );
+   }
+   elsif( $! == EAGAIN ) {
+      # No client ready after all. Perhaps we're sharing the listen
+      # socket with other processes? Anyway; not fatal, just ignore it
+   }
+   else {
+      # TODO: make a callback
+      die "Cannot accept - $!";
+   }
 }
 
 =head1 METHODS
 
 =cut
 
-=head2 $loop->listen( %params )
+sub is_listening
+{
+   my $self = shift;
+
+   return ( defined $self->sockname );
+}
+
+sub sockname
+{
+   my $self = shift;
+
+   my $handle = $self->read_handle or return undef;
+   return $handle->sockname;
+}
+
+=head2 $listener->listen( %params )
 
 This method sets up a listening socket using the addresses given, and will
-invoke a callback each time a new connection is accepted on the socket.
-Addresses may be given directly, or they may be looked up using the
-system's name resolver. As a convenience, an existing listening socket
-can be passed directly instead.
+invoke the C<on_accept> callback each time a new connection is accepted on the
+socket. Addresses may be given directly, or they may be looked up using the
+system's name resolver.
 
 If multiple addresses are given, or resolved from the service and hostname,
 then each will be attempted in turn until one succeeds.
@@ -160,44 +257,15 @@ method.
 
 =back
 
-To pass an existing socket handle, the C<%params> hash takes the following
-keys:
-
-=over 8
-
-=item handle => IO
-
-The IO handle containing an existing listen-mode socket.
-
-=back
-
 In either case, the following keys are also taken:
 
 =over 8
 
-=item on_accept => CODE
-
-A callback that is invoked whenever a new client connects to the socket. It is
-passed the new socket handle
-
- $on_accept->( $clientsocket );
-
 =item on_listen => CODE
 
 Optional. A callback that is invoked when the listening socket is ready.
-Typically this would be used in the name resolver case, in order to inspect
-the socket's sockname address, or otherwise inspect the filehandle.
 
- $on_listen->( $listensocket );
-
-=item on_notifier => CODE
-
-Optional. A callback that is invoked when a C<IO::Async::Handle> object has
-been constructed around the listening socket, and added to the underlying
-C<IO::Async::Loop> object. Typically this can be used to store a reference to
-the notifier so that it can later be removed from the loop.
-
- $on_notifier->( $notifier )
+ $on_listen->( $listener )
 
 =item on_listen_error => CODE
 
@@ -232,9 +300,6 @@ be set. To prevent this, pass a false value such as 0.
 
 =back
 
-If more than one address is provided or resolved, then a separate listening
-socket will be created on each.
-
 =cut
 
 sub listen
@@ -242,39 +307,16 @@ sub listen
    my $self = shift;
    my ( %params ) = @_;
 
-   my $on_accept = $params{on_accept};
-   ref $on_accept eq "CODE" or croak "Expected 'on_accept' as CODE reference";
+   my $loop = $self->get_loop;
+   defined $loop or croak "Cannot listen when not a member of a Loop"; # TODO: defer?
 
    # Shortcut
    if( $params{addr} and not $params{addrs} ) {
       $params{addrs} = [ delete $params{addr} ];
    }
 
-   my $on_notifier = $params{on_notifier}; # optional
-   !defined $on_notifier or ref $on_notifier eq "CODE" or croak "Expected 'on_notifier' to be a CODE reference";
-
-   if( my $handle = $params{handle} ) {
-      defined eval { $handle->sockname } or croak "IO handle $handle does not have a sockname";
-
-      # So now we know it's at least some kind of socket. Is it listening?
-      # SO_ACCEPTCONN would tell us, but not all OSes implement it. Since it's
-      # only a best-effort sanity check, we won't mind if the OS doesn't.
-      my $acceptconn = eval { $handle->sockopt( SO_ACCEPTCONN ) };
-      !defined $acceptconn or $acceptconn or croak "Socket is not accepting connections";
-
-      my $notifier = $self->_listen_sock( $handle, $on_accept );
-      $on_notifier->( $notifier ) if defined $on_notifier;
-
-      return;
-   }
-
    my $on_listen = $params{on_listen}; # optional
    !defined $on_listen or ref $on_listen eq "CODE" or croak "Expected 'on_listen' to be a CODE reference";
-
-   if( $params{on_error} ) {
-      carp "'on_error' is now deprecated, use 'on_listen_error' instead";
-      $params{on_listen_error} = delete $params{on_error};
-   }
 
    my $on_listen_error = $params{on_listen_error};
    ref $on_listen_error eq "CODE" or croak "Expected 'on_listen_error' as a CODE reference";
@@ -283,8 +325,6 @@ sub listen
    !defined $on_fail or ref $on_fail eq "CODE" or croak "Expected 'on_fail' to be a CODE reference";
 
    my $queuesize = $params{queuesize} || 3;
-
-   my $loop = $self->{loop};
 
    if( my $addrlist = $params{addrs} ) {
       my $reuseaddr = 1;
@@ -317,10 +357,9 @@ sub listen
             next;
          }
 
-         $on_listen->( $sock ) if defined $on_listen;
+         $self->SUPER::configure( read_handle => $sock );
 
-         my $notifier = $self->_listen_sock( $sock, $on_accept );
-         $on_notifier->( $notifier ) if defined $on_notifier;
+         $on_listen->( $self ) if defined $on_listen;
 
          return;
       }
@@ -349,7 +388,7 @@ sub listen
          data => [ $host, $service, $family, $socktype, $protocol, $flags ],
 
          on_resolved => sub {
-            $loop->listen( 
+            $self->listen( 
                %params,
                addrs => [ @_ ],
             );
@@ -362,36 +401,6 @@ sub listen
    else {
       croak "Expected either 'service' or 'addrs' or 'addr' arguments";
    }
-}
-
-sub _listen_sock
-{
-   my $self = shift;
-   my ( $sock, $on_accept ) = @_;
-
-   my $loop = $self->{loop};
-
-   my $notifier = IO::Async::Handle->new(
-      read_handle => $sock,
-      on_read_ready => sub {
-         my $newclient = $sock->accept();
-         if( defined $newclient ) {
-            $on_accept->( $newclient );
-            # TODO: Consider what it might return
-         }
-         elsif( $! == EAGAIN ) {
-            # No client ready after all. Perhaps we're sharing the listen
-            # socket with other processes? Anyway; not fatal, just ignore it
-         }
-         else {
-            die "Cannot accept - $!";
-         }
-      },
-   );
-
-   $loop->add( $notifier );
-
-   return $notifier;
 }
 
 # Keep perl happy; keep Britain tidy

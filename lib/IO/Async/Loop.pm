@@ -769,9 +769,37 @@ sub connect
 
 =head2 $loop->listen( %params )
 
-This method sets up a listening socket. It uses an internally-stored
-C<IO::Async::Listener> object. For more detail, see the C<listen()> method on
-the L<IO::Async::Listener> class.
+This method sets up a listening socket. It creates an instance of
+L<IO::Async::Listener> and adds it to the Loop.
+
+Most parameters given to this method are passed into the constructed Listener
+object's C<listen> method. In addition, the following arguments are also
+recognised directly:
+
+=over 8
+
+=item on_listen => CODE
+
+Optional. A callback that is invoked when the listening socket is ready.
+Typically this would be used in the name resolver case, in order to inspect
+the socket's sockname address, or otherwise inspect the filehandle.
+
+ $on_listen->( $socket )
+
+=item on_notifier => CODE
+
+Optional. A callback that is invoked when the Listener object is ready to
+receive connections. The callback is passed the Listener object itself.
+
+ $on_notifier->( $listener )
+
+If this callback is required, it may instead be better to construct the
+Listener object directly.
+
+=back
+
+An alternative which gives more control over the listener, is to create the
+C<IO::Async::Listener> object directly and add it explicitly to the Loop.
 
 =cut
 
@@ -780,9 +808,31 @@ sub listen
    my $self = shift;
    my ( %params ) = @_;
 
-   my $listener = $self->{listener} ||= $self->__new_feature( "IO::Async::Listener" );
+   require IO::Async::Listener;
 
-   $listener->listen( %params );
+   my $on_notifier = delete $params{on_notifier};
+
+   my $listener = IO::Async::Listener->new( 
+      exists $params{handle} ? ( handle => delete $params{handle} ) : (),
+      on_accept => delete $params{on_accept},
+   );
+
+   $self->add( $listener );
+
+   if( $listener->is_listening ) {
+      $on_notifier->( $listener );
+   }
+   else {
+      my $on_listen = delete $params{on_listen};
+      $listener->listen( 
+         %params,
+         on_listen => sub {
+            my ( $sock ) = @_;
+            $on_listen->( $listener->read_handle ) if $on_listen;
+            $on_notifier->( $listener ) if $on_notifier;
+         },
+      );
+   }
 }
 
 ###################
