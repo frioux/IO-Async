@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 63;
+use Test::More tests => 69;
 use Test::Exception;
 use Test::Refcount;
 
@@ -118,6 +118,35 @@ is_refcount( $stream, 2, 'reading $stream has refcount 2 before removing from Lo
 $loop->remove( $stream );
 
 is_oneref( $stream, 'reading $stream refcount 1 finally' );
+
+undef $stream;
+
+# Subclass
+
+my @sub_received;
+
+$stream = TestStream->new(
+   read_handle => $S1,
+);
+
+ok( defined $stream, 'reading subclass $stream defined' );
+isa_ok( $stream, "IO::Async::Stream", 'reading $stream isa IO::Async::Stream' );
+
+is_oneref( $stream, 'subclass $stream has refcount 1 initially' );
+
+$loop->add( $stream );
+
+is_refcount( $stream, 2, 'subclass $stream has refcount 2 after adding to Loop' );
+
+$S2->syswrite( "message\n" );
+
+is_deeply( \@sub_received, [], '@sub_received before loop_once' );
+
+$loop->loop_once( 0.1 );
+
+is_deeply( \@sub_received, [ "message\n" ], '@sub_received after loop_once' );
+
+undef @received;
 
 undef $stream;
 
@@ -431,6 +460,20 @@ cmp_ok( $write_errno, "==", ECONNRESET, 'errno after failed write' );
 $loop->remove( $stream );
 
 undef $stream;
+
+package TestStream;
+use base qw( IO::Async::Stream );
+
+sub on_read
+{
+   my $self = shift;
+   my ( $buffref, $buffclosed ) = @_;
+
+   return 0 unless $$buffref =~ s/^(.*\n)//;
+
+   push @sub_received, $1;
+   return 1;
+}
 
 package ErrorSocket;
 

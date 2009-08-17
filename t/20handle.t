@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 49;
+use Test::More tests => 59;
 use Test::Exception;
 use Test::Refcount;
 
@@ -110,6 +110,48 @@ is_oneref( $handle, '$handle has refcount 1 finally' );
 
 undef $handle;
 
+# Subclass
+
+my $sub_readready = 0;
+my $sub_writeready = 0;
+
+$handle = TestHandle->new(
+   handle => $S1,
+);
+
+ok( defined $handle, 'subclass $handle defined' );
+isa_ok( $handle, "IO::Async::Handle", 'subclass $handle isa IO::Async::Handle' );
+
+is_oneref( $handle, 'subclass $handle has refcount 1 initially' );
+
+is( $handle->read_handle,  $S1, 'subclass ->read_handle returns S1' );
+is( $handle->write_handle, $S1, 'subclass ->write_handle returns S1' );
+
+$loop->add( $handle );
+
+is_refcount( $handle, 2, 'subclass $handle has refcount 2 after adding to Loop' );
+
+$S2->syswrite( "data\n" );
+
+$loop->loop_once( 0.1 );
+
+is( $sub_readready,  1, '$sub_readready while readable' );
+is( $sub_writeready, 0, '$sub_writeready while readable' );
+
+$S1->getline(); # ignore return
+$sub_readready = 0;
+
+$handle->want_writeready( 1 );
+
+$loop->loop_once( 0.1 );
+
+is( $sub_readready,  0, '$sub_readready while writeable' );
+is( $sub_writeready, 1, '$sub_writeready while writeable' );
+
+$loop->remove( $handle );
+
+undef $handle;
+
 $handle = IO::Async::Handle->new(
    read_handle  => \*STDIN,
    write_handle => \*STDOUT,
@@ -205,3 +247,9 @@ is( $notifier->read_handle, $S1, '->read_handle returns S1' );
 is( $notifier->read_fileno, $S1->fileno, '->read_fileno returns fileno(S1)' );
 
 is_oneref( $notifier, '$notifier has refcount 1' );
+
+package TestHandle;
+use base qw( IO::Async::Handle );
+
+sub on_read_ready  { $sub_readready = 1 }
+sub on_write_ready { $sub_writeready = 1 }
