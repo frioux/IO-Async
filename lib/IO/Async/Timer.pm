@@ -47,6 +47,26 @@ callback after the given period from when it was started. After it has expired
 the Timer may be started again, when it will wait the same period then invoke
 the callback again. A timer that is currently running may be stopped or reset.
 
+This object may be used in one of two ways; with a callback function, or as a
+base class.
+
+=over 4
+
+=item Callbacks
+
+If the C<on_expire> key is supplied to the constructor, it should contain a
+CODE reference to a callback function to be invoked at the appropriate time:
+
+ $on_expire->( $self )
+
+=item Base Class
+
+If a subclass is built, then it can override the C<on_expire> method.
+
+ $self->on_expire()
+
+=back
+
 =cut
 
 =head1 PARAMETERS
@@ -63,7 +83,8 @@ time.
 
 =item on_expire => CODE
 
-CODE reference to callback to invoke when the timer expires.
+CODE reference to callback to invoke when the timer expires. If not supplied,
+the subclass method will be called instead.
 
 =item delay => NUM
 
@@ -112,6 +133,10 @@ sub configure
       $delay > 0 or croak "Expected a 'delay' as a positive number";
 
       $self->{delay} = $delay;
+   }
+
+   if( !$self->{on_expire} and !$self->can( 'on_expire' ) ) {
+      croak 'Expected either a on_expire callback or an ->on_expire method';
    }
 
    $self->SUPER::configure( %params );
@@ -172,10 +197,18 @@ sub start
    if( !$self->{cb} ) {
       weaken( my $weakself = $self );
 
-      $self->{cb} = sub {
-         undef $weakself->{id};
-         $weakself->{on_expire}->();
-      };
+      if( $self->{on_expire} ) {
+         $self->{cb} = sub {
+            undef $weakself->{id};
+            $weakself->{on_expire}->( $weakself );
+         };
+      }
+      else {
+         $self->{cb} = sub {
+            undef $weakself->{id};
+            $weakself->on_expire;
+         };
+      }
    }
 
    $self->{id} = $loop->enqueue_timer(

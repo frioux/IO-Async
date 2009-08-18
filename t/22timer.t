@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 27;
+use Test::More tests => 38;
 use Test::Exception;
 use Test::Refcount;
 
@@ -147,3 +147,47 @@ dies_ok( sub { $timer->configure( delay => 5 ); },
 $loop->remove( $timer );
 
 is_oneref( $timer, 'Timer has refcount 1 finally' );
+
+undef $timer;
+
+## Subclass
+
+my $sub_expired;
+
+$timer = TestTimer->new(
+   mode  => 'countdown',
+   delay => 2 * AUT,
+);
+
+ok( defined $timer, 'subclass $timer defined' );
+isa_ok( $timer, "IO::Async::Timer", 'subclass $timer isa IO::Async::Timer' );
+
+is_oneref( $timer, 'subclass $timer has refcount 1 initially' );
+
+$loop->add( $timer );
+
+is_refcount( $timer, 2, 'subclass $timer has refcount 2 after adding to Loop' );
+
+$timer->start;
+
+is_refcount( $timer, 2, 'subclass $timer has refcount 2 after starting' );
+
+ok( $timer->is_running, 'Started subclass Timer is running' );
+
+time_between( sub { wait_for { $sub_expired } },
+   1.5, 2.5, 'subclass Timer works' );
+
+ok( !$timer->is_running, 'Expired subclass Timer is no longer running' );
+
+is_refcount( $timer, 2, 'subclass $timer has refcount 2 before removing from Loop' );
+
+$loop->remove( $timer );
+
+is_oneref( $timer, 'subclass $timer has refcount 1 after removing from Loop' );
+
+undef $timer;
+
+package TestTimer;
+use base qw( IO::Async::Timer );
+
+sub on_expire { $sub_expired = 1 }
