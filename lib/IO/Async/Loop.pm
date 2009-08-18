@@ -811,10 +811,14 @@ sub listen
    require IO::Async::Listener;
 
    my $on_notifier = delete $params{on_notifier};
+   my $on_accept   = delete $params{on_accept};
 
    my $listener = IO::Async::Listener->new( 
       exists $params{handle} ? ( handle => delete $params{handle} ) : (),
-      on_accept => delete $params{on_accept},
+      on_accept => sub {
+         my ( undef, $clientsock ) = @_;
+         $on_accept->( $clientsock );
+      }
    );
 
    $self->add( $listener );

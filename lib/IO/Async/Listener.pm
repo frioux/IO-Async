@@ -96,6 +96,28 @@ Alternatively, the Listener can construct a socket by calling the C<listen>
 method. Either a list of addresses can be provided, or a service name can be
 looked up using the underlying loop's C<resolve> method.
 
+This object may be used in one of two ways; with a callback function, or as a
+base class.
+
+=over 4
+
+=item Callbacks
+
+If the C<on_accept> key is supplied to the constructor, it should contain a
+CODE reference to a callback function to be invoked when a new client connects
+to the socket. It is passed an C<IO::Socket> reference to the newly accepted
+socket:
+
+ $on_accept->( $self, $clientsocket )
+
+=item Base Class
+
+If a subclass is built, then it can override the C<on_accept> method.
+
+ $self->on_accept( $clientsocket )
+
+=back
+
 =cut
 
 =head1 PARAMETERS
@@ -106,10 +128,8 @@ The following named parameters may be passed to C<new> or C<configure>:
 
 =item on_accept => CODE
 
-A callback that is invoked whenever a new client connects to the socket. It is
-passed the new socket handle
-
- $on_accept->( $clientsocket );
+A callback that is invoked whenever a new client connects to the socket. If
+not supplied  the subclass method will be called instead.
 
 =item handle => IO
 
@@ -144,6 +164,10 @@ sub configure
       $self->SUPER::configure( read_handle => $handle );
    }
 
+   if( !$self->{on_accept} and !$self->can( 'on_accept' ) ) {
+      croak 'Expected either a on_accept callback or an ->on_accept method';
+   }
+
    if( keys %params ) {
       croak "Cannot pass though configuration keys to underlying Handle - " . join( ", ", keys %params );
    }
@@ -157,7 +181,12 @@ sub on_read_ready
 
    if( defined $newclient ) {
       # TODO: make class/callback
-      $self->{on_accept}->( $newclient );
+      if( $self->{on_accept} ) {
+         $self->{on_accept}->( $self, $newclient );
+      }
+      else {
+         $self->on_accept( $newclient );
+      }
    }
    elsif( $! == EAGAIN ) {
       # No client ready after all. Perhaps we're sharing the listen

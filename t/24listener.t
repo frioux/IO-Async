@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 16;
+use Test::More tests => 22;
 use Test::Refcount;
 
 use IO::Async::Loop::IO_Poll;
@@ -29,7 +29,7 @@ my $newclient;
 
 my $listener = IO::Async::Listener->new(
    handle => $listensock,
-   on_accept => sub { $newclient = shift },
+   on_accept => sub { ( undef, $newclient ) = @_ },
 );
 
 ok( defined $listener, 'defined $listener' );
@@ -62,10 +62,47 @@ undef $clientsock;
 undef $newclient;
 
 undef $listener;
+
+## Subclass
+
+my $sub_newclient;
+
+$listener = TestListener->new(
+   handle => $listensock,
+);
+
+ok( defined $listener, 'subclass defined $listener' );
+isa_ok( $listener, "IO::Async::Listener", 'subclass $listener isa IO::Async::Listener' );
+
+is_oneref( $listener, 'subclass $listener has refcount 1 initially' );
+
+$loop->add( $listener );
+
+is_refcount( $listener, 2, 'subclass $listener has refcount 2 after adding to Loop' );
+
+$clientsock = IO::Socket::INET->new( Type => SOCK_STREAM )
+   or die "Cannot socket() - $!";
+
+$clientsock->connect( $listensock->sockname ) or die "Cannot connect() - $!";
+
+ok( defined $clientsock->peername, 'subclass $clientsock is connected' );
+
+wait_for { defined $sub_newclient };
+
+is( $sub_newclient->peername, $clientsock->sockname, '$sub_newclient peer is correct' );
+
+$loop->remove( $listener );
+
+undef $clientsock;
+undef $sub_newclient;
+
+undef $listener;
+
+undef $listener;
 undef $listensock;
 
 $listener = IO::Async::Listener->new(
-   on_accept => sub { $newclient = shift },
+   on_accept => sub { ( undef, $newclient ) = @_ },
 );
 
 ok( !$listener->is_listening, '$listener is_listening not yet' );
@@ -101,3 +138,8 @@ is_refcount( $listener, 2, 'subclass $listener has refcount 2 before removing fr
 $loop->remove( $listener );
 
 is_oneref( $listener, 'subclass $listener has refcount 1 after removing from Loop' );
+
+package TestListener;
+use base qw( IO::Async::Listener );
+
+sub on_accept { ( undef, $sub_newclient ) = @_ }
