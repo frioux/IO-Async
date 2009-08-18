@@ -4,7 +4,8 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 12;
+use Test::More tests => 16;
+use Test::Refcount;
 
 use IO::Async::Loop::IO_Poll;
 
@@ -35,10 +36,14 @@ ok( defined $listener, 'defined $listener' );
 isa_ok( $listener, "IO::Async::Listener", '$listener isa IO::Async::Listener' );
 isa_ok( $listener, "IO::Async::Notifier", '$listener isa IO::Async::Notifier' );
 
+is_oneref( $listener, '$listener has refcount 1 initially' );
+
 ok( $listener->is_listening, '$listener is_listening' );
 is( $listener->sockname, $listensock->sockname, '$listener->sockname' );
 
 $loop->add( $listener );
+
+is_refcount( $listener, 2, '$listener has refcount 2 after adding to Loop' );
 
 my $clientsock = IO::Socket::INET->new( Type => SOCK_STREAM )
    or die "Cannot socket() - $!";
@@ -78,6 +83,7 @@ $listener->listen(
 ok( $listener->is_listening, '$listener is_listening' );
 
 is( $listen_self, $listener, '$listen_self is $listener' );
+undef $listen_self; # for refcount
 
 $clientsock = IO::Socket::INET->new( Type => SOCK_STREAM )
    or die "Cannot socket() - $!";
@@ -90,4 +96,8 @@ wait_for { defined $newclient };
 
 is( $newclient->peername, $clientsock->sockname, '$newclient peer is correct' );
 
+is_refcount( $listener, 2, 'subclass $listener has refcount 2 before removing from Loop' );
+
 $loop->remove( $listener );
+
+is_oneref( $listener, 'subclass $listener has refcount 1 after removing from Loop' );
