@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 14;
+use Test::More tests => 20;
 use Test::Exception;
 use Test::Refcount;
 
@@ -89,3 +89,37 @@ is_refcount( $signal, 2, '$signal has refcount 2 before removing from Loop' );
 $loop->remove( $signal );
 
 is_oneref( $signal, '$signal has refcount 1 finally' );
+
+undef $signal;
+
+## Subclass
+
+my $sub_caught = 0;
+
+$signal = TestSignal->new(
+   name => 'TERM',
+);
+
+ok( defined $signal, 'subclass $signal defined' );
+isa_ok( $signal, "IO::Async::Signal", 'subclass $signal isa IO::Async::Signal' );
+
+is_oneref( $signal, 'subclass $signal has refcount 1 initially' );
+
+$loop->add( $signal );
+
+is_refcount( $signal, 2, 'subclass $signal has refcount 2 after adding to Loop' );
+
+$loop->loop_once( 0.1 );
+
+is( $sub_caught, 0, '$sub_caught idling' );
+
+kill SIGTERM, $$;
+
+wait_for { $sub_caught };
+
+is( $sub_caught, 1, '$sub_caught after raise' );
+
+package TestSignal;
+use base qw( IO::Async::Signal );
+
+sub on_receipt { $sub_caught++ }

@@ -45,6 +45,27 @@ callback when a particular POSIX signal is received.
 Multiple objects can be added to a C<Loop> that all watch for the same signal.
 The callback functions will all be invoked, in no particular order.
 
+This object may be used in one of two ways; with a callback function, or as a
+base class.
+
+=over 4
+
+=item Callbacks
+
+If the C<on_receipt> key is supplied to the constructor, it should contain a
+CODE reference to a callback function to be invoked when the signal is received.
+
+ $on_receipt->( $self )
+
+=item Base Class
+
+If a subclass is built, then it can override the C<on_receipt> method.
+
+ $self->on_receipt()
+
+=back
+
+
 =cut
 
 =head1 PARAMETERS
@@ -60,7 +81,8 @@ only be given at construction time.
 
 =item on_receipt => CODE
 
-CODE reference to callback to invoke when the signal is received.
+CODE reference to callback to invoke when the signal is received. If not
+supplied, the subclass method will be called instead.
 
 =back
 
@@ -91,10 +113,16 @@ sub configure
    if( exists $params{on_receipt} ) {
       $self->{on_receipt} = delete $params{on_receipt};
 
+      undef $self->{cb}; # Will be lazily constructed when needed
+
       if( my $loop = $self->get_loop ) {
          $self->_remove_from_loop( $loop );
          $self->_add_to_loop( $loop );
       }
+   }
+
+   if( !$self->{on_receipt} and !$self->can( 'on_receipt' ) ) {
+      croak 'Expected either a on_receipt callback or an ->on_receipt method';
    }
 
    $self->SUPER::configure( %params );
@@ -105,7 +133,18 @@ sub _add_to_loop
    my $self = shift;
    my ( $loop ) = @_;
 
-   $self->{id} = $loop->attach_signal( $self->{name}, $self->{on_receipt} );
+   if( !$self->{cb} ) {
+      weaken( my $weakself = $self );
+
+      if( $self->{on_receipt} ) {
+         $self->{cb} = sub { $weakself->{on_receipt}->( $weakself ) };
+      }
+      else {
+         $self->{cb} = sub { $weakself->on_receipt };
+      }
+   }
+
+   $self->{id} = $loop->attach_signal( $self->{name}, $self->{cb} );
 }
 
 sub _remove_from_loop
