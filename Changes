@@ -1,5 +1,13 @@
 Revision history for IO-Async
 
+0.23    CHANGES:
+         * Rearranged IO::Async::Listener to be a constructable Notifier
+           suclass
+         * Allow Signal, Timer and Listener to act as base classes as well as
+           standalone with callbacks
+         * Renamed IO::Async::Loop::IO_Poll to ::Poll; created transparent
+           backward-compatibility wrapper
+
 0.22    CHANGES:
          * Added tcp-proxy.pl example
          * More documentation on IO::Async::Notifier subclass-override methods

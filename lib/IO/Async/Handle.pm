@@ -9,7 +9,7 @@ use strict;
 use warnings;
 use base qw( IO::Async::Notifier );
 
-our $VERSION = '0.22';
+our $VERSION = '0.23';
 
 use Carp;
 use Scalar::Util qw( weaken );
