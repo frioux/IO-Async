@@ -13,9 +13,9 @@ use Time::HiRes qw( sleep );
 
 use IO::Async::DetachedCode;
 
-use IO::Async::Loop::IO_Poll;
+use IO::Async::Loop::Poll;
 
-my $loop = IO::Async::Loop::IO_Poll->new();
+my $loop = IO::Async::Loop::Poll->new();
 
 testing_loop( $loop );
 is_refcount( $loop, 2, '$loop has refcount 2 after adding to IO::Async::Test' );

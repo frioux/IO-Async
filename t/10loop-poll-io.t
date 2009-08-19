@@ -8,13 +8,13 @@ use Test::Refcount;
 
 use IO::Poll;
 
-use IO::Async::Loop::IO_Poll;
+use IO::Async::Loop::Poll;
 
 my $poll = IO::Poll->new();
-my $loop = IO::Async::Loop::IO_Poll->new( poll => $poll );
+my $loop = IO::Async::Loop::Poll->new( poll => $poll );
 
 ok( defined $loop, '$loop defined' );
-isa_ok( $loop, "IO::Async::Loop::IO_Poll", '$loop isa IO::Async::Loop::IO_Poll' );
+isa_ok( $loop, "IO::Async::Loop::Poll", '$loop isa IO::Async::Loop::Poll' );
 
 is_oneref( $loop, '$loop has refcount 1' );
 
@@ -229,7 +229,7 @@ is( scalar @handles, 0, '@handles after unwatching pipe' );
 # Constructor with implied poll object
 
 undef $loop;
-$loop = IO::Async::Loop::IO_Poll->new();
+$loop = IO::Async::Loop::Poll->new();
 
 $loop->watch_io(
    handle => $S1,

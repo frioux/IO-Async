@@ -10,9 +10,9 @@ use Test::Exception;
 use Socket qw( AF_INET SOCK_STREAM );
 use Socket::GetAddrInfo qw( :Socket6api getaddrinfo );
 
-use IO::Async::Loop::IO_Poll;
+use IO::Async::Loop::Poll;
 
-my $loop = IO::Async::Loop::IO_Poll->new();
+my $loop = IO::Async::Loop::Poll->new();
 
 testing_loop( $loop );
 

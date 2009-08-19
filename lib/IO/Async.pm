@@ -101,7 +101,7 @@ handlers, and other functionallity. It performs all of the abstract
 collection management tasks, and leaves the actual OS interactions to a
 particular subclass for the purpose.
 
-L<IO::Async::Loop::IO_Poll> uses an C<IO::Poll> object for this test.
+L<IO::Async::Loop::Poll> uses an C<IO::Poll> object for this test.
 
 L<IO::Async::Loop::Select> uses the C<select()> syscall.
 

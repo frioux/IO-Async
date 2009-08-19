@@ -4,13 +4,13 @@ use strict;
 
 use Test::More tests => 16;
 
-use IO::Async::Loop::IO_Poll;
+use IO::Async::Loop::Poll;
 
 use Socket qw( SOCK_STREAM SOCK_DGRAM );
 
 use POSIX qw( SIGTERM );
 
-my $loop = IO::Async::Loop::IO_Poll->new();
+my $loop = IO::Async::Loop::Poll->new();
 
 {
    my ( $S1, $S2 ) = $loop->socketpair( undef, SOCK_STREAM )

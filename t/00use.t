@@ -13,7 +13,7 @@ use_ok( "IO::Async::Signal" );
 use_ok( "IO::Async::Listener" );
 
 use_ok( "IO::Async::Loop::Select" );
-use_ok( "IO::Async::Loop::IO_Poll" );
+use_ok( "IO::Async::Loop::Poll" );
 
 use_ok( "IO::Async::Test" );
 

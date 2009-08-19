@@ -142,7 +142,7 @@ sub watch
       # __END__ section before attempting to modify this code.
 
       # Protect the interrupted code against unexpected modifications of $!,
-      # such as the line just after the poll() call in IO::Async::Loop::IO_Poll
+      # such as the line just after the poll() call in IO::Async::Loop::Poll
       local $!;
 
       if( !@$signal_queue ) {

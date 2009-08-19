@@ -12,9 +12,9 @@ use IO::Async::ChildManager;
 
 use POSIX qw( SIGTERM WIFEXITED WEXITSTATUS WIFSIGNALED WTERMSIG );
 
-use IO::Async::Loop::IO_Poll;
+use IO::Async::Loop::Poll;
 
-my $loop = IO::Async::Loop::IO_Poll->new();
+my $loop = IO::Async::Loop::Poll->new();
 is_oneref( $loop, '$loop has refcount 1' );
 
 testing_loop( $loop );

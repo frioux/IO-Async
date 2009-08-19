@@ -7,13 +7,13 @@ use IO::Async::Test;
 use Test::More tests => 22;
 use Test::Refcount;
 
-use IO::Async::Loop::IO_Poll;
+use IO::Async::Loop::Poll;
 
 use IO::Socket::INET;
 
 use IO::Async::Listener;
 
-my $loop = IO::Async::Loop::IO_Poll->new();
+my $loop = IO::Async::Loop::Poll->new();
 
 testing_loop( $loop );
 

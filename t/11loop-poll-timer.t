@@ -6,11 +6,11 @@ use Test::More tests => 6;
 
 use Time::HiRes qw( time );
 
-use IO::Async::Loop::IO_Poll;
+use IO::Async::Loop::Poll;
 
 use constant AUT => $ENV{TEST_QUICK_TIMERS} ? 0.1 : 1;
 
-my $loop = IO::Async::Loop::IO_Poll->new();
+my $loop = IO::Async::Loop::Poll->new();
 
 my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
 

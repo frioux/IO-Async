@@ -8,9 +8,9 @@ use Test::Refcount;
 
 use POSIX qw( SIGTERM );
 
-use IO::Async::Loop::IO_Poll;
+use IO::Async::Loop::Poll;
 
-my $loop = IO::Async::Loop::IO_Poll->new();
+my $loop = IO::Async::Loop::Poll->new();
 
 is_oneref( $loop, '$loop has refcount 1 initally' );
 

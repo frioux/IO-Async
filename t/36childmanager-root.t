@@ -20,9 +20,9 @@ else {
 
 is( $>, 0, 'am root');
 
-require IO::Async::Loop::IO_Poll;
+require IO::Async::Loop::Poll;
 
-my $loop = IO::Async::Loop::IO_Poll->new();
+my $loop = IO::Async::Loop::Poll->new();
 
 testing_loop( $loop );
 

@@ -13,7 +13,7 @@ my $loop;
 
 $loop = IO::Async::Loop->new();
 
-isa_ok( $loop, "IO::Async::Loop::IO_Poll", 'Magic constructor in default mode' );
+isa_ok( $loop, "IO::Async::Loop::Poll", 'Magic constructor in default mode' );
 
 {
    local $ENV{IO_ASYNC_LOOP} = "t::StupidLoop";

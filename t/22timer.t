@@ -12,7 +12,7 @@ use Time::HiRes qw( time );
 
 use IO::Async::Timer;
 
-use IO::Async::Loop::IO_Poll;
+use IO::Async::Loop::Poll;
 
 use constant AUT => $ENV{TEST_QUICK_TIMERS} ? 0.1 : 1;
 
@@ -29,7 +29,7 @@ sub time_between
    cmp_ok( $took, '<', $upper, "$name took no more than $upper" );
 }
 
-my $loop = IO::Async::Loop::IO_Poll->new();
+my $loop = IO::Async::Loop::Poll->new();
 
 testing_loop( $loop );
 

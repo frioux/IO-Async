@@ -89,7 +89,7 @@ See also the two bundled Loop subclasses:
 
 =item L<IO::Async::Loop::Select>
 
-=item L<IO::Async::Loop::IO_Poll>
+=item L<IO::Async::Loop::Poll>
 
 =back
 
@@ -156,12 +156,12 @@ The module called C<IO::Async::Loop::$^O> is tried next. This allows specific
 OSes, such as the ever-tricky C<MSWin32>, to provide an implementation that
 might be more efficient than the generic ones, or even work at all.
 
-=item * IO_Poll and Select
+=item * Poll and Select
 
-Finally, if no other choice has been made by now, the built-in C<IO_Poll>
-module is chosen. This should always work, but in case it doesn't, the
-C<Select> module will be chosen afterwards as a last-case attempt. If this
-also fails, then the magic constructor itself will throw an exception.
+Finally, if no other choice has been made by now, the built-in C<Poll> module
+is chosen. This should always work, but in case it doesn't, the C<Select>
+module will be chosen afterwards as a last-case attempt. If this also fails,
+then the magic constructor itself will throw an exception.
 
 =back
 
@@ -214,8 +214,8 @@ sub new
 
    $self = __try_new( "IO::Async::Loop::$^O" ) and return $self unless $LOOP_NO_OS;
 
-   $self = __try_new( "IO::Async::Loop::IO_Poll" ) and return $self;
-   $self = __try_new( "IO::Async::Loop::Select" )  and return $self;
+   $self = __try_new( "IO::Async::Loop::Poll" )   and return $self;
+   $self = __try_new( "IO::Async::Loop::Select" ) and return $self;
 
    croak "Cannot find a suitable candidate class";
 }
