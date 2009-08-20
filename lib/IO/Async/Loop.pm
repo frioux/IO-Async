@@ -1030,8 +1030,6 @@ This utility method converts a signal name (such as "TERM") into its system-
 specific signal number. This may be useful to pass to C<POSIX::SigSet> or use
 in other places which use numbers instead of symbolic names.
 
-Note that this function is not an object method, and is not exported.
-
 =cut
 
 my %sig_num;
