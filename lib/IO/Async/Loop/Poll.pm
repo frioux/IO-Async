@@ -25,7 +25,7 @@ use constant IO_POLL_REMOVE_BUG => ( $IO::Poll::VERSION == '0.05' );
 
 =head1 NAME
 
-C<IO::Async::Loop::Poll> - a Loop using an C<IO::Poll> object
+C<IO::Async::Loop::Poll> - use C<IO::Async> with C<poll(2)>
 
 =head1 SYNOPSIS
 

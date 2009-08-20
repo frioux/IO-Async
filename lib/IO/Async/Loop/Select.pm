@@ -16,7 +16,7 @@ use Carp;
 
 =head1 NAME
 
-C<IO::Async::Loop::Select> - a Loop using the C<select()> syscall
+C<IO::Async::Loop::Select> - use C<IO::Async> with C<select(2)>
 
 =head1 SYNOPSIS
 
