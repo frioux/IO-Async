@@ -71,12 +71,21 @@ includes more higher-level functionallity built on top of these basic parts.
 Because there are a lot of classes in this collection, the following overview
 gives a brief description of each.
 
+=head2 Notifiers
+
+The base class of all the event handling subclasses is L<IO::Async::Notifier>.
+It does not perform any IO operations itself, but instead acts as a base class
+to build the specific IO functionallity upon. It can also coordinate a
+collection of other Notifiers contained within it, forming a tree structure.
+
+The following sections describe particular types of Notifier.
+
 =head2 File Handle IO
 
-A L<IO::Async::Handle> object represents a single IO handle that is being
-managed. While in most cases it will represent a single filehandle, such as a
-socket (for example, an C<IO::Socket::INET> connection), it is possible to
-have separate reading and writing handles (most likely for a program's
+A L<IO::Async::Handle> object is a Notifier that represents a single IO handle
+being managed. While in most cases it will represent a single filehandle, such
+as a socket (for example, an C<IO::Socket::INET> connection), it is possible
+to have separate reading and writing handles (most likely for a program's
 C<STDIN> and C<STDOUT> streams, or a pair of pipes connected to a child
 process).
 
@@ -87,19 +96,41 @@ class automatically handles reading of incoming data into the incoming buffer,
 and writing of the outgoing buffer. Methods or callbacks are used to inform
 when new incoming data is available, or when the outgoing buffer is empty.
 
-Both of the above are subclasses of L<IO::Async::Notifier>, which does not
-perform any IO operations itself, but instead acts to coordinate a collection
-of other Notifiers, or act as a base class to build the specific IO
-functionallity upon. For other types of C<Notifier>, see Timers and Signals
-below.
+The L<IO::Async::Listener> class is another subclass of C<IO::Async::Handle>
+which facilitates the use of C<listen()>-mode sockets. When a new connection
+is available on the socket it will C<accept()> it and pass the new client
+socket to its callback function.
+
+=head2 Timers
+
+A L<IO::Async::Timer> object represents a counttime timer, which will invoke
+a callback after a given delay. It can be stopped and restarted.
+
+The L<IO::Async::Loop> also supports methods for managing timed events on a
+lower level. Events may be absolute, or relative in time to the time they are
+installed.
+
+=head2 Signals
+
+A L<IO::Async::Signal> object represents a POSIX signal, which will invoke a
+callback when the given signal is received by the process. Multiple objects
+watching the same signal can be used; they will all invoke in no particular
+order.
+
+=head2 Merge Points
+
+The L<IO::Async::MergePoint> object class allows for a program to wait on the
+completion of multiple seperate subtasks. It allows for each subtask to return
+some data, which will be collected and given to the callback provided to the
+merge point, which is called when every subtask has completed.
 
 =head2 Loops
 
 The L<IO::Async::Loop> object class represents an abstract collection of
-C<IO::Async::Notifier> objects, filehandle IO watches, timers, signal
-handlers, and other functionallity. It performs all of the abstract
-collection management tasks, and leaves the actual OS interactions to a
-particular subclass for the purpose.
+C<IO::Async::Notifier> objects, and manages the actual filehandle IO
+watches, timers, signal handlers, and other functionallity. It performs all
+of the abstract collection management tasks, and leaves the actual OS
+interactions to a particular subclass for the purpose.
 
 L<IO::Async::Loop::Poll> uses an C<IO::Poll> object for this test.
 
@@ -107,7 +138,7 @@ L<IO::Async::Loop::Select> uses the C<select()> syscall.
 
 Other subclasses of loop may appear on CPAN under their own dists; such
 as L<IO::Async::Loop::Glib> which acts as a proxy for the C<Glib::MainLoop> of
-a L<Glib>-based program, or L<IO::Async::Loop::IO_Ppoll> which uses the
+a L<Glib>-based program, or L<IO::Async::Loop::Ppoll> which uses the
 L<IO::Ppoll> object to handle signals safely on Linux.
 
 As well as these general-purpose classes, the C<IO::Async::Loop> constructor
@@ -147,29 +178,6 @@ For these cases, an instance of L<IO::Async::DetachedCode> can be used around
 a code block, to execute it in a detached child process. The code in the
 sub-process runs isolated from the main program, communicating only by
 function call arguments and return values.
-
-=head2 Timers
-
-A L<IO::Async::Timer> object represents a counttime timer, which will invoke
-a callback after a given delay. It can be stopped and restarted.
-
-The L<IO::Async::Loop> also supports methods for managing timed events on a
-lower level. Events may be absolute, or relative in time to the time they are
-installed.
-
-=head2 Signals
-
-A L<IO::Async::Signal> object represents a POSIX signal, which will invoke a
-callback when the given signal is received by the process. Multiple objects
-watching the same signal can be used; they will all invoke in no particular
-order.
-
-=head2 Merge Points
-
-The L<IO::Async::MergePoint> object class allows for a program to wait on the
-completion of multiple seperate subtasks. It allows for each subtask to return
-some data, which will be collected and given to the callback provided to the
-merge point, which is called when every subtask has completed.
 
 =head2 Networking
 
