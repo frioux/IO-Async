@@ -5,6 +5,7 @@ use warnings;
 
 use IO::Async::Loop;
 use IO::Async::Stream;
+use IO::Async::Listener;
 
 my $LISTEN_PORT = 12345;
 my $CONNECT_HOST = "localhost";
@@ -12,11 +13,9 @@ my $CONNECT_PORT = 80;
 
 my $loop = IO::Async::Loop->new;
 
-$loop->listen(
-   service  => $LISTEN_PORT,
-   socktype => 'stream',
-
+my $listener = IO::Async::Listener->new(
    on_accept => sub {
+      my $self = shift;
       my ( $socket1 ) = @_;
 
       # $socket is just an IO::Socket reference
@@ -72,6 +71,13 @@ $loop->listen(
          on_connect_error => sub { print STDERR "Cannot connect\n"; },
       );
    },
+);
+
+$loop->add( $listener );
+
+$listener->listen(
+   service  => $LISTEN_PORT,
+   socktype => 'stream',
 
    on_resolve_error => sub { die "Cannot resolve - $_[0]\n"; },
    on_listen_error  => sub { die "Cannot listen\n"; },
