@@ -29,3 +29,9 @@ Any program still referring to this class directly should be changed.
 
 # Keep perl happy; keep Britain tidy
 1;
+
+__END__
+
+=head1 AUTHOR
+
+Paul Evans <leonerd@leonerd.org.uk>
