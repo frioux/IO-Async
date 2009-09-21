@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 20;
+use Test::More tests => 21;
 use Test::Exception;
 use Test::Refcount;
 
@@ -118,6 +118,15 @@ kill SIGTERM, $$;
 wait_for { $sub_caught };
 
 is( $sub_caught, 1, '$sub_caught after raise' );
+
+dies_ok( sub {
+            my $signal = IO::Async::Signal->new(
+               name => 'this signal name does not exist',
+               on_receipt => sub {},
+            );
+            $loop->add( $signal );
+         },
+         'Bad signal name fails' );
 
 package TestSignal;
 use base qw( IO::Async::Signal );

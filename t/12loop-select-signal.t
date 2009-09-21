@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 12;
+use Test::More tests => 13;
 use Test::Exception;
 use Test::Refcount;
 
@@ -63,5 +63,8 @@ is( $cA, undef, '$cA after raise' );
 is( $cB, 1,     '$cB after raise' );
 
 $loop->detach_signal( 'TERM', $idB );
+
+dies_ok( sub { $loop->attach_signal( 'this signal name does not exist', sub {} ) },
+         'Bad signal name fails' );
 
 is_oneref( $loop, '$loop has refcount 1 finally' );

@@ -388,8 +388,9 @@ sub attach_signal
    }
 
    if( not $self->{sigattaches}->{$signal} ) {
-      my $attaches = $self->{sigattaches}->{$signal} = [];
-      $self->watch_signal( $signal, sub { $_->() for @$attaches } );
+      my @attaches;
+      $self->watch_signal( $signal, sub { $_->() for @attaches } );
+      $self->{sigattaches}->{$signal} = \@attaches;
    }
 
    push @{ $self->{sigattaches}->{$signal} }, $code;
