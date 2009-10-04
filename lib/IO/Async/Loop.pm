@@ -52,6 +52,7 @@ C<IO::Async::Loop> - core loop of the C<IO::Async> framework
  my $loop = IO::Async::Loop->new();
 
  $loop->add( IO::Async::Timer->new(
+    mode => "countdown",
     delay => 10,
     on_expire => sub { print "10 seconds have passed\n" },
  ) );
