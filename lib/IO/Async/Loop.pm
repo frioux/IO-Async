@@ -45,14 +45,13 @@ C<IO::Async::Loop> - core loop of the C<IO::Async> framework
 =head1 SYNOPSIS
 
  use IO::Async::Stream;
- use IO::Async::Timer;
+ use IO::Async::Timer::Countdown;
 
  use IO::Async::Loop;
 
  my $loop = IO::Async::Loop->new();
 
- $loop->add( IO::Async::Timer->new(
-    mode => "countdown",
+ $loop->add( IO::Async::Timer::Countdown->new(
     delay => 10,
     on_expire => sub { print "10 seconds have passed\n" },
  )->start );
@@ -675,7 +674,7 @@ CODE reference to the continuation to run at the allotted time.
 
 For more powerful timer functionallity as a C<IO::Async::Notifier> (so it can
 be used as a child within another Notifier), see instead the
-L<IO::Async::Timer> object.
+L<IO::Async::Timer> object and its subclasses.
 
 =cut
 

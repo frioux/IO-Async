@@ -155,7 +155,6 @@ undef $timer;
 my $sub_expired;
 
 $timer = TestTimer->new(
-   mode  => 'countdown',
    delay => 2 * AUT,
 );
 
@@ -188,6 +187,6 @@ is_oneref( $timer, 'subclass $timer has refcount 1 after removing from Loop' );
 undef $timer;
 
 package TestTimer;
-use base qw( IO::Async::Timer );
+use base qw( IO::Async::Timer::Countdown );
 
 sub on_expire { $sub_expired = 1 }

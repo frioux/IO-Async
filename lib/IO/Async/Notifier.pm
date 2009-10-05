@@ -85,7 +85,7 @@ L<IO::Async::Sequencer> - handle a serial pipeline of requests / responses (EXPE
 
 =item *
 
-L<IO::Async::Timer> - event callback after some timed delay
+L<IO::Async::Timer> - base class for Notifiers that use timed delays
 
 =item *
 

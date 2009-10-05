@@ -12,86 +12,44 @@ use base qw( IO::Async::Notifier );
 our $VERSION = '0.23';
 
 use Carp;
-use Scalar::Util qw( weaken );
 
 =head1 NAME
 
-C<IO::Async::Timer> - event callback after some timed delay
-
-=head1 SYNOPSIS
-
- use IO::Async::Timer;
-
- use IO::Async::Loop;
- my $loop = IO::Async::Loop->new();
-
- my $timer = IO::Async::Timer->new(
-    mode => "countdown",
-    delay => 10,
-
-    on_expire => sub {
-       print "Sorry, your time's up\n";
-       $loop->loop_stop;
-    },
- );
-
- $timer->start;
-
- $loop->add( $timer );
-
- $loop->loop_forever;
+C<IO::Async::Timer> - base class for Notifiers that use timed delays
 
 =head1 DESCRIPTION
 
-This module provides a class of C<IO::Async::Notifier> for implementing timed
-delays. A C<Timer> object implements a countdown timer, which invokes its
-callback after the given period from when it was started. After it has expired
-the Timer may be started again, when it will wait the same period then invoke
-the callback again. A timer that is currently running may be stopped or reset.
+This module provides a base class of C<IO::Async::Notifier> for implementing
+notifiers that use timed delays. For specific implementations, see one of the
+subclasses:
 
-This object may be used in one of two ways; with a callback function, or as a
-base class.
+=over 8
 
-=over 4
+=item *
 
-=item Callbacks
-
-If the C<on_expire> key is supplied to the constructor, it should contain a
-CODE reference to a callback function to be invoked at the appropriate time:
-
- $on_expire->( $self )
-
-=item Base Class
-
-If a subclass is built, then it can override the C<on_expire> method.
-
- $self->on_expire()
+L<IO::Async::Timer::Countdown>
 
 =back
 
 =cut
 
-=head1 PARAMETERS
+=head1 CONSTRUCTOR
 
-The following named parameters may be passed to C<new> or C<configure>:
+=cut
+
+=head2 $timer = IO::Async::Timer->new( %args )
+
+Constructs a particular subclass of C<IO::Async::Timer> object, and returns
+it. This constructor is provided for backward compatibility to older code
+which doesn't use the subclasses. New code should directly construct a
+subclass instead.
 
 =over 8
 
 =item mode => STRING
 
 The type of timer to create. Currently the only allowed mode is C<countdown>
-but more types may be added in the future. Can only be given at construction
-time.
-
-=item on_expire => CODE
-
-CODE reference to callback to invoke when the timer expires. If not supplied,
-the subclass method will be called instead.
-
-=item delay => NUM
-
-The delay in seconds after starting the timer until it expires. Cannot be
-changed if the timer is running.
+but more types may be added in the future.
 
 =back
 
@@ -100,48 +58,20 @@ will work. It will also need to be started by the C<start> method.
 
 =cut
 
-sub _init
+sub new
 {
-   my $self = shift;
-   my ( $params ) = @_;
+   my $class = shift;
+   my %args = @_;
 
-   my $mode = delete $params->{mode} or croak "Expected a 'mode'";
+   if( my $mode = delete $args{mode} ) {
+      # Might define some other modes later
+      $mode eq "countdown" or croak "Expected 'mode' to be 'countdown'";
 
-   # Might define some other modes later
-   $mode eq "countdown" or croak "Expected 'mode' to be 'countdown'";
-
-   $self->{mode} = $mode;
-
-   $self->SUPER::_init( $params );
-}
-
-sub configure
-{
-   my $self = shift;
-   my %params = @_;
-
-   if( exists $params{on_expire} ) {
-      my $on_expire = delete $params{on_expire};
-      ref $on_expire eq "CODE" or croak "Expected 'on_expire' as a CODE reference";
-
-      $self->{on_expire} = $on_expire;
-      undef $self->{cb}; # Will be lazily constructed when needed
+      require IO::Async::Timer::Countdown;
+      return IO::Async::Timer::Countdown->new( %args );
    }
 
-   if( exists $params{delay} ) {
-      $self->is_running and croak "Cannot configure 'delay' of a running timer\n";
-
-      my $delay = delete $params{delay};
-      $delay > 0 or croak "Expected a 'delay' as a positive number";
-
-      $self->{delay} = $delay;
-   }
-
-   if( !$self->{on_expire} and !$self->can( 'on_expire' ) ) {
-      croak 'Expected either a on_expire callback or an ->on_expire method';
-   }
-
-   $self->SUPER::configure( %params );
+   return $class->SUPER::new( %args );
 }
 
 sub _add_to_loop
@@ -202,24 +132,11 @@ sub start
    defined $self->{id} and croak "Cannot start a Timer that is already running";
 
    if( !$self->{cb} ) {
-      weaken( my $weakself = $self );
-
-      if( $self->{on_expire} ) {
-         $self->{cb} = sub {
-            undef $weakself->{id};
-            $weakself->{on_expire}->( $weakself );
-         };
-      }
-      else {
-         $self->{cb} = sub {
-            undef $weakself->{id};
-            $weakself->on_expire;
-         };
-      }
+      $self->{cb} = $self->_make_cb;
    }
 
    $self->{id} = $loop->enqueue_timer(
-      delay => $self->{delay},
+      $self->_make_enqueueargs,
       code => $self->{cb},
    );
 
@@ -243,27 +160,6 @@ sub stop
    $loop->cancel_timer( $self->{id} );
 
    undef $self->{id};
-}
-
-=head2 $timer->reset
-
-If the timer is running, restart the countdown period from now. If the timer
-is not running, this method has no effect.
-
-=cut
-
-sub reset
-{
-   my $self = shift;
-
-   my $loop = $self->get_loop or croak "Cannot reset a Timer that is not in a Loop";
-
-   return if !$self->is_running;
-
-   $self->{id} = $loop->requeue_timer(
-      $self->{id},
-      delay => $self->{delay},
-   );
 }
 
 # Keep perl happy; keep Britain tidy
