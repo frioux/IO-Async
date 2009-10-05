@@ -35,6 +35,8 @@ C<IO::Async::Timer> - event callback after some timed delay
     },
  );
 
+ $timer->start;
+
  $loop->add( $timer );
 
  $loop->loop_forever;
@@ -180,6 +182,11 @@ If the Timer is not yet in a Loop, the actual start will be deferred until it
 is added. Once added, it will be running, and will expire at the given
 duration after the time it was added.
 
+As a convenience, C<$timer> is returned. This may be useful for starting
+timers at construction time:
+
+ $loop->add( IO::Async::Timer->new( ... )->start );
+
 =cut
 
 sub start
@@ -215,6 +222,8 @@ sub start
       delay => $self->{delay},
       code => $self->{cb},
    );
+
+   return $self;
 }
 
 =head2 $timer->stop

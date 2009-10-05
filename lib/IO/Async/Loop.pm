@@ -55,7 +55,7 @@ C<IO::Async::Loop> - core loop of the C<IO::Async> framework
     mode => "countdown",
     delay => 10,
     on_expire => sub { print "10 seconds have passed\n" },
- ) );
+ )->start );
 
  $loop->add( IO::Async::Stream->new(
     read_handle => \*STDIN,

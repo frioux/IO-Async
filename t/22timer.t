@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 38;
+use Test::More tests => 39;
 use Test::Exception;
 use Test::Refcount;
 
@@ -51,7 +51,7 @@ $loop->add( $timer );
 
 is_refcount( $timer, 2, '$timer has refcount 2 after adding to Loop' );
 
-$timer->start;
+is( $timer->start, $timer, '$timer->start returns $timer' );
 
 is_refcount( $timer, 2, '$timer has refcount 2 after starting' );
 
