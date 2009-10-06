@@ -27,7 +27,11 @@ subclasses:
 
 =item *
 
-L<IO::Async::Timer::Countdown>
+L<IO::Async::Timer::Countdown> - event callback after a fixed delay
+
+=item *
+
+L<IO::Async::Timer::Periodic> - event callback at regular intervals
 
 =back
 
