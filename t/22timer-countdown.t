@@ -10,7 +10,7 @@ use Test::Refcount;
 
 use Time::HiRes qw( time );
 
-use IO::Async::Timer;
+use IO::Async::Timer::Countdown;
 
 use IO::Async::Loop::Poll;
 
@@ -35,8 +35,7 @@ testing_loop( $loop );
 
 my $expired;
 
-my $timer = IO::Async::Timer->new(
-   mode  => 'countdown',
+my $timer = IO::Async::Timer::Countdown->new(
    delay => 2 * AUT,
 
    on_expire => sub { $expired = 1 },
