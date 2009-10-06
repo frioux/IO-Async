@@ -103,8 +103,12 @@ socket to its callback function.
 
 =head2 Timers
 
-A L<IO::Async::Timer> object represents a counttime timer, which will invoke
-a callback after a given delay. It can be stopped and restarted.
+A L<IO::Async::Timer::Countdown> object represents a counttime timer, which
+will invoke a callback after a given delay. It can be stopped and restarted.
+
+A L<IO::Async::Timer::Periodic> object invokes a callback at regular intervals
+from its initial start time. It is reliable and will not drift due to the time
+taken to run the callback.
 
 The L<IO::Async::Loop> also supports methods for managing timed events on a
 lower level. Events may be absolute, or relative in time to the time they are
