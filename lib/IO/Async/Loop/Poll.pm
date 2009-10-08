@@ -9,6 +9,7 @@ use strict;
 use warnings;
 
 our $VERSION = '0.23';
+use constant API_VERSION => '0.23';
 
 use base qw( IO::Async::Loop );
 

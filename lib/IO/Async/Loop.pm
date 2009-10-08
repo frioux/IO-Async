@@ -9,6 +9,7 @@ use strict;
 use warnings;
 
 our $VERSION = '0.23';
+use constant NEED_API_VERSION => '0.23';
 
 use Carp;
 
@@ -103,8 +104,12 @@ sub __new
 {
    my $class = shift;
 
-   # We've changed interface since 0.19; detect that this Loop implementation is compatible.
-   $class->can( "watch_io" ) or die "$class is too old for IO::Async $VERSION; consider upgrading it\n";
+   # Detect if the API version provided by the subclass is sufficient
+   $class->can( "API_VERSION" ) or
+      die "$class is too old for IO::Async $VERSION; it does not provide \->API_VERSION\n";
+
+   $class->API_VERSION >= NEED_API_VERSION or
+      die "$class is too old for IO::Async $VERSION; we need API version >= ".NEED_API_VERSION.", it provides ".$class->API_VERSION."\n";
 
    my $self = bless {
       notifiers    => {}, # {nkey} = notifier
@@ -168,6 +173,9 @@ then the magic constructor itself will throw an exception.
 If any of the explicitly-requested loop types (C<$ENV{IO_ASYNC_LOOP}> or
 C<$IO::Async::Loop::LOOP>) fails to load then a warning is printed detailing
 the error.
+
+Implementors of new C<IO::Async::Loop> subclasses should see the notes about
+C<API_VERSION> below.
 
 =cut
 
@@ -1071,6 +1079,22 @@ the various event objects or higher level methods listed above.
 
 These methods should be considered as part of the interface contract required
 to implement a C<IO::Async::Loop> subclass.
+
+=cut
+
+=head2 IO::Async::Loop->API_VERSION
+
+This method will be called by the magic constructor on the class before it is
+constructed, to ensure that the specific implementation will support the
+required API. This method should return the API version that the loop
+implementation supports. The magic constructor will use that class, provided
+it declares a version at least as new as the version documented here.
+
+The current API version is C<0.23>.
+
+This method may be implemented using C<constant>; e.g
+
+ use constant API_VERSION => '0.23';
 
 =cut
 
