@@ -721,6 +721,19 @@ sub _build_time
    return $time;
 }
 
+# For subclasses to call
+sub _manage_queues
+{
+   my $self = shift;
+
+   my $count = 0;
+
+   my $timequeue = $self->{timequeue};
+   $count += $timequeue->fire if $timequeue;
+
+   return $count;
+}
+
 =head2 $id = $loop->enqueue_timer( %params )
 
 This method installs a callback which will be called at the specified time.

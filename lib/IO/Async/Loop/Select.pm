@@ -181,8 +181,7 @@ sub post_select
    # Since we have no way to know if the timeout occured, we'll have to
    # attempt to fire any waiting timeout events anyway
 
-   my $timequeue = $self->{timequeue};
-   $timequeue->fire if $timequeue;
+   $self->_manage_queues;
 }
 
 =head2 $count = $loop->loop_once( $timeout )

@@ -168,9 +168,7 @@ sub post_poll
 
    # Since we have no way to know if the timeout occured, we'll have to
    # attempt to fire any waiting timeout events anyway
-
-   my $timequeue = $self->{timequeue};
-   $count += $timequeue->fire if $timequeue;
+   $count += $self->_manage_queues;
 
    return $count;
 }
