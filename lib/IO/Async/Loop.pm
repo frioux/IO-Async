@@ -672,164 +672,6 @@ sub run_child
    $childmanager->run_child( %params );
 }
 
-# For subclasses to call
-sub _adjust_timeout
-{
-   my $self = shift;
-   my ( $timeref, %params ) = @_;
-
-   if( defined $self->{sigproxy} and !$params{no_sigwait} ) {
-      $$timeref = $MAX_SIGWAIT_TIME if( !defined $$timeref or $$timeref > $MAX_SIGWAIT_TIME );
-   }
-
-   my $timequeue = $self->{timequeue};
-   return unless defined $timequeue;
-
-   my $nexttime = $timequeue->next_time;
-   return unless defined $nexttime;
-
-   my $now = exists $params{now} ? $params{now} : time();
-   my $timer_delay = $nexttime - $now;
-
-   if( $timer_delay < 0 ) {
-      $$timeref = 0;
-   }
-   elsif( !defined $$timeref or $timer_delay < $$timeref ) {
-      $$timeref = $timer_delay;
-   }
-}
-
-# For subclasses to call
-sub _build_time
-{
-   my $self = shift;
-   my %params = @_;
-
-   my $time;
-   if( exists $params{time} ) {
-      $time = $params{time};
-   }
-   elsif( exists $params{delay} ) {
-      my $now = exists $params{now} ? $params{now} : time();
-
-      $time = $now + $params{delay};
-   }
-   else {
-      croak "Expected either 'time' or 'delay' keys";
-   }
-
-   return $time;
-}
-
-# For subclasses to call
-sub _manage_queues
-{
-   my $self = shift;
-
-   my $count = 0;
-
-   my $timequeue = $self->{timequeue};
-   $count += $timequeue->fire if $timequeue;
-
-   return $count;
-}
-
-=head2 $id = $loop->enqueue_timer( %params )
-
-This method installs a callback which will be called at the specified time.
-The time may either be specified as an absolute value (the C<time> key), or
-as a delay from the time it is installed (the C<delay> key).
-
-The returned C<$id> value can be used to identify the timer in case it needs
-to be cancelled by the C<cancel_timer()> method. Note that this value may be
-an object reference, so if it is stored, it should be released after it has
-been fired or cancelled, so the object itself can be freed.
-
-The C<%params> hash takes the following keys:
-
-=over 8
-
-=item time => NUM
-
-The absolute system timestamp to run the event.
-
-=item delay => NUM
-
-The delay after now at which to run the event, if C<time> is not supplied.
-
-=item now => NUM
-
-The time to consider as now if calculating an absolute time based on C<delay>;
-defaults to C<time()> if not specified.
-
-=item code => CODE
-
-CODE reference to the continuation to run at the allotted time.
-
-=back
-
-Either one of C<time> or C<delay> is required.
-
-For more powerful timer functionallity as a C<IO::Async::Notifier> (so it can
-be used as a child within another Notifier), see instead the
-L<IO::Async::Timer> object and its subclasses.
-
-=cut
-
-sub enqueue_timer
-{
-   my $self = shift;
-   my ( %params ) = @_;
-
-   my $timequeue = $self->{timequeue} ||= $self->__new_feature( "IO::Async::Internals::TimeQueue" );
-
-   $params{time} = $self->_build_time( %params );
-
-   $timequeue->enqueue( %params );
-}
-
-=head2 $loop->cancel_timer( $id )
-
-Cancels a previously-enqueued timer event by removing it from the queue.
-
-=cut
-
-sub cancel_timer
-{
-   my $self = shift;
-   my ( $id ) = @_;
-
-   my $timequeue = $self->{timequeue} ||= $self->__new_feature( "IO::Async::Internals::TimeQueue" );
-
-   $timequeue->cancel( $id );
-}
-
-=head2 $newid = $loop->requeue_timer( $id, %params )
-
-Reschedule an existing timer, moving it to a new time. The old timer is
-removed and will not be invoked.
-
-The C<%params> hash takes the same keys as C<enqueue_timer()>, except for the
-C<code> argument.
-
-The requeue operation may be implemented as a cancel + enqueue, which may
-mean the ID changes. Be sure to store the returned C<$newid> value if it is
-required.
-
-=cut
-
-sub requeue_timer
-{
-   my $self = shift;
-   my ( $id, %params ) = @_;
-
-   my $timequeue = $self->{timequeue} ||= $self->__new_feature( "IO::Async::Internals::TimeQueue" );
-
-   $params{time} = $self->_build_time( %params );
-
-   $timequeue->requeue( $id, %params );
-}
-
 =head2 $loop->resolve( %params )
 
 This method performs a single name resolution operation. It uses an
@@ -1302,6 +1144,187 @@ sub unwatch_signal
       undef $sigproxy;
       undef $self->{sigproxy};
    }
+}
+
+# For subclasses to call
+sub _build_time
+{
+   my $self = shift;
+   my %params = @_;
+
+   my $time;
+   if( exists $params{time} ) {
+      $time = $params{time};
+   }
+   elsif( exists $params{delay} ) {
+      my $now = exists $params{now} ? $params{now} : time();
+
+      $time = $now + $params{delay};
+   }
+   else {
+      croak "Expected either 'time' or 'delay' keys";
+   }
+
+   return $time;
+}
+
+=head2 $id = $loop->enqueue_timer( %params )
+
+This method installs a callback which will be called at the specified time.
+The time may either be specified as an absolute value (the C<time> key), or
+as a delay from the time it is installed (the C<delay> key).
+
+The returned C<$id> value can be used to identify the timer in case it needs
+to be cancelled by the C<cancel_timer()> method. Note that this value may be
+an object reference, so if it is stored, it should be released after it has
+been fired or cancelled, so the object itself can be freed.
+
+The C<%params> hash takes the following keys:
+
+=over 8
+
+=item time => NUM
+
+The absolute system timestamp to run the event.
+
+=item delay => NUM
+
+The delay after now at which to run the event, if C<time> is not supplied.
+
+=item now => NUM
+
+The time to consider as now if calculating an absolute time based on C<delay>;
+defaults to C<time()> if not specified.
+
+=item code => CODE
+
+CODE reference to the continuation to run at the allotted time.
+
+=back
+
+Either one of C<time> or C<delay> is required.
+
+For more powerful timer functionallity as a C<IO::Async::Notifier> (so it can
+be used as a child within another Notifier), see instead the
+L<IO::Async::Timer> object and its subclasses.
+
+These C<*_timer> methods are optional; a subclass may implement none or all of
+them. If it implements none, then the base class will manage a queue of timer
+events. This queue should be handled by the C<loop_once> method implemented by
+the subclass, using the C<_adjust_timeout> and C<_manage_queues> methods.
+
+=cut
+
+sub enqueue_timer
+{
+   my $self = shift;
+   my ( %params ) = @_;
+
+   my $timequeue = $self->{timequeue} ||= $self->__new_feature( "IO::Async::Internals::TimeQueue" );
+
+   $params{time} = $self->_build_time( %params );
+
+   $timequeue->enqueue( %params );
+}
+
+=head2 $loop->cancel_timer( $id )
+
+Cancels a previously-enqueued timer event by removing it from the queue.
+
+=cut
+
+sub cancel_timer
+{
+   my $self = shift;
+   my ( $id ) = @_;
+
+   my $timequeue = $self->{timequeue} ||= $self->__new_feature( "IO::Async::Internals::TimeQueue" );
+
+   $timequeue->cancel( $id );
+}
+
+=head2 $newid = $loop->requeue_timer( $id, %params )
+
+Reschedule an existing timer, moving it to a new time. The old timer is
+removed and will not be invoked.
+
+The C<%params> hash takes the same keys as C<enqueue_timer()>, except for the
+C<code> argument.
+
+The requeue operation may be implemented as a cancel + enqueue, which may
+mean the ID changes. Be sure to store the returned C<$newid> value if it is
+required.
+
+=cut
+
+sub requeue_timer
+{
+   my $self = shift;
+   my ( $id, %params ) = @_;
+
+   my $timequeue = $self->{timequeue} ||= $self->__new_feature( "IO::Async::Internals::TimeQueue" );
+
+   $params{time} = $self->_build_time( %params );
+
+   $timequeue->requeue( $id, %params );
+}
+
+=head1 METHODS FOR SUBCLASSES
+
+The following methods are provided to access internal features which are
+required by specific subclasses to implement the loop functionallity. The use
+cases of each will be documented in the above section.
+
+=head2 $loop->_adjust_timeout( \$timeout )
+
+Shortens the timeout value passed in the scalar reference if it is longer in
+seconds than the time until the next queued event on the timer queue.
+
+=cut
+
+sub _adjust_timeout
+{
+   my $self = shift;
+   my ( $timeref, %params ) = @_;
+
+   if( defined $self->{sigproxy} and !$params{no_sigwait} ) {
+      $$timeref = $MAX_SIGWAIT_TIME if( !defined $$timeref or $$timeref > $MAX_SIGWAIT_TIME );
+   }
+
+   my $timequeue = $self->{timequeue};
+   return unless defined $timequeue;
+
+   my $nexttime = $timequeue->next_time;
+   return unless defined $nexttime;
+
+   my $now = exists $params{now} ? $params{now} : time();
+   my $timer_delay = $nexttime - $now;
+
+   if( $timer_delay < 0 ) {
+      $$timeref = 0;
+   }
+   elsif( !defined $$timeref or $timer_delay < $$timeref ) {
+      $$timeref = $timer_delay;
+   }
+}
+
+=head2 $loop->_manage_queues
+
+Checks the timer queue for callbacks that should have been invoked by now, and
+runs them all, removing them from the queue.
+
+=cut
+
+sub _manage_queues
+{
+   my $self = shift;
+
+   my $count = 0;
+
+   my $timequeue = $self->{timequeue};
+   $count += $timequeue->fire if $timequeue;
+
+   return $count;
 }
 
 # Keep perl happy; keep Britain tidy
