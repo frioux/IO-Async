@@ -78,7 +78,7 @@ C<IO::Async::Loop> - core loop of the C<IO::Async> framework
 
 This module provides an abstract class which implements the core loop of the
 C<IO::Async> framework. Its primary purpose is to store a set of
-C<IO::Async::Notifier> objects or subclasses of them. It handles all of the
+L<IO::Async::Notifier> objects or subclasses of them. It handles all of the
 lower-level set manipulation actions, and leaves the actual IO readiness 
 testing/notification to the concrete class that implements it. It also
 provides other functionallity such as signal handling, child process managing,
@@ -228,13 +228,15 @@ sub new
    croak "Cannot find a suitable candidate class";
 }
 
-=head1 METHODS
-
-=cut
-
 #######################
 # Notifier management #
 #######################
+
+=head1 NOTIFIER MANAGEMENT
+
+The following methods manage the collection of C<IO::Async::Notifier> objects.
+
+=cut
 
 # Internal method
 sub _nkey
@@ -327,9 +329,81 @@ sub _remove_noparentcheck
    return;
 }
 
+###################
+# Looping support #
+###################
+
+=head1 LOOPING CONTROL
+
+The following methods control the actual run cycle of the loop, and hence the
+program.
+
+=cut
+
+=head2 $count = $loop->loop_once( $timeout )
+
+This method performs a single wait loop using the specific subclass's
+underlying mechanism. If C<$timeout> is undef, then no timeout is applied, and
+it will wait until an event occurs. The intention of the return value is to
+indicate the number of callbacks that this loop executed, though different
+subclasses vary in how accurately they can report this. See the documentation
+for this method in the specific subclass for more information.
+
+=cut
+
+sub loop_once
+{
+   my $self = shift;
+   my ( $timeout ) = @_;
+
+   croak "Expected that $self overrides ->loop_once()";
+}
+
+=head2 $loop->loop_forever()
+
+This method repeatedly calls the C<loop_once> method with no timeout (i.e.
+allowing the underlying mechanism to block indefinitely), until the
+C<loop_stop> method is called from an event callback.
+
+=cut
+
+sub loop_forever
+{
+   my $self = shift;
+
+   $self->{still_looping} = 1;
+
+   while( $self->{still_looping} ) {
+      $self->loop_once( undef );
+   }
+}
+
+=head2 $loop->loop_stop()
+
+This method cancels a running C<loop_forever>, and makes that method return.
+It would be called from an event callback triggered by an event that occured
+within the loop.
+
+=cut
+
+sub loop_stop
+{
+   my $self = shift;
+   
+   $self->{still_looping} = 0;
+}
+
 ############
 # Features #
 ############
+
+=head1 FEATURES
+
+Most of the following methods are higher-level wrappers around base
+functionallity provided by the low-level API documented below. They may be
+used by C<IO::Async::Notifier> subclasses or called directly by the program.
+
+=cut
 
 sub __new_feature
 {
@@ -668,17 +742,20 @@ The absolute system timestamp to run the event.
 
 =item delay => NUM
 
-The delay after now at which to run the event.
+The delay after now at which to run the event, if C<time> is not supplied.
 
 =item now => NUM
 
-The time to consider as now; defaults to C<time()> if not specified.
+The time to consider as now if calculating an absolute time based on C<delay>;
+defaults to C<time()> if not specified.
 
 =item code => CODE
 
 CODE reference to the continuation to run at the allotted time.
 
 =back
+
+Either one of C<time> or C<delay> is required.
 
 For more powerful timer functionallity as a C<IO::Async::Notifier> (so it can
 be used as a child within another Notifier), see instead the
@@ -848,63 +925,6 @@ sub listen
    }
 }
 
-###################
-# Looping support #
-###################
-
-=head2 $count = $loop->loop_once( $timeout )
-
-This method performs a single wait loop using the specific subclass's
-underlying mechanism. If C<$timeout> is undef, then no timeout is applied, and
-it will wait until an event occurs. The intention of the return value is to
-indicate the number of callbacks that this loop executed, though different
-subclasses vary in how accurately they can report this. See the documentation
-for this method in the specific subclass for more information.
-
-=cut
-
-sub loop_once
-{
-   my $self = shift;
-   my ( $timeout ) = @_;
-
-   croak "Expected that $self overrides ->loop_once()";
-}
-
-=head2 $loop->loop_forever()
-
-This method repeatedly calls the C<loop_once> method with no timeout (i.e.
-allowing the underlying mechanism to block indefinitely), until the
-C<loop_stop> method is called from an event callback.
-
-=cut
-
-sub loop_forever
-{
-   my $self = shift;
-
-   $self->{still_looping} = 1;
-
-   while( $self->{still_looping} ) {
-      $self->loop_once( undef );
-   }
-}
-
-=head2 $loop->loop_stop()
-
-This method cancels a running C<loop_forever>, and makes that method return.
-It would be called from an event callback triggered by an event that occured
-within the loop.
-
-=cut
-
-sub loop_stop
-{
-   my $self = shift;
-   
-   $self->{still_looping} = 0;
-}
-
 =head1 OS ABSTRACTIONS
 
 Because the Magic Constructor searches for OS-specific subclasses of the Loop,
@@ -1070,7 +1090,7 @@ sub signame2num
    return $sig_num{$signame};
 }
 
-=head1 SUBCLASS METHODS
+=head1 LOW-LEVEL METHODS
 
 As C<IO::Async::Loop> is an abstract base class, specific subclasses of it are
 required to implement certain methods that form the base level of
@@ -1133,8 +1153,6 @@ of using this method.
 
 # This class specifically does NOT implement this method, so that subclasses
 # are forced to. The constructor will be checking....
-# This is done so that we can recognise and abort on a pre-0.20 Loop
-# implementation.
 sub __watch_io
 {
    my $self = shift;
@@ -1228,6 +1246,10 @@ remove an existing one.
 
 Applications should use a C<IO::Async::Signal> object, or call
 C<attach_signal> instead of using this method.
+
+This and C<unwatch_signal> are optional; a subclass may implement neither, or
+both. If it implements neither then signal handling will be performed by the
+base class using a self-connected pipe to interrupt the main IO blocking.
 
 =cut
 
