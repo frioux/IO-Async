@@ -118,6 +118,7 @@ sub __new
       sigproxy     => undef,
       childmanager => undef,
       timequeue    => undef,
+      deferrals    => [],
    }, $class;
 
    return $self;
@@ -1269,16 +1270,107 @@ sub requeue_timer
    $timequeue->requeue( $id, %params );
 }
 
+=head2 $id = $loop->watch_idle( %params )
+
+This method installs a callback which will be called at some point in the near
+future.
+
+The C<%params> hash takes the following keys:
+
+=over 8
+
+=item when => STRING
+
+Specifies the time at which the callback will be invoked. See below.
+
+=item code => CODE
+
+CODE reference to the continuation to run at the allotted time.
+
+=back
+
+The C<when> parameter defines the time at which the callback will later be
+invoked. Must be one of the following values:
+
+=over 8
+
+=item later
+
+Callback is invoked after the current round of IO events have been processed
+by the loop's underlying C<loop_once> method.
+
+If a new idle watch is installed from within a C<later> callback, the
+installed one will not be invoked during this round. It will be deferred for
+the next time C<loop_once> is called, after any IO events have been handled.
+
+=back
+
+If there are pending idle handlers, then the C<loop_once> method will use a
+zero timeout; it will return immediately, having processed any IO events and
+idle handlers.
+
+The returned C<$id> value can be used to identify the idle handler in case it
+needs to be removed, by calling the C<unwatch_idle> method. Note this value
+may be a reference, so if it is stored it should be released after the
+callback has been invoked or cancled, so the referrant itself can be freed.
+
+This and C<unwatch_idle> are optional; a subclass may implement neither, or
+both. If it implements neither then idle handling will be performed by the
+base class, using the C<_adjust_timeout> and C<_manage_queues> methods.
+
+=cut
+
+sub watch_idle
+{
+   my $self = shift;
+   my %params = @_;
+
+   my $code = delete $params{code};
+   ref $code eq "CODE" or croak "Expected 'code' to be a CODE reference";
+
+   my $when = delete $params{when} or croak "Expected 'when'";
+
+   # Future-proofing for other idle modes
+   $when eq "later" or croak "Expected 'when' to be 'later'";
+
+   my $deferrals = $self->{deferrals};
+
+   push @$deferrals, $code;
+   return \$deferrals->[-1];
+}
+
+=head2 $loop->unwatch_idle( $id )
+
+Cancels a previously-installed idle handler.
+
+=cut
+
+sub unwatch_idle
+{
+   my $self = shift;
+   my ( $id ) = @_;
+
+   my $deferrals = $self->{deferrals};
+
+   my $idx;
+   \$deferrals->[$_] == $id and ( $idx = $_ ), last for 0 .. $#$deferrals;
+
+   splice @$deferrals, $idx, 1, () if defined $idx;
+}
+
 =head1 METHODS FOR SUBCLASSES
 
 The following methods are provided to access internal features which are
 required by specific subclasses to implement the loop functionallity. The use
 cases of each will be documented in the above section.
 
+=cut
+
 =head2 $loop->_adjust_timeout( \$timeout )
 
 Shortens the timeout value passed in the scalar reference if it is longer in
-seconds than the time until the next queued event on the timer queue.
+seconds than the time until the next queued event on the timer queue. If there
+are pending idle handlers, the timeout is reduced to zero.
 
 =cut
 
@@ -1286,6 +1378,8 @@ sub _adjust_timeout
 {
    my $self = shift;
    my ( $timeref, %params ) = @_;
+
+   $$timeref = 0, return if @{ $self->{deferrals} };
 
    if( defined $self->{sigproxy} and !$params{no_sigwait} ) {
       $$timeref = $MAX_SIGWAIT_TIME if( !defined $$timeref or $$timeref > $MAX_SIGWAIT_TIME );
@@ -1311,7 +1405,9 @@ sub _adjust_timeout
 =head2 $loop->_manage_queues
 
 Checks the timer queue for callbacks that should have been invoked by now, and
-runs them all, removing them from the queue.
+runs them all, removing them from the queue. It also invokes all of the
+pending idle handlers. Any new idle handlers installed by these are not
+invoked yet; they will wait for the next time this method is called.
 
 =cut
 
@@ -1323,6 +1419,14 @@ sub _manage_queues
 
    my $timequeue = $self->{timequeue};
    $count += $timequeue->fire if $timequeue;
+
+   my $deferrals = $self->{deferrals};
+   $self->{deferrals} = [];
+
+   foreach my $code ( @$deferrals ) {
+      $code->();
+      $count++;
+   }
 
    return $count;
 }
