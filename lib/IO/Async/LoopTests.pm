@@ -99,6 +99,18 @@ sub wait_for(&)
    IO::Async::Test::testing_loop( undef );
 }
 
+sub time_between(&$$$)
+{
+   my ( $code, $lower, $upper, $name ) = @_;
+
+   my $start = time;
+   $code->();
+   my $took = time - $start;
+
+   cmp_ok( $took, '>=', $lower, "$name took at least $lower seconds" ) if defined $lower;
+   cmp_ok( $took, '<=', $upper, "$name took no more than $upper seconds" ) if defined $upper;
+}
+
 =head1 TEST SUITES
 
 The following test suite names exist, to be passed as a name in the C<@tests>
@@ -175,7 +187,7 @@ Tests the Loop's support for idle handlers
 
 =cut
 
-use constant count_tests_idle => 9;
+use constant count_tests_idle => 10;
 sub run_tests_idle
 {
    my $called = 0;
@@ -186,15 +198,9 @@ sub run_tests_idle
 
    is( $called, 0, 'deferred sub not yet invoked' );
 
-   my ( $now, $took );
-
-   $now = time;
-   $loop->loop_once( 3 );
-   $took = time - $now;
+   time_between { $loop->loop_once( 3 ) } undef, 1.0, 'loop_once(3) with deferred sub';
 
    is( $called, 1, 'deferred sub called after loop_once' );
-
-   cmp_ok( $took, '<', 1, 'loop_once(3) with deferred sub takes no more than 1 second' );
 
    $loop->watch_idle( when => 'later', code => sub {
       $loop->watch_idle( when => 'later', code => sub { $called++ } )
@@ -212,13 +218,9 @@ sub run_tests_idle
 
    $loop->unwatch_idle( $id );
 
-   $now = time;
-   $loop->loop_once( 1 );
-   $took = time - $now;
+   time_between { $loop->loop_once( 1 ) } 0.9, 1.1, 'loop_once(1) with unwatched deferral';
 
    is( $called, 2, 'unwatched deferral not called' );
-
-   cmp_ok( $took, '>', '0.9', 'loop_once(1) with unwatched deferral takes more than 0.9 seconds' );
 
    $loop->later( sub { $called++ } );
 
