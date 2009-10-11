@@ -19,7 +19,7 @@ use Carp;
 use Scalar::Util qw( weaken );
 
 use Fcntl qw( F_GETFL F_SETFL FD_CLOEXEC );
-use POSIX qw( WNOHANG _exit sysconf _SC_OPEN_MAX dup2 nice );
+use POSIX qw( _exit sysconf _SC_OPEN_MAX dup2 nice );
 
 use constant LENGTH_OF_I => length( pack( "I", 0 ) );
 
@@ -125,24 +125,12 @@ sub new
    my $loop = delete $params{loop} or croak "Expected a 'loop'";
 
    my $self = bless {
-      childdeathhandlers => {},
       loop => $loop,
    }, $class;
 
    weaken( $self->{loop} );
 
-   $self->{sig_id} = $loop->attach_signal( CHLD => sub { $self->SIGCHLD } );
-
    return $self;
-}
-
-sub disable
-{
-   my $self = shift;
-
-   my $loop = $self->{loop};
-
-   $loop->detach_signal( 'CHLD', $self->{sig_id} );
 }
 
 =head1 METHODS
@@ -151,112 +139,6 @@ When active, the following methods are available on the containing C<Loop>
 object.
 
 =cut
-
-sub SIGCHLD
-{
-   my $self = shift;
-
-   my $handlermap = $self->{childdeathhandlers};
-
-   my $count = 0;
-
-   while( 1 ) {
-      my $zid = waitpid( -1, WNOHANG );
-
-      last if !defined $zid or $zid < 1;
- 
-      if( defined $handlermap->{$zid} ) {
-         $handlermap->{$zid}->( $zid, $? );
-         delete $handlermap->{$zid};
-      }
-      else {
-         carp "No child death handler for '$zid'";
-      }
-
-      $count++;
-   }
-
-   return $count;
-}
-
-=head2 $loop->watch_child( $kid, $code )
-
-This method adds a new handler for the termination of the given child PID.
-
-=over 8
-
-=item $kid
-
-The PID to watch.
-
-=item $code
-
-A CODE reference to the exit handler. It will be invoked as
-
- $code->( $pid, $? )
-
-The second argument is passed the plain perl C<$?> value. To use that
-usefully, see C<WEXITSTATUS()> and others from C<POSIX>.
-
-After invocation, the handler is automatically removed from the manager.
-
-=back
-
-=cut
-
-sub watch_child
-{
-   my $self = shift;
-   my ( $kid, $code ) = @_;
-
-   my $handlermap = $self->{childdeathhandlers};
-
-   croak "Already have a handler for $kid" if exists $handlermap->{$kid};
-   $handlermap->{$kid} = $code;
-
-   return;
-}
-
-=head2 $watching = $manager->is_watching( $kid )
-
-This method tests if the manager is currently watching for termination of the
-given PID. It returns a boolean value.
-
-=over 8
-
-=item $kid
-
-The PID.
-
-=back
-
-=cut
-
-sub is_watching
-{
-   my $self = shift;
-   my ( $kid ) = @_;
-
-   my $handlermap = $self->{childdeathhandlers};
-
-   return exists $handlermap->{$kid};
-}
-
-=head2 @kids = $manager->list_watching()
-
-This method returns a list of the PIDs that the manager is currently watching
-for. The list is returned in no particular order.
-
-=cut
-
-sub list_watching
-{
-   my $self = shift;
-
-   my $handlermap = $self->{childdeathhandlers};
-
-   return keys %$handlermap;
-}
 
 =head2 $pid = $loop->detach_child( %params )
 

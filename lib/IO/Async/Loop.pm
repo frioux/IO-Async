@@ -16,6 +16,7 @@ use Carp;
 use Socket;
 use IO::Socket;
 use Time::HiRes qw( time );
+use POSIX qw( WNOHANG );
 
 # Try to load IO::Socket::INET6 but don't worry if we don't have it
 eval { require IO::Socket::INET6 };
@@ -117,6 +118,7 @@ sub __new
       sigattaches  => {}, # {sig} => \@callbacks
       sigproxy     => undef,
       childmanager => undef,
+      childwatches => {}, # {pid} => $code
       timequeue    => undef,
       deferrals    => [],
    }, $class;
@@ -465,9 +467,9 @@ sub attach_signal
    my ( $signal, $code ) = @_;
 
    if( $signal eq "CHLD" ) {
-      # We make special exception to allow the ChildManager to do this
-      caller eq "IO::Async::ChildManager" or
-         carp "Attaching to SIGCHLD is not advised - use the IO::Async::ChildManager instead";
+      # We make special exception to allow $self->watch_child to do this
+      caller eq "IO::Async::Loop" or
+         carp "Attaching to SIGCHLD is not advised - use ->watch_child instead";
    }
 
    if( not $self->{sigattaches}->{$signal} ) {
@@ -538,61 +540,9 @@ sub later
    return $self->watch_idle( when => 'later', code => $code );
 }
 
-=head2 $loop->enable_childmanager
-
-This method enables the child manager, which allows use of the
-C<watch_child()> methods without a race condition.
-
-The child manager will be automatically enabled if required; so this method
-does not need to be explicitly called for other C<*_child()> methods.
-
-=cut
-
-sub enable_childmanager
-{
-   my $self = shift;
-
-   $self->{childmanager} ||= $self->__new_feature( "IO::Async::ChildManager" );
-}
-
-=head2 $loop->disable_childmanager
-
-This method disables the child manager.
-
-=cut
-
-sub disable_childmanager
-{
-   my $self = shift;
-
-   if( my $childmanager = $self->{childmanager} ) {
-      $childmanager->disable;
-      undef $self->{childmanager};
-   }
-}
-
-=head2 $loop->watch_child( $pid, $code )
-
-This method adds a new handler for the termination of the given child PID.
-
-Because the process represented by C<$pid> may already have exited by the time
-this method is called, the child manager should already have been enabled
-before it was C<fork()>ed, by calling C<enable_childmanager>. If this is not
-done, then a C<SIGCHLD> signal may have been missed, and the exit of this
-child process will not be reported.
-
-=cut
-
-sub watch_child
-{
-   my $self = shift;
-   my ( $kid, $code ) = @_;
-
-   my $childmanager = $self->{childmanager} ||=
-      $self->__new_feature( "IO::Async::ChildManager" );
-
-   $childmanager->watch_child( $kid, $code );
-}
+# The following two methods are no longer needed; included just to keep legacy code happy
+sub enable_childmanager  { }
+sub disable_childmanager { }
 
 =head2 $pid = $loop->detach_child( %params )
 
@@ -1375,6 +1325,92 @@ sub unwatch_idle
    \$deferrals->[$_] == $id and ( $idx = $_ ), last for 0 .. $#$deferrals;
 
    splice @$deferrals, $idx, 1, () if defined $idx;
+}
+
+=head2 $loop->watch_child( $pid, $code )
+
+This method adds a new handler for the termination of the given child process
+PID.
+
+=over 8
+
+=item $pid
+
+The PID to watch.
+
+=item $code
+
+A CODE reference to the exit handler. It will be invoked as
+
+ $code->( $pid, $? )
+
+The second argument is passed the plain perl C<$?> value. To use that
+usefully, see C<WEXITSTATUS()> and others from C<POSIX>.
+
+=back
+
+After invocation, the handler is automatically removed.
+
+This and C<unwatch_child> are optional; a subclass may implement neither, or
+both. If it implements neither then child watching will be performed by using
+C<watch_signal> to install a C<SIGCHLD> handler, which will use C<waitpid> to
+look for exited child processes.
+
+=cut
+
+sub watch_child
+{
+   my $self = shift;
+   my ( $pid, $code ) = @_;
+
+   my $childwatches = $self->{childwatches};
+
+   croak "Already have a handler for $pid" if exists $childwatches->{$pid};
+
+   if( !$self->{childwatch_sigid} ) {
+      $self->{childwatch_sigid} = $self->attach_signal( CHLD => sub {
+         while( 1 ) {
+            my $zid = waitpid( -1, WNOHANG );
+
+            last if !defined $zid or $zid < 1;
+
+            if( defined $childwatches->{$zid} ) {
+               $childwatches->{$zid}->( $zid, $? );
+               delete $childwatches->{$zid};
+            }
+         }
+      } );
+
+      # There's a chance the child has already exited
+      my $zid = waitpid( $pid, WNOHANG );
+      if( defined $zid and $zid > 0 ) {
+         my $exitstatus = $?;
+         $self->later( sub { $code->( $pid, $exitstatus ) } );
+         return;
+      }
+   }
+
+   $childwatches->{$pid} = $code;
+}
+
+=head2 $loop->unwatch_child( $pid )
+
+This method removes a watch on an existing child process PID.
+
+=cut
+
+sub unwatch_child
+{
+   my $self = shift;
+   my ( $pid ) = @_;
+
+   my $childwatches = $self->{childwatches};
+
+   delete $childwatches->{$pid};
+
+   if( !keys %$childwatches ) {
+      $self->detach_signal( CHLD => delete $self->{childwatch_sigid} );
+   }
 }
 
 =head1 METHODS FOR SUBCLASSES
