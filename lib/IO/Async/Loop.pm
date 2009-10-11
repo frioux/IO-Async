@@ -519,6 +519,25 @@ sub detach_signal
    }
 }
 
+=head2 $loop->later( $code )
+
+Installs a new idle handler which invokes its callback when the IO loop is
+idle.
+
+This method is implemented using the C<watch_idle> method, with the C<when>
+parameter set to C<later>. It will return an ID value that can be passed to
+C<unwatch_idle> if required.
+
+=cut
+
+sub later
+{
+   my $self = shift;
+   my ( $code ) = @_;
+
+   return $self->watch_idle( when => 'later', code => $code );
+}
+
 =head2 $loop->enable_childmanager
 
 This method enables the child manager, which allows use of the

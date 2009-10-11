@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 8;
+use Test::More tests => 9;
 
 use Time::HiRes qw( time );
 
@@ -51,3 +51,9 @@ $took = time - $now;
 is( $called, 2, 'unwatched deferral not called' );
 
 cmp_ok( $took, '>', '0.9', 'loop_once(1) with unwatched deferral takes more than 0.9 seconds' );
+
+$loop->later( sub { $called++ } );
+
+$loop->loop_once( 1 );
+
+is( $called, 3, '$loop->later() shortcut works' );
