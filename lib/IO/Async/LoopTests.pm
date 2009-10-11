@@ -17,12 +17,16 @@ use Test::More;
 use Test::Exception;
 use Test::Refcount;
 
-use IO::Async::Test;
+use IO::Async::Test qw();
 
 use POSIX qw( SIGTERM WIFEXITED WEXITSTATUS WIFSIGNALED WTERMSIG );
 use Time::HiRes qw( time );
 
 our $VERSION = '0.23';
+
+# The loop under test. We keep it in a single lexical here, so we can use
+# is_oneref() tests in the individual test suite functions
+my $loop;
 
 =head1 NAME
 
@@ -61,7 +65,7 @@ sub run_tests
    my ( $testclass, @tests ) = @_;
 
    my $count = 0;
-   $count += __PACKAGE__->can( "count_tests_$_" )->() for @tests;
+   $count += __PACKAGE__->can( "count_tests_$_" )->() + 2 for @tests;
 
    plan tests => $count;
 
@@ -72,7 +76,27 @@ sub run_tests
       BAIL_OUT( "Unable to load $testclass - $@" );
    }
 
-   __PACKAGE__->can( "run_tests_$_" )->( $testclass ) for @tests;
+   foreach my $test ( @tests ) {
+      $loop = $testclass->new();
+
+      is_oneref( $loop, '$loop has refcount 1' );
+
+      __PACKAGE__->can( "run_tests_$test" )->();
+
+      is_oneref( $loop, '$loop has refcount 1 finally' );
+   }
+}
+
+sub wait_for(&)
+{
+   # Bounce via here so we don't upset refcount tests by having loop
+   # permanently set in IO::Async::Test
+   IO::Async::Test::testing_loop( $loop );
+
+   # Override prototype - I know what I'm doing
+   &IO::Async::Test::wait_for( @_ );
+
+   IO::Async::Test::testing_loop( undef );
 }
 
 =head1 TEST SUITES
@@ -88,15 +112,9 @@ Tests the Loop's ability to watch POSIX signals
 
 =cut
 
-use constant count_tests_signal => 13;
+use constant count_tests_signal => 11;
 sub run_tests_signal
 {
-   my ( $class ) = @_;
-
-   my $loop = $class->new();
-
-   is_oneref( $loop, '$loop has refcount 1 initally' );
-
    my $caught;
 
    $loop->watch_signal( TERM => sub { $caught = 1 } );
@@ -149,8 +167,6 @@ sub run_tests_signal
 
    dies_ok( sub { $loop->attach_signal( 'this signal name does not exist', sub {} ) },
             'Bad signal name fails' );
-
-   is_oneref( $loop, '$loop has refcount 1 finally' );
 }
 
 =head2 idle
@@ -162,10 +178,6 @@ Tests the Loop's support for idle handlers
 use constant count_tests_idle => 9;
 sub run_tests_idle
 {
-   my ( $class ) = @_;
-
-   my $loop = $class->new();
-
    my $called = 0;
 
    my $id = $loop->watch_idle( when => 'later', code => sub { $called++ } );
@@ -221,17 +233,9 @@ Tests the Loop's support for watching child processes by PID
 
 =cut
 
-use constant count_tests_child => 9;
+use constant count_tests_child => 6;
 sub run_tests_child
 {
-   my ( $class ) = @_;
-
-   my $loop = $class->new();
-   is_oneref( $loop, '$loop has refcount 1' );
-
-   testing_loop( $loop );
-   is_refcount( $loop, 2, '$loop has refcount 2 after adding to IO::Async::Test' );
-
    my $kid = fork();
    defined $kid or die "Cannot fork() - $!";
 
@@ -243,7 +247,7 @@ sub run_tests_child
 
    $loop->watch_child( $kid => sub { ( undef, $exitcode ) = @_; } );
 
-   is_refcount( $loop, 2, '$loop has refcount 2 after watch_child' );
+   is_oneref( $loop, '$loop has refcount 1 after watch_child' );
    ok( !defined $exitcode, '$exitcode not defined before ->loop_once' );
 
    undef $exitcode;
@@ -270,10 +274,6 @@ sub run_tests_child
 
    ok( WIFSIGNALED($exitcode),          'WIFSIGNALED($exitcode) after SIGTERM' );
    is( WTERMSIG($exitcode),    SIGTERM, 'WTERMSIG($exitcode) after SIGTERM' );
-
-   is_refcount( $loop, 2, '$loop has refcount 2 at EOF' );
-
-   testing_loop( undef );
 }
 
 # Keep perl happy; keep Britain tidy
