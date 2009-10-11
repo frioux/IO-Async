@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 6;
+use Test::More tests => 4;
 
 use Time::HiRes qw( time );
 
@@ -12,26 +12,7 @@ use constant AUT => $ENV{TEST_QUICK_TIMERS} ? 0.1 : 1;
 
 my $loop = IO::Async::Loop::Poll->new();
 
-my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
-
-# Need sockets in nonblocking mode
-$S1->blocking( 0 );
-$S2->blocking( 0 );
-
-# loop_once
-
 my ( $now, $took );
-
-$now = time;
-$loop->loop_once( 2 * AUT );
-$took = (time - $now) / AUT;
-
-cmp_ok( $took, '>', 1.9, 'loop_once(2) while idle takes at least 1.9 seconds' );
-cmp_ok( $took, '<', 10, 'loop_once(2) while idle takes no more than 10 seconds' );
-if( $took > 2.5 ) {
-   diag( "loop_once(2) while idle took more than 2.5 seconds.\n" .
-         "This is not itself a bug, and may just be an indication of a busy testing machine" );
-}
 
 # timers
 

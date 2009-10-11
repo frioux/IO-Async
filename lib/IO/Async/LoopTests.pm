@@ -24,6 +24,14 @@ use Time::HiRes qw( time );
 
 our $VERSION = '0.23';
 
+# Abstract Units of Time
+# Normally 1 second, except if the environment variable TEST_QUICK_TIMERS is
+# set. This allows timing-based tests to run quicker during development runs
+# Slower timers are preferred for smoke testers to guard against false
+# negatives causing tests to fail simply because of scheduling delays or high
+# system load
+use constant AUT => $ENV{TEST_QUICK_TIMERS} ? 0.1 : 1;
+
 # The loop under test. We keep it in a single lexical here, so we can use
 # is_oneref() tests in the individual test suite functions
 my $loop;
@@ -105,10 +113,13 @@ sub time_between(&$$$)
 
    my $start = time;
    $code->();
-   my $took = time - $start;
+   my $took = ( time - $start ) / AUT;
 
    cmp_ok( $took, '>=', $lower, "$name took at least $lower seconds" ) if defined $lower;
-   cmp_ok( $took, '<=', $upper, "$name took no more than $upper seconds" ) if defined $upper;
+   cmp_ok( $took, '<=', $upper * 3, "$name took no more than $upper seconds" ) if defined $upper;
+   if( $took > $upper and $took <= $upper * 3 ) {
+      diag( "$name took longer than $upper seconds - this may just be an indication of a busy testing machine rather than a bug" );
+   }
 }
 
 =head1 TEST SUITES
@@ -198,7 +209,7 @@ sub run_tests_idle
 
    is( $called, 0, 'deferred sub not yet invoked' );
 
-   time_between { $loop->loop_once( 3 ) } undef, 1.0, 'loop_once(3) with deferred sub';
+   time_between { $loop->loop_once( 3 * AUT ) } undef, 1.0, 'loop_once(3) with deferred sub';
 
    is( $called, 1, 'deferred sub called after loop_once' );
 
@@ -218,7 +229,7 @@ sub run_tests_idle
 
    $loop->unwatch_idle( $id );
 
-   time_between { $loop->loop_once( 1 ) } 0.9, 1.1, 'loop_once(1) with unwatched deferral';
+   time_between { $loop->loop_once( 1 * AUT ) } 0.9, 1.1, 'loop_once(1) with unwatched deferral';
 
    is( $called, 2, 'unwatched deferral not called' );
 
@@ -276,6 +287,29 @@ sub run_tests_child
 
    ok( WIFSIGNALED($exitcode),          'WIFSIGNALED($exitcode) after SIGTERM' );
    is( WTERMSIG($exitcode),    SIGTERM, 'WTERMSIG($exitcode) after SIGTERM' );
+}
+
+=head2 control
+
+Tests that the C<loop_once> and C<loop_forever> methods behave correctly
+
+=cut
+
+use constant count_tests_control => 3;
+sub run_tests_control
+{
+   time_between { $loop->loop_once( 2 * AUT ) } 1.9, 2.5, 'loop_once(2) when idle';
+
+   $loop->later( sub { $loop->loop_stop } );
+
+   local $SIG{ALRM} = sub { die "Test timed out before ->loop_stop" };
+   alarm( 1 );
+
+   $loop->loop_forever;
+
+   alarm( 0 );
+
+   ok( 1, '$loop->loop_forever interruptable by ->loop_stop' );
 }
 
 # Keep perl happy; keep Britain tidy

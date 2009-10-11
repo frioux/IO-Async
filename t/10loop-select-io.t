@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 25;
+use Test::More tests => 24;
 use Test::Exception;
 
 use IO::Async::Loop::Select;
@@ -102,29 +102,6 @@ $ready = $loop->loop_once( 0.1 );
 
 is( $ready, 1, '$ready after loop_once' );
 is( $writeready, 1, '$writeready after loop_once' );
-
-# loop_forever
-
-$loop->watch_io(
-   handle => \*STDOUT,
-   on_write_ready => sub { $loop->loop_stop() },
-);
-
-$writeready = 0;
-
-$SIG{ALRM} = sub { die "Test timed out"; };
-alarm( 1 );
-
-$loop->loop_forever();
-
-alarm( 0 );
-
-is( $writeready, 1, '$writeready after loop_forever' );
-
-$loop->unwatch_io(
-   handle => \*STDOUT,
-   on_write_ready => 1,
-);
 
 # Removal
 

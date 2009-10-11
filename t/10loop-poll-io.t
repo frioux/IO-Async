@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 39;
+use Test::More tests => 35;
 use Test::Exception;
 use Test::Refcount;
 
@@ -98,40 +98,6 @@ $ready = $loop->loop_once( 0.1 );
 
 is( $ready, 1, '$ready after loop_once' );
 is( $writeready, 1, '$writeready after loop_once' );
-
-# loop_forever
-
-$loop->watch_io(
-   handle => \*STDOUT,
-   on_write_ready => sub { $loop->loop_stop() },
-);
-
-@handles = $poll->handles();
-# We can't guarantee the order here, but we can get 'sort' to do that
-is_deeply( [ sort @handles ],
-           [ sort ( $S1, \*STDOUT ) ],
-           '@handles after watching STDOUT' );
-
-$writeready = 0;
-
-$SIG{ALRM} = sub { die "Test timed out"; };
-alarm( 1 );
-
-$loop->loop_forever();
-
-alarm( 0 );
-
-is( $writeready, 1, '$writeready after loop_forever' );
-
-$loop->unwatch_io(
-   handle => \*STDOUT,
-   on_write_ready => 1,
-);
-
-is_oneref( $loop, '$loop has refcount 1 after removing cyclic iowatch' );
-
-@handles = $poll->handles();
-is_deeply( \@handles, [ $S1 ], '@handles after unwatching STDOUT' );
 
 # HUP
 
