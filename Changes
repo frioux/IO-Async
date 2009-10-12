@@ -1,5 +1,20 @@
 Revision history for IO-Async
 
+0.24    ADDITIONS:
+         * Timer subclasses - Countdown and Periodic
+         * Idleness event watching via low-level 'watch_io/unwatch_io' methods
+           and higher-level 'later' method
+         * Added the missing 'unwatch_child' method
+         * Shareable acceptance testing suite for IO::Async::Loop subclasses
+           for better testing in subclass implementations
+
+        CHANGES:
+         * More future-proof API version checking for subclasses - requires
+           subclasses to declare their version. 
+           ### pre-0.24 Loop subclasses are no longer compatible. ###
+         * Entirely remove the need to $loop->enable_childmanager by calling
+           waitpid() in 'watch_child'.
+
 0.23    CHANGES:
          * Rearranged IO::Async::Listener to be a constructable Notifier
            suclass

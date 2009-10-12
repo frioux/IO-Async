@@ -8,8 +8,8 @@ package IO::Async::Loop;
 use strict;
 use warnings;
 
-our $VERSION = '0.23';
-use constant NEED_API_VERSION => '0.23';
+our $VERSION = '0.24';
+use constant NEED_API_VERSION => '0.24';
 
 use Carp;
 
@@ -935,11 +935,11 @@ required API. This method should return the API version that the loop
 implementation supports. The magic constructor will use that class, provided
 it declares a version at least as new as the version documented here.
 
-The current API version is C<0.23>.
+The current API version is C<0.24>.
 
 This method may be implemented using C<constant>; e.g
 
- use constant API_VERSION => '0.23';
+ use constant API_VERSION => '0.24';
 
 =cut
 
