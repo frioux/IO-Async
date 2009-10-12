@@ -25,11 +25,6 @@ use Time::HiRes qw( time );
 our $VERSION = '0.23';
 
 # Abstract Units of Time
-# Normally 1 second, except if the environment variable TEST_QUICK_TIMERS is
-# set. This allows timing-based tests to run quicker during development runs
-# Slower timers are preferred for smoke testers to guard against false
-# negatives causing tests to fail simply because of scheduling delays or high
-# system load
 use constant AUT => $ENV{TEST_QUICK_TIMERS} ? 0.1 : 1;
 
 # The loop under test. We keep it in a single lexical here, so we can use
@@ -42,7 +37,8 @@ C<IO::Async::LoopTests> - acceptance testing for C<IO::Async::Loop> subclasses
 
 =head1 SYNOPSIS
 
- TODO
+ use IO::Async::LoopTests;
+ run_tests( 'IO::Async::Loop::Shiney', 'io' );
 
 =head1 DESCRIPTION
 
@@ -50,6 +46,19 @@ This module contains a collection of test functions for running acceptance
 tests on L<IO::Async::Loop> subclasses. It is provided as a facility for
 authors of such subclasses to ensure that the code conforms to the Loop API
 required by C<IO::Async>.
+
+=head1 TIMING
+
+Certain tests require the use of timers or timed delays. Normally these are
+counted in units of seconds. By setting the environment variable
+C<TEST_QUICK_TIMERS> to some true value, these timers run 10 times quicker,
+being measured in units of 0.1 seconds instead. This value may be useful when
+running the tests interactively, to avoid them taking too long. The slower
+timers are preferred on automated smoke-testing machines, to help guard
+against false negatives reported simply because of scheduling delays or high
+system load while testing.
+
+ TEST_QUICK_TIMERS=1 ./Build test
 
 =cut
 
@@ -129,7 +138,7 @@ argument to C<run_tests>:
 
 =cut
 
-=head1 io
+=head2 io
 
 Tests the Loop's ability to watch filehandles for IO readiness
 
