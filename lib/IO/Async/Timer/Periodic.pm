@@ -31,7 +31,6 @@ C<IO::Async::Timer::Periodic> - event callback at regular intervals
 
     on_tick => sub {
        print "You've had a minute\n";
-       $loop->loop_stop;
     },
  );
 
