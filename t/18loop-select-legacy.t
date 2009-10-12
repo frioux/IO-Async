@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 9;
+use Test::More tests => 24;
 
 use Time::HiRes qw( time );
 
@@ -12,12 +12,87 @@ use constant AUT => $ENV{TEST_QUICK_TIMERS} ? 0.1 : 1;
 
 my $loop = IO::Async::Loop::Select->new();
 
+my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
+
+# Need sockets in nonblocking mode
+$S1->blocking( 0 );
+$S2->blocking( 0 );
+
+my $testvec = '';
+vec( $testvec, $S1->fileno, 1 ) = 1;
+
 my ( $rvec, $wvec, $evec ) = ('') x 3;
 my $timeout;
 
+# Empty
+
 $loop->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
+is( $rvec, '', '$rvec idling pre_select' );
+is( $wvec, '', '$wvec idling pre_select' );
+is( $evec, '', '$evec idling pre_select' );
 is( $timeout, undef, '$timeout idling pre_select' );
 
+# watch_io
+
+my $readready = 0;
+$loop->watch_io(
+   handle => $S1,
+   on_read_ready => sub { $readready = 1 },
+);
+
+$loop->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
+
+is( $rvec, $testvec, '$rvec readready pre_select' );
+is( $wvec, '',       '$wvec readready pre_select' );
+is( $evec, '',       '$evec readready pre_select' );
+is( $timeout, undef, '$timeout readready pre_select' );
+
+is( $readready,  0, '$readready readready pre_select' );
+
+$rvec = $testvec;
+$wvec = '';
+$evec = '';
+
+$loop->post_select( $rvec, $wvec, $evec );
+
+is( $readready,  1, '$readready readready post_select' );
+
+$loop->unwatch_io(
+   handle => $S1,
+   on_read_ready => 1,
+);
+
+my $writeready = 0;
+$loop->watch_io(
+   handle => $S1,
+   on_write_ready => sub { $writeready = 1 },
+);
+
+$loop->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
+
+is( $rvec, $testvec, '$rvec writeready pre_select' );
+is( $wvec, $testvec, '$wvec writeready pre_select' );
+is( $evec, '',       '$evec writeready pre_select' );
+is( $timeout, undef, '$timeout writeready pre_select' );
+
+is( $writeready, 0, '$writeready writeready pre_select' );
+
+$rvec = '';
+$wvec = $testvec;
+$evec = '';
+
+$loop->post_select( $rvec, $wvec, $evec );
+
+is( $writeready, 1, '$writeready writeready post_select' );
+
+$loop->unwatch_io(
+   handle => $S1,
+   on_write_ready => 1,
+);
+
+# watch_timer
+
+$rvec = $wvec = $evec = '';
 $timeout = 5 * AUT;
 
 $loop->pre_select( \$rvec, \$wvec, \$evec, \$timeout );

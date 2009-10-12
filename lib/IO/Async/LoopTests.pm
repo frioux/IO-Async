@@ -129,6 +129,107 @@ argument to C<run_tests>:
 
 =cut
 
+=head1 io
+
+Tests the Loop's ability to watch filehandles for IO readiness
+
+=cut
+
+use constant count_tests_io => 10;
+sub run_tests_io
+{
+   my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
+
+   $_->blocking( 0 ) for $S1, $S2;
+
+   my $readready  = 0;
+   my $writeready = 0;
+
+   $loop->watch_io(
+      handle => $S1,
+      on_read_ready => sub { $readready = 1 },
+   );
+
+   is_oneref( $loop, '$loop has refcount 1 after watch_io on_read_ready' );
+   is( $readready, 0, '$readready still 0 before ->loop_once' );
+
+   $loop->loop_once( 0.1 );
+
+   is( $readready, 0, '$readready when idle' );
+
+   $S2->syswrite( "data\n" );
+
+   # We should still wait a little while even thought we expect to be ready
+   # immediately, because talking to ourself with 0 poll timeout is a race
+   # condition - we can still race with the kernel.
+
+   $loop->loop_once( 0.1 );
+
+   is( $readready, 1, '$readready after loop_once' );
+
+   # Ready $S1 to clear the data
+   $S1->getline(); # ignore return
+
+   $loop->watch_io(
+      handle => $S1,
+      on_write_ready => sub { $writeready = 1 },
+   );
+
+   is_oneref( $loop, '$loop has refcount 1 after watch_io on_write_ready' );
+
+   $loop->loop_once( 0.1 );
+
+   is( $writeready, 1, '$writeready after loop_once' );
+
+   $loop->unwatch_io(
+      handle => $S1,
+      on_write_ready => 1,
+   );
+
+   $readready = 0;
+   $loop->loop_once( 0.1 );
+
+   is( $readready, 0, '$readready before HUP' );
+
+   close( $S2 );
+
+   $readready = 0;
+   $loop->loop_once( 0.1 );
+
+   is( $readready, 1, '$readready after HUP' );
+
+   $loop->unwatch_io(
+      handle => $S1,
+      on_read_ready => 1,
+   );
+
+   # HUP of pipe - can be different to sockets on some architectures
+
+   my ( $P1, $P2 ) = $loop->pipepair() or die "Cannot pipepair - $!";
+
+   $loop->watch_io(
+      handle => $P1,
+      on_read_ready => sub { $readready = 1 },
+   );
+
+   $readready = 0;
+   $loop->loop_once( 0.1 );
+
+   is( $readready, 0, '$readready before pipe HUP' );
+
+   close( $P2 );
+
+   $readready = 0;
+   $loop->loop_once( 0.1 );
+
+   is( $readready, 1, '$readready after pipe HUP' );
+
+   $loop->unwatch_io(
+      handle => $P1,
+      on_read_ready => 1,
+   );
+}
+
 =head2 timer
 
 Tests the Loop's ability to handle timer events
