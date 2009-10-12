@@ -129,6 +129,66 @@ argument to C<run_tests>:
 
 =cut
 
+=head2 timer
+
+Tests the Loop's ability to handle timer events
+
+=cut
+
+use constant count_tests_timer => 8;
+sub run_tests_timer
+{
+   my $done = 0;
+
+   $loop->enqueue_timer( delay => 2 * AUT, code => sub { $done = 1; } );
+
+   is_oneref( $loop, '$loop has refcount 1 after enqueue_timer' );
+
+   time_between {
+      my $now = time;
+      $loop->loop_once( 5 * AUT );
+
+      # poll() might have returned just a little early, such that the TimerQueue
+      # doesn't think anything is ready yet. We need to handle that case.
+      while( !$done ) {
+         die "It should have been ready by now" if( time - $now > 5 * AUT );
+         $loop->loop_once( 0.1 * AUT );
+      }
+   } 1.9, 2.5, 'loop_once(5) while waiting for timer';
+
+   my $cancelled_fired = 0;
+   my $id = $loop->enqueue_timer( delay => 1 * AUT, code => sub { $cancelled_fired = 1 } );
+   $loop->cancel_timer( $id );
+   undef $id;
+
+   $loop->loop_once( 2 * AUT );
+
+   ok( !$cancelled_fired, 'cancelled timer does not fire' );
+
+   $id = $loop->enqueue_timer( delay => 1 * AUT, code => sub { $done = 2; } );
+   $id = $loop->requeue_timer( $id, delay => 2 * AUT );
+
+   $done = 0;
+
+   time_between {
+      $loop->loop_once( 1 * AUT );
+
+      is( $done, 0, '$done still 0 so far' );
+
+      my $now = time;
+      $loop->loop_once( 5 * AUT );
+
+      # poll() might have returned just a little early, such that the TimerQueue
+      # doesn't think anything is ready yet. We need to handle that case.
+      while( !$done ) {
+         die "It should have been ready by now" if( time - $now > 5 * AUT );
+         $loop->loop_once( 0.1 * AUT );
+      }
+   } 1.9, 2.5, 'requeued timer of delay 2';
+
+   is( $done, 2, '$done is 2 after requeued timer' );
+}
+
 =head2 signal
 
 Tests the Loop's ability to watch POSIX signals
