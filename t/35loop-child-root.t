@@ -65,9 +65,9 @@ my $child_out;
 $loop->run_child(
    code => sub {
       print "EUID: $>\n";
-      my ( $gid, $groups ) = split( m/ /, $), 2 );
+      my ( $gid, @groups ) = split( m/ /, $) );
       print "EGID: $gid\n";
-      print "Groups: $groups\n";
+      print "Groups: " . join( " ", sort { $a <=> $b } @groups ) . "\n";
       return 0;
    },
    setup => [
