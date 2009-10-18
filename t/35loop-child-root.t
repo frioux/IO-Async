@@ -71,8 +71,8 @@ $loop->run_child(
       return 0;
    },
    setup => [
-      setgroups => [ 4, 5, 6, 10 ],
       setgid    => 10,
+      setgroups => [ 4, 5, 6, 10 ],
       setuid    => 20,
    ],
    on_finish => sub { ( undef, $exitcode, $child_out ) = @_; },

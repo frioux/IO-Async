@@ -408,6 +408,9 @@ On most systems, only the privileged superuser change user or group IDs.
 C<IO::Async> will B<NOT> check before detaching the child process whether
 this is the case.
 
+If setting both the primary GID and the supplementary groups list, it is
+suggested to set the primary GID first.
+
 =back
 
 If no directions for what to do with C<stdin>, C<stdout> and C<stderr> are
@@ -430,6 +433,8 @@ sub _check_setup_and_canonicise
    return () if !@$setup;
 
    my @setup;
+
+   my $has_setgroups;
 
    foreach my $i ( 0 .. $#$setup / 2 ) {
       my ( $key, $value ) = @$setup[$i*2, $i*2 + 1];
@@ -480,10 +485,12 @@ sub _check_setup_and_canonicise
       }
       elsif( $key eq "setgid" ) {
          $value =~ m/^\d+$/ or croak "Expected integer for 'setgid' setup key";
+         $has_setgroups and carp "It is suggested to 'setgid' before 'setgroups'";
       }
       elsif( $key eq "setgroups" ) {
          ref $value eq "ARRAY" or croak "Expected ARRAY reference for 'setgroups' setup key";
          m/^\d+$/ or croak "Expected integer in 'setgroups' array" for @$value;
+         $has_setgroups = 1;
       }
       else {
          croak "Unrecognised setup operation '$key'";
