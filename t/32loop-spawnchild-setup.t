@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 107;
+use Test::More tests => 112;
 use Test::Exception;
 
 use File::Temp qw( tmpnam );
@@ -286,6 +286,26 @@ my $ret;
 
    is( $ret, 11,               '$pipe_r->read() after pipe dup to stdout and stderr same pipe' );
    is( $buffer, 'outputerror', '$buffer after pipe dup to stdout and stderr same pipe' );
+}
+
+{
+   my ( $child_r, $my_w, $my_r, $child_w ) = $loop->pipequad() or die "Cannot pipequad - $!";
+
+   $my_w->syswrite( "hello\n" );
+
+   TEST "pipe quad to fd0/fd1",
+      setup => [ stdin  => $child_r,
+                 stdout => $child_w, ],
+      code => sub { print uc scalar <STDIN>; return 0 },
+
+      exitstatus => 0,
+      dollarat   => '';
+
+   my $buffer;
+   $ret = read_timeout( $my_r, $buffer, 6, 0.1 );
+
+   is( $ret, 6,            '$my_r->read() after pipe quad to fd0/fd1' );
+   is( $buffer, "HELLO\n", '$buffer after pipe quad to fd0/fd1' );
 }
 
 TEST "stdout close",

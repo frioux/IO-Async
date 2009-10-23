@@ -457,7 +457,7 @@ sub _check_setup_and_canonicise
          elsif( $ref eq "ARRAY" ) {
             # Already OK
          }
-         elsif( $ref eq "GLOB" ) {
+         elsif( $ref eq "GLOB" or eval { $value->isa( "IO::Handle" ) } ) {
             $value = [ 'dup', $value ];
          }
          else {
