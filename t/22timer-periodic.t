@@ -17,9 +17,13 @@ use IO::Async::Loop::Poll;
 use constant AUT => $ENV{TEST_QUICK_TIMERS} ? 0.1 : 1;
 
 # Kindof like Test::Timer only we use Time::HiRes
-sub time_between
+# We'll be quite lenient on the time taken, in case of heavy test machine load
+sub time_about
 {
-   my ( $code, $lower, $upper, $name ) = @_;
+   my ( $code, $target, $name ) = @_;
+
+   my $lower = $target*0.75;
+   my $upper = $target*1.5 + 1;
 
    my $now = time;
    $code->();
@@ -56,13 +60,11 @@ is_refcount( $timer, 2, '$timer has refcount 2 after starting' );
 
 ok( $timer->is_running, 'Started Timer is running' );
 
-time_between( sub { wait_for { $tick == 1 } },
-   1.5, 2.5, 'Timer works' );
+time_about( sub { wait_for { $tick == 1 } }, 2, 'Timer works' );
 
 ok( $timer->is_running, 'Timer is still running' );
 
-time_between( sub { wait_for { $tick == 2 } },
-   1.5, 2.5, 'Timer works a second time' );
+time_about( sub { wait_for { $tick == 2 } }, 2, 'Timer works a second time' );
 
 $loop->loop_once( 1 * AUT );
 
@@ -86,8 +88,7 @@ $timer->configure( interval => 1 * AUT );
 
 $timer->start;
 
-time_between( sub { wait_for { $tick == 3 } },
-   0.5, 1.5, 'Reconfigured timer interval works' );
+time_about( sub { wait_for { $tick == 3 } }, 1, 'Reconfigured timer interval works' );
 
 dies_ok( sub { $timer->configure( interval => 5 ); },
          'Configure a running timer fails' );
@@ -121,8 +122,7 @@ is_refcount( $timer, 2, 'subclass $timer has refcount 2 after starting' );
 
 ok( $timer->is_running, 'Started subclass Timer is running' );
 
-time_between( sub { wait_for { $sub_tick == 1 } },
-   1.5, 2.5, 'subclass Timer works' );
+time_about( sub { wait_for { $sub_tick == 1 } }, 2, 'subclass Timer works' );
 
 is_refcount( $timer, 2, 'subclass $timer has refcount 2 before removing from Loop' );
 

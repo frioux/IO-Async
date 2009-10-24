@@ -102,7 +102,7 @@ my $done = 0;
 $loop->enqueue_timer( delay => 2 * AUT, code => sub { $done = 1; } );
 
 $loop->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
-cmp_ok( $timeout/AUT, '>', 1.9, '$timeout while timer waiting pre_select at least 1.9' );
+cmp_ok( $timeout/AUT, '>', 1.7, '$timeout while timer waiting pre_select at least 1.7' );
 cmp_ok( $timeout/AUT, '<', 2.5, '$timeout while timer waiting pre_select at least 2.5' );
 
 my ( $now, $took );
@@ -111,7 +111,7 @@ $now = time;
 select( $rvec, $wvec, $evec, $timeout );
 $took = (time - $now) / AUT;
 
-cmp_ok( $took, '>', 1.9, 'loop_once(5) while waiting for timer takes at least 1.9 seconds' );
+cmp_ok( $took, '>', 1.7, 'loop_once(5) while waiting for timer takes at least 1.7 seconds' );
 cmp_ok( $took, '<', 10, 'loop_once(5) while waiting for timer no more than 10 seconds' );
 if( $took > 2.5 ) {
    diag( "took more than 2.5 seconds to select().\n" .

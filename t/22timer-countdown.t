@@ -17,9 +17,13 @@ use IO::Async::Loop::Poll;
 use constant AUT => $ENV{TEST_QUICK_TIMERS} ? 0.1 : 1;
 
 # Kindof like Test::Timer only we use Time::HiRes
-sub time_between
+# We'll be quite lenient on the time taken, in case of heavy test machine load
+sub time_about
 {
-   my ( $code, $lower, $upper, $name ) = @_;
+   my ( $code, $target, $name ) = @_;
+
+   my $lower = $target*0.75;
+   my $upper = $target*1.5 + 1;
 
    my $now = time;
    $code->();
@@ -56,8 +60,7 @@ is_refcount( $timer, 2, '$timer has refcount 2 after starting' );
 
 ok( $timer->is_running, 'Started Timer is running' );
 
-time_between( sub { wait_for { $expired } },
-   1.5, 2.5, 'Timer works' );
+time_about( sub { wait_for { $expired } }, 2, 'Timer works' );
 
 ok( !$timer->is_running, 'Expired Timer is no longer running' );
 
@@ -73,8 +76,7 @@ $loop->add( $timer );
 
 $timer->start;
 
-time_between( sub { wait_for { $expired } },
-   1.5, 2.5, 'Timer works a second time' );
+time_about( sub { wait_for { $expired } }, 2, 'Timer works a second time' );
 
 undef $expired;
 $timer->start;
@@ -120,24 +122,21 @@ $loop->add( $timer );
 
 ok( $timer->is_running, 'Pre-started Timer is running after adding' );
 
-time_between( sub { wait_for { $expired } },
-   1.5, 2.5, 'Pre-started Timer works' );
+time_about( sub { wait_for { $expired } }, 2, 'Pre-started Timer works' );
 
 $timer->configure( delay => 1 * AUT );
 
 undef $expired;
 $timer->start;
 
-time_between( sub { wait_for { $expired } },
-   0.5, 1.5, 'Reconfigured timer delay works' );
+time_about( sub { wait_for { $expired } }, 1, 'Reconfigured timer delay works' );
 
 my $new_expired;
 $timer->configure( on_expire => sub { $new_expired = 1 } );
 
 $timer->start;
 
-time_between( sub { wait_for { $new_expired } },
-   0.5, 1.5, 'Reconfigured timer on_expire works' );
+time_about( sub { wait_for { $new_expired } }, 1, 'Reconfigured timer on_expire works' );
 
 $timer->start;
 dies_ok( sub { $timer->configure( delay => 5 ); },
@@ -172,8 +171,7 @@ is_refcount( $timer, 2, 'subclass $timer has refcount 2 after starting' );
 
 ok( $timer->is_running, 'Started subclass Timer is running' );
 
-time_between( sub { wait_for { $sub_expired } },
-   1.5, 2.5, 'subclass Timer works' );
+time_about( sub { wait_for { $sub_expired } }, 2, 'subclass Timer works' );
 
 ok( !$timer->is_running, 'Expired subclass Timer is no longer running' );
 

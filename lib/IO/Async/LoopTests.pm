@@ -264,7 +264,7 @@ sub run_tests_timer
          die "It should have been ready by now" if( time - $now > 5 * AUT );
          $loop->loop_once( 0.1 * AUT );
       }
-   } 1.9, 2.5, 'loop_once(5) while waiting for timer';
+   } 1.5, 2.5, 'loop_once(5) while waiting for timer';
 
    my $cancelled_fired = 0;
    my $id = $loop->enqueue_timer( delay => 1 * AUT, code => sub { $cancelled_fired = 1 } );
@@ -294,7 +294,7 @@ sub run_tests_timer
          die "It should have been ready by now" if( time - $now > 5 * AUT );
          $loop->loop_once( 0.1 * AUT );
       }
-   } 1.9, 2.5, 'requeued timer of delay 2';
+   } 1.5, 2.5, 'requeued timer of delay 2';
 
    is( $done, 2, '$done is 2 after requeued timer' );
 }
@@ -399,7 +399,7 @@ sub run_tests_idle
 
    $loop->unwatch_idle( $id );
 
-   time_between { $loop->loop_once( 1 * AUT ) } 0.9, 1.1, 'loop_once(1) with unwatched deferral';
+   time_between { $loop->loop_once( 1 * AUT ) } 0.5, 1.5, 'loop_once(1) with unwatched deferral';
 
    is( $called, 2, 'unwatched deferral not called' );
 
@@ -468,7 +468,7 @@ Tests that the C<loop_once> and C<loop_forever> methods behave correctly
 use constant count_tests_control => 3;
 sub run_tests_control
 {
-   time_between { $loop->loop_once( 2 * AUT ) } 1.9, 2.5, 'loop_once(2) when idle';
+   time_between { $loop->loop_once( 2 * AUT ) } 1.5, 2.5, 'loop_once(2) when idle';
 
    $loop->later( sub { $loop->loop_stop } );
 
