@@ -439,6 +439,11 @@ sub run_tests_child
    ok( WIFEXITED($exitcode),      'WIFEXITED($exitcode) after child exit' );
    is( WEXITSTATUS($exitcode), 3, 'WEXITSTATUS($exitcode) after child exit' );
 
+   # We require that SIGTERM perform its default action; i.e. terminate the
+   # process. Ensure this definitely happens, in case the test harness has it
+   # ignored or handled elsewhere.
+   local $SIG{TERM} = "DEFAULT";
+
    $kid = fork();
    defined $kid or die "Cannot fork() - $!";
 
