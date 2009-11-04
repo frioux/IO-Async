@@ -1,5 +1,15 @@
 Revision history for IO-Async
 
+0.25    CHANGES:
+         * Accept 'stream'/'dgram'/'raw' as symbolic shortcuts for socket
+           types in connect/listen operations - avoids 'use Socket'
+         * Accept IO::Handle-derived objects in ChildManager setup keys as
+           well as raw GLOB refs
+
+        BUGFIXES:
+         * Various changes to test scripts to hopefully improve portability or
+           reliability during smoke tests
+
 0.24    ADDITIONS:
          * Timer subclasses - Countdown and Periodic
          * Idleness event watching via low-level 'watch_io/unwatch_io' methods
