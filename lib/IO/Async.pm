@@ -23,14 +23,12 @@ C<IO::Async> - perform asynchronous filehandle IO and other operations
  use IO::Async::Stream;
  use IO::Async::Loop;
 
- use Socket qw( SOCK_STREAM );
-
  my $loop = IO::Async::Loop->new();
 
  $loop->connect(
     host     => "some.other.host",
     service  => 12345,
-    socktype => SOCK_STREAM,
+    socktype => 'stream',
 
     on_connected => sub {
        my ( $socket ) = @_;

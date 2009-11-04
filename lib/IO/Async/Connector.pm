@@ -23,15 +23,13 @@ C<IO::Async::Connector> - perform non-blocking socket connections
 
 This object is used indirectly via an C<IO::Async::Loop>:
 
- use Socket qw( SOCK_STREAM );
-
  use IO::Async::Loop;
  my $loop = IO::Async::Loop->new();
 
  $loop->connect(
     host     => "www.example.com",
     service  => "http",
-    socktype => SOCK_STREAM,
+    socktype => 'stream',
 
     on_connected => sub {
        my ( $sock ) = @_;
@@ -277,6 +275,13 @@ The hostname and service name to connect to.
 
 Optional. Other arguments to pass along with C<host> and C<service> to the
 C<getaddrinfo()> call.
+
+=item socktype => STRING
+
+Optionally may instead be one of the values C<'stream'>, C<'dgram'> or
+C<'raw'> to stand for C<SOCK_STREAM>, C<SOCK_DGRAM> or C<SOCK_RAW>. This
+utility is provided to allow the caller to avoid a separate C<use Socket> only
+for importing these constants.
 
 =item on_resolve_error => CODE
 

@@ -11,6 +11,7 @@ use warnings;
 our $VERSION = '0.24';
 
 use Socket::GetAddrInfo qw( :Socket6api getaddrinfo getnameinfo );
+use Socket qw( SOCK_STREAM SOCK_DGRAM SOCK_RAW );
 
 use Carp;
 
@@ -249,9 +250,15 @@ tuples of 5 values. The C<getnameinfo> resolver returns its result unchanged.
 =cut
 
 register_resolver( 'getaddrinfo', sub {
-   my @args = @_;
+   my ( $host, $service, $family, $socktype, $protocol, $flags ) = @_;
 
-   my @res = getaddrinfo( @args );
+   if( defined $socktype ) {
+      $socktype = SOCK_STREAM if $socktype eq 'stream';
+      $socktype = SOCK_DGRAM  if $socktype eq 'dgram';
+      $socktype = SOCK_RAW    if $socktype eq 'raw';
+   }
+
+   my @res = getaddrinfo( $host, $service, $family, $socktype, $protocol, $flags );
 
    # getaddrinfo() uses a 1-element list as an error value
    die "$res[0]\n" if @res == 1;

@@ -57,7 +57,7 @@ undef $notifier;
 
 $loop->listen(
    family   => AF_INET,
-   socktype => SOCK_STREAM,
+   socktype => 'stream',
    service  => 0, # Ask the kernel to allocate a port for us
    host     => "localhost",
 
@@ -125,7 +125,7 @@ SKIP: {
 
    $loop->listen(
       family   => AF_INET,
-      socktype => SOCK_STREAM,
+      socktype => 'stream',
       service  => $badport,
 
       on_resolve_error => sub { die "Test died early - resolve error $_[0]\n"; },

@@ -26,8 +26,6 @@ C<IO::Async::Listener> - listen on network sockets for incoming connections
 
 =head1 SYNOPSIS
 
- use Socket qw( SOCK_STREAM );
-
  use IO::Async::Listener;
  use IO::Async::Stream;
 
@@ -55,7 +53,7 @@ C<IO::Async::Listener> - listen on network sockets for incoming connections
 
  $listener->listen(
     service  => "echo",
-    socktype => SOCK_STREAM,
+    socktype => 'stream',
 
     on_resolve_error => sub { print STDERR "Cannot resolve - $_[0]\n"; },
     on_listen_error  => sub { print STDERR "Cannot listen\n"; },
@@ -65,8 +63,6 @@ C<IO::Async::Listener> - listen on network sockets for incoming connections
 
 This object can also be used indirectly via an C<IO::Async::Loop>:
 
- use Socket qw( SOCK_STREAM );
-
  use IO::Async::Stream;
 
  use IO::Async::Loop;
@@ -74,7 +70,7 @@ This object can also be used indirectly via an C<IO::Async::Loop>:
 
  $loop->listen(
     service  => "echo",
-    socktype => SOCK_STREAM,
+    socktype => 'stream',
 
     on_accept => sub {
        ...
@@ -277,6 +273,13 @@ supplied.
 
 Optional. Other arguments to pass along with C<host> and C<service> to the
 C<getaddrinfo()> call.
+
+=item socktype => STRING
+
+Optionally may instead be one of the values C<'stream'>, C<'dgram'> or
+C<'raw'> to stand for C<SOCK_STREAM>, C<SOCK_DGRAM> or C<SOCK_RAW>. This
+utility is provided to allow the caller to avoid a separate C<use Socket> only
+for importing these constants.
 
 =item on_resolve_error => CODE
 
