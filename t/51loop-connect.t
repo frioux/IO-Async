@@ -57,24 +57,29 @@ is( $sock->peername, $addr, 'by host/service: $sock->getpeername is $addr' );
 $listensock->accept; # Throw it away
 undef $sock; # This too
 
-# Now try an address we know to be invalid - a UNIX socket that doesn't exist
+SKIP: {
+   # Now try an address we know to be invalid - a UNIX socket that doesn't exist
 
-my $error;
+   socket( my $dummy, AF_UNIX, SOCK_STREAM, 0 ) or
+      skip "Cannot create AF_UNIX sockets - $!", 2;
 
-my $failop;
-my $failerr;
+   my $error;
 
-$loop->connect(
-   addr => [ AF_UNIX, SOCK_STREAM, 0, pack_sockaddr_un( "/some/path/we/know/breaks" ) ],
-   on_connected => sub { die "Test died early - connect succeeded\n"; },
-   on_fail => sub { $failop = shift @_; $failerr = pop @_; },
-   on_connect_error => sub { $error = 1 },
-);
+   my $failop;
+   my $failerr;
 
-wait_for { $error };
+   $loop->connect(
+      addr => [ AF_UNIX, SOCK_STREAM, 0, pack_sockaddr_un( "/some/path/we/know/breaks" ) ],
+      on_connected => sub { die "Test died early - connect succeeded\n"; },
+      on_fail => sub { $failop = shift @_; $failerr = pop @_; },
+      on_connect_error => sub { $error = 1 },
+   );
 
-is( $failop, "connect", '$failop is connect' );
-is( $failerr+0, ENOENT, '$failerr is ENOENT' );
+   wait_for { $error };
+
+   is( $failop, "connect", '$failop is connect' );
+   is( $failerr+0, ENOENT, '$failerr is ENOENT' );
+}
 
 # UNIX sockets always connect() synchronously, meaning if they fail, the error
 # is available immediately. The above has therefore not properly tested
@@ -98,10 +103,10 @@ foreach ( 1 .. 100 ) {
 SKIP: {
    skip "Cannot find an un-connect()able socket on 127.0.0.1", 2 unless defined $port;
 
-   undef $failop;
-   undef $failerr;
+   my $failop;
+   my $failerr;
 
-   $error = 0;
+   my $error = 0;
 
    $loop->connect(
       addr => [ AF_INET, SOCK_STREAM, 0, pack_sockaddr_in( $port, inet_aton("127.0.0.1") ) ],
