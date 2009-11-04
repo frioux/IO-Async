@@ -80,7 +80,7 @@ $loop->add( $listener );
 
 is_refcount( $listener, 2, 'subclass $listener has refcount 2 after adding to Loop' );
 
-$clientsock = IO::Socket::INET->new( Type => SOCK_STREAM )
+$clientsock = IO::Socket::INET->new( LocalAddr => "127.0.0.1", Type => SOCK_STREAM )
    or die "Cannot socket() - $!";
 
 $clientsock->connect( $listensock->sockname ) or die "Cannot connect() - $!";
