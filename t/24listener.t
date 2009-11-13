@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 22;
+use Test::More tests => 25;
 use Test::Refcount;
 
 use IO::Async::Loop::Poll;
@@ -119,13 +119,21 @@ $listener->listen(
 
 ok( $listener->is_listening, '$listener is_listening' );
 
+my $sockname = $listener->sockname;
+ok( defined $sockname, 'defined $sockname' );
+
+my ( $port, $sinaddr ) = unpack_sockaddr_in( $sockname );
+
+ok( $port > 0, 'socket listens on some defined port number' );
+is( $sinaddr, INADDR_ANY, 'socket listens on INADDR_ANY' );
+
 is( $listen_self, $listener, '$listen_self is $listener' );
 undef $listen_self; # for refcount
 
 $clientsock = IO::Socket::INET->new( Type => SOCK_STREAM )
    or die "Cannot socket() - $!";
 
-$clientsock->connect( $listener->sockname ) or die "Cannot connect() - $!";
+$clientsock->connect( pack_sockaddr_in( $port, INADDR_LOOPBACK ) ) or die "Cannot connect() - $!";
 
 ok( defined $clientsock->peername, '$clientsock is connected' );
 
