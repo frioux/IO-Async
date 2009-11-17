@@ -141,30 +141,23 @@ sub post_poll
    my $iowatches = $self->{iowatches};
    my $poll      = $self->{poll};
 
-   # Build a list of the callbacks to fire, then fire them afterwards.
-   # This avoids races and other bad effects if any of the callbacks happen
-   # to change any state.
-   my @ready;
+   my $count = 0;
 
    foreach my $fd ( keys %$iowatches ) {
-      my $watch = $iowatches->{$fd};
+      my $watch = $iowatches->{$fd} or next;
 
       my $events = $poll->events( $watch->[0] );
 
       # We have to test separately because kernel doesn't report POLLIN when
       # a pipe gets closed.
       if( $events & (POLLIN|POLLHUP) ) {
-         push @ready, $watch->[1] if defined $watch->[1];
+         $count++, $watch->[1]->() if defined $watch->[1];
       }
 
       if( $events & (POLLOUT|POLLHUP) ) {
-         push @ready, $watch->[2] if defined $watch->[2];
+         $count++, $watch->[2]->() if defined $watch->[2];
       }
    }
-
-   my $count = @ready;
-
-   $_->() foreach @ready;
 
    # Since we have no way to know if the timeout occured, we'll have to
    # attempt to fire any waiting timeout events anyway

@@ -157,10 +157,7 @@ sub post_select
 
    my $iowatches = $self->{iowatches};
 
-   # Build a list of the callbacks to fire, then fire them afterwards.
-   # This avoids races and other bad effects if any of the callbacks happen
-   # to change any state.
-   my @ready;
+   my $count = 0;
 
    foreach my $fd ( keys %$iowatches ) {
       my $watch = $iowatches->{$fd};
@@ -168,15 +165,13 @@ sub post_select
       my $fileno = $watch->[0]->fileno;
 
       if( vec( $readvec, $fileno, 1 ) ) {
-         push @ready, $watch->[1] if defined $watch->[1];
+         $count++, $watch->[1]->() if defined $watch->[1];
       }
 
       if( vec( $writevec, $fileno, 1 ) ) {
-         push @ready, $watch->[2] if defined $watch->[2];
+         $count++, $watch->[2]->() if defined $watch->[2];
       }
    }
-
-   $_->() foreach @ready;
 
    # Since we have no way to know if the timeout occured, we'll have to
    # attempt to fire any waiting timeout events anyway

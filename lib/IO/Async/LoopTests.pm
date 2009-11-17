@@ -144,7 +144,7 @@ Tests the Loop's ability to watch filehandles for IO readiness
 
 =cut
 
-use constant count_tests_io => 10;
+use constant count_tests_io => 11;
 sub run_tests_io
 {
    my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
@@ -237,6 +237,29 @@ sub run_tests_io
       handle => $P1,
       on_read_ready => 1,
    );
+
+   # Check that combined read/write handlers can cancel each other
+
+   ( $S1, $S2 ) = $loop->socketpair() or die "Cannot socketpair - $!";
+
+   my $callcount = 0;
+   $loop->watch_io(
+      handle => $S1,
+      on_read_ready => sub {
+         $callcount++;
+         $loop->unwatch_io( handle => $S1, on_read_ready => 1, on_write_ready => 1 );
+      },
+      on_write_ready => sub {
+         $callcount++;
+         $loop->unwatch_io( handle => $S1, on_read_ready => 1, on_write_ready => 1 );
+      },
+   );
+
+   $S2->close;
+
+   $loop->loop_once( 0.1 );
+
+   is( $callcount, 1, 'read/write_ready can cancel each other' );
 }
 
 =head2 timer

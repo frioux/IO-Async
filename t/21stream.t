@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 69;
+use Test::More tests => 71;
 use Test::Exception;
 use Test::Refcount;
 
@@ -417,6 +417,27 @@ is( $buffer2, "more text", 'stream-written text appears after reopen' );
 $loop->remove( $stream );
 
 undef $stream;
+
+{
+   my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot socketpair - $!";
+
+   my $stream = IO::Async::Stream->new(
+      handle => $S1,
+      on_read => sub { },
+   );
+
+   $stream->write( "hello" );
+
+   $loop->add( $stream );
+
+   is_refcount( $stream, 2, '$stream has two references' );
+   undef $stream; # Only ref is now in the Loop
+
+   $S2->close;
+
+   # $S1 should now be both read- and write-ready.
+   lives_ok sub { $loop->loop_once }, 'read+write-ready closed Stream doesn\'t die';
+}
 
 # Socket errors
 
