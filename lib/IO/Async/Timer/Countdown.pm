@@ -178,6 +178,52 @@ sub reset
 
 __END__
 
+=head1 EXAMPLES
+
+=head2 Watchdog Timer
+
+Because the C<reset> method restarts a running countdown timer back to its
+full period, it can be used to implement a watchdog timer. This is a timer
+which will not expire provided the method is called at least as often as it
+is configured. If the method fails to be called, the timer will eventually
+expire and run its callback.
+
+For example, to expire an accepted connection after 30 seconds of inactivity:
+
+ ...
+
+ on_accept => sub {
+    my ( $newclient ) = @_;
+
+    my $stream;
+
+    my $watchdog = IO::Async::Timer::Countdown->new(
+       delay => 30,
+
+       on_expire => sub { $stream->close },
+    );
+
+    my $stream = IO::Async::Stream->new(
+       handle => $newclient,
+
+       on_read => sub {
+          my ( $self, $buffref, $closed ) = @_;
+          $stream->reset;
+
+          ...
+       },
+
+       on_closed => sub {
+          $watchdog->stop;
+       },
+    ) );
+
+    $watchdog->start;
+
+    $loop->add( $stream );
+    $loop->add( $watchdog );
+ }
+
 =head1 AUTHOR
 
 Paul Evans <leonerd@leonerd.org.uk>
