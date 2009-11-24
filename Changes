@@ -1,5 +1,11 @@
 Revision history for IO-Async
 
+0.26    BUGFIXES:
+         * Connect to INADDR_LOOPBACK rather than INADDR_ANY during
+           t/24listener.t; hopefully fixes FAILs on OpenBSD
+         * Fix IO::Async::Stream during combined read/write-ready of a closed
+           stream
+
 0.25    CHANGES:
          * Accept 'stream'/'dgram'/'raw' as symbolic shortcuts for socket
            types in connect/listen operations - avoids 'use Socket'
