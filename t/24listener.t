@@ -39,7 +39,8 @@ isa_ok( $listener, "IO::Async::Notifier", '$listener isa IO::Async::Notifier' );
 is_oneref( $listener, '$listener has refcount 1 initially' );
 
 ok( $listener->is_listening, '$listener is_listening' );
-is( $listener->sockname, $listensock->sockname, '$listener->sockname' );
+is_deeply( [ unpack_sockaddr_in $listener->sockname ],
+           [ unpack_sockaddr_in $listensock->sockname ], '$listener->sockname' );
 
 $loop->add( $listener );
 
@@ -54,7 +55,8 @@ ok( defined $clientsock->peername, '$clientsock is connected' );
 
 wait_for { defined $newclient };
 
-is( $newclient->peername, $clientsock->sockname, '$newclient peer is correct' );
+is_deeply( [ unpack_sockaddr_in $newclient->peername ],
+           [ unpack_sockaddr_in $clientsock->sockname ], '$newclient peer is correct' );
 
 $loop->remove( $listener );
 
@@ -89,7 +91,8 @@ ok( defined $clientsock->peername, 'subclass $clientsock is connected' );
 
 wait_for { defined $sub_newclient };
 
-is( $sub_newclient->peername, $clientsock->sockname, '$sub_newclient peer is correct' );
+is_deeply( [ unpack_sockaddr_in $sub_newclient->peername ],
+           [ unpack_sockaddr_in $clientsock->sockname ], '$sub_newclient peer is correct' );
 
 $loop->remove( $listener );
 
@@ -139,7 +142,8 @@ ok( defined $clientsock->peername, '$clientsock is connected' );
 
 wait_for { defined $newclient };
 
-is( $newclient->peername, $clientsock->sockname, '$newclient peer is correct' );
+is_deeply( [ unpack_sockaddr_in $newclient->peername ],
+           [ unpack_sockaddr_in $clientsock->sockname ], '$newclient peer is correct' );
 
 is_refcount( $listener, 2, 'subclass $listener has refcount 2 before removing from Loop' );
 

@@ -33,7 +33,8 @@ $loop->connect(
 wait_for { $sock };
 
 isa_ok( $sock, "IO::Socket::INET", 'by addr: $sock isa IO::Socket::INET' );
-is( $sock->peername, $addr, 'by addr: $sock->getpeername is $addr' );
+is_deeply( [ unpack_sockaddr_in $sock->peername ],
+           [ unpack_sockaddr_in $addr ], 'by addr: $sock->getpeername is $addr' );
 
 $listensock->accept; # Throw it away
 undef $sock; # This too
@@ -52,7 +53,8 @@ $loop->connect(
 wait_for { $sock };
 
 isa_ok( $sock, "IO::Socket::INET", 'by host/service: $sock isa IO::Socket::INET' );
-is( $sock->peername, $addr, 'by host/service: $sock->getpeername is $addr' );
+is_deeply( [ unpack_sockaddr_in $sock->peername ],
+           [ unpack_sockaddr_in $addr ], 'by host/service: $sock->getpeername is $addr' );
 
 $listensock->accept; # Throw it away
 undef $sock; # This too

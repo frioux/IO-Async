@@ -48,7 +48,8 @@ ok( defined $clientsock->peername, '$clientsock is connected' );
 
 wait_for { defined $newclient };
 
-is( $newclient->peername, $clientsock->sockname, '$newclient peer is correct' );
+is_deeply( [ unpack_sockaddr_in $newclient->peername ],
+           [ unpack_sockaddr_in $clientsock->sockname ], '$newclient peer is correct' );
 
 undef $listensock;
 undef $clientsock;
@@ -101,7 +102,8 @@ wait_for { defined $newclient };
 
 isa_ok( $newclient, "IO::Socket::INET", '$newclient isa IO::Socket::INET' );
 
-is( $newclient->peername, $clientsock->sockname, '$newclient peer is correct' );
+is_deeply( [ unpack_sockaddr_in $newclient->peername ],
+           [ unpack_sockaddr_in $clientsock->sockname ], '$newclient peer is correct' );
 
 # Now we want to test failure. It's hard to know in a test script what will
 # definitely fail, but it's likely we're either running as non-root, or the
