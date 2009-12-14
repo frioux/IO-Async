@@ -474,7 +474,11 @@ sub attach_signal
 
    if( not $self->{sigattaches}->{$signal} ) {
       my @attaches;
-      $self->watch_signal( $signal, sub { $_->() for @attaches } );
+      $self->watch_signal( $signal, sub {
+         foreach my $attachment ( @attaches ) {
+            $attachment->();
+         }
+      } );
       $self->{sigattaches}->{$signal} = \@attaches;
    }
 
