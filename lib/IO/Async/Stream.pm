@@ -228,6 +228,16 @@ A CODE reference for when the writing data buffer becomes empty.
 
 A CODE reference for when the C<syswrite()> method on the write handle fails.
 
+=item autoflush => BOOL
+
+Optional. If true, the C<write> method will attempt to write data to the
+operating system immediately, without waiting for the loop to indicate the
+filehandle is write-ready. This is useful, for example, on streams that should
+contain up-to-date logging or console information.
+
+It currently defaults to false for any file handle, but future versions of
+C<IO::Async> may enable this by default on STDOUT and STDERR.
+
 =back
 
 If a read handle is given, it is required that either an C<on_read> callback
@@ -246,7 +256,7 @@ sub configure
    my $self = shift;
    my %params = @_;
 
-   for (qw( on_read on_outgoing_empty on_read_error on_write_error )) {
+   for (qw( on_read on_outgoing_empty on_read_error on_write_error autoflush )) {
       $self->{$_} = delete $params{$_} if exists $params{$_};
    }
 
@@ -341,6 +351,12 @@ A scalar containing data to write
 
 =back
 
+If the C<autoflush> option is set, this method will try immediately to write
+the data to the underlying filehandle. If this completes successfully then it
+will have been written by the time this method returns. If it fails to write
+completely, then the data is queued as if C<autoflush> were not set, and will
+be flushed later as normal by the C<on_write_ready()> method.
+
 =cut
 
 sub write
@@ -350,6 +366,25 @@ sub write
 
    carp "Cannot write data to a Stream that is closing" and return if $self->{stream_closing};
    croak "Cannot write data to a Stream with no write_handle" unless $self->write_handle;
+
+   if( $self->{autoflush} ) {
+      $data = $self->{writebuff} . $data if length $self->{writebuff};
+
+      my $handle = $self->write_handle;
+
+      while( length $data ) {
+         my $len = $handle->syswrite( $data, $WRITELEN );
+
+         last if !$len; # stop on any errors and defer back to the non-autoflush path
+
+         substr( $data, 0, $len ) = "";
+      }
+
+      if( !length $data ) {
+         $self->want_writeready( 0 );
+         return;
+      }
+   }
 
    $self->{writebuff} .= $data;
 

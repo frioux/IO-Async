@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 71;
+use Test::More tests => 75;
 use Test::Exception;
 use Test::Refcount;
 
@@ -240,6 +240,20 @@ ok( !$stream->want_writeready, 'want_writeready after loop_once' );
 is( $empty, 1, '$empty after writing buffer' );
 
 is( read_data( $S2 ), "message\n", 'data after writing buffer' );
+
+$stream->configure( autoflush => 1 );
+$stream->write( "immediate\n" );
+
+ok( !$stream->want_writeready, 'not want_writeready after autoflush write' );
+is( read_data( $S2 ), "immediate\n", 'data after autoflush write' );
+
+$stream->configure( autoflush => 0 );
+$stream->write( "partial " );
+$stream->configure( autoflush => 1 );
+$stream->write( "data\n" );
+
+ok( !$stream->want_writeready, 'not want_writeready after split autoflush write' );
+is( read_data( $S2 ), "partial data\n", 'data after split autoflush write' );
 
 is_refcount( $stream, 2, 'writing $stream has refcount 2 before removing from Loop' );
 
