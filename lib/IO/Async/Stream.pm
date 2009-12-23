@@ -12,7 +12,7 @@ our $VERSION = '0.26';
 
 use base qw( IO::Async::Handle );
 
-use POSIX qw( EAGAIN EWOULDBLOCK );
+use POSIX qw( EAGAIN EWOULDBLOCK EINTR );
 
 use Carp;
 
@@ -262,6 +262,16 @@ sub configure
 
 =cut
 
+# FUNCTION not method
+sub _nonfatal_error
+{
+   my ( $errno ) = @_;
+
+   return $errno == EAGAIN ||
+          $errno == EWOULDBLOCK ||
+          $errno == EINTR;
+}
+
 =head2 $stream->close
 
 A synonym for C<close_when_empty>. This should not be used when the deferred
@@ -359,7 +369,7 @@ sub on_read_ready
    if( !defined $len ) {
       my $errno = $!;
 
-      return if $errno == EAGAIN or $errno == EWOULDBLOCK;
+      return if _nonfatal_error( $errno );
 
       if( defined $self->{on_read_error} ) {
          $self->{on_read_error}->( $self, $errno );
@@ -418,7 +428,7 @@ sub on_write_ready
       if( !defined $len ) {
          my $errno = $!;
 
-         return if $errno == EAGAIN or $errno == EWOULDBLOCK;
+         return if _nonfatal_error( $errno );
 
          if( defined $self->{on_write_error} ) {
             $self->{on_write_error}->( $self, $errno );
