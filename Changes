@@ -1,5 +1,15 @@
 Revision history for IO-Async
 
+0.27    CHANGES:
+         * Implement 'autoflush' option on IO::Async::Stream
+
+        BUGFIXES:
+         * Avoid $_ breaking stored signal handler references when invoking
+           them
+         * Ignore EINTR from sysread/syswrite
+         * More reliable socket address tests - don't rely on uninitialised
+           padding bytes between struct members
+
 0.26    BUGFIXES:
          * Connect to INADDR_LOOPBACK rather than INADDR_ANY during
            t/24listener.t; hopefully fixes FAILs on OpenBSD
