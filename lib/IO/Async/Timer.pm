@@ -130,7 +130,7 @@ sub start
    my $loop = $self->get_loop;
    if( !defined $loop ) {
       $self->{pending} = 1;
-      return;
+      return $self;
    }
 
    defined $self->{id} and croak "Cannot start a Timer that is already running";

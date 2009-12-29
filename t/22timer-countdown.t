@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 39;
+use Test::More tests => 40;
 use Test::Exception;
 use Test::Refcount;
 
@@ -72,9 +72,9 @@ is_oneref( $timer, '$timer has refcount 1 after removing from Loop' );
 
 undef $expired;
 
-$loop->add( $timer );
+is( $timer->start, $timer, '$timer->start out of a Loop returns $timer' );
 
-$timer->start;
+$loop->add( $timer );
 
 time_about( sub { wait_for { $expired } }, 2, 'Timer works a second time' );
 
