@@ -268,7 +268,7 @@ Tests the Loop's ability to handle timer events
 
 =cut
 
-use constant count_tests_timer => 8;
+use constant count_tests_timer => 10;
 sub run_tests_timer
 {
    my $done = 0;
@@ -320,6 +320,14 @@ sub run_tests_timer
    } 1.5, 2.5, 'requeued timer of delay 2';
 
    is( $done, 2, '$done is 2 after requeued timer' );
+
+   $loop->enqueue_timer( delay => -1, code => sub { $done = 1 } );
+
+   $done = 0;
+
+   time_between {
+      $loop->loop_once() while !$done;
+   } 0, 0.1, 'loop_once() while waiting for negative interval timer';
 }
 
 =head2 signal

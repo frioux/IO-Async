@@ -1163,7 +1163,9 @@ The absolute system timestamp to run the event.
 
 =item delay => NUM
 
-The delay after now at which to run the event, if C<time> is not supplied.
+The delay after now at which to run the event, if C<time> is not supplied. A
+zero or negative delayed timer should be executed as soon as possible; the
+next time the C<loop_once()> method is invoked.
 
 =item now => NUM
 
