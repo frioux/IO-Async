@@ -1,14 +1,14 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2009 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2009,2010 -- leonerd@leonerd.org.uk
 
 package IO::Async::LoopTests;
 
 use strict;
 use warnings;
 
-use base qw( Exporter );
+use Exporter 'import';
 our @EXPORT = qw(
    run_tests
 );
