@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2008,2009 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2008-2010 -- leonerd@leonerd.org.uk
 
 package IO::Async::Listener;
 
@@ -16,7 +16,7 @@ use IO::Async::Handle;
 use POSIX qw( EAGAIN );
 use Socket::GetAddrInfo qw( :Socket6api AI_PASSIVE );
 
-use Socket qw( SO_ACCEPTCONN SO_REUSEADDR );
+use Socket qw( SOL_SOCKET SO_ACCEPTCONN SO_REUSEADDR );
 
 use Carp;
 
@@ -148,14 +148,17 @@ sub configure
 
    if( exists $params{handle} ) {
       my $handle = delete $params{handle};
-      # Sanity check it
-      defined eval { $handle->sockname } or croak "IO handle $handle does not have a sockname";
+      # Sanity check it - it may be a bare GLOB ref, not an IO::Socket-derived handle
+      defined getsockname( $handle ) or croak "IO handle $handle does not have a sockname";
 
       # So now we know it's at least some kind of socket. Is it listening?
       # SO_ACCEPTCONN would tell us, but not all OSes implement it. Since it's
       # only a best-effort sanity check, we won't mind if the OS doesn't.
-      my $acceptconn = eval { $handle->sockopt( SO_ACCEPTCONN ) };
-      !defined $acceptconn or $acceptconn or croak "Socket is not accepting connections";
+      my $acceptconn = getsockopt( $handle, SOL_SOCKET, SO_ACCEPTCONN ) or croak "Cannot getsockopt - $!";
+      unpack( "I", $acceptconn ) or croak "Socket is not accepting connections";
+
+      # This is a bit naughty but hopefully nobody will mind...
+      bless $handle, "IO::Socket" if ref( $handle ) eq "GLOB";
 
       $self->SUPER::configure( read_handle => $handle );
    }
