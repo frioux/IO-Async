@@ -8,6 +8,8 @@ package IO::Async::Loop::IO_Poll;
 use strict;
 use warnings;
 
+use Carp;
+
 our $VERSION = '0.28';
 
 use base qw( IO::Async::Loop::Poll );
@@ -21,11 +23,19 @@ L<IO::Async::Loop::Poll>
 
 This class is a compatibility wrapper for programs that expect to find the
 Loop subclass which uses L<IO::Poll> under this name. It was renamed to
-C<IO::Async::Loop::Poll>.
+C<IO::Async::Loop::Poll>. The API is exactly the same, only under a different
+name.
 
-Any program still referring to this class directly should be changed.
+Any program still referring to this class directly should be changed. This
+object constructor will print a warning when the object is created.
 
 =cut
+
+sub new
+{
+   carp "IO::Async::Loop::IO_Poll is deprecated, and now called IO::Async::Loop::Poll. Please update your code";
+   shift->SUPER::new( @_ );
+}
 
 # Keep perl happy; keep Britain tidy
 1;
