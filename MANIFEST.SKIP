@@ -12,3 +12,4 @@ MANIFEST\.SKIP
 Build$
 _build
 ^\.shelf
+^MYMETA.yml$
