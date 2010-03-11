@@ -1,5 +1,12 @@
 Revision history for IO-Async
 
+0.28    BUGFIXES:
+         * Ensure that Timer->start returns $self even when not in a Loop
+         * Accept bare GLOB refs as IO::Async::Listener handles; upgrade them
+           to IO::Socket refs if required
+         * Applied documentation patch from RT 55375 - thanks to
+           Chris Williams
+
 0.27    CHANGES:
          * Implement 'autoflush' option on IO::Async::Stream
 
