@@ -43,7 +43,7 @@ sub enqueue
    my ( %params ) = @_;
 
    my $code = delete $params{code};
-   ref $code eq "CODE" or croak "Expected 'code' to be a CODE reference";
+   ref $code or croak "Expected 'code' to be a reference";
 
    defined $params{time} or croak "Expected 'time'";
    my $time = $params{time};

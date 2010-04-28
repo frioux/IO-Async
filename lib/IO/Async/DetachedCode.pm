@@ -179,7 +179,7 @@ sub new
    my $loop = delete $params{loop} or croak "Expected a 'loop'";
 
    my $code = delete $params{code};
-   ref $code eq "CODE" or croak "Expected a CODE reference as 'code'";
+   ref $code or croak "Expected a reference as 'code'";
 
    my $marshaller;
 
@@ -390,13 +390,13 @@ sub call
    my $on_result;
    if( defined $params{on_result} ) {
       $on_result = delete $params{on_result};
-      ref $on_result eq "CODE" or croak "Expected 'on_result' to be a CODE reference";
+      ref $on_result or croak "Expected 'on_result' to be a reference";
    }
    elsif( defined $params{on_return} and defined $params{on_error} ) {
       my $on_return = delete $params{on_return};
-      ref $on_return eq "CODE" or croak "Expected 'on_return' to be a CODE reference";
+      ref $on_return or croak "Expected 'on_return' to be a reference";
       my $on_error  = delete $params{on_error};
-      ref $on_error eq "CODE" or croak "Expected 'on_error' to be a CODE reference";
+      ref $on_error or croak "Expected 'on_error' to be a reference";
 
       $on_result = sub {
          my $result = shift;

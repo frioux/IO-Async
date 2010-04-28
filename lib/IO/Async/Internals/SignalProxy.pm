@@ -112,7 +112,7 @@ sub on_read_ready
       # failure on a Solaris 8 + perl 5.6.1 machine here. This message should
       # at least help find the problem
       defined $callback or croak "Undefined callback for signal $_";
-      ref $callback eq "CODE" or croak "Callback for signal $_ is not a CODE ref";
+      ref $callback or croak "Callback for signal $_ is not a reference";
 
       $callback->();
    }
@@ -125,7 +125,7 @@ sub watch
 
    exists $SIG{$signal} or croak "Unrecognised signal name $signal";
 
-   ref $code eq "CODE" or croak 'Expected $code as a CODE reference';
+   ref $code or croak 'Expected $code as a reference';
 
    $self->{callbacks}->{$signal} = $code;
 

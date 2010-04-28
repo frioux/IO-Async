@@ -138,10 +138,10 @@ sub resolve
    exists $METHODS{$type} or croak "Expected 'type' to be an existing resolver method, got '$type'";
 
    my $on_resolved = $args{on_resolved};
-   ref $on_resolved eq "CODE" or croak "Expected 'on_resolved' to be a CODE reference";
+   ref $on_resolved or croak "Expected 'on_resolved' to be a reference";
 
    my $on_error = $args{on_error};
-   ref $on_error eq "CODE" or croak "Expected 'on_error' to be a CODE reference";
+   ref $on_error or croak "Expected 'on_error' to be a reference";
 
    my $code = $self->{code};
    $code->call(

@@ -788,11 +788,11 @@ sub open_child
    my %filehandles;
 
    my $on_finish = delete $params{on_finish};
-   ref $on_finish eq "CODE" or croak "Expected 'on_finish' to be a CODE ref";
+   ref $on_finish or croak "Expected 'on_finish' to be a reference";
 
    my $on_error = delete $params{on_error};
    if( $on_error ) {
-      ref $on_error eq "CODE" or croak "Expected 'on_error' to be a CODE ref";
+      ref $on_error or croak "Expected 'on_error' to be a reference";
    }
 
    $params{on_exit} and croak "Cannot pass 'on_exit' parameter through ChildManager->open";
@@ -821,7 +821,7 @@ sub open_child
          my $op;
 
          if( exists $value->{on_read} ) {
-            ref $value->{on_read} eq "CODE" or croak "Expected 'on_read' for '$orig_key' be a CODE ref";
+            ref $value->{on_read} or croak "Expected 'on_read' for '$orig_key' to be a reference";
             scalar keys %$value == 1 or croak "Found other keys than 'on_read' for '$orig_key'";
 
             $op = "pipe_read";
@@ -987,7 +987,7 @@ sub run_child
    my %params = @_;
 
    my $on_finish = delete $params{on_finish};
-   ref $on_finish eq "CODE" or croak "Expected 'on_finish' to be a CODE ref";
+   ref $on_finish or croak "Expected 'on_finish' to be a reference";
 
    my $child_out;
    my $child_err;

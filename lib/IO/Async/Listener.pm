@@ -351,13 +351,13 @@ sub listen
    }
 
    my $on_listen = $params{on_listen}; # optional
-   !defined $on_listen or ref $on_listen eq "CODE" or croak "Expected 'on_listen' to be a CODE reference";
+   !defined $on_listen or ref $on_listen or croak "Expected 'on_listen' to be a reference";
 
    my $on_listen_error = $params{on_listen_error};
-   ref $on_listen_error eq "CODE" or croak "Expected 'on_listen_error' as a CODE reference";
+   ref $on_listen_error or croak "Expected 'on_listen_error' as a reference";
 
    my $on_fail = $params{on_fail};
-   !defined $on_fail or ref $on_fail eq "CODE" or croak "Expected 'on_fail' to be a CODE reference";
+   !defined $on_fail or ref $on_fail or croak "Expected 'on_fail' to be a reference";
 
    my $queuesize = $params{queuesize} || 3;
 
@@ -405,7 +405,7 @@ sub listen
 
    elsif( defined $params{service} ) {
       my $on_resolve_error = delete $params{on_resolve_error};
-      ref $on_resolve_error eq "CODE" or croak "Expected 'on_resolve_error' as CODE reference";
+      ref $on_resolve_error or croak "Expected 'on_resolve_error' as a reference";
 
       my $host = delete $params{host} || "";
 

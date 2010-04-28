@@ -104,7 +104,7 @@ sub configure
 
    if( exists $params{on_expire} ) {
       my $on_expire = delete $params{on_expire};
-      ref $on_expire eq "CODE" or croak "Expected 'on_expire' as a CODE reference";
+      ref $on_expire or croak "Expected 'on_expire' as a reference";
 
       $self->{on_expire} = $on_expire;
       undef $self->{cb}; # Will be lazily constructed when needed
