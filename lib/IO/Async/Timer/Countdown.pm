@@ -202,13 +202,14 @@ For example, to expire an accepted connection after 30 seconds of inactivity:
 
        on_expire => sub { $stream->close },
     );
+    $stream->add_child( $watchdog );
 
-    my $stream = IO::Async::Stream->new(
+    $stream = IO::Async::Stream->new(
        handle => $newclient,
 
        on_read => sub {
           my ( $self, $buffref, $closed ) = @_;
-          $stream->reset;
+          $watchdog->reset;
 
           ...
        },
@@ -220,7 +221,6 @@ For example, to expire an accepted connection after 30 seconds of inactivity:
 
     $watchdog->start;
 
-    $loop->add( $stream );
     $loop->add( $watchdog );
  }
 
