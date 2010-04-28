@@ -154,8 +154,8 @@ sub configure
       # So now we know it's at least some kind of socket. Is it listening?
       # SO_ACCEPTCONN would tell us, but not all OSes implement it. Since it's
       # only a best-effort sanity check, we won't mind if the OS doesn't.
-      my $acceptconn = getsockopt( $handle, SOL_SOCKET, SO_ACCEPTCONN ) or croak "Cannot getsockopt - $!";
-      unpack( "I", $acceptconn ) or croak "Socket is not accepting connections";
+      my $acceptconn = getsockopt( $handle, SOL_SOCKET, SO_ACCEPTCONN );
+      !defined $acceptconn or unpack( "I", $acceptconn ) or croak "Socket is not accepting connections";
 
       # This is a bit naughty but hopefully nobody will mind...
       bless $handle, "IO::Socket" if ref( $handle ) eq "GLOB";
