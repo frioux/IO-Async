@@ -19,7 +19,7 @@ C<IO::Async::Timer> - base class for Notifiers that use timed delays
 
 =head1 DESCRIPTION
 
-This module provides a base class of C<IO::Async::Notifier> for implementing
+This module provides a base class of L<IO::Async::Notifier> for implementing
 notifiers that use timed delays. For specific implementations, see one of the
 subclasses:
 
