@@ -143,14 +143,11 @@ sub new
    my $class = shift;
    my %params = @_;
 
-   if( $class eq __PACKAGE__ ) {
+   if( $class eq __PACKAGE__ and 
+      grep { exists $params{$_} } qw( handle read_handle write_handle on_read_ready on_write_ready ) ) {
       # TODO: This is temporary. Eventually, throw a deprecation warning.
-      foreach my $key ( keys %params ) {
-         if( grep { $key eq $_ } qw( handle read_handle write_handle on_read_ready on_write_ready ) ) {
-            require IO::Async::Handle;
-            return IO::Async::Handle->new( %params );
-         }
-      }
+      require IO::Async::Handle;
+      return IO::Async::Handle->new( %params );
    }
 
    my $self = bless {
