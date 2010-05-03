@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2006-2009 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2006-2010 -- leonerd@leonerd.org.uk
 
 package IO::Async::Notifier;
 
@@ -133,8 +133,8 @@ any of these keys are present, then a C<IO::Async::Handle> is returned.
 
 Do not rely on this feature in new code.  This logic exists purely to provide
 an upgrade path from older code that still expects C<IO::Async::Notifier> to
-provide filehandle operations. This will eventually produce a deprecation
-warning at some point in the future, and removed at some point beyond that.
+provide filehandle operations. This produces a deprecation warning. At some
+point in the future this functionallity may be removed.
 
 =cut
 
@@ -145,7 +145,8 @@ sub new
 
    if( $class eq __PACKAGE__ and 
       grep { exists $params{$_} } qw( handle read_handle write_handle on_read_ready on_write_ready ) ) {
-      # TODO: This is temporary. Eventually, throw a deprecation warning.
+      carp "IO::Async::Notifier no longer wraps a filehandle; see instead IO::Async::Handle";
+
       require IO::Async::Handle;
       return IO::Async::Handle->new( %params );
    }

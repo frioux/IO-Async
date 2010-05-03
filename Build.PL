@@ -18,6 +18,7 @@ my $build = Module::Build->new(
       'Test::More' => 0,
       'Test::Exception' => 0,
       'Test::Refcount' => 0,
+      'Test::Warn' => 0,
    },
    license => 'perl',
    create_makefile_pl => 'traditional',
