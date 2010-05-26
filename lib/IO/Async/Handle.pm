@@ -86,6 +86,11 @@ should not call the C<SUPER::> versions of those methods.
 
  $self->on_write_ready()
 
+Optionally, an C<on_closed> method may be provided, which will be called when
+the C<close> method is invoked.
+
+ $self->on_closed()
+
 =back
 
 If either of the readyness methods calls the C<close()> method, then
@@ -347,7 +352,12 @@ sub close
    return if $self->{handle_closing};
    $self->{handle_closing} = 1;
 
-   $self->{on_closed}->( $self ) if $self->{on_closed};
+   if( $self->{on_closed} ) {
+      $self->{on_closed}->( $self );
+   }
+   elsif( $self->can( "on_closed" ) ) {
+      $self->on_closed;
+   }
 
    if( my $parent = $self->{parent} ) {
       $parent->remove_child( $self );
