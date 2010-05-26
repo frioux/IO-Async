@@ -378,6 +378,17 @@ sub _remove_from_loop
    # empty default
 }
 
+# Utility for subclasses
+sub __anticurry
+{
+   my $self = shift;
+   my ( $code ) = @_;   # actually bare method names work too
+
+   weaken $self;
+
+   return sub { $self->$code( @_ ) };
+}
+
 # Keep perl happy; keep Britain tidy
 1;
 

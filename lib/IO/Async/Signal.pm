@@ -12,7 +12,6 @@ use base qw( IO::Async::Notifier );
 our $VERSION = '0.28';
 
 use Carp;
-use Scalar::Util qw( weaken );
 
 =head1 NAME
 
@@ -134,13 +133,11 @@ sub _add_to_loop
    my ( $loop ) = @_;
 
    if( !$self->{cb} ) {
-      weaken( my $weakself = $self );
-
       if( $self->{on_receipt} ) {
-         $self->{cb} = sub { $weakself->{on_receipt}->( $weakself ) };
+         $self->{cb} = $self->__anticurry( $self->{on_receipt} );
       }
       else {
-         $self->{cb} = sub { $weakself->on_receipt };
+         $self->{cb} = $self->__anticurry( 'on_receipt' );
       }
    }
 
