@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 60;
+use Test::More tests => 62;
 use Test::Exception;
 use Test::Refcount;
 use Test::Warn;
@@ -25,10 +25,13 @@ dies_ok( sub { IO::Async::Handle->new( handle => "Hello" ) },
 my $readready = 0;
 my $writeready = 0;
 
+my @rrargs;
+my @wrargs;
+
 my $handle = IO::Async::Handle->new(
    handle => $S1,
-   on_read_ready  => sub { $readready = 1 },
-   on_write_ready => sub { $writeready = 1 },
+   on_read_ready  => sub { @rrargs = @_; $readready = 1 },
+   on_write_ready => sub { @wrargs = @_; $writeready = 1 },
 );
 
 ok( defined $handle, '$handle defined' );
@@ -61,6 +64,7 @@ $S2->syswrite( "data\n" );
 $loop->loop_once( 0.1 );
 
 is( $readready,  1, '$readready while readable' );
+is_deeply( \@rrargs, [ $handle ], 'on_read_ready args while readable' );
 is( $writeready, 0, '$writeready while readable' );
 
 $S1->getline(); # ignore return
@@ -92,6 +96,7 @@ $loop->loop_once( 0.1 );
 
 is( $readready,  0, '$readready while writeable' );
 is( $writeready, 1, '$writeready while writeable' );
+is_deeply( \@wrargs, [ $handle ], 'on_write_ready args while writeable' );
 
 $writeready = 0;
 my $new_writeready = 0;
@@ -102,6 +107,9 @@ $loop->loop_once( 0.1 );
 
 is( $writeready,     0, '$writeready while writeable after on_write_ready replace' );
 is( $new_writeready, 1, '$new_writeready while writeable after on_write_ready replace' );
+
+undef @rrargs;
+undef @wrargs;
 
 is_refcount( $handle, 2, '$handle has refcount 2 before removing from Loop' );
 

@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 21;
+use Test::More tests => 22;
 use Test::Exception;
 use Test::Refcount;
 
@@ -20,9 +20,11 @@ testing_loop( $loop );
 
 my $caught = 0;
 
+my @rargs;
+
 my $signal = IO::Async::Signal->new(
    name => 'TERM',
-   on_receipt => sub { $caught++ },
+   on_receipt => sub { @rargs = @_; $caught++ },
 );
 
 ok( defined $signal, '$signal defined' );
@@ -43,6 +45,7 @@ kill SIGTERM, $$;
 wait_for { $caught };
 
 is( $caught, 1, '$caught after raise' );
+is_deeply( \@rargs, [ $signal ], 'on_receipt args after raise' );
 
 my $caught2 = 0;
 
@@ -83,6 +86,8 @@ wait_for { $new_caught };
 
 is( $caught, undef, '$caught after raise after replace on_receipt' );
 is( $new_caught, 1, '$new_caught after raise after replace on_receipt' );
+
+undef @rargs;
 
 is_refcount( $signal, 2, '$signal has refcount 2 before removing from Loop' );
 

@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 30;
+use Test::More tests => 31;
 use Test::Exception;
 use Test::Refcount;
 
@@ -39,10 +39,12 @@ testing_loop( $loop );
 
 my $tick = 0;
 
+my @targs;
+
 my $timer = IO::Async::Timer::Periodic->new(
    interval => 2 * AUT,
 
-   on_tick => sub { $tick++ },
+   on_tick => sub { @targs = @_; $tick++ },
 );
 
 ok( defined $timer, '$timer defined' );
@@ -61,6 +63,7 @@ is_refcount( $timer, 2, '$timer has refcount 2 after starting' );
 ok( $timer->is_running, 'Started Timer is running' );
 
 time_about( sub { wait_for { $tick == 1 } }, 2, 'Timer works' );
+is_deeply( \@targs, [ $timer ], 'on_tick args' );
 
 ok( $timer->is_running, 'Timer is still running' );
 
@@ -73,6 +76,8 @@ $timer->stop;
 $loop->loop_once( 2 * AUT );
 
 ok( $tick == 2, "Stopped timer doesn't tick" );
+
+undef @targs;
 
 is_refcount( $timer, 2, '$timer has refcount 2 before removing from Loop' );
 
@@ -94,6 +99,8 @@ dies_ok( sub { $timer->configure( interval => 5 ); },
          'Configure a running timer fails' );
 
 $loop->remove( $timer );
+
+undef @targs;
 
 is_oneref( $timer, 'Timer has refcount 1 finally' );
 

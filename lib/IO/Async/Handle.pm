@@ -12,7 +12,6 @@ use base qw( IO::Async::Notifier );
 our $VERSION = '0.28';
 
 use Carp;
-use Scalar::Util qw( weaken );
 
 =head1 NAME
 
@@ -149,11 +148,15 @@ sub configure
 
    if( exists $params{on_read_ready} ) {
       $self->{on_read_ready} = delete $params{on_read_ready};
+      undef $self->{cb_r};
+
       $self->_watch_read(0), $self->_watch_read(1) if $self->want_readready;
    }
 
    if( exists $params{on_write_ready} ) {
       $self->{on_write_ready} = delete $params{on_write_ready};
+      undef $self->{cb_w};
+
       $self->_watch_write(0), $self->_watch_write(1) if $self->want_writeready;
    }
 
@@ -229,15 +232,14 @@ sub _watch_read
    my $loop = $self->get_loop or return;
    my $fh = $self->read_handle or return;
 
-   if( !$self->{on_read_ready} ) {
-      weaken( my $weakself = $self );
-      $self->{on_read_ready} = sub { $weakself->on_read_ready };
-   }
-
    if( $want ) {
+      $self->{cb_r} ||= $self->{on_read_ready} ?
+         $self->__anticurry( $self->{on_read_ready} ) :
+         $self->__anticurry( 'on_read_ready' );
+
       $loop->watch_io(
          handle => $fh,
-         on_read_ready => $self->{on_read_ready},
+         on_read_ready => $self->{cb_r},
       );
    }
    else {
@@ -256,15 +258,14 @@ sub _watch_write
    my $loop = $self->get_loop or return;
    my $fh = $self->write_handle or return;
 
-   if( !$self->{on_write_ready} ) {
-      weaken( my $weakself = $self );
-      $self->{on_write_ready} = sub { $weakself->on_write_ready };
-   }
-
    if( $want ) {
+      $self->{cb_w} ||= $self->{on_write_ready} ?
+         $self->__anticurry( $self->{on_write_ready} ) :
+         $self->__anticurry( 'on_write_ready' );
+
       $loop->watch_io(
          handle => $fh,
-         on_write_ready => $self->{on_write_ready},
+         on_write_ready => $self->{cb_w},
       );
    }
    else {

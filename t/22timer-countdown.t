@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 40;
+use Test::More tests => 41;
 use Test::Exception;
 use Test::Refcount;
 
@@ -39,10 +39,12 @@ testing_loop( $loop );
 
 my $expired;
 
+my @eargs;
+
 my $timer = IO::Async::Timer::Countdown->new(
    delay => 2 * AUT,
 
-   on_expire => sub { $expired = 1 },
+   on_expire => sub { @eargs = @_; $expired = 1 },
 );
 
 ok( defined $timer, '$timer defined' );
@@ -61,8 +63,11 @@ is_refcount( $timer, 2, '$timer has refcount 2 after starting' );
 ok( $timer->is_running, 'Started Timer is running' );
 
 time_about( sub { wait_for { $expired } }, 2, 'Timer works' );
+is_deeply( \@eargs, [ $timer ], 'on_expire args' );
 
 ok( !$timer->is_running, 'Expired Timer is no longer running' );
+
+undef @eargs;
 
 is_refcount( $timer, 2, '$timer has refcount 2 before removing from Loop' );
 
@@ -143,6 +148,8 @@ dies_ok( sub { $timer->configure( delay => 5 ); },
          'Configure a running timer fails' );
 
 $loop->remove( $timer );
+
+undef @eargs;
 
 is_oneref( $timer, 'Timer has refcount 1 finally' );
 
