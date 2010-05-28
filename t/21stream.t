@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 75;
+use Test::More tests => 78;
 use Test::Exception;
 use Test::Refcount;
 
@@ -121,6 +121,42 @@ is_oneref( $stream, 'reading $stream refcount 1 finally' );
 
 undef $stream;
 
+{
+   local $IO::Async::Stream::READLEN = 2;
+
+   my @chunks;
+
+   $stream = IO::Async::Stream->new(
+      read_handle => $S1,
+      on_read => sub {
+         my ( $self, $buffref, $closed ) = @_;
+         push @chunks, $$buffref;
+         $$buffref = "";
+      },
+   );
+
+   $loop->add( $stream );
+
+   $S2->syswrite( "partial" );
+
+   $loop->loop_once( 0.1 );
+
+   is_deeply( \@chunks, [ "pa" ], '@received with READLEN=2 without read_all' );
+
+   $loop->loop_once( 0.1 ) for 1 .. 3;
+
+   is_deeply( \@chunks, [ "pa", "rt", "ia", "l" ], '@received finally with READLEN=2 without read_all' );
+
+   undef @chunks;
+   $stream->configure( read_all => 1 );
+
+   $S2->syswrite( "partial" );
+
+   $loop->loop_once( 0.1 );
+
+   is_deeply( \@chunks, [ "pa", "rt", "ia", "l" ], '@received with READLEN=2 with read_all' );
+}
+
 # Subclass
 
 my @sub_received;
@@ -147,6 +183,8 @@ $loop->loop_once( 0.1 );
 is_deeply( \@sub_received, [ "message\n" ], '@sub_received after loop_once' );
 
 undef @received;
+
+$loop->remove( $stream );
 
 undef $stream;
 
