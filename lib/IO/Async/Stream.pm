@@ -391,7 +391,6 @@ sub write
    $self->want_writeready( 1 );
 }
 
-# protected
 sub on_read_ready
 {
    my $self = shift;
@@ -450,7 +449,6 @@ sub on_read_ready
    $self->close_now if $handleclosed;
 }
 
-# protected
 sub on_write_ready
 {
    my $self = shift;
