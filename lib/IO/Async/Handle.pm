@@ -234,8 +234,8 @@ sub _watch_read
 
    if( $want ) {
       $self->{cb_r} ||= $self->{on_read_ready} ?
-         $self->__anticurry( $self->{on_read_ready} ) :
-         $self->__anticurry( 'on_read_ready' );
+         $self->_capture_weakself( $self->{on_read_ready} ) :
+         $self->_capture_weakself( 'on_read_ready' );
 
       $loop->watch_io(
          handle => $fh,
@@ -260,8 +260,8 @@ sub _watch_write
 
    if( $want ) {
       $self->{cb_w} ||= $self->{on_write_ready} ?
-         $self->__anticurry( $self->{on_write_ready} ) :
-         $self->__anticurry( 'on_write_ready' );
+         $self->_capture_weakself( $self->{on_write_ready} ) :
+         $self->_capture_weakself( 'on_write_ready' );
 
       $loop->watch_io(
          handle => $fh,

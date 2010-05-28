@@ -378,8 +378,36 @@ sub _remove_from_loop
    # empty default
 }
 
-# Utility for subclasses
-sub __anticurry
+=head1 UTILITY METHODS
+
+=cut
+
+=head2 $mref = $notifier->_capture_weakself( $code )
+
+Returns a new CODE ref which, when invoked, will invoke the originally-passed
+ref, with additionally a reference to the Notifier as its first argument. The
+Notifier reference is stored weakly in C<$mref>, so this CODE ref may be
+stored in the Notifier itself without creating a cycle.
+
+For example,
+
+ my $mref = $notifier->_capture_weakself( sub {
+    my ( $notifier, $arg ) = @_;
+    print "Notifier $notifier got argument $arg\n";
+ } );
+
+ $mref->( 123 );
+
+This is provided as a utility for Notifier subclasses to use to build a
+callback CODEref to pass to a Loop method, but which may also want to store
+the CODE ref internally for efficiency.
+
+The C<$code> argument may also be a plain string, which will be used as a
+method name; the returned CODE ref will then invoke that method on the object.
+
+=cut
+
+sub _capture_weakself
 {
    my $self = shift;
    my ( $code ) = @_;   # actually bare method names work too

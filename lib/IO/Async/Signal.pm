@@ -134,10 +134,10 @@ sub _add_to_loop
 
    if( !$self->{cb} ) {
       if( $self->{on_receipt} ) {
-         $self->{cb} = $self->__anticurry( $self->{on_receipt} );
+         $self->{cb} = $self->_capture_weakself( $self->{on_receipt} );
       }
       else {
-         $self->{cb} = $self->__anticurry( 'on_receipt' );
+         $self->{cb} = $self->_capture_weakself( 'on_receipt' );
       }
    }
 
