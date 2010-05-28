@@ -250,6 +250,12 @@ other filehandles of processing time. Turning this option on may improve bulk
 data transfer rate, at the risk of delaying or stalling processing on other
 filehandles.
 
+=item write_all => BOOL
+
+Optional. Analogous to the C<read_all> option, but for writing to filehandles
+into the kernel buffer. When C<autoflush> is enabled, option only affects
+deferred writing if the initial attempt failed due to buffer space.
+
 =back
 
 If a read handle is given, it is required that either an C<on_read> callback
@@ -268,7 +274,7 @@ sub configure
    my $self = shift;
    my %params = @_;
 
-   for (qw( on_read on_outgoing_empty on_read_error on_write_error autoflush read_all )) {
+   for (qw( on_read on_outgoing_empty on_read_error on_write_error autoflush read_all write_all )) {
       $self->{$_} = delete $params{$_} if exists $params{$_};
    }
 
@@ -498,6 +504,8 @@ sub on_write_ready
       }
 
       substr( $self->{writebuff}, 0, $len ) = "";
+
+      last unless $self->{write_all};
    }
 
    # All data successfully flushed

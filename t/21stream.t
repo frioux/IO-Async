@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 78;
+use Test::More tests => 81;
 use Test::Exception;
 use Test::Refcount;
 
@@ -300,6 +300,34 @@ $loop->remove( $stream );
 is_oneref( $stream, 'writing $stream refcount 1 finally' );
 
 undef $stream;
+
+{
+   local $IO::Async::Stream::WRITELEN = 2;
+
+   $stream = IO::Async::Stream->new(
+      write_handle => $S1,
+   );
+
+   $loop->add( $stream );
+
+   $stream->write( "partial" );
+
+   $loop->loop_once( 0.1 );
+
+   is( read_data( $S2 ), "pa", 'data after writing buffer with WRITELEN=2 without write_all');
+
+   $loop->loop_once( 0.1 ) for 1 .. 3;
+
+   is( read_data( $S2 ), "rtial", 'data finally after writing buffer with WRITELEN=2 without write_all' );
+
+   $stream->configure( write_all => 1 );
+
+   $stream->write( "partial" );
+
+   $loop->loop_once( 0.1 );
+
+   is( read_data( $S2 ), "partial", 'data after writing buffer with WRITELEN=2 with write_all');
+}
 
 # Split reading/writing to different handles
 
