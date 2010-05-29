@@ -179,6 +179,8 @@ sub on_read_ready
    my $newclient = $self->read_handle->accept();
 
    if( defined $newclient ) {
+      $newclient->blocking( 0 );
+
       # TODO: make class/callback
       if( $self->{on_accept} ) {
          $self->{on_accept}->( $self, $newclient );
