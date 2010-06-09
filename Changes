@@ -1,5 +1,17 @@
 Revision history for IO-Async
 
+0.29    CHANGES:
+         * Don't require 'CODE' refs for callbacks/continations; this allows
+           the use of CODEref objects, &{} operator overloads, or other things
+           that are callable
+         * Implement 'read_all' and 'write_all' options on IO::Async::Stream
+         * Allow IO::Async::Stream subclasses to override on_closed
+
+        BUGFIXES:
+         * Work around some OSes not implementing SO_ACCEPTCONN
+         * Ensure Handle's on_read_ready/on_write_ready callbacks also take a
+           $self reference
+
 0.28    BUGFIXES:
          * Ensure that Timer->start returns $self even when not in a Loop
          * Accept bare GLOB refs as IO::Async::Listener handles; upgrade them

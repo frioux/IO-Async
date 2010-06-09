@@ -22,7 +22,7 @@ use IO::Async::Test qw();
 use POSIX qw( SIGTERM WIFEXITED WEXITSTATUS WIFSIGNALED WTERMSIG );
 use Time::HiRes qw( time );
 
-our $VERSION = '0.28';
+our $VERSION = '0.29';
 
 # Abstract Units of Time
 use constant AUT => $ENV{TEST_QUICK_TIMERS} ? 0.1 : 1;

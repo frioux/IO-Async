@@ -10,7 +10,7 @@ use warnings;
 
 use Carp;
 
-our $VERSION = '0.28';
+our $VERSION = '0.29';
 
 use base qw( IO::Async::Loop::Poll );
 
