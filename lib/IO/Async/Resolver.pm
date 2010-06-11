@@ -215,23 +215,23 @@ taking and returning a list of values exactly as the perl function does:
 
 # Now register the inbuilt methods
 
-register_resolver( 'getpwnam', sub { return getpwnam( $_[0] ) or die "$!\n" } );
-register_resolver( 'getpwuid', sub { return getpwuid( $_[0] ) or die "$!\n" } );
+register_resolver getpwnam => sub { return getpwnam( $_[0] ) or die "$!\n" };
+register_resolver getpwuid => sub { return getpwuid( $_[0] ) or die "$!\n" };
 
-register_resolver( 'getgrnam', sub { return getgrnam( $_[0] ) or die "$!\n" } );
-register_resolver( 'getgrgid', sub { return getgrgid( $_[0] ) or die "$!\n" } );
+register_resolver getgrnam => sub { return getgrnam( $_[0] ) or die "$!\n" };
+register_resolver getgrgid => sub { return getgrgid( $_[0] ) or die "$!\n" };
 
-register_resolver( 'getservbyname', sub { return getservbyname( $_[0], $_[1] ) or die "$!\n" } );
-register_resolver( 'getservbyport', sub { return getservbyport( $_[0], $_[1] ) or die "$!\n" } );
+register_resolver getservbyname => sub { return getservbyname( $_[0], $_[1] ) or die "$!\n" };
+register_resolver getservbyport => sub { return getservbyport( $_[0], $_[1] ) or die "$!\n" };
 
-register_resolver( 'gethostbyname', sub { return gethostbyname( $_[0] ) or die "$!\n" } );
-register_resolver( 'gethostbyaddr', sub { return gethostbyaddr( $_[0], $_[1] ) or die "$!\n" } );
+register_resolver gethostbyname => sub { return gethostbyname( $_[0] ) or die "$!\n" };
+register_resolver gethostbyaddr => sub { return gethostbyaddr( $_[0], $_[1] ) or die "$!\n" };
 
-register_resolver( 'getnetbyname', sub { return getnetbyname( $_[0] ) or die "$!\n" } );
-register_resolver( 'getnetbyaddr', sub { return getnetbyaddr( $_[0], $_[1] ) or die "$!\n" } );
+register_resolver getnetbyname => sub { return getnetbyname( $_[0] ) or die "$!\n" };
+register_resolver getnetbyaddr => sub { return getnetbyaddr( $_[0], $_[1] ) or die "$!\n" };
 
-register_resolver( 'getprotobyname',   sub { return getprotobyname( $_[0] ) or die "$!\n" } );
-register_resolver( 'getprotobynumber', sub { return getprotobynumber( $_[0] ) or die "$!\n" } );
+register_resolver getprotobyname   => sub { return getprotobyname( $_[0] ) or die "$!\n" };
+register_resolver getprotobynumber => sub { return getprotobynumber( $_[0] ) or die "$!\n" };
 
 # The two Socket::GetAddrInfo-based ones
 
@@ -249,7 +249,7 @@ tuples of 5 values. The C<getnameinfo> resolver returns its result unchanged.
 
 =cut
 
-register_resolver( 'getaddrinfo', sub {
+register_resolver getaddrinfo => sub {
    my ( $host, $service, $family, $socktype, $protocol, $flags ) = @_;
 
    if( defined $socktype ) {
@@ -270,9 +270,9 @@ register_resolver( 'getaddrinfo', sub {
    }
 
    return @ret;
-} );
+};
 
-register_resolver( 'getnameinfo', sub { return getnameinfo( @_ ) } );
+register_resolver getnameinfo => sub { return getnameinfo( @_ ) };
 
 # Keep perl happy; keep Britain tidy
 1;
@@ -292,19 +292,19 @@ C<IO::Async::Resolver> itself.
  @numbers = qw( zero  one   two   three four
                 five  six   seven eight nine  );
 
- register_resolver( 'getnumberbyindex', sub {
+ register_resolver getnumberbyindex => sub {
     my ( $index ) = @_;
     die "Bad index $index" unless $index >= 0 and $index < @numbers;
     return ( $index, $numbers[$index] );
- } );
+ };
 
- register_resolver( 'getnumberbyname', sub {
+ register_resolver getnumberbyname => sub {
     my ( $name ) = @_;
     foreach my $index ( 0 .. $#numbers ) {
        return ( $index, $name ) if $numbers[$index] eq $name;
     }
     die "Bad name $name";
- } );
+ };
 
 =head1 TODO
 
