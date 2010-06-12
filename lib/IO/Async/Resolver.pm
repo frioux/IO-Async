@@ -10,7 +10,7 @@ use warnings;
 
 our $VERSION = '0.29';
 
-use Socket::GetAddrInfo qw( :Socket6api getaddrinfo getnameinfo );
+use Socket::GetAddrInfo qw( :newapi getaddrinfo getnameinfo );
 use Socket qw( SOCK_STREAM SOCK_DGRAM SOCK_RAW );
 
 use Carp;
@@ -258,21 +258,31 @@ register_resolver getaddrinfo => sub {
       $socktype = SOCK_RAW    if $socktype eq 'raw';
    }
 
-   my @res = getaddrinfo( $host, $service, $family, $socktype, $protocol, $flags );
+   my %hints;
+   $hints{family}   = $family   if defined $family;
+   $hints{socktype} = $socktype if defined $socktype;
+   $hints{protocol} = $protocol if defined $protocol;
+   $hints{flags}    = $flags    if defined $flags;
 
-   # getaddrinfo() uses a 1-element list as an error value
-   die "$res[0]\n" if @res == 1;
+   my ( $err, @addrs ) = getaddrinfo( $host, $service, \%hints );
 
-   # Convert the @res list into a list of ARRAY refs of 5 values each
-   my @ret;
-   while( @res >= 5 ) {
-      push @ret, [ splice( @res, 0, 5 ) ];
-   }
+   die "$err\n" if $err;
 
-   return @ret;
+   # Convert the @addrs list into a list of ARRAY refs of 5 values each
+   return map {
+      [ $_->{family}, $_->{socktype}, $_->{protocol}, $_->{addr}, $_->{canonname} ]
+   } @addrs;
 };
 
-register_resolver getnameinfo => sub { return getnameinfo( @_ ) };
+register_resolver getnameinfo => sub {
+   my ( $addr, $flags ) = @_;
+
+   my ( $err, $host, $service ) = getnameinfo( $addr, $flags );
+
+   die "$err\n" if $err;
+
+   return [ $host, $service ];
+};
 
 # Keep perl happy; keep Britain tidy
 1;
