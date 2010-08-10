@@ -329,13 +329,7 @@ foreach my $id ( 1, 2, 3 ) {
 
 my $start = time();
 
-while( not( -e "$dir/1" and -e "$dir/2" and -e "$dir/3" ) ) {
-   if( time() - $start > 10 ) {
-      die "Not all child processes ready after 10second wait";
-   }
-
-   $loop->loop_once( 0.1 );
-}
+wait_for { -e "$dir/1" and -e "$dir/2" and -e "$dir/3" };
 
 ok( 1, 'synchronise files created' );
 

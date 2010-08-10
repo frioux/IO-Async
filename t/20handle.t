@@ -2,6 +2,8 @@
 
 use strict;
 
+use IO::Async::Test;
+
 use Test::More tests => 62;
 use Test::Exception;
 use Test::Refcount;
@@ -12,6 +14,8 @@ use IO::Async::Loop;
 use IO::Async::Handle;
 
 my $loop = IO::Async::Loop->new();
+
+testing_loop( $loop );
 
 my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
 
@@ -52,7 +56,7 @@ $loop->add( $handle );
 
 is_refcount( $handle, 2, '$handle has refcount 2 after adding to Loop' );
 
-$loop->loop_once( 0.1 );
+$loop->loop_once( 0.1 ); # nothing happens
 
 is( $readready,  0, '$readready while idle' );
 is( $writeready, 0, '$writeready while idle' );
@@ -61,7 +65,7 @@ is( $writeready, 0, '$writeready while idle' );
 
 $S2->syswrite( "data\n" );
 
-$loop->loop_once( 0.1 );
+wait_for { $readready };
 
 is( $readready,  1, '$readready while readable' );
 is_deeply( \@rrargs, [ $handle ], 'on_read_ready args while readable' );
@@ -74,14 +78,14 @@ my $new_readready = 0;
 
 $handle->configure( on_read_ready => sub { $new_readready = 1 } );
 
-$loop->loop_once( 0.1 );
+$loop->loop_once( 0.1 ); # nothing happens
 
 is( $readready,     0, '$readready while idle after on_read_ready replace' );
 is( $new_readready, 0, '$new_readready while idle after on_read_ready replace' );
 
 $S2->syswrite( "data\n" );
 
-$loop->loop_once( 0.1 );
+wait_for { $new_readready };
 
 is( $readready,     0, '$readready while readable after on_read_ready replace' );
 is( $new_readready, 1, '$new_readready while readable after on_read_ready replace' );
@@ -92,7 +96,7 @@ $S1->getline(); # ignore return
 
 $handle->want_writeready( 1 );
 
-$loop->loop_once( 0.1 );
+wait_for { $writeready };
 
 is( $readready,  0, '$readready while writeable' );
 is( $writeready, 1, '$writeready while writeable' );
@@ -103,7 +107,7 @@ my $new_writeready = 0;
 
 $handle->configure( on_write_ready => sub { $new_writeready = 1 } );
 
-$loop->loop_once( 0.1 );
+wait_for { $new_writeready };
 
 is( $writeready,     0, '$writeready while writeable after on_write_ready replace' );
 is( $new_writeready, 1, '$new_writeready while writeable after on_write_ready replace' );
@@ -142,7 +146,7 @@ is_refcount( $handle, 2, 'subclass $handle has refcount 2 after adding to Loop' 
 
 $S2->syswrite( "data\n" );
 
-$loop->loop_once( 0.1 );
+wait_for { $sub_readready };
 
 is( $sub_readready,  1, '$sub_readready while readable' );
 is( $sub_writeready, 0, '$sub_writeready while readable' );
@@ -152,7 +156,7 @@ $sub_readready = 0;
 
 $handle->want_writeready( 1 );
 
-$loop->loop_once( 0.1 );
+wait_for { $sub_writeready };
 
 is( $sub_readready,  0, '$sub_readready while writeable' );
 is( $sub_writeready, 1, '$sub_writeready while writeable' );

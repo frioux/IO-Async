@@ -2,6 +2,8 @@
 
 use strict;
 
+use IO::Async::Test;
+
 use Test::More tests => 81;
 use Test::Exception;
 use Test::Refcount;
@@ -13,6 +15,8 @@ use IO::Async::Loop;
 use IO::Async::Stream;
 
 my $loop = IO::Async::Loop->new();
+
+testing_loop( $loop );
 
 my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
 
@@ -68,31 +72,30 @@ is_refcount( $stream, 2, 'reading $stream has refcount 2 after adding to Loop' )
 
 $S2->syswrite( "message\n" );
 
-is_deeply( \@received, [], '@received before loop_once' );
+is_deeply( \@received, [], '@received before wait' );
 
-$loop->loop_once( 0.1 );
+wait_for { scalar @received };
 
-is_deeply( \@received, [ "message\n" ], '@received after loop_once' );
+is_deeply( \@received, [ "message\n" ], '@received after wait' );
 
 undef @received;
 
 $S2->syswrite( "return" );
 
-$loop->loop_once( 0.1 );
+$loop->loop_once( 0.1 ); # nothing happens
 
 is_deeply( \@received, [], '@received partial still empty' );
 
 $S2->syswrite( "\n" );
 
-$loop->loop_once( 0.1 );
+wait_for { scalar @received };
 
 is_deeply( \@received, [ "return\n" ], '@received partial completed now received' );
 
 undef @received;
 
 $S2->syswrite( "hello\nworld\n" );
-
-$loop->loop_once( 0.1 );
+wait_for { scalar @received };
 
 is_deeply( \@received, [ "hello\n", "world\n" ], '@received two at once' );
 
@@ -109,7 +112,7 @@ $stream->configure( on_read => sub {
 
 $S2->syswrite( "new\nlines\n" );
 
-$loop->loop_once( 0.1 );
+wait_for { scalar @new_lines };
 
 is_deeply( \@new_lines, [ "new\n", "lines\n" ], '@new_lines after on_read replace' );
 
@@ -139,11 +142,11 @@ undef $stream;
 
    $S2->syswrite( "partial" );
 
-   $loop->loop_once( 0.1 );
+   wait_for { scalar @chunks };
 
    is_deeply( \@chunks, [ "pa" ], '@received with READLEN=2 without read_all' );
 
-   $loop->loop_once( 0.1 ) for 1 .. 3;
+   wait_for { @chunks == 4 };
 
    is_deeply( \@chunks, [ "pa", "rt", "ia", "l" ], '@received finally with READLEN=2 without read_all' );
 
@@ -152,7 +155,7 @@ undef $stream;
 
    $S2->syswrite( "partial" );
 
-   $loop->loop_once( 0.1 );
+   wait_for { scalar @chunks };
 
    is_deeply( \@chunks, [ "pa", "rt", "ia", "l" ], '@received with READLEN=2 with read_all' );
 }
@@ -176,11 +179,11 @@ is_refcount( $stream, 2, 'subclass $stream has refcount 2 after adding to Loop' 
 
 $S2->syswrite( "message\n" );
 
-is_deeply( \@sub_received, [], '@sub_received before loop_once' );
+is_deeply( \@sub_received, [], '@sub_received before wait' );
 
-$loop->loop_once( 0.1 );
+wait_for { scalar @sub_received };
 
-is_deeply( \@sub_received, [ "message\n" ], '@sub_received after loop_once' );
+is_deeply( \@sub_received, [ "message\n" ], '@sub_received after wait' );
 
 undef @received;
 
@@ -223,22 +226,22 @@ is_oneref( $stream, 'dynamic reading $stream has refcount 1 initially' );
 $loop->add( $stream );
 
 $S2->syswrite( "11" ); # No linefeed yet
-$loop->loop_once( 0.1 );
+wait_for { $outer_count > 0 };
 is( $outer_count, 1, '$outer_count after idle' );
 is( $inner_count, 0, '$inner_count after idle' );
 
 $S2->syswrite( "\n" );
-$loop->loop_once( 0.1 );
+wait_for { $inner_count > 0 };
 is( $outer_count, 2, '$outer_count after received length' );
 is( $inner_count, 1, '$inner_count after received length' );
 
 $S2->syswrite( "Hello " );
-$loop->loop_once( 0.1 );
+wait_for { $inner_count > 1 };
 is( $outer_count, 2, '$outer_count after partial body' );
 is( $inner_count, 2, '$inner_count after partial body' );
 
 $S2->syswrite( "world" );
-$loop->loop_once( 0.1 );
+wait_for { $inner_count > 2 };
 is( $outer_count, 3, '$outer_count after complete body' );
 is( $inner_count, 3, '$inner_count after complete body' );
 is( $record, "Hello world", '$record after complete body' );
@@ -272,9 +275,9 @@ $stream->write( "message\n" );
 
 ok( $stream->want_writeready, 'want_writeready after write' );
 
-$loop->loop_once( 0.1 );
+wait_for { $empty };
 
-ok( !$stream->want_writeready, 'want_writeready after loop_once' );
+ok( !$stream->want_writeready, 'want_writeready after wait' );
 is( $empty, 1, '$empty after writing buffer' );
 
 is( read_data( $S2 ), "message\n", 'data after writing buffer' );
@@ -407,7 +410,7 @@ $stream->close_when_empty;
 
 is( $closed, 0, 'closed after close' );
 
-$loop->loop_once( 1 ) or die "Nothing ready after 1 second";
+wait_for { $closed };
 
 is( $closed, 1, 'closed after wait' );
 is( $loop_during_closed, $loop, 'loop during closed' );
@@ -466,7 +469,7 @@ is( $buffer2, "some text", 'stream-written text appears' );
 
 $S2->syswrite( "more text" );
 
-$loop->loop_once( 0.1 );
+wait_for { length $buffer };
 
 is( $buffer, "more text", 'stream-read text appears' );
 
@@ -539,7 +542,7 @@ $stream = IO::Async::Stream->new(
 
 $loop->add( $stream );
 
-$loop->loop_once( 0.1 );
+wait_for { defined $read_errno };
 
 cmp_ok( $read_errno, "==", ECONNRESET, 'errno after failed read' );
 
@@ -554,7 +557,7 @@ $loop->add( $stream );
 
 $stream->write( "hello" );
 
-$loop->loop_once( 0.1 );
+wait_for { defined $write_errno };
 
 cmp_ok( $write_errno, "==", ECONNRESET, 'errno after failed write' );
 

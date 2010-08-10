@@ -36,7 +36,7 @@ $loop->add( $signal );
 
 is_refcount( $signal, 2, '$signal has refcount 2 after adding to Loop' );
 
-$loop->loop_once( 0.1 );
+$loop->loop_once( 0.1 ); # nothing happens
 
 is( $caught, 0, '$caught idling' );
 
@@ -114,7 +114,7 @@ $loop->add( $signal );
 
 is_refcount( $signal, 2, 'subclass $signal has refcount 2 after adding to Loop' );
 
-$loop->loop_once( 0.1 );
+$loop->loop_once( 0.1 ); # nothing happens
 
 is( $sub_caught, 0, '$sub_caught idling' );
 
