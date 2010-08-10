@@ -132,14 +132,9 @@ sub _add_to_loop
    my $self = shift;
    my ( $loop ) = @_;
 
-   if( !$self->{cb} ) {
-      if( $self->{on_receipt} ) {
-         $self->{cb} = $self->_capture_weakself( $self->{on_receipt} );
-      }
-      else {
-         $self->{cb} = $self->_capture_weakself( 'on_receipt' );
-      }
-   }
+   $self->{cb} ||= $self->{on_receipt} ?
+      $self->_capture_weakself( $self->{on_receipt} ) :
+      $self->_capture_weakself( 'on_receipt' );
 
    $self->{id} = $loop->attach_signal( $self->{name}, $self->{cb} );
 }
