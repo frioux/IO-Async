@@ -2,25 +2,30 @@
 
 use strict;
 
-use Test::More tests => 16;
+use Test::More tests => 28;
 
 use IO::Async::Loop::Poll;
 
-use Socket qw( SOCK_STREAM SOCK_DGRAM );
+use Socket qw( AF_INET SOCK_STREAM SOCK_DGRAM );
 
 use POSIX qw( SIGTERM );
 
 my $loop = IO::Async::Loop::Poll->new();
 
-{
-   my ( $S1, $S2 ) = $loop->socketpair( undef, SOCK_STREAM )
+foreach my $family ( undef, AF_INET ) {
+   my ( $S1, $S2 ) = $loop->socketpair( $family, SOCK_STREAM )
       or die "Could not socketpair - $!";
 
    isa_ok( $S1, "IO::Socket", '$S1 isa IO::Socket' );
    isa_ok( $S2, "IO::Socket", '$S2 isa IO::Socket' );
 
-   is( $S1->socktype, SOCK_STREAM, '$S1->socktype is SOCK_STREAM' );
-   is( $S2->socktype, SOCK_STREAM, '$S2->socktype is SOCK_STREAM' );
+   # Due to a bug in IO::Socket, this may not be set
+   SKIP: {
+      skip "IO::Socket doesn't set ->socktype of ->accept'ed sockets", 2 if defined $family;
+
+      is( $S1->socktype, SOCK_STREAM, '$S1->socktype is SOCK_STREAM' );
+      is( $S2->socktype, SOCK_STREAM, '$S2->socktype is SOCK_STREAM' );
+   }
 
    $S1->syswrite( "Hello" );
    is( do { my $b; $S2->sysread( $b, 8192 ); $b }, "Hello", '$S1 --writes-> $S2' );
@@ -28,7 +33,7 @@ my $loop = IO::Async::Loop::Poll->new();
    $S2->syswrite( "Goodbye" );
    is( do { my $b; $S1->sysread( $b, 8192 ); $b }, "Goodbye", '$S2 --writes-> $S1' );
 
-   ( $S1, $S2 ) = $loop->socketpair( undef, SOCK_DGRAM )
+   ( $S1, $S2 ) = $loop->socketpair( $family, SOCK_DGRAM )
       or die "Could not socketpair - $!";
 
    isa_ok( $S1, "IO::Socket", '$S1 isa IO::Socket' );
