@@ -1,0 +1,369 @@
+#  You may distribute under the terms of either the GNU General Public License
+#  or the Artistic License (the same terms as Perl itself)
+#
+#  (C) Paul Evans, 2010 -- leonerd@leonerd.org.uk
+
+package IO::Async::Socket;
+
+use strict;
+use warnings;
+
+our $VERSION = '0.29';
+
+use base qw( IO::Async::Handle );
+
+use POSIX qw( EAGAIN EWOULDBLOCK EINTR );
+
+use Carp;
+
+=head1 NAME
+
+C<IO::Async::Socket> - event callbacks and send buffering for a socket
+filehandle
+
+=head1 SYNOPSIS
+
+ use IO::Async::Socket;
+
+ use IO::Async::Loop;
+ my $loop = IO::Async::Loop->new();
+
+ $loop->connect(
+    host     => "some.host.here",
+    service  => "echo",
+    socktype => 'dgram',
+
+    on_connected => sub {
+       my ( $sock ) = @_;
+
+       my $socket = IO::Async::Socket->new(
+          handle => $sock,
+          on_recv => sub {
+             my ( $self, $dgram, $addr ) = @_;
+
+             print "Received reply: $dgram\n",
+             $loop->loop_stop;
+          },
+          on_recv_error => sub {
+             my ( $self, $errno ) = @_;
+             die "Cannot recv - $errno\n";
+          },
+       );
+
+       $loop->add( $socket );
+
+       $socket->send( "A TEST DATAGRAM" );
+    },
+
+    on_resolve_error => sub { die "Cannot resolve - $_[0]\n"; },
+    on_connect_error => sub { die "Cannot connect\n"; },
+ );
+
+ $loop->loop_forever;
+
+=head1 DESCRIPTION
+
+This subclass of L<IO::Async::Handle> contains a socket filehandle. It
+provides a queue of outgoing data. It invokes the C<on_recv> handler when new
+data is received from the filehandle. Data may be sent to the filehandle by
+calling the C<send()> method.
+
+It is primarily intended for C<SOCK_data> or C<SOCK_RAW> sockets; for
+C<SOCK_STREAM> sockets an instance of L<IO::Async::Stream> is probably more
+appropriate.
+
+This object may be used in one of two ways; as an instance with CODE
+references as callbacks, or as a base class with overridden methods.
+
+=over 4
+
+=item Subclassing
+
+If a subclass is built, then it can override the following methods to handle
+events:
+
+ $self->on_recv( $data, $addr )
+
+ $self->on_recv_error( $errno )
+
+ $self->on_outgoing_empty()
+
+ $self->on_send_error( $errno )
+
+=back
+
+The C<on_recv> handler is invoked once for each packet, datagram, or stream
+segment that is received. It is passed the data itself, and the sender's
+address.
+
+The C<on_recv_error> and C<on_send_error> handlers are passed the value of
+C<$!> at the time the error occured. (The C<$!> variable itself, by its
+nature, may have changed from the original error by the time this handler
+runs so it should always use the value passed in).
+
+If an error occurs when the corresponding error callback is not supplied, and
+there is not a subclass method for it, then the C<close()> method is
+called instead.
+
+The C<on_outgoing_empty> handler is not passed any arguments.
+
+=cut
+
+sub _init
+{
+   my $self = shift;
+
+   $self->{recv_len} = 65536;
+
+   $self->SUPER::_init( @_ );
+}
+
+=head1 PARAMETERS
+
+The following named parameters may be passed to C<new> or C<configure>:
+
+=over 8
+
+=item read_handle => IO
+
+The IO handle to receive from. Must implement C<fileno> and C<recv> methods.
+
+=item write_handle => IO
+
+The IO handle to send to. Must implement C<fileno> and C<send> methods.
+
+=item handle => IO
+
+Shortcut to specifying the same IO handle for both of the above.
+
+=item on_recv => CODE
+
+A CODE reference to invoke on receipt of a packet, datagram, or stream
+segment.
+
+ $on_recv->( $self, $data, $addr )
+
+=item on_recv_error => CODE
+
+Optional. A CODE reference for when the C<recv()> method on the receiving
+handle fails.
+
+ $on_recv_error->( $self, $errno )
+
+=item on_outgoing_empty => CODE
+
+Optional. A CODE reference for when the sending data buffer becomes empty.
+
+ $on_outgoing_empty->( $self )
+
+=item on_send_error => CODE
+
+Optional. A CODE reference for when the C<send()> method on the sending handle
+fails.
+
+ $on_send_error->( $self, $errno )
+
+=item autoflush => BOOL
+
+Optional. If true, the C<send> method will atempt to send data to the
+operating system immediately, without waiting for the loop to indicate the
+filehandle is write-ready.
+
+=item recv_len => INT
+
+Optional. Sets the buffer size for C<recv()> calls. Defaults to 64 KiB.
+
+=item recv_all => BOOL
+
+Optional. If true, repeatedly call C<recv> when the receiving handle first
+becomes read-ready. By default this is turned off, meaning at most one
+fixed-size buffer is received. If there is still more data in the kernel's
+buffer, the handle will stil be readable, and will be received from again.
+
+This behaviour allows multiple streams and sockets to be multiplexed
+simultaneously, meaning that a large bulk transfer on one cannot starve other
+filehandles of processing time. Turning this option on may improve bulk data
+transfer rate, at the risk of delaying or stalling processing on other
+filehandles.
+
+=item send_all => INT
+
+Optional. Analogous to the C<recv_all> option, but for sending. When
+C<autoflush> is enabled, this option only affects deferred sending if the
+initial attempt failed.
+
+=back
+
+=cut
+
+sub configure
+{
+   my $self = shift;
+   my %params = @_;
+
+   for (qw( on_recv on_outgoing_empty on_recv_error on_send_error
+            recv_len recv_all send_all autoflush )) {
+      $self->{$_} = delete $params{$_} if exists $params{$_};
+   }
+
+   $self->SUPER::configure( %params );
+
+   if( defined $self->read_handle ) {
+      $self->{on_recv} or $self->can( "on_recv" ) or
+         croak 'Expected either an on_recv callback or to be able to ->on_recv';
+   }
+}
+
+=head1 METHODS
+
+=cut
+
+=head2 $socket->send( $data, $flags, $addr )
+
+This method adds a segment of data to be sent, or sends it immediately,
+according to the C<autoflush> parameter. C<$flags> and C<$addr> are optional.
+
+If the C<autoflush> option is set, this method will try immediately to send
+the data to the underlying filehandle, optionally using the given flags and
+destination address. If this completes successfully then it will have been
+sent by the time this method returns. If it fails to send, then the data is
+queued as if C<autoflush> were not set, and will be flushed as normal.
+
+=cut
+
+sub send
+{
+   my $self = shift;
+   my ( $data, $flags, $addr ) = @_;
+
+   croak "Cannot send data to a Socket with no write_handle" unless my $handle = $self->write_handle;
+
+   my $sendqueue = $self->{sendqueue} ||= [];
+   push @$sendqueue, [ $data, $flags, $addr ];
+
+   if( $self->{autoflush} ) {
+      while( @$sendqueue ) {
+         my ( $data, $flags, $addr ) = @{ $sendqueue->[0] };
+         my $len = $handle->send( $data, $flags, $addr );
+
+         last if !$len; # stop on any errors and defer back to the non-autoflush path
+
+         shift @$sendqueue;
+      }
+
+      if( !@$sendqueue ) {
+         $self->want_writeready( 0 );
+         return;
+      }
+   }
+
+   $self->want_writeready( 1 );
+}
+
+sub on_read_ready
+{
+   my $self = shift;
+
+   my $handle = $self->read_handle;
+
+   while(1) {
+      my $addr = $handle->recv( my $data, $self->{recv_len} );
+
+      if( !defined $addr ) {
+         return if $! == EAGAIN || $! == EWOULDBLOCK || $! == EINTR;
+
+         my $errno = $!;
+
+         if( defined $self->{on_recv_error} ) {
+            $self->{on_recv_error}->( $self, $errno );
+         }
+         elsif( $self->can( "on_recv_error" ) ) {
+            $self->on_recv_error( $errno );
+         }
+         else {
+            $self->close;
+         }
+
+         return;
+      }
+
+      if( !length $data ) {
+         $self->close;
+         return;
+      }
+
+      my $on_recv = $self->{on_recv}
+                     || $self->can( "on_recv" );
+
+      $on_recv->( $self, $data, $addr );
+
+      last unless $self->{recv_all};
+   }
+}
+
+sub on_write_ready
+{
+   my $self = shift;
+
+   my $handle = $self->write_handle;
+
+   my $sendqueue = $self->{sendqueue};
+
+   while( $sendqueue and @$sendqueue ) {
+      my ( $data, $flags, $addr ) = @{ shift @$sendqueue };
+      my $len = $handle->send( $data, $flags, $addr );
+
+      if( !defined $len ) {
+         return if $! == EAGAIN || $! == EWOULDBLOCK || $! == EINTR;
+
+         my $errno = $!;
+
+         if( defined $self->{on_send_error} ) {
+            $self->{on_send_error}->( $self, $errno );
+         }
+         elsif( $self->can( "on_send_error" ) ) {
+            $self->on_send_error( $errno );
+         }
+         else {
+            $self->close;
+         }
+
+         return;
+      }
+
+      if( $len == 0 ) {
+         $self->close;
+         return;
+      }
+
+      last unless $self->{send_all};
+   }
+
+   if( !$sendqueue or !@$sendqueue ) {
+      $self->want_writeready( 0 );
+
+      my $on_outgoing_empty = $self->{on_outgoing_empty}
+                               || $self->can( "on_outgoing_empty" );
+
+      $on_outgoing_empty->( $self ) if $on_outgoing_empty;
+   }
+}
+
+# Keep perl happy; keep Britain tidy
+1;
+
+__END__
+
+=head1 SEE ALSO
+
+=over 4
+
+=item *
+
+L<IO::Handle> - Supply object methods for I/O handles
+
+=back
+
+=head1 AUTHOR
+
+Paul Evans <leonerd@leonerd.org.uk>

@@ -44,7 +44,8 @@ the C<< Loop->listen() >> method would be used instead.
  $loop->add( $handle );
 
 For most other uses with sockets, pipes or other filehandles that carry a byte
-stream, the C<IO::Async::Stream> class is likely to be more suitable.
+stream, the L<IO::Async::Stream> class is likely to be more suitable. For
+non-stream sockets, see L<IO::Async::Socket>.
 
 =head1 DESCRIPTION
 

@@ -77,7 +77,13 @@ L<IO::Async::Handle> - event callbacks for a non-blocking file descriptor
 
 =item *
 
-L<IO::Async::Stream> - read and write buffers around an IO handle
+L<IO::Async::Stream> - event callbacks and write bufering for a stream
+filehandle
+
+=item *
+
+L<IO::Async::Socket> - event callbacks and send buffering for a socket
+filehandle
 
 =item *
 

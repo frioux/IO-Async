@@ -94,6 +94,12 @@ class automatically handles reading of incoming data into the incoming buffer,
 and writing of the outgoing buffer. Methods or callbacks are used to inform
 when new incoming data is available, or when the outgoing buffer is empty.
 
+While stream-based sockets can be handled using using C<IO::Async::Stream>,
+datagram or raw sockets do not provide a bytestream. For these, the
+L<IO::Async::Socket> class is another subclass of L<IO::Async::Handle> which
+maintains an outgoing packet queue, and informs of packet receipt using a
+callback or method.
+
 The L<IO::Async::Listener> class is another subclass of L<IO::Async::Handle>
 which facilitates the use of C<listen()>-mode sockets. When a new connection
 is available on the socket it will C<accept()> it and pass the new client
