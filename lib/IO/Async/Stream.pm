@@ -23,7 +23,7 @@ our $WRITELEN = 8192;
 
 =head1 NAME
 
-C<IO::Async::Stream> - read and write buffers around an IO handle
+C<IO::Async::Stream> - use a stream filehandle asynchronously
 
 =head1 SYNOPSIS
 
@@ -96,43 +96,20 @@ Or
 
 =head1 DESCRIPTION
 
-This module provides a subclass of C<IO::Async::Handle> which implements
-asynchronous communications buffers around stream handles. It provides
-buffering for both incoming and outgoing data, which are transferred to or
-from the actual OS-level filehandle as controlled by the containing Loop.
+This subclass of C<IO::Async::Handle> allows stream filehandles to be used
+asynchronously. It provides buffering for both incoming and outgoing data.
+When new data is read from the filehandle, the C<on_read> handler is invoked.
+Data may be written to the filehandle by calling the C<write()> method.
 
-Data can be added to the outgoing buffer at any time using the C<write()>
-method, and will be flushed whenever the underlying handle is notified as
-being write-ready. Whenever the handle is notified as being read-ready, the
-data is read in from the handle, and the C<on_read> code is called to indicate
-the data is available. The code can then inspect the buffer and possibly
-consume any input it considers ready.
-
-This object may be used in one of two ways; with a callback function, or as a
-base class.
+This object may be used in one of two ways; as an instance with CODE
+references as callbacks, or as a base class with overridden methods.
 
 =over 4
 
-=item Callbacks
+=item Subclassing
 
-If certain keys are supplied to the constructor, they should contain CODE
-references to callback functions that will be called in the following manner:
-
- $ret = $on_read->( $self, \$buffer, $handleclosed )
-
- $on_read_error->( $self, $errno )
-
- $on_outgoing_empty->( $self )
-
- $on_write_error->( $self, $errno )
-
-A reference to the calling C<IO::Async::Stream> object is passed as the first
-argument, so that the callback can access it.
-
-=item Base Class
-
-If a subclass is built, then it can override the C<on_read> or
-C<on_outgoing_empty> methods, which will be called in the following manner:
+If a subclass is built, then it can override the following methods to handle
+events:
 
  $ret = $self->on_read( \$buffer, $handleclosed )
 
@@ -144,11 +121,11 @@ C<on_outgoing_empty> methods, which will be called in the following manner:
 
 =back
 
-The first argument to the C<on_read()> callback is a reference to a plain perl
-string. The code should inspect and remove any data it likes, but is not
-required to remove all, or indeed any of the data. Any data remaining in the
-buffer will be preserved for the next call, the next time more data is
-received from the handle.
+The first argument to C<on_read()> is a reference to a plain perl string. The
+code should inspect and remove any data it likes, but is not required to
+remove all, or indeed any of the data. Any data remaining in the buffer will
+be preserved for the next call, the next time more data is received from the
+handle.
 
 In this way, it is easy to implement code that reads records of some form when
 completed, but ignores partially-received records, until all the data is
@@ -172,16 +149,16 @@ C<undef>. Whenever the callback is changed in this way, the new code is called
 again; even if the read buffer is currently empty. See the examples at the end
 of this documentation for more detail.
 
-The C<on_read_error> and C<on_write_error> callbacks are passed the value of
+The C<on_read_error> and C<on_write_error> handlers are passed the value of
 C<$!> at the time the error occured. (The C<$!> variable itself, by its
-nature, may have changed from the original error by the time this callback
+nature, may have changed from the original error by the time this handler
 runs so it should always use the value passed in).
 
 If an error occurs when the corresponding error callback is not supplied, and
 there is not a subclass method for it, then the C<close()> method is
 called instead.
 
-The C<on_outgoing_empty> callback is not passed any arguments.
+The C<on_outgoing_empty> handler is not passed any arguments.
 
 =cut
 
@@ -219,17 +196,27 @@ Shortcut to specifying the same IO handle for both of the above.
 A CODE reference for when more data is available in the internal receiving 
 buffer.
 
+ $ret = $on_read->( $self, \$buffer, $handleclosed )
+
 =item on_read_error => CODE
 
-A CODE reference for when the C<sysread()> method on the read handle fails.
+Optional. A CODE reference for when the C<sysread()> method on the read handle
+fails.
+
+ $on_read_error->( $self, $errno )
 
 =item on_outgoing_empty => CODE
 
-A CODE reference for when the writing data buffer becomes empty.
+Optional. A CODE reference for when the writing data buffer becomes empty.
+
+ $on_outgoing_empty->( $self )
 
 =item on_write_error => CODE
 
-A CODE reference for when the C<syswrite()> method on the write handle fails.
+Optional. A CODE reference for when the C<syswrite()> method on the write
+handle fails.
+
+ $on_write_error->( $self, $errno )
 
 =item autoflush => BOOL
 
@@ -251,10 +238,12 @@ Optional. If true, attempt to read as much data from the kernel as possible
 when the handle becomes readable. By default this is turned off, meaning at
 most one fixed-size buffer is read. If there is still more data in the
 kernel's buffer, the handle will still be readable, and will be read from
-again. This behaviour allows multiple streams to be multiplexed
-simultaneously, meaning that a large bulk transfer on one stream cannot starve
-other filehandles of processing time. Turning this option on may improve bulk
-data transfer rate, at the risk of delaying or stalling processing on other
+again.
+
+This behaviour allows multiple streams and sockets to be multiplexed
+simultaneously, meaning that a large bulk transfer on one cannot starve other
+filehandles of processing time. Turning this option on may improve bulk data
+transfer rate, at the risk of delaying or stalling processing on other
 filehandles.
 
 =item write_len => INT
@@ -263,9 +252,9 @@ Optional. Sets the buffer size for C<write()> calls. Defaults to 8 KiBytes.
 
 =item write_all => BOOL
 
-Optional. Analogous to the C<read_all> option, but for writing to filehandles
-into the kernel buffer. When C<autoflush> is enabled, option only affects
-deferred writing if the initial attempt failed due to buffer space.
+Optional. Analogous to the C<read_all> option, but for writing. When
+C<autoflush> is enabled, this option only affects deferred writing if the
+initial attempt failed due to buffer space.
 
 =back
 
@@ -274,7 +263,7 @@ reference is passed, or that the object provides an C<on_read> method. It is
 optional whether either is true for C<on_outgoing_empty>; if neither is
 supplied then no action will be taken when the writing buffer becomes empty.
 
-An C<on_read> callback may be supplied even if no read handle is yet given, to
+An C<on_read> handler may be supplied even if no read handle is yet given, to
 be used when a read handle is eventually provided by the C<set_handles>
 method.
 
@@ -370,22 +359,14 @@ sub close_now
 
 =head2 $stream->write( $data )
 
-This method adds data to the outgoing data queue. The data is not yet sent to
-the handle; this will be done later in the C<on_write_ready()> method.
-
-=over 8
-
-=item $data
-
-A scalar containing data to write
-
-=back
+This method adds data to the outgoing data queue, or writes it immediately,
+according to the C<autoflush> parameter.
 
 If the C<autoflush> option is set, this method will try immediately to write
 the data to the underlying filehandle. If this completes successfully then it
 will have been written by the time this method returns. If it fails to write
 completely, then the data is queued as if C<autoflush> were not set, and will
-be flushed later as normal by the C<on_write_ready()> method.
+be flushed as normal.
 
 =cut
 

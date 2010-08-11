@@ -165,7 +165,7 @@ undef $stream;
 
 # Subclass
 
-my @sub_received;
+my @sub_lines;
 
 $stream = TestStream->new(
    read_handle => $S1,
@@ -182,11 +182,11 @@ is_refcount( $stream, 2, 'subclass $stream has refcount 2 after adding to Loop' 
 
 $S2->syswrite( "message\n" );
 
-is_deeply( \@sub_received, [], '@sub_received before wait' );
+is_deeply( \@sub_lines, [], '@sub_lines before wait' );
 
-wait_for { scalar @sub_received };
+wait_for { scalar @sub_lines };
 
-is_deeply( \@sub_received, [ "message\n" ], '@sub_received after wait' );
+is_deeply( \@sub_lines, [ "message\n" ], '@sub_lines after wait' );
 
 undef @lines;
 
@@ -577,7 +577,7 @@ sub on_read
 
    return 0 unless $$buffref =~ s/^(.*\n)//;
 
-   push @sub_received, $1;
+   push @sub_lines, $1;
    return 1;
 }
 
