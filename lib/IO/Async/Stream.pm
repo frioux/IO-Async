@@ -23,7 +23,8 @@ our $WRITELEN = 8192;
 
 =head1 NAME
 
-C<IO::Async::Stream> - use a stream filehandle asynchronously
+C<IO::Async::Stream> - event callbacks and write bufering for a stream
+filehandle
 
 =head1 SYNOPSIS
 
@@ -96,10 +97,10 @@ Or
 
 =head1 DESCRIPTION
 
-This subclass of C<IO::Async::Handle> allows stream filehandles to be used
-asynchronously. It provides buffering for both incoming and outgoing data.
-When new data is read from the filehandle, the C<on_read> handler is invoked.
-Data may be written to the filehandle by calling the C<write()> method.
+This subclass of L<IO::Async::Handle> contains a filehandle that represents
+a byte-stream. It provides buffering for both incoming and outgoing data. It
+invokes the C<on_read> handler when new data is read from the filehandle. Data
+may be written to the filehandle by calling the C<write()> method.
 
 This object may be used in one of two ways; as an instance with CODE
 references as callbacks, or as a base class with overridden methods.

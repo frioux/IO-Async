@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2009 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2009-2010 -- leonerd@leonerd.org.uk
 
 package IO::Async::Timer::Countdown;
 
@@ -42,31 +42,24 @@ C<IO::Async::Timer::Countdown> - event callback after a fixed delay
 
 =head1 DESCRIPTION
 
-This module provides a subclass of L<IO::Async::Timer> for implementing
-one-shot fixed delays. The object implements a countdown timer, which invokes
-its callback after the given period from when it was started. After it has
-expired the Timer may be started again, when it will wait the same period then
-invoke the callback again. A timer that is currently running may be stopped or
-reset.
+This subclass of L<IO::Async::Timer> implements one-shot fixed delays.
+The object implements a countdown timer, which invokes its callback after the
+given period from when it was started. After it has expired the Timer may be
+started again, when it will wait the same period then invoke the callback
+again. A timer that is currently running may be stopped or reset.
 
 For a C<Timer> object that repeatedly runs a callback at regular intervals,
 see instead L<IO::Async::Timer::Periodic>.
 
-This object may be used in one of two ways; with a callback function, or as a
-base class.
+This object may be used in one of two ways; as an instance with CODE
+references as callbacks, or as a base class with overridden methods.
 
 =over 4
 
-=item Callbacks
+=item Subclassing
 
-If the C<on_expire> key is supplied to the constructor, it should contain a
-CODE reference to a callback function to be invoked at the appropriate time:
-
- $on_expire->( $self )
-
-=item Base Class
-
-If a subclass is built, then it can override the C<on_expire> method.
+If a subclass is built, then it can override the following methods to handle
+events:
 
  $self->on_expire()
 
@@ -84,6 +77,8 @@ The following named parameters may be passed to C<new> or C<configure>:
 
 CODE reference to callback to invoke when the timer expires. If not supplied,
 the subclass method will be called instead.
+
+ $on_expire->( $self )
 
 =item delay => NUM
 

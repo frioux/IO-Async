@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2009 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2009-2010 -- leonerd@leonerd.org.uk
 
 package IO::Async::Signal;
 
@@ -38,32 +38,25 @@ C<IO::Async::Signal> - event callback on receipt of a POSIX signal
 
 =head1 DESCRIPTION
 
-This module provides a class of C<IO::Async::Notifier> which invokes its
-callback when a particular POSIX signal is received.
+This subclass of L<IO::Async::Notifier> invokes its callback when a particular
+POSIX signal is received.
 
 Multiple objects can be added to a C<Loop> that all watch for the same signal.
 The callback functions will all be invoked, in no particular order.
 
-This object may be used in one of two ways; with a callback function, or as a
-base class.
+This object may be used in one of two ways; as an instance with CODE
+references as callbacks, or as a base class with overridden methods.
 
 =over 4
 
-=item Callbacks
+=item Subclassing
 
-If the C<on_receipt> key is supplied to the constructor, it should contain a
-CODE reference to a callback function to be invoked when the signal is received.
-
- $on_receipt->( $self )
-
-=item Base Class
-
-If a subclass is built, then it can override the C<on_receipt> method.
+If a subclass is built, then it can override the following methods to handle
+events:
 
  $self->on_receipt()
 
 =back
-
 
 =cut
 
@@ -82,6 +75,8 @@ only be given at construction time.
 
 CODE reference to callback to invoke when the signal is received. If not
 supplied, the subclass method will be called instead.
+
+ $on_receipt->( $self )
 
 =back
 

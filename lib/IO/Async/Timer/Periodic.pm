@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2009 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2009-2010 -- leonerd@leonerd.org.uk
 
 package IO::Async::Timer::Periodic;
 
@@ -42,30 +42,23 @@ C<IO::Async::Timer::Periodic> - event callback at regular intervals
 
 =head1 DESCRIPTION
 
-This module provides a subclass of L<IO::Async::Timer> for implementing
-repeating events at regular intervals. The object invokes its callback at
-regular clock intervals. The timing is not subject to how long it takes the
-callback to execute, but runs at regular intervals beginning at the time the
-timer was started, then adding each interval thereafter.
+This subclass of L<IO::Async::Timer> implements repeating events at regular
+clock intervals. The timing is not subject to how long it takes the callback
+to execute, but runs at regular intervals beginning at the time the timer was
+started, then adding each interval thereafter.
 
 For a C<Timer> object that only runs a callback once, after a given delay, see
 instead L<IO::Async::Timer::Countdown>.
 
-This object may be used in one of two ways; with a callback function, or as a
-base class.
+This object may be used in one of two ways; as an instance with CODE
+references as callbacks, or as a base class with overridden methods.
 
 =over 4
 
-=item Callbacks
+=item Subclassing
 
-If the C<on_tick> key is supplied to the constructor, it should contain a
-CODE reference to a callback function to be invoked at the appropriate time:
-
- $on_tick->( $self )
-
-=item Base Class
-
-If a subclass is built, then it can override the C<on_tick> method.
+If a subclass is built, then it can override the following methods to handle
+events:
 
  $self->on_tick()
 
@@ -83,6 +76,8 @@ The following named parameters may be passed to C<new> or C<configure>:
 
 CODE reference to callback to invoke each interval. If not supplied, the
 subclass method will be called instead.
+
+ $on_tick->( $self )
 
 =item interval => NUM
 

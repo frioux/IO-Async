@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2006-2009 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2006-2010 -- leonerd@leonerd.org.uk
 
 package IO::Async::Handle;
 
@@ -48,39 +48,18 @@ stream, the C<IO::Async::Stream> class is likely to be more suitable.
 
 =head1 DESCRIPTION
 
-This module provides a class of C<IO::Async::Notifier> for implementing
-non-blocking IO on file descriptors. The object interacts with the actual OS
-by being part of the C<IO::Async::Loop> object it has been added to.
+This subclass of L<IO::Async::Notifier> allows non-blocking IO on filehandles.
+It provides event handlers for when the filehandle is read- or write-ready.
 
-This object may be used in one of two ways; with callback functions, or as a
-base class.
+This object may be used in one of two ways; as an instance with CODE
+references as callbacks, or as a base class with overridden methods.
 
 =over 4
 
-=item Callbacks
+=item Subclassing
 
-If the C<on_read_ready> or C<on_write_ready> keys are supplied in the
-constructor, they should contain CODE references to callback functions to be
-called when the underlying IO handle becomes readable or writable:
-
- $on_read_ready->( $self )
-
- $on_write_ready->( $self )
-
-Optionally, an C<on_closed> key can also be specified, which will be called
-when the C<close> method is invoked.
-
- $on_closed->( $self )
-
-This callback is invoked before the filehandles are closed and the Handle
-removed from its containing Loop. The C<get_loop> will still return the
-containing Loop object.
-
-=item Base Class
-
-If a subclass is built, then it can override the C<on_read_ready> or
-C<on_write_ready> methods of the base to perform its work. In this case, it
-should not call the C<SUPER::> versions of those methods.
+If a subclass is built, then it can override the following methods to handle
+events:
 
  $self->on_read_ready()
 
@@ -126,9 +105,19 @@ CODE references to callbacks for when the handle becomes read-ready or
 write-ready. If these are not supplied, subclass methods will be called
 instead.
 
+ $on_read_ready->( $self )
+
+ $on_write_ready->( $self )
+
 =item on_closed => CODE
 
-CODE reference to the callback for when the handle becomes closed.
+Optional. CODE reference to the callback for when the handle becomes closed.
+
+This callback is invoked before the filehandles are closed and the Handle
+removed from its containing Loop. The C<get_loop> will still return the
+containing Loop object.
+
+ $on_closed->( $self )
 
 =back
 
@@ -140,9 +129,9 @@ shortcut, then both read and write-ready callbacks or methods are required.
 
 If no IO handles are provided at construction time, the object is still
 created but will not yet be fully-functional as a Handle. IO handles can be
-assigned later using the C<set_handle> or C<set_handles> methods. This may be
-useful when constructing an object to represent a network connection, before
-the C<connect()> has actually been performed yet.
+assigned later using the C<set_handle> or C<set_handles> methods, or by
+C<configure>. This may be useful when constructing an object to represent a
+network connection, before the C<connect()> has actually been performed yet.
 
 =cut
 

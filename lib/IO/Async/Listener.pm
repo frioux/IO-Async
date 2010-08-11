@@ -97,18 +97,10 @@ base class.
 
 =over 4
 
-=item Callbacks
+=item Subclassing
 
-If the C<on_accept> key is supplied to the constructor, it should contain a
-CODE reference to a callback function to be invoked when a new client connects
-to the socket. It is passed an C<IO::Socket> reference to the newly accepted
-socket:
-
- $on_accept->( $self, $clientsocket )
-
-=item Base Class
-
-If a subclass is built, then it can override the C<on_accept> method.
+If a subclass is built, then it can override the following methods to handle
+events:
 
  $self->on_accept( $clientsocket )
 
@@ -126,6 +118,8 @@ The following named parameters may be passed to C<new> or C<configure>:
 
 A callback that is invoked whenever a new client connects to the socket. If
 not supplied  the subclass method will be called instead.
+
+ $on_accept->( $self, $clientsocket )
 
 =item handle => IO
 
