@@ -20,6 +20,7 @@ use Test::Refcount;
 use IO::Async::Test qw();
 
 use POSIX qw( SIGTERM WIFEXITED WEXITSTATUS WIFSIGNALED WTERMSIG );
+use Socket qw( AF_INET SOCK_DGRAM );
 use Time::HiRes qw( time );
 
 our $VERSION = '0.29';
@@ -144,7 +145,7 @@ Tests the Loop's ability to watch filehandles for IO readiness
 
 =cut
 
-use constant count_tests_io => 11;
+use constant count_tests_io => 12;
 sub run_tests_io
 {
    my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
@@ -260,6 +261,29 @@ sub run_tests_io
    $loop->loop_once( 0.1 );
 
    is( $callcount, 1, 'read/write_ready can cancel each other' );
+
+   # Check that error conditions that aren't true read/write-ability are still
+   # invoked
+
+   ( $S1, $S2 ) = $loop->socketpair( AF_INET, SOCK_DGRAM ) or die "Cannot create AF_INET/SOCK_DGRAM connected pair - $!";
+   $S2->close;
+
+   $readready = 0;
+   $loop->watch_io(
+      handle => $S1,
+      on_read_ready => sub { $readready = 1 },
+   );
+
+   $S1->syswrite( "Boo!" );
+
+   $loop->loop_once( 0.1 );
+
+   is( $readready, 1, 'exceptional socket invokes on_read_ready' );
+
+   $loop->unwatch_io(
+      handle => $S1,
+      on_read_ready => 1,
+   );
 }
 
 =head2 timer

@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2007-2009 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2007-2010 -- leonerd@leonerd.org.uk
 
 package IO::Async::Loop::Poll;
 
@@ -15,7 +15,7 @@ use base qw( IO::Async::Loop );
 
 use Carp;
 
-use IO::Poll qw( POLLIN POLLOUT POLLHUP );
+use IO::Poll qw( POLLIN POLLOUT POLLHUP POLLERR );
 
 use POSIX qw( EINTR );
 
@@ -150,11 +150,11 @@ sub post_poll
 
       # We have to test separately because kernel doesn't report POLLIN when
       # a pipe gets closed.
-      if( $events & (POLLIN|POLLHUP) ) {
+      if( $events & (POLLIN|POLLHUP|POLLERR) ) {
          $count++, $watch->[1]->() if defined $watch->[1];
       }
 
-      if( $events & (POLLOUT|POLLHUP) ) {
+      if( $events & (POLLOUT|POLLHUP|POLLERR) ) {
          $count++, $watch->[2]->() if defined $watch->[2];
       }
    }
