@@ -191,6 +191,9 @@ sub _init
 
    $self->{writebuff} = "";
    $self->{readbuff} = "";
+
+   $self->{read_len}  = $READLEN;
+   $self->{write_len} = $WRITELEN;
 }
 
 =head1 PARAMETERS
@@ -238,17 +241,25 @@ contain up-to-date logging or console information.
 It currently defaults to false for any file handle, but future versions of
 C<IO::Async> may enable this by default on STDOUT and STDERR.
 
+=item read_len => INT
+
+Optional. Sets the buffer size for C<read()> calls. Defaults to 8 KiBytes.
+
 =item read_all => BOOL
 
 Optional. If true, attempt to read as much data from the kernel as possible
 when the handle becomes readable. By default this is turned off, meaning at
-most a fixed-size buffer of 8 KiB is read. If there is still more data in the
+most one fixed-size buffer is read. If there is still more data in the
 kernel's buffer, the handle will still be readable, and will be read from
 again. This behaviour allows multiple streams to be multiplexed
 simultaneously, meaning that a large bulk transfer on one stream cannot starve
 other filehandles of processing time. Turning this option on may improve bulk
 data transfer rate, at the risk of delaying or stalling processing on other
 filehandles.
+
+=item write_len => INT
+
+Optional. Sets the buffer size for C<write()> calls. Defaults to 8 KiBytes.
 
 =item write_all => BOOL
 
@@ -274,7 +285,8 @@ sub configure
    my $self = shift;
    my %params = @_;
 
-   for (qw( on_read on_outgoing_empty on_read_error on_write_error autoflush read_all write_all )) {
+   for (qw( on_read on_outgoing_empty on_read_error on_write_error
+            autoflush read_len read_all write_len write_all )) {
       $self->{$_} = delete $params{$_} if exists $params{$_};
    }
 
@@ -383,15 +395,13 @@ sub write
    my ( $data ) = @_;
 
    carp "Cannot write data to a Stream that is closing" and return if $self->{stream_closing};
-   croak "Cannot write data to a Stream with no write_handle" unless $self->write_handle;
+   croak "Cannot write data to a Stream with no write_handle" unless my $handle = $self->write_handle;
 
    if( $self->{autoflush} ) {
       $data = $self->{writebuff} . $data if length $self->{writebuff};
 
-      my $handle = $self->write_handle;
-
       while( length $data ) {
-         my $len = $handle->syswrite( $data, $WRITELEN );
+         my $len = $handle->syswrite( $data, $self->{write_len} );
 
          last if !$len; # stop on any errors and defer back to the non-autoflush path
 
@@ -417,7 +427,7 @@ sub on_read_ready
 
    while(1) {
       my $data;
-      my $len = $handle->sysread( $data, $READLEN );
+      my $len = $handle->sysread( $data, $self->{read_len} );
 
       if( !defined $len ) {
          my $errno = $!;
@@ -478,7 +488,7 @@ sub on_write_ready
    my $handle = $self->write_handle;
 
    while( length $self->{writebuff} ) {
-      my $len = $handle->syswrite( $self->{writebuff}, $WRITELEN );
+      my $len = $handle->syswrite( $self->{writebuff}, $self->{write_len} );
 
       if( !defined $len ) {
          my $errno = $!;
