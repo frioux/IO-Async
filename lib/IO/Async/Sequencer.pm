@@ -203,6 +203,8 @@ sub _init
    my $self = shift;
    my ( $params ) = @_;
 
+   $self->SUPER::_init( @_ );
+
    $self->{pipeline} = 1; # default on
 
    # Queue to use in server mode - stores pending responses to be sent
