@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 19;
+use Test::More tests => 20;
 use Test::Exception;
 use Test::Refcount;
 
@@ -68,6 +68,9 @@ $mref->( 456 );
 is_deeply( \@subargs, [ $notifier, 456 ], '@subargs after invoking $mref on named method' );
 
 undef @subargs;
+
+dies_ok( sub { $notifier->_capture_weakself( 'cannotdo' ) },
+         '$notifier->_capture_weakself on unknown method name fails' );
 
 is_oneref( $notifier, '$notifier has refcount 1 finally' );
 

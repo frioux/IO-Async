@@ -418,6 +418,14 @@ sub _capture_weakself
    my $self = shift;
    my ( $code ) = @_;   # actually bare method names work too
 
+   if( !ref $code ) {
+      my $class = ref $self;
+      my $coderef = $self->can( $code ) or
+         croak qq(Can't locate object method "$code" via package "$class");
+
+      $code = $coderef;
+   }
+
    weaken $self;
 
    return sub { $self->$code( @_ ) };
