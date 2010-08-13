@@ -428,7 +428,10 @@ sub _capture_weakself
 
    weaken $self;
 
-   return sub { $self->$code( @_ ) };
+   return sub {
+      unshift @_, $self;
+      goto &$code;
+   };
 }
 
 # Keep perl happy; keep Britain tidy

@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 20;
+use Test::More tests => 21;
 use Test::Exception;
 use Test::Refcount;
 
@@ -48,6 +48,16 @@ is_oneref( $notifier, '$notifier has refcount 1 after _capture_weakself' );
 
 $mref->( 123 );
 is_deeply( \@args, [ $notifier, 123 ], '@args after invoking $mref' );
+
+my @callstack;
+$notifier->_capture_weakself( sub {
+   my $level = 0;
+   push @callstack, [ (caller $level++)[0,3] ] while defined caller $level;
+} )->();
+
+is_deeply( \@callstack,
+           [ [ "main", "main::__ANON__" ] ],
+           'trampoline does not appear in _capture_weakself callstack' );
 
 undef @args;
 
