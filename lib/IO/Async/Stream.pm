@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2006-2009 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2006-2010 -- leonerd@leonerd.org.uk
 
 package IO::Async::Stream;
 
@@ -260,13 +260,19 @@ initial attempt failed due to buffer space.
 =back
 
 If a read handle is given, it is required that either an C<on_read> callback
-reference is passed, or that the object provides an C<on_read> method. It is
-optional whether either is true for C<on_outgoing_empty>; if neither is
+reference is configured, or that the object provides an C<on_read> method. It
+is optional whether either is true for C<on_outgoing_empty>; if neither is
 supplied then no action will be taken when the writing buffer becomes empty.
 
 An C<on_read> handler may be supplied even if no read handle is yet given, to
 be used when a read handle is eventually provided by the C<set_handles>
 method.
+
+This condition is checked at the time the object is added to a Loop; it is
+allowed to create a C<IO::Async::Stream> object with a read handle but without
+a C<on_read> handler, provided that one is later given using C<configure>
+before the stream is added to its containing Loop, either directly or by being
+a child of another Notifier already in a Loop, or added to one.
 
 =cut
 
@@ -282,10 +288,22 @@ sub configure
 
    $self->SUPER::configure( %params );
 
+   if( $self->get_loop and $self->read_handle ) {
+      $self->{on_read} or $self->can( "on_read" ) or
+         croak 'Expected either an on_read callback or to be able to ->on_read';
+   }
+}
+
+sub _add_to_loop
+{
+   my $self = shift;
+
    if( defined $self->read_handle ) {
       $self->{on_read} or $self->can( "on_read" ) or
          croak 'Expected either an on_read callback or to be able to ->on_read';
    }
+
+   $self->SUPER::_add_to_loop( @_ );
 }
 
 =head1 METHODS

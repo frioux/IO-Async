@@ -24,12 +24,6 @@ my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
 $S1->blocking( 0 );
 $S2->blocking( 0 );
 
-dies_ok( sub { IO::Async::Stream->new( handle => $S1 ) },
-         'No on_read' );
-
-lives_ok( sub { IO::Async::Stream->new( write_handle => \*STDOUT ) },
-          'Write-only Stream works' );
-
 # useful test function
 sub read_data
 {
@@ -162,6 +156,12 @@ undef $stream;
 
    is_deeply( \@chunks, [ "pa", "rt", "ia", "l" ], '@lines with read_len=2 with read_all' );
 }
+
+my $no_on_read_stream;
+lives_ok( sub { $no_on_read_stream = IO::Async::Stream->new( handle => $S1 ) },
+          'Allowed to construct a Stream without an on_read handler' );
+dies_ok( sub { $loop->add( $no_on_read_stream ) },
+         'Not allowed to add an on_read-less Stream to a Loop' );
 
 # Subclass
 
