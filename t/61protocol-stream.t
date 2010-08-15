@@ -1,0 +1,134 @@
+#!/usr/bin/perl -w
+
+use strict;
+
+use IO::Async::Test;
+
+use Test::More tests => 17;
+use Test::Refcount;
+
+use IO::Async::Loop;
+
+use IO::Async::Stream;
+use IO::Async::Protocol::Stream;
+
+my $loop = IO::Async::Loop->new;
+
+testing_loop( $loop );
+
+my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
+
+# Need sockets in nonblocking mode
+$S1->blocking( 0 );
+$S2->blocking( 0 );
+
+my @lines;
+
+my $streamproto = IO::Async::Protocol::Stream->new(
+   transport => IO::Async::Stream->new( handle => $S1 ),
+   on_read => sub {
+      my $self = shift;
+      my ( $buffref, $closed ) = @_;
+
+      return 0 unless( $$buffref =~ s/^(.*\n)// );
+
+      push @lines, $1;
+      return 1;
+   },
+);
+
+ok( defined $streamproto, '$streamproto defined' );
+isa_ok( $streamproto, "IO::Async::Protocol::Stream", '$streamproto isa IO::Async::Protocol::Stream' );
+
+is_oneref( $streamproto, '$streamproto has refcount 1 initially' );
+
+$loop->add( $streamproto );
+
+is_refcount( $streamproto, 2, '$streamproto has refcount 2 after adding to Loop' );
+
+$S2->syswrite( "message\n" );
+
+is_deeply( \@lines, [], '@lines before wait' );
+
+wait_for { scalar @lines };
+
+is_deeply( \@lines, [ "message\n" ], '@lines after wait' );
+
+undef @lines;
+my @new_lines;
+$streamproto->configure( 
+   on_read => sub {
+      my $self = shift;
+      my ( $buffref, $closed ) = @_;
+
+      return 0 unless( $$buffref =~ s/^(.*\n)// );
+
+      push @new_lines, $1;
+      return 1;
+   },
+);
+
+$S2->syswrite( "new\nlines\n" );
+
+wait_for { scalar @new_lines };
+
+is( scalar @lines, 0, '@lines still empty after on_read replace' );
+is_deeply( \@new_lines, [ "new\n", "lines\n" ], '@new_lines after on_read replace' );
+
+$streamproto->write( "response\n" );
+
+my $response = "";
+wait_for_stream { $response =~ m/\n/ } $S2 => $response;
+
+is( $response, "response\n", 'response written by protocol' );
+
+is_refcount( $streamproto, 2, '$streamproto has refcount 2 before removing from Loop' );
+
+$loop->remove( $streamproto );
+
+is_oneref( $streamproto, '$streamproto refcount 1 finally' );
+
+undef $streamproto;
+
+my @sub_lines;
+
+$streamproto = TestProtocol::Stream->new(
+   transport => IO::Async::Stream->new( handle => $S1 ),
+);
+
+ok( defined $streamproto, 'subclass $streamproto defined' );
+isa_ok( $streamproto, "IO::Async::Protocol::Stream", '$streamproto isa IO::Async::Protocol::Stream' );
+
+is_oneref( $streamproto, 'subclass $streamproto has refcount 1 initially' );
+
+$loop->add( $streamproto );
+
+is_refcount( $streamproto, 2, 'subclass $streamproto has refcount 2 after adding to Loop' );
+
+$S2->syswrite( "message\n" );
+
+is_deeply( \@sub_lines, [], '@sub_lines before wait' );
+
+wait_for { scalar @sub_lines };
+
+is_deeply( \@sub_lines, [ "message\n" ], '@sub_lines after wait' );
+
+undef @lines;
+
+$loop->remove( $streamproto );
+
+undef $streamproto;
+
+package TestProtocol::Stream;
+use base qw( IO::Async::Protocol::Stream );
+
+sub on_read
+{
+   my $self = shift;
+   my ( $buffref, $buffclosed ) = @_;
+
+   return 0 unless $$buffref =~ s/^(.*\n)//;
+
+   push @sub_lines, $1;
+   return 1;
+}
