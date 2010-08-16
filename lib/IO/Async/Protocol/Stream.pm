@@ -83,7 +83,13 @@ events:
 
  $ret = $self->on_read( \$buffer, $handleclosed )
 
+ $self->on_closed()
+
 The C<on_read> handler is invoked identically to C<IO::Async::Stream>.
+
+The C<on_closed> handler is optional, but if provided, will be invoked after
+the stream is closed by either side (either because the C<close()> method has
+been invoked on it, or on an incoming EOF).
 
 =back
 
@@ -105,6 +111,12 @@ A CODE reference for when more data is available
 
  $ret = $on_read->( $self, \$buffer, $handleclosed )
 
+=item on_closed => CODE
+
+Optional. A CODE reference to invoke when the transport handle becomes closed.
+
+ $on_closed->( $self )
+
 =back
 
 =cut
@@ -114,7 +126,7 @@ sub configure
    my $self = shift;
    my %params = @_;
 
-   for (qw( on_read )) {
+   for (qw( on_read on_closed )) {
       $self->{$_} = delete $params{$_} if exists $params{$_};
    }
 
@@ -148,6 +160,16 @@ sub setup_transport
                         $self->can( 'on_read' );
 
          $on_read->( $self, $buffref, $closed );
+      } ),
+
+      on_closed => $self->_capture_weakself( sub {
+         my $self = shift;
+         my ( $transport ) = @_;
+
+         my $on_closed = $self->{on_closed} ||
+                          $self->can( 'on_closed' );
+
+         $on_closed->( $self ) if $on_closed;
       } ),
    );
 }

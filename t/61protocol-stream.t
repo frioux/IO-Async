@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 17;
+use Test::More tests => 18;
 use Test::Refcount;
 
 use IO::Async::Loop;
@@ -82,6 +82,17 @@ wait_for_stream { $response =~ m/\n/ } $S2 => $response;
 
 is( $response, "response\n", 'response written by protocol' );
 
+my $closed = 0;
+$streamproto->configure(
+   on_closed => sub { $closed++ },
+);
+
+$S2->close;
+
+wait_for { $closed };
+
+is( $closed, 1, '$closed after stream close' );
+
 is_refcount( $streamproto, 2, '$streamproto has refcount 2 before removing from Loop' );
 
 $loop->remove( $streamproto );
@@ -89,6 +100,12 @@ $loop->remove( $streamproto );
 is_oneref( $streamproto, '$streamproto refcount 1 finally' );
 
 undef $streamproto;
+
+( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
+
+# Need sockets in nonblocking mode
+$S1->blocking( 0 );
+$S2->blocking( 0 );
 
 my @sub_lines;
 
