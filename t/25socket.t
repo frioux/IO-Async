@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 39;
+use Test::More tests => 40;
 use Test::Exception;
 use Test::Refcount;
 
@@ -40,9 +40,6 @@ sub recv_data
    return "" if $! == EAGAIN;
    die "Cannot recv - $!";
 }
-
-dies_ok( sub { IO::Async::Socket->new( handle => $S1 ) },
-         'No on_recv' );
 
 lives_ok( sub { IO::Async::Socket->new( write_handle => \*STDOUT ) },
           'Send-only Socket works' );
@@ -144,6 +141,12 @@ undef $socket;
 
    is_deeply( \@frags, [ "Long", "Repe", "Once" ], '@frags with recv_len=4 with recv_all' );
 }
+
+my $no_on_recv_socket;
+lives_ok( sub { $no_on_recv_socket = IO::Async::Socket->new( handle => $S1 ) },
+          'Allowed to construct a Socket without an on_recv handler' );
+dies_ok( sub { $loop->add( $no_on_recv_socket ) },
+         'Not allowed to add an on_recv-less Socket to a Loop' );
 
 # Subclass
 

@@ -194,6 +194,13 @@ initial attempt failed.
 
 =back
 
+The condition requiring an C<on_recv> handler is checked at the time the
+object is added to a Loop; it is allowed to create a C<IO::Async::Socket>
+object with a read handle but without a C<on_recv> handler, provided that
+one is later given using C<configure> before the stream is added to its
+containing Loop, either directly or by being a child of another Notifier
+already in a Loop, or added to one.
+
 =cut
 
 sub configure
@@ -208,10 +215,22 @@ sub configure
 
    $self->SUPER::configure( %params );
 
+   if( $self->get_loop and defined $self->read_handle ) {
+      $self->{on_recv} or $self->can( "on_recv" ) or
+         croak 'Expected either an on_recv callback or to be able to ->on_recv';
+   }
+}
+
+sub _add_to_loop
+{
+   my $self = shift;
+
    if( defined $self->read_handle ) {
       $self->{on_recv} or $self->can( "on_recv" ) or
          croak 'Expected either an on_recv callback or to be able to ->on_recv';
    }
+
+   $self->SUPER::_add_to_loop( @_ );
 }
 
 =head1 METHODS
