@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 8;
+use Test::More tests => 10;
 
 use IO::Socket::INET;
 use POSIX qw( ENOENT );
@@ -57,6 +57,30 @@ is_deeply( [ unpack_sockaddr_in $sock->peername ],
            [ unpack_sockaddr_in $addr ], 'by host/service: $sock->getpeername is $addr' );
 
 $listensock->accept; # Throw it away
+undef $sock; # This too
+
+# Now try on_stream event
+
+my $stream;
+
+$loop->connect(
+   host     => $listensock->sockhost,
+   service  => $listensock->sockport,
+   socktype => $listensock->socktype,
+   on_stream => sub { $stream = shift; },
+   on_resolve_error => sub { die "Test died early - resolve error $_[0]\n"; },
+   on_connect_error => sub { die "Test died early - connect error $_[0]\n"; },
+);
+
+wait_for { $stream };
+
+isa_ok( $stream, "IO::Async::Stream", 'on_stream $stream isa IO::Async::Stream' );
+$sock = $stream->read_handle;
+is_deeply( [ unpack_sockaddr_in $sock->peername ],
+           [ unpack_sockaddr_in $addr ], 'on_stream $sock->getpeername is $addr' );
+
+$listensock->accept; # Throw it away
+undef $stream;
 undef $sock; # This too
 
 SKIP: {
