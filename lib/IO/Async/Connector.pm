@@ -242,6 +242,13 @@ transport for a Protocol object.
 
  $on_stream->( $stream )
 
+=item on_socket => CODE
+
+Similar to C<on_stream>, but constructs an instance of L<IO::Async::Socket>.
+This is most useful for C<SOCK_DGRAM> or C<SOCK_RAW> sockets.
+
+ $on_socket->( $socket )
+
 =item on_connect_error => CODE
 
 A continuation that is invoked after all of the addresses have been tried, and
@@ -327,6 +334,13 @@ sub connect
       $on_connected = sub {
          my ( $handle ) = @_;
          $on_stream->( IO::Async::Stream->new( handle => $handle ) );
+      };
+   }
+   elsif( my $on_socket = delete $params{on_socket} ) {
+      require IO::Async::Socket;
+      $on_connected = sub {
+         my ( $handle ) = @_;
+         $on_socket->( IO::Async::Socket->new( handle => $handle ) );
       };
    }
    else {
