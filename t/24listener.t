@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 25;
+use Test::More tests => 29;
 use Test::Refcount;
 
 use IO::Async::Loop::Poll;
@@ -58,11 +58,42 @@ wait_for { defined $newclient };
 is_deeply( [ unpack_sockaddr_in $newclient->peername ],
            [ unpack_sockaddr_in $clientsock->sockname ], '$newclient peer is correct' );
 
-$loop->remove( $listener );
-
 undef $clientsock;
 undef $newclient;
 
+my $newstream;
+$listener->configure(
+   on_stream => sub { ( undef, $newstream ) = @_ },
+);
+
+$clientsock = IO::Socket::INET->new( Type => SOCK_STREAM )
+   or die "Cannot socket() - $!";
+
+$clientsock->connect( $listensock->sockname ) or die "Cannot connect() - $!";
+
+wait_for { defined $newstream };
+
+isa_ok( $newstream, "IO::Async::Stream", 'on_stream $newstream isa IO::Async::Stream' );
+is_deeply( [ unpack_sockaddr_in $newstream->read_handle->peername ],
+           [ unpack_sockaddr_in $clientsock->sockname ], '$newstream sock peer is correct' );
+
+my $newsocket;
+$listener->configure(
+   on_socket => sub { ( undef, $newsocket ) = @_ },
+);
+
+$clientsock = IO::Socket::INET->new( Type => SOCK_STREAM )
+   or die "Cannot socket() - $!";
+
+$clientsock->connect( $listensock->sockname ) or die "Cannot connect() - $!";
+
+wait_for { defined $newsocket };
+
+isa_ok( $newsocket, "IO::Async::Socket", 'on_socket $newsocket isa IO::Async::Socket' );
+is_deeply( [ unpack_sockaddr_in $newsocket->read_handle->peername ],
+           [ unpack_sockaddr_in $clientsock->sockname ], '$newsocket sock peer is correct' );
+
+$loop->remove( $listener );
 undef $listener;
 
 ## Subclass
