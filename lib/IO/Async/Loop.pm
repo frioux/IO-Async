@@ -726,15 +726,24 @@ sub listen
    require IO::Async::Listener;
 
    my $on_notifier = delete $params{on_notifier};
-   my $on_accept   = delete $params{on_accept};
 
-   my $listener = IO::Async::Listener->new( 
-      exists $params{handle} ? ( handle => delete $params{handle} ) : (),
-      on_accept => sub {
-         my ( undef, $clientsock ) = @_;
-         $on_accept->( $clientsock );
-      }
-   );
+   my %listenerparams;
+
+   if( my $handle = delete $params{handle} ) {
+      $listenerparams{handle} = $handle;
+   }
+
+   # Our wrappings of these don't want $self
+   for (qw( on_accept on_stream on_socket )) {
+      next unless exists $params{$_};
+      my $code = delete $params{$_};
+      $listenerparams{$_} = sub {
+         shift;
+         goto &$code;
+      };
+   }
+
+   my $listener = IO::Async::Listener->new( %listenerparams );
 
    $self->add( $listener );
 
