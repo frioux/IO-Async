@@ -247,6 +247,10 @@ returned value is more useful to the caller. It splits up the list of 5-tuples
 into a list of ARRAY refs, where each referenced array contains one of the
 tuples of 5 values. The C<getnameinfo> resolver returns its result unchanged.
 
+Because this module simply uses the system's C<getaddrinfo> resolver, it will
+be fully IPv6-aware if the underlying platform's resolver is. This allows
+programs to be fully IPv6-capable.
+
 =cut
 
 register_resolver getaddrinfo => sub {

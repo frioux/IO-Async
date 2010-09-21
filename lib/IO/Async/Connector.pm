@@ -70,6 +70,10 @@ To be aware of individual failures, the optional C<on_fail> callback can be
 used. This will be invoked on each individual C<socket()> or C<connect()>
 failure, which may be useful for debugging or logging.
 
+Because this module simply uses the C<getaddrinfo> resolver, it will be fully
+IPv6-aware if the underlying platform's resolver is. This allows programs to
+be fully IPv6-capable.
+
 =cut
 
 # Internal constructor
