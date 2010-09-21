@@ -1,5 +1,20 @@
 Revision history for IO-Async
 
+0.30    ADDITIONS:
+         * Added IO::Async::Socket
+         * Added IO::Async::Protocol and ::Protocol::Stream
+         * Added on_stream and on_socket continuations for $loop->connect and
+           Listener
+
+        CHANGES:
+         * Emulate socketpair(AF_INET,...)
+         * Allow IO::Async::Stream 's read_len and write_len to be configured
+           per-instance
+         * Allow a Stream object without an on_read handler
+
+        BUGFIXES:
+         * Cope with exceptional-state sockets in Loop::Poll
+
 0.29    CHANGES:
          * Don't require 'CODE' refs for callbacks/continations; this allows
            the use of CODEref objects, &{} operator overloads, or other things
