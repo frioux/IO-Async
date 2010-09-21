@@ -247,6 +247,15 @@ L<POE> - portable multitasking and networking framework for Perl
 
 =back
 
+=head1 SUPPORT
+
+Bugs may be reported via RT at
+
+ https://rt.cpan.org/Public/Dist/Display.html?Name=IO-Async
+
+Support by IRC may also be found on F<irc.perl.org> in the F<#ioasync>
+channel.
+
 =head1 AUTHOR
 
 Paul Evans <leonerd@leonerd.org.uk>
