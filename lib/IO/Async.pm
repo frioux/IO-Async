@@ -196,6 +196,14 @@ the use of the system's name resolvers in an asynchronous way, to resolve
 names into addresses, or vice versa. These methods are fully IPv6-capable if
 the underlying operating system is.
 
+=head2 Protocols
+
+The L<IO::Async::Protocol> class provides storage for a L<IO::Async::Handle>
+object, to act as a transport for some protocol. It allows a level of
+independence from the actual transport being for that protocol, allowing it to
+be easily reused. The L<IO::Async::Protocol::Stream> subclass provides further
+support for protocols based on stream connections, such as TCP sockets.
+
 =head1 TODO
 
 This collection of modules is still very much in development. As a result,
