@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2008,2009 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2008-2010 -- leonerd@leonerd.org.uk
 
 package IO::Async;
 
@@ -193,7 +193,8 @@ The L<IO::Async::Loop> provides several methods for performing network-based
 tasks. Primarily, the C<connect> and C<listen> methods allow the creation of
 client or server network sockets. Additionally, the C<resolve> method allows
 the use of the system's name resolvers in an asynchronous way, to resolve
-names into addresses, or vice versa.
+names into addresses, or vice versa. These methods are fully IPv6-capable if
+the underlying operating system is.
 
 =head1 TODO
 
