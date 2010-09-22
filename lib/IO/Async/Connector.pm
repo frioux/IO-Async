@@ -364,16 +364,7 @@ sub connect
       my $loop = $self->{loop};
 
       my $family   = $params{family}   || 0;
-
-      my $socktype;
-      if( $params{type} ) {
-         carp( "'type' deprecated, use 'socktype' instead" );
-         $socktype = $params{type} || 0;
-      }
-      else {
-         $socktype = $params{socktype} || 0;
-      }
-
+      my $socktype = $params{socktype} || 0;
       my $protocol = $params{protocol} || 0;
       my $flags    = $params{flags}    || 0;
 
