@@ -19,23 +19,27 @@ use base qw( IO::Async::Loop::Poll );
 C<IO::Async::Loop::IO_Poll> - compatibility wrapper for
 L<IO::Async::Loop::Poll>
 
-=head1 DESCRIPTION
+=head1 SYNOPSIS
 
-This class is a compatibility wrapper for programs that expect to find the
-Loop subclass which uses L<IO::Poll> under this name. It was renamed to
-C<IO::Async::Loop::Poll>. The API is exactly the same, only under a different
-name.
+This class should not be used in nwe code. It has been renamed to
+L<IO::Async::Loop::Poll>. Any application still using this class should simply
+change
 
-Any program still referring to this class directly should be changed. This
-object constructor will print a warning when the object is created.
+ use IO::Async::Loop::IO_Poll;
+
+ my $loop = IO::Async::Loop::IO_Poll->new( ... );
+
+into
+
+ use IO::Async::Loop::Poll;
+
+ my $loop = IO::Async::Loop::Poll->new( ... );
+
+The behaviour has not otherwise changed.
 
 =cut
 
-sub new
-{
-   carp "IO::Async::Loop::IO_Poll is deprecated, and now called IO::Async::Loop::Poll. Please update your code";
-   shift->SUPER::new( @_ );
-}
+die "IO::Async::Loop::IO_Poll is now called IO::Async::Loop::Poll. Please update your code";
 
 # Keep perl happy; keep Britain tidy
 1;
