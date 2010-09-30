@@ -56,6 +56,16 @@ undef $clientsock;
 undef $newclient;
 undef $notifier;
 
+# Some odd locations like BSD jails might not like INADDR_LOOPBACK. We'll
+# establish a baseline first to test against
+my $INADDR_LOOPBACK = do {
+   my $localsock = IO::Socket::INET->new( LocalAddr => "localhost", Listen => 1 );
+   $localsock->sockaddr;
+};
+if( $INADDR_LOOPBACK ne INADDR_LOOPBACK ) {
+   diag( sprintf "Testing with INADDR_LOOPBACK=%vd; this may be because of odd networking", $INADDR_LOOPBACK );
+}
+
 $loop->listen(
    family   => AF_INET,
    socktype => 'stream',
@@ -89,7 +99,9 @@ ok( defined $listenaddr, '$listensock has address' );
 
 my ( $listenport, $listen_inaddr ) = unpack_sockaddr_in( $listenaddr );
 
-is( $listen_inaddr, "\x7f\0\0\1", '$listenaddr is INADDR_LOOPBACK' );
+is( sprintf("%vd",$listen_inaddr),
+    sprintf("%vd",$INADDR_LOOPBACK),
+    '$listenaddr is INADDR_LOOPBACK' );
 
 $clientsock = IO::Socket::INET->new( Type => SOCK_STREAM )
    or die "Cannot socket() - $!";
