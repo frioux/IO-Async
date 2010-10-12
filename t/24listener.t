@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 29;
+use Test::More tests => 31;
 use Test::Refcount;
 
 use IO::Async::Loop::Poll;
@@ -12,6 +12,20 @@ use IO::Async::Loop::Poll;
 use IO::Socket::INET;
 
 use IO::Async::Listener;
+
+use Scalar::Util qw( refaddr );
+sub identical
+{
+   my ( $got, $expected, $name ) = @_;
+
+   my $got_addr = refaddr $got;
+   my $exp_addr = refaddr $expected;
+
+   ok( !defined $got_addr && !defined $exp_addr ||
+          $got_addr == $exp_addr,
+       $name ) or
+      diag( "Expected $got and $expected to refer to the same object" );
+}
 
 my $loop = IO::Async::Loop::Poll->new();
 
@@ -63,7 +77,10 @@ undef $newclient;
 
 my $newstream;
 $listener->configure(
-   on_stream => sub { ( undef, $newstream ) = @_ },
+   on_stream => sub {
+      ( undef, $newstream ) = @_;
+      identical( $_[0], $listener, '$self is $listener in on_stream' );
+   },
 );
 
 $clientsock = IO::Socket::INET->new( Type => SOCK_STREAM )
@@ -79,7 +96,10 @@ is_deeply( [ unpack_sockaddr_in $newstream->read_handle->peername ],
 
 my $newsocket;
 $listener->configure(
-   on_socket => sub { ( undef, $newsocket ) = @_ },
+   on_socket => sub {
+      ( undef, $newsocket ) = @_;
+      identical( $_[0], $listener, '$self is $listener in on_socket' );
+   },
 );
 
 $clientsock = IO::Socket::INET->new( Type => SOCK_STREAM )

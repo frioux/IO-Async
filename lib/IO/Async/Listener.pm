@@ -128,14 +128,14 @@ of L<IO::Async::Stream> when a new client connects. This is provided as a
 convenience for the common case that a Stream object is required as the
 transport for a Protocol object.
 
- $on_stream->( $stream )
+ $on_stream->( $self, $stream )
 
 =item on_socket => CODE
 
 Similar to C<on_stream>, but constructs an instance of L<IO::Async::Socket>.
 This is most useful for C<SOCK_DGRAM> or C<SOCK_RAW> sockets.
 
- $on_socket->( $socket )
+ $on_socket->( $self, $socket )
 
 =item handle => IO
 
