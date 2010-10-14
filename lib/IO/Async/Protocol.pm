@@ -99,6 +99,16 @@ sub transport
    return $self->{transport};
 }
 
+=head1 TRANSPORT DELEGATION
+
+The following methods are delegated to the transport object
+
+ close
+
+=cut
+
+sub close { shift->transport->close }
+
 =head1 SUBCLASS METHODS
 
 C<IO::Async::Protocol> is a base class provided so that specific subclasses of
