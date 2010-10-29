@@ -546,10 +546,10 @@ C<read_handle>, C<write_handle> or both.
 
 =cut
 
-sub new_for_stdin  { shift->new( read_handle  => \*STDIN ) }
-sub new_for_stdout { shift->new( write_handle => \*STDOUT ) }
+sub new_for_stdin  { shift->new( read_handle  => \*STDIN, @_ ) }
+sub new_for_stdout { shift->new( write_handle => \*STDOUT, @_ ) }
 
-sub new_for_stdio { shift->new( read_handle => \*STDIN, write_handle => \*STDOUT ) }
+sub new_for_stdio { shift->new( read_handle => \*STDIN, write_handle => \*STDOUT, @_ ) }
 
 # Keep perl happy; keep Britain tidy
 1;
