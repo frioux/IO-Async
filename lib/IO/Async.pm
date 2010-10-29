@@ -16,7 +16,7 @@ our $VERSION = '0.30';
 
 =head1 NAME
 
-C<IO::Async> - perform asynchronous filehandle IO and other operations
+C<IO::Async> - Asynchronous event-driven programming
 
 =head1 SYNOPSIS
 
