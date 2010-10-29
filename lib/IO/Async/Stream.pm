@@ -531,6 +531,26 @@ sub on_write_ready
    }
 }
 
+=head1 UTILITY CONSTRUCTORS
+
+=cut
+
+=head2 $stream = IO::Async::Stream->new_for_stdin
+
+=head2 $stream = IO::Async::Stream->new_for_stdout
+
+=head2 $stream = IO::Async::Stream->new_for_stdio
+
+Return a C<IO::Async::Stream> object preconfigured with the correct
+C<read_handle>, C<write_handle> or both.
+
+=cut
+
+sub new_for_stdin  { shift->new( read_handle  => \*STDIN ) }
+sub new_for_stdout { shift->new( write_handle => \*STDOUT ) }
+
+sub new_for_stdio { shift->new( read_handle => \*STDIN, write_handle => \*STDOUT ) }
+
 # Keep perl happy; keep Britain tidy
 1;
 

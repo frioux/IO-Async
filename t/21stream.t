@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 82;
+use Test::More tests => 86;
 use Test::Exception;
 use Test::Refcount;
 
@@ -566,6 +566,16 @@ cmp_ok( $write_errno, "==", ECONNRESET, 'errno after failed write' );
 $loop->remove( $stream );
 
 undef $stream;
+
+$stream = IO::Async::Stream->new_for_stdin;
+is( $stream->read_handle, \*STDIN, 'Stream->new_for_stdin->read_handle is STDIN' );
+
+$stream = IO::Async::Stream->new_for_stdout;
+is( $stream->write_handle, \*STDOUT, 'Stream->new_for_stdout->write_handle is STDOUT' );
+
+$stream = IO::Async::Stream->new_for_stdio;
+is( $stream->read_handle,  \*STDIN,  'Stream->new_for_stdio->read_handle is STDIN' );
+is( $stream->write_handle, \*STDOUT, 'Stream->new_for_stdio->write_handle is STDOUT' );
 
 package TestStream;
 use base qw( IO::Async::Stream );
