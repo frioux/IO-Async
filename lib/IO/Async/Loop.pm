@@ -58,9 +58,7 @@ C<IO::Async::Loop> - core loop of the C<IO::Async> framework
     on_expire => sub { print "10 seconds have passed\n" },
  )->start );
 
- $loop->add( IO::Async::Stream->new(
-    read_handle => \*STDIN,
-
+ $loop->add( IO::Async::Stream->new_for_stdin(
     on_read => sub {
        my ( $self, $buffref, $closed ) = @_;
 

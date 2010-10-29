@@ -65,10 +65,7 @@ $socketstream = IO::Async::Stream->new(
 );
 $loop->add( $socketstream );
 
-$stdiostream = IO::Async::Stream->new(
-   read_handle  => \*STDIN,
-   write_handle => \*STDOUT,
-
+$stdiostream = IO::Async::Stream->new_for_stdio(
    on_read => sub {
       my ( undef, $buffref, $closed ) = @_;
 

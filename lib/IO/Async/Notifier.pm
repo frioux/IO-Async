@@ -32,8 +32,7 @@ Usually not directly used by a program, but one valid use case may be:
  my $notifier = IO::Async::Notifier->new();
 
  $notifier->add_child(
-    IO::Async::Stream->new(
-       read_handle => \*STDIN,
+    IO::Async::Stream->new_for_stdin(
        on_read => sub {
           my $self = shift;
           my ( $buffref, $closed ) = @_;
