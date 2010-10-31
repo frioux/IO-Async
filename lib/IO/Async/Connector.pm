@@ -324,9 +324,6 @@ sub connect
    my $self = shift;
    my ( %params ) = @_;
 
-   my $timeout = $params{timeout};
-   $timeout = 30 if !defined $timeout;
-
    # Callbacks
    my $on_connected;
    if( $on_connected = delete $params{on_connected} ) {
