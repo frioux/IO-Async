@@ -5,6 +5,7 @@ use strict;
 use IO::Async::Test;
 
 use Test::More tests => 31;
+use Test::Identity;
 use Test::Refcount;
 
 use IO::Async::Loop::Poll;
@@ -12,20 +13,6 @@ use IO::Async::Loop::Poll;
 use IO::Socket::INET;
 
 use IO::Async::Listener;
-
-use Scalar::Util qw( refaddr );
-sub identical
-{
-   my ( $got, $expected, $name ) = @_;
-
-   my $got_addr = refaddr $got;
-   my $exp_addr = refaddr $expected;
-
-   ok( !defined $got_addr && !defined $exp_addr ||
-          $got_addr == $exp_addr,
-       $name ) or
-      diag( "Expected $got and $expected to refer to the same object" );
-}
 
 my $loop = IO::Async::Loop::Poll->new();
 
