@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use IO::Async::Loop;
-use IO::Async::Stream;
 use IO::Async::Listener;
 
 my $PORT = 12345;
@@ -12,18 +11,16 @@ my $PORT = 12345;
 my $loop = IO::Async::Loop->new;
 
 my $listener = IO::Async::Listener->new(
-   on_accept => sub {
+   on_stream => sub {
       my $self = shift;
-      my ( $socket ) = @_;
+      my ( $stream ) = @_;
 
-      # $socket is just an IO::Socket reference
+      my $socket = $stream->read_handle;
       my $peeraddr = $socket->peerhost . ":" . $socket->peerport;
 
       print STDERR "Accepted new connection from $peeraddr\n";
 
-      my $clientstream = IO::Async::Stream->new(
-         handle => $socket,
-
+      $stream->configure(
          on_read => sub {
             my ( $self, $buffref, $closed ) = @_;
 
@@ -43,7 +40,7 @@ my $listener = IO::Async::Listener->new(
          },
       );
 
-      $loop->add( $clientstream );
+      $loop->add( $stream );
    },
 );
 
