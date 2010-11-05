@@ -27,25 +27,24 @@ C<IO::Async::Listener> - listen on network sockets for incoming connections
 =head1 SYNOPSIS
 
  use IO::Async::Listener;
- use IO::Async::Stream;
 
  use IO::Async::Loop;
  my $loop = IO::Async::Loop->new();
 
  my $listener = IO::Async::Listener->new(
-    on_accept => sub {
-       my ( $newclient ) = @_;
+    on_stream => sub {
+       my ( undef, $stream ) = @_;
 
-       $loop->add( IO::Async::Stream->new(
-          handle => $newclient,
-
+       $stream->configure(
           on_read => sub {
              my ( $self, $buffref, $closed ) = @_;
              $self->write( $$buffref );
              $$buffref = "";
              return 0;
           },
-       ) );
+       );
+       
+       $loop->add( $stream );
     },
  );
 
