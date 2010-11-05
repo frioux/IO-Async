@@ -364,6 +364,9 @@ be set. To prevent this, pass a false value such as 0.
 
 =back
 
+As a convenience, it also supports a C<handle> argument, which is passed
+directly to C<configure>.
+
 =cut
 
 sub listen
@@ -373,6 +376,12 @@ sub listen
 
    my $loop = $self->get_loop;
    defined $loop or croak "Cannot listen when not a member of a Loop"; # TODO: defer?
+
+   if( exists $params{handle} ) {
+      my $handle = $params{handle};
+      $self->configure( handle => $handle );
+      return;
+   }
 
    # Shortcut
    if( $params{addr} and not $params{addrs} ) {
@@ -471,6 +480,51 @@ sub listen
 1;
 
 __END__
+
+=head1 EXAMPLES
+
+=head2 Listening on UNIX Sockets
+
+The C<handle> argument can be passed an existing socket already in listening
+mode, making it possible to listen on other types of socket such as UNIX
+sockets.
+
+ use IO::Async::Listener;
+ use IO::Socket::UNIX;
+
+ use IO::Async::Loop;
+ my $loop = IO::Async::Loop->new();
+
+ my $listener = IO::Async::Listener->new(
+    on_stream => sub {
+       my ( undef, $stream ) = @_;
+
+       $stream->configure(
+          on_read => sub {
+             my ( $self, $buffref, $closed ) = @_;
+             $self->write( $$buffref );
+             $$buffref = "";
+             return 0;
+          },
+       );
+       
+       $loop->add( $stream );
+    },
+ );
+
+ $loop->add( $listener );
+
+ my $socket = IO::Socket::UNIX->new(
+    Local => "echo.sock",
+    Listen => 1,
+ ) or die "Cannot make UNIX socket - $!\n";
+
+ $listener->listen(
+    handle => $socket,
+ );
+
+ $loop->loop_forever;
+
 
 =head1 AUTHOR
 
