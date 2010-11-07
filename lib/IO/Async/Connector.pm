@@ -227,7 +227,9 @@ an array, with at least the following elements:
 
 The first three arguments will be passed to a C<socket()> call and, if
 successful, the fourth to a C<connect()> call on the resulting socket. Any
-trailing elements will be ignored.
+trailing elements will be ignored. Note that C<$address> must be a packed
+socket address, such as returned by C<pack_sockaddr_in> or
+C<pack_sockaddr_un>. See also the C<EXAMPLES> section,
 
 =item on_connected => CODE
 
@@ -390,6 +392,44 @@ sub connect
 1;
 
 __END__
+
+=head1 EXAMPLES
+
+=head2 Passing Packed Socket Addresses
+
+The C<addr> or C<addrs> parameters should contain a packed socket address.
+This example shows how to use the C<Socket> functions to construct one for
+TCP port 8001 on address 10.0.0.1:
+
+ use Socket qw( PF_INET SOCK_STREAM pack_sockaddr_in inet_aton );
+
+ ...
+
+ $loop->connect(
+    addr => [
+       PF_INET,
+       SOCK_STREAM,
+       0, # Don't need to supply a protocol as kernel will do that
+       pack_sockaddr_in( 8001, inet_aton( "10.0.0.1" ) ),
+    ],
+    ...
+ );
+
+This example shows another way to connect to a UNIX socket at F<echo.sock>.
+
+ use Socket qw( PF_UNIX SOCK_STREAM pack_sockaddr_un );
+
+ ...
+
+ $loop->connect(
+    addr => [
+       PF_UNIX,
+       SOCK_STREAM,
+       0, # Don't need to supply a protocol as kernel will do that
+       pack_sockaddr_un( "echo.sock" ),
+    ],
+    ...
+ );
 
 =head1 AUTHOR
 
