@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2007,2009 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2007-2010 -- leonerd@leonerd.org.uk
 
 package IO::Async::Loop;
 
@@ -668,12 +668,31 @@ This method performs a non-blocking connect operation. It uses an
 internally-stored C<IO::Async::Connector> object. For more detail, see the
 C<connect()> method on the L<IO::Async::Connector> class.
 
+This method accepts an C<extensions> parameter; see the C<EXTENSIONS> section
+below.
+
 =cut
 
 sub connect
 {
    my $self = shift;
    my ( %params ) = @_;
+
+   my $extensions;
+   if( $extensions = delete $params{extensions} and @$extensions ) {
+      my ( $ext, @others ) = @$extensions;
+
+      my $method = "${ext}_connect";
+      # TODO: Try to 'require IO::Async::$ext'
+
+      $self->can( $method ) or croak "Extension method '$method' is not available";
+
+      $self->$method(
+         %params,
+         ( @others ? ( extensions => \@others ) : () ),
+      );
+      return;
+   }
 
    my $connector = $self->{connector} ||= $self->__new_feature( "IO::Async::Connector" );
 
@@ -1536,6 +1555,43 @@ sub _manage_queues
 1;
 
 __END__
+
+=head1 EXTENSIONS
+
+An Extension is a Perl module that provides extra methods in the
+C<IO::Async::Loop> or other packages. They are intended to provide extra
+functionallity that easily integrates with the rest of the code.
+
+Certain base methods take an C<extensions> parameter; an ARRAY reference
+containing a list of extension names. If such a list is passed to a method, it
+will immediately call a method whose name is that of the base method, prefixed
+by the first extension name in the list, separated by C<_>. If the
+C<extensions> list contains more extension names, it will be passed the
+remaining ones in another C<extensions> parameter.
+
+ $loop->connect(
+    extensions => [qw( FOO BAR )],
+    %args
+ )
+
+will become
+
+ $loop->FOO_connect(
+    extensions => [qw( BAR )],
+    %args
+ )
+
+This is provided so that extension modules, such as L<IO::Async::SSL> can
+easily be invoked indirectly, by passing extra arguments to C<connect> methods
+or similar, without needing every module to be aware of the C<SSL> extension.
+This functionallity is generic and not limited to C<SSL>; other extensions may
+also use it.
+
+The following methods take an C<extensions> parameter:
+
+ $loop->connect
+
+=cut
 
 =head1 AUTHOR
 
