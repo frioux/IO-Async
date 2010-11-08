@@ -111,12 +111,6 @@ A CODE reference for when more data is available
 
  $ret = $on_read->( $self, \$buffer, $handleclosed )
 
-=item on_closed => CODE
-
-Optional. A CODE reference to invoke when the transport handle becomes closed.
-
- $on_closed->( $self )
-
 =back
 
 =cut
@@ -126,7 +120,7 @@ sub configure
    my $self = shift;
    my %params = @_;
 
-   for (qw( on_read on_closed )) {
+   for (qw( on_read )) {
       $self->{$_} = delete $params{$_} if exists $params{$_};
    }
 
@@ -151,6 +145,8 @@ sub setup_transport
    my $self = shift;
    my ( $transport ) = @_;
 
+   $self->SUPER::setup_transport( $transport );
+
    $transport->configure( 
       on_read => $self->_capture_weakself( sub {
          my $self = shift;
@@ -160,16 +156,6 @@ sub setup_transport
                         $self->can( 'on_read' );
 
          $on_read->( $self, $buffref, $closed );
-      } ),
-
-      on_closed => $self->_capture_weakself( sub {
-         my $self = shift;
-         my ( $transport ) = @_;
-
-         my $on_closed = $self->{on_closed} ||
-                          $self->can( 'on_closed' );
-
-         $on_closed->( $self ) if $on_closed;
       } ),
    );
 }
@@ -182,6 +168,8 @@ sub teardown_transport
    $transport->configure(
       on_read => undef,
    );
+
+   $self->SUPER::teardown_transport( $transport );
 }
 
 =head1 METHODS
