@@ -96,6 +96,10 @@ L<IO::Async::Timer> - base class for Notifiers that use timed delays
 
 L<IO::Async::Signal> - event callback on receipt of a POSIX signal
 
+=item *
+
+L<IO::Async::PID> - event callback on exit of a child process
+
 =back
 
 For more detail, see the SYNOPSIS section in one of the above.
