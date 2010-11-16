@@ -1,5 +1,20 @@
 Revision history for IO-Async
 
+0.31    ADDITIONS:
+         * Delegate Protocol->close method and on_closed continuation to its
+           transport object
+         * Stream->new_for_stdin, ->new_for_stdout, ->new_for_stdio
+         * Support Listener->new( handle => $fh )
+         * IO::Async::PID notifier subclass
+
+        CHANGES:
+         * Better documentation of Listener and Connector addr and addrs
+           arguments
+
+        BUGFIXES:
+         * INADDR_ANY/INADDR_LOOPBACK fixes inside BSD jails with restricted
+           networking
+
 0.30    ADDITIONS:
          * Added IO::Async::Socket
          * Added IO::Async::Protocol and ::Protocol::Stream

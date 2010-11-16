@@ -23,7 +23,7 @@ use POSIX qw( SIGTERM WIFEXITED WEXITSTATUS WIFSIGNALED WTERMSIG );
 use Socket qw( AF_INET SOCK_DGRAM );
 use Time::HiRes qw( time );
 
-our $VERSION = '0.30';
+our $VERSION = '0.31';
 
 # Abstract Units of Time
 use constant AUT => $ENV{TEST_QUICK_TIMERS} ? 0.1 : 1;
