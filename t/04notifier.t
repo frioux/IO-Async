@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 21;
+use Test::More tests => 25;
 use Test::Exception;
 use Test::Refcount;
 
@@ -81,6 +81,21 @@ undef @subargs;
 
 dies_ok( sub { $notifier->_capture_weakself( 'cannotdo' ) },
          '$notifier->_capture_weakself on unknown method name fails' );
+
+$notifier->invoke_event( 'frobnicate', 78 );
+is_deeply( \@subargs, [ $notifier, 78 ], '@subargs after ->invoke_event' );
+
+undef @subargs;
+
+my $cb = $notifier->make_event_cb( 'frobnicate' );
+
+is( ref $cb, "CODE", '->make_event_cb returns a CODE reference' );
+is_oneref( $notifier, '$notifier has refcount 1 after ->make_event_cb' );
+
+$cb->( 90 );
+is_deeply( \@subargs, [ $notifier, 90 ], '@subargs after ->make_event_cb->()' );
+
+undef @subargs;
 
 is_oneref( $notifier, '$notifier has refcount 1 finally' );
 

@@ -430,6 +430,50 @@ sub _capture_weakself
    };
 }
 
+=head2 $callback = $notifier->make_event_cb( $event_name )
+
+Returns a C<CODE> reference which, when invoked, will execute the given event
+handler. Event handlers may either be subclass methods, or parameters given to
+the C<new> or C<configure> method.
+
+The event handler can be passed extra arguments by giving them to the C<CODE>
+reference; the first parameter received will be a reference to the notifier
+itself. This is stored weakly in the closure, so it is safe to store the
+resulting C<CODE> reference in the object itself without causing a reference
+cycle.
+
+=cut
+
+sub make_event_cb
+{
+   my $self = shift;
+   my ( $event_name ) = @_;
+
+   my $code = $self->{$event_name} || $self->can( $event_name )
+      or croak "$self cannot handle $event_name event";
+
+   return $self->_capture_weakself( $code );
+}
+
+=head2 $notifier->invoke_event( $event_name, @args )
+
+Invokes the given event handler, passing in the given arguments. Event
+handlers may either be subclass methods, or parameters given to the C<new> or
+C<configure> method.
+
+=cut
+
+sub invoke_event
+{
+   my $self = shift;
+   my ( $event_name, @args ) = @_;
+
+   my $code = $self->{$event_name} || $self->can( $event_name )
+      or croak "$self cannot handle $event_name event";
+
+   $code->( $self, @args );
+}
+
 # Keep perl happy; keep Britain tidy
 1;
 
