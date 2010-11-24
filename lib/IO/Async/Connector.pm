@@ -332,6 +332,7 @@ sub connect
       # all fine
    }
    elsif( my $on_stream = delete $params{on_stream} ) {
+      require IO::Async::Stream;
       # TODO: It doesn't make sense to put a SOCK_DGRAM in an
       # IO::Async::Stream but currently we don't detect this
       $on_connected = sub {
