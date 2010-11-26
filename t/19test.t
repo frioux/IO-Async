@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 4;
+use Test::More tests => 5;
 use Test::Refcount;
 use IO::Async::Test;
 
@@ -54,3 +54,11 @@ $S2->syswrite( "Another line\n" );
 wait_for_stream { $readbuffer =~ m/\n/ } $S1 => $readbuffer;
 
 is( $readbuffer, "Another line\n", 'Automatic stream read wait' );
+
+$readbuffer = "";
+
+$S2->syswrite( "Some dynamic data\n" );
+
+wait_for_stream { $readbuffer =~ m/\n/ } $S1 => sub { $readbuffer .= shift };
+
+is( $readbuffer, "Some dynamic data\n" );

@@ -134,23 +134,35 @@ whenever it is readable will read bytes in from it into the given buffer. The
 buffer is NOT initialised when the function is entered, in case data remains
 from a previous call.
 
+C<$buffer> can also be a CODE reference, in which case it will be invoked
+being passed data read from the handle, whenever it is readable.
+
 =cut
 
 sub wait_for_stream(&$$)
 {
    my ( $cond, $handle, undef ) = @_;
-   my $varref = \$_[2]; # So that we can modify it from the on_read callback
+
+   my $on_read;
+   if( ref $_[2] eq "CODE" ) {
+      $on_read = $_[2];
+   }
+   else {
+      my $varref = \$_[2];
+      $on_read = sub { $$varref .= $_[0] };
+   }
 
    $loop->watch_io(
       handle => $handle,
       on_read_ready => sub {
-         my $ret = $handle->sysread( $$varref, 8192, length $$varref );
+         my $ret = $handle->sysread( my $buffer, 8192 );
          if( !defined $ret ) {
             die "Read failed on $handle - $!\n";
          }
          elsif( $ret == 0 ) {
             die "Read returned EOF on $handle\n";
          }
+         $on_read->( $buffer );
       }
    );
 
