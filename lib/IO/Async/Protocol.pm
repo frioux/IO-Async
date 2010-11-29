@@ -177,3 +177,7 @@ sub teardown_transport
 1;
 
 __END__
+
+=head1 AUTHOR
+
+Paul Evans <leonerd@leonerd.org.uk>
