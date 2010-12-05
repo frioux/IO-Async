@@ -140,8 +140,10 @@ sub _add_to_loop
       $self->{on_exit} ? $self->{on_exit}->( $self, $exitcode )
                        : $self->on_exit( $exitcode );
 
-      # Since this is a oneshot, we'll have to remove it from the loop
-      $self->get_loop->remove( $self );
+      # Since this is a oneshot, we'll have to remove it from the loop or
+      # parent Notifier
+      $self->parent ? $self->parent->remove_child( $self ) 
+                    : $self->get_loop->remove( $self );
    } );
 
    $loop->watch_child( $self->pid, $self->{cb} );
