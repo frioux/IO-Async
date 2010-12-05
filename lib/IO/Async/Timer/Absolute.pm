@@ -1,0 +1,155 @@
+#  You may distribute under the terms of either the GNU General Public License
+#  or the Artistic License (the same terms as Perl itself)
+#
+#  (C) Paul Evans, 2010 -- leonerd@leonerd.org.uk
+
+package IO::Async::Timer::Absolute;
+
+use strict;
+use warnings;
+use base qw( IO::Async::Timer );
+
+our $VERSION = '0.31';
+
+use Carp;
+
+=head1 NAME
+
+C<IO::Async::Timer::Absolute> - event callback at a fixed future time
+
+=head1 SYNOPSIS
+
+ use IO::Async::Timer::Absolute;
+
+ use POSIX qw( mktime );
+
+ use IO::Async::Loop;
+ my $loop = IO::Async::Loop->new();
+
+ my @time = gmtime;
+
+ my $timer = IO::Async::Timer::Absolute->new(
+    time => mktime( 0, 0, 0, $time[4]+1, $time[5], $time[6] ),
+
+    on_expire => sub {
+       print "It's midnight\n";
+       $loop->loop_stop;
+    },
+ );
+
+ $timer->start;
+
+ $loop->add( $timer );
+
+ $loop->loop_forever;
+
+=head1 DESCRIPTION
+
+This subclass of L<IO::Async::Timer> implements one-shot events at a fixed
+time in the future. The object waits for a given timestamp, and invokes its
+callback at that point in the future.
+
+For a C<Timer> object that waits for a delay relative to the time it is
+started, see instead L<IO::Async::Timer::Countdown>.
+
+This object may be used in one of two ways; as an instance with CODE
+references as callbacks, or as a base class with overridden methods.
+
+=over 4
+
+=item Subclassing
+
+If a subclass is built, then it can override the following methods to handle
+events:
+
+ $self->on_expire()
+
+=back
+
+=cut
+
+=head1 PARAMETERS
+
+The following named parameters may be passed to C<new> or C<configure>:
+
+=over 8
+
+=item on_expire => CODE
+
+CODE reference to callback to invoke when the timer expires. If not supplied,
+the subclass method will be called instead.
+
+ $on_expire->( $self )
+
+=item time => NUM
+
+The epoch time at which the timer will expire.
+
+=back
+
+Once constructed, the timer object will need to be added to the C<Loop> before
+it will work.
+
+Unlike other timers, it does not make sense to C<start> this object, because
+its expiry time is absolute, and not relative to the time it is started.
+
+=cut
+
+sub configure
+{
+   my $self = shift;
+   my %params = @_;
+
+   if( exists $params{on_expire} ) {
+      my $on_expire = delete $params{on_expire};
+      ref $on_expire or croak "Expected 'on_expire' as a reference";
+
+      $self->{on_expire} = $on_expire;
+      undef $self->{cb}; # Will be lazily constructed when needed
+   }
+
+   if( exists $params{time} ) {
+      my $time = delete $params{time};
+
+      $self->stop if $self->is_running;
+
+      $self->{time} = $time;
+
+      $self->start if !$self->is_running;
+   }
+
+   if( !$self->{on_expire} and !$self->can( 'on_expire' ) ) {
+      croak 'Expected either a on_expire callback or an ->on_expire method';
+   }
+
+   $self->SUPER::configure( %params );
+}
+
+sub _make_cb
+{
+   my $self = shift;
+
+   return $self->_capture_weakself( sub {
+      my ( $self ) = @_;
+
+      undef $self->{id};
+
+      $self->invoke_event( "on_expire" );
+   } );
+}
+
+sub _make_enqueueargs
+{
+   my $self = shift;
+
+   return time => $self->{time};
+}
+
+# Keep perl happy; keep Britain tidy
+1;
+
+__END__
+
+=head1 AUTHOR
+
+Paul Evans <leonerd@leonerd.org.uk>

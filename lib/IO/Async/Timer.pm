@@ -27,6 +27,10 @@ subclasses:
 
 =item *
 
+L<IO::Async::Timer::Absolute> - event callback at a fixed future time
+
+=item *
+
 L<IO::Async::Timer::Countdown> - event callback after a fixed delay
 
 =item *

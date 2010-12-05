@@ -48,7 +48,8 @@ started again, when it will wait the same period then invoke the callback
 again. A timer that is currently running may be stopped or reset.
 
 For a C<Timer> object that repeatedly runs a callback at regular intervals,
-see instead L<IO::Async::Timer::Periodic>.
+see instead L<IO::Async::Timer::Periodic>. For a C<Timer> that invokes its
+callback at a fixed time in the future, see L<IO::Async::Timer::Absolute>.
 
 This object may be used in one of two ways; as an instance with CODE
 references as callbacks, or as a base class with overridden methods.

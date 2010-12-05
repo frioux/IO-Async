@@ -107,6 +107,9 @@ socket to its callback function.
 
 =head2 Timers
 
+An L<IO::Async::Timer::Absolute> object represents a timer that expires at a
+given absolute time in the future.
+
 An L<IO::Async::Timer::Countdown> object represents a count time timer, which
 will invoke a callback after a given delay. It can be stopped and restarted.
 
