@@ -12,7 +12,6 @@ use base qw( IO::Async::Timer );
 our $VERSION = '0.31';
 
 use Carp;
-use Scalar::Util qw( weaken );
 
 =head1 NAME
 
@@ -124,20 +123,14 @@ sub configure
 sub _make_cb
 {
    my $self = shift;
-   weaken( my $weakself = $self );
 
-   if( $self->{on_expire} ) {
-      return sub {
-         undef $weakself->{id};
-         $weakself->{on_expire}->( $weakself );
-      };
-   }
-   else {
-      return sub {
-         undef $weakself->{id};
-         $weakself->on_expire;
-      };
-   }
+   return $self->_capture_weakself( sub {
+      my ( $self ) = @_;
+
+      undef $self->{id};
+
+      $self->invoke_event( "on_expire" );
+   } );
 }
 
 sub _make_enqueueargs
