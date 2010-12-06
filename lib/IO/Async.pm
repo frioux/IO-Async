@@ -252,7 +252,7 @@ Bugs may be reported via RT at
 
  https://rt.cpan.org/Public/Dist/Display.html?Name=IO-Async
 
-Support by IRC may also be found on F<irc.perl.org> in the F<#ioasync>
+Support by IRC may also be found on F<irc.perl.org> in the F<#io-async>
 channel.
 
 =head1 AUTHOR
