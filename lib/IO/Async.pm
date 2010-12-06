@@ -232,7 +232,7 @@ for OS-specific subclasses first.
 =item *
 
 A consideration of whether it is useful and possible to provide integration
-with L<POE> or L<AnyEvent>.
+with L<AnyEvent>.
 
 =back
 
@@ -243,10 +243,6 @@ with L<POE> or L<AnyEvent>.
 =item *
 
 L<Event> - Event loop processing
-
-=item *
-
-L<POE> - portable multitasking and networking framework for Perl
 
 =back
 
