@@ -16,7 +16,7 @@ use IO::Async::Handle;
 use POSIX qw( EAGAIN );
 use Socket::GetAddrInfo qw( :Socket6api AI_PASSIVE );
 
-use Socket qw( SOL_SOCKET SO_ACCEPTCONN SO_REUSEADDR );
+use Socket qw( sockaddr_family SOL_SOCKET SO_ACCEPTCONN SO_REUSEADDR SO_TYPE );
 
 use Carp;
 
@@ -237,12 +237,46 @@ sub is_listening
    return ( defined $self->sockname );
 }
 
+=head2 $name = $listener->sockname
+
+Returns the C<sockname> of the underlying listening socket
+
+=cut
+
 sub sockname
 {
    my $self = shift;
 
    my $handle = $self->read_handle or return undef;
    return $handle->sockname;
+}
+
+=head2 $family = $listener->family
+
+Returns the socket address family of the underlying listening socket
+
+=cut
+
+sub family
+{
+   my $self = shift;
+
+   my $sockname = $self->sockname or return undef;
+   return sockaddr_family( $sockname );
+}
+
+=head2 $socktype = $listener->socktype
+
+Returns the socket type of the underlying listening socket
+
+=cut
+
+sub socktype
+{
+   my $self = shift;
+
+   my $handle = $self->read_handle or return undef;
+   return $handle->sockopt(SO_TYPE);
 }
 
 =head2 $listener->listen( %params )

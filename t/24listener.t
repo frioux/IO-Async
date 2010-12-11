@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 31;
+use Test::More tests => 35;
 use Test::Identity;
 use Test::Refcount;
 
@@ -42,6 +42,9 @@ is_oneref( $listener, '$listener has refcount 1 initially' );
 ok( $listener->is_listening, '$listener is_listening' );
 is_deeply( [ unpack_sockaddr_in $listener->sockname ],
            [ unpack_sockaddr_in $listensock->sockname ], '$listener->sockname' );
+
+is( $listener->family,   AF_INET,     '$listener->family' );
+is( $listener->socktype, SOCK_STREAM, '$listener->sockname' );
 
 $loop->add( $listener );
 
@@ -179,6 +182,9 @@ ok( $port > 0, 'socket listens on some defined port number' );
 is( sprintf("%vd",$sinaddr),
     sprintf("%vd",$INADDR_ANY),
     'socket listens on INADDR_ANY' );
+
+is( $listener->family,   AF_INET,     '$listener->family' );
+is( $listener->socktype, SOCK_STREAM, '$listener->sockname' );
 
 is( $listen_self, $listener, '$listen_self is $listener' );
 undef $listen_self; # for refcount
