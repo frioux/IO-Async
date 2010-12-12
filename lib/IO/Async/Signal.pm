@@ -44,19 +44,16 @@ POSIX signal is received.
 Multiple objects can be added to a C<Loop> that all watch for the same signal.
 The callback functions will all be invoked, in no particular order.
 
-This object may be used in one of two ways; as an instance with CODE
-references as callbacks, or as a base class with overridden methods.
+=cut
 
-=over 4
+=head1 EVENTS
 
-=item Subclassing
+The following events are invoked, either using subclass methods or CODE
+references in parameters:
 
-If a subclass is built, then it can override the following methods to handle
-events:
+=head2 on_receipt
 
- $self->on_receipt()
-
-=back
+Invoked when the signal is received.
 
 =cut
 
@@ -73,10 +70,7 @@ only be given at construction time.
 
 =item on_receipt => CODE
 
-CODE reference to callback to invoke when the signal is received. If not
-supplied, the subclass method will be called instead.
-
- $on_receipt->( $self )
+CODE reference for the C<on_receipt> event.
 
 =back
 

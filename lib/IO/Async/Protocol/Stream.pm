@@ -71,31 +71,26 @@ independence from the actual stream being used. For example, the stream may
 actually be an L<IO::Async::SSLStream> to allow the protocol to be used over
 SSL.
 
-The object may be used in one of two ways; as an instance with CODE references
-as callbacks, or as a base class with overridden methods.
+As with C<IO::Async::Stream>, it is required that by the time the protocol
+object is added to a Loop, that it either has an C<on_read> method, or has
+been configured with an C<on_read> callback handler.
 
-=over 4
+=cut
 
-=item Subclassing
+=head1 EVENTS
 
-If a subclass is built, then it can override the following methods to handle
-events:
+The following events are invoked, either using subclass methods or CODE
+references in parameters:
 
- $ret = $self->on_read( \$buffer, $handleclosed )
-
- $self->on_closed()
+=head2 $ret = on_read \$buffer, $handleclosed
 
 The C<on_read> handler is invoked identically to C<IO::Async::Stream>.
+
+=head2 on_closed
 
 The C<on_closed> handler is optional, but if provided, will be invoked after
 the stream is closed by either side (either because the C<close()> method has
 been invoked on it, or on an incoming EOF).
-
-=back
-
-As with C<IO::Async::Stream>, it is required that by the time the protocol
-object is added to a Loop, that it either has an C<on_read> method, or has
-been configured with an C<on_read> callback handler.
 
 =cut
 
@@ -107,9 +102,7 @@ The following named parameters may be passed to C<new> or C<configure>:
 
 =item on_read => CODE
 
-A CODE reference for when more data is available
-
- $ret = $on_read->( $self, \$buffer, $handleclosed )
+CODE reference for the C<on_read> event.
 
 =back
 

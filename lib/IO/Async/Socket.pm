@@ -72,29 +72,26 @@ It is primarily intended for C<SOCK_data> or C<SOCK_RAW> sockets; for
 C<SOCK_STREAM> sockets an instance of L<IO::Async::Stream> is probably more
 appropriate.
 
-This object may be used in one of two ways; as an instance with CODE
-references as callbacks, or as a base class with overridden methods.
+=head1 EVENTS
 
-=over 4
+The following events are invoked, either using subclass methods or CODE
+references in parameters:
 
-=item Subclassing
+=head2 on_recv $data, $addr
 
-If a subclass is built, then it can override the following methods to handle
-events:
-
- $self->on_recv( $data, $addr )
-
- $self->on_recv_error( $errno )
-
- $self->on_outgoing_empty()
-
- $self->on_send_error( $errno )
-
-=back
+Invoke on receipt of a packet, datagram, or stream segment.
 
 The C<on_recv> handler is invoked once for each packet, datagram, or stream
 segment that is received. It is passed the data itself, and the sender's
 address.
+
+=head2 on_recv_error $errno
+
+Optional. Invoked when the C<recv()> method on the receiving handle fails.
+
+=head2 on_send_error $errno
+
+Optional. Invoked when the C<send()> method on the sending handle fails.
 
 The C<on_recv_error> and C<on_send_error> handlers are passed the value of
 C<$!> at the time the error occured. (The C<$!> variable itself, by its
@@ -105,7 +102,9 @@ If an error occurs when the corresponding error callback is not supplied, and
 there is not a subclass method for it, then the C<close()> method is
 called instead.
 
-The C<on_outgoing_empty> handler is not passed any arguments.
+=head2 on_outgoing_empty
+
+Optional. Invoked when the sending data buffer becomes empty.
 
 =cut
 
@@ -138,30 +137,11 @@ Shortcut to specifying the same IO handle for both of the above.
 
 =item on_recv => CODE
 
-A CODE reference to invoke on receipt of a packet, datagram, or stream
-segment.
-
- $on_recv->( $self, $data, $addr )
-
 =item on_recv_error => CODE
-
-Optional. A CODE reference for when the C<recv()> method on the receiving
-handle fails.
-
- $on_recv_error->( $self, $errno )
 
 =item on_outgoing_empty => CODE
 
-Optional. A CODE reference for when the sending data buffer becomes empty.
-
- $on_outgoing_empty->( $self )
-
 =item on_send_error => CODE
-
-Optional. A CODE reference for when the C<send()> method on the sending handle
-fails.
-
- $on_send_error->( $self, $errno )
 
 =item autoflush => BOOL
 

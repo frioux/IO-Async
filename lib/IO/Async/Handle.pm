@@ -52,30 +52,28 @@ non-stream sockets, see L<IO::Async::Socket>.
 This subclass of L<IO::Async::Notifier> allows non-blocking IO on filehandles.
 It provides event handlers for when the filehandle is read- or write-ready.
 
-This object may be used in one of two ways; as an instance with CODE
-references as callbacks, or as a base class with overridden methods.
+=cut
 
-=over 4
+=head1 EVENTS
 
-=item Subclassing
+The following events are invoked, either using subclass methods or CODE
+references in parameters:
 
-If a subclass is built, then it can override the following methods to handle
-events:
+=head2 on_read_ready
 
- $self->on_read_ready()
+Invoked when the read handle becomes ready for reading.
 
- $self->on_write_ready()
+=head2 on_write_ready
 
-Optionally, an C<on_closed> method may be provided, which will be called when
-the C<close> method is invoked.
+Invoked when the write handle becomes ready for writing.
 
- $self->on_closed()
+=head2 on_closed
 
-=back
+Optional. Invoked when the handle becomes closed.
 
-If either of the readyness methods calls the C<close()> method, then
-the handle is internally marked as closed within the object and will be
-removed from its containing loop, if it is within one.
+This handler is invoked before the filehandles are closed and the Handle
+removed from its containing Loop. The C<get_loop> will still return the
+containing Loop object.
 
 =cut
 
@@ -102,23 +100,9 @@ as above. Must implement C<fileno> method in way that C<IO::Handle> does.
 
 =item on_write_ready => CODE
 
-CODE references to callbacks for when the handle becomes read-ready or
-write-ready. If these are not supplied, subclass methods will be called
-instead.
-
- $on_read_ready->( $self )
-
- $on_write_ready->( $self )
-
 =item on_closed => CODE
 
-Optional. CODE reference to the callback for when the handle becomes closed.
-
-This callback is invoked before the filehandles are closed and the Handle
-removed from its containing Loop. The C<get_loop> will still return the
-containing Loop object.
-
- $on_closed->( $self )
+CODE references for event handlers.
 
 =back
 

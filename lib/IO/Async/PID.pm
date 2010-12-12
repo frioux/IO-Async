@@ -55,19 +55,16 @@ C<IO::Async::PID> - event callback on exit of a child process
 This subclass of L<IO::Async::Notifier> invokes its callback when a process
 exits.
 
-This object may be used in one of two ways; as an instance with CODE
-references as callbacks, or as a base class with overridden methods.
+=cut
 
-=over 4
+=head1 EVENTS
 
-=item Subclassing
+The following events are invoked, either using subclass methods or CODE
+references in parameters:
 
-If a subclass is built, then it can override the following methods to handle
-events:
+=head2 on_exit $exitcode
 
- $self->on_exit( $exitcode )
-
-=back
+Invoked when the watched process exits.
 
 =cut
 
@@ -83,10 +80,7 @@ The process ID to watch. Can only be given at construction time.
 
 =item on_exit => CODE
 
-CODE reference to callback to invoke when the process exits. If not supplied,
-the subclass method will be called instead.
-
- $on_exit->( $self, $exitcode )
+CODE reference for the C<on_exit> event.
 
 =back
 

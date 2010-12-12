@@ -51,19 +51,16 @@ For a C<Timer> object that repeatedly runs a callback at regular intervals,
 see instead L<IO::Async::Timer::Periodic>. For a C<Timer> that invokes its
 callback at a fixed time in the future, see L<IO::Async::Timer::Absolute>.
 
-This object may be used in one of two ways; as an instance with CODE
-references as callbacks, or as a base class with overridden methods.
+=cut
 
-=over 4
+=head1 EVENTS
 
-=item Subclassing
+The following events are invoked, either using subclass methods or CODE
+references in parameters:
 
-If a subclass is built, then it can override the following methods to handle
-events:
+=head2 on_expire
 
- $self->on_expire()
-
-=back
+Invoked when the timer expires.
 
 =cut
 
@@ -75,10 +72,7 @@ The following named parameters may be passed to C<new> or C<configure>:
 
 =item on_expire => CODE
 
-CODE reference to callback to invoke when the timer expires. If not supplied,
-the subclass method will be called instead.
-
- $on_expire->( $self )
+CODE reference for the C<on_expire> event.
 
 =item delay => NUM
 

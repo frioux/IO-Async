@@ -91,19 +91,16 @@ Alternatively, the Listener can construct a socket by calling the C<listen>
 method. Either a list of addresses can be provided, or a service name can be
 looked up using the underlying loop's C<resolve> method.
 
-This object may be used in one of two ways; with a callback function, or as a
-base class.
+=cut
 
-=over 4
+=head1 EVENTS
 
-=item Subclassing
+The following events are invoked, either using subclass methods or CODE
+references in parameters:
 
-If a subclass is built, then it can override the following methods to handle
-events:
+=head2 on_accept $clientsocket
 
- $self->on_accept( $clientsocket )
-
-=back
+Invoked whenever a new client connects to the socket.
 
 =cut
 
@@ -115,10 +112,7 @@ The following named parameters may be passed to C<new> or C<configure>:
 
 =item on_accept => CODE
 
-A callback that is invoked whenever a new client connects to the socket. If
-not supplied  the subclass method will be called instead.
-
- $on_accept->( $self, $clientsocket )
+CODE reference for the C<on_accept> event.
 
 =item on_stream => CODE
 

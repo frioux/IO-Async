@@ -102,46 +102,35 @@ a byte-stream. It provides buffering for both incoming and outgoing data. It
 invokes the C<on_read> handler when new data is read from the filehandle. Data
 may be written to the filehandle by calling the C<write()> method.
 
-This object may be used in one of two ways; as an instance with CODE
-references as callbacks, or as a base class with overridden methods.
+=cut
 
-=over 4
+=head1 EVENTS
 
-=item Subclassing
+The following events are invoked, either using subclass methods or CODE
+references in parameters:
 
-If a subclass is built, then it can override the following methods to handle
-events:
+=head2 $ret = on_read \$buffer, $handleclosed
 
- $ret = $self->on_read( \$buffer, $handleclosed )
+Invoked when more data is available in the internal receiving buffer.
 
- $self->on_read_error( $errno )
-
- $self->on_outgoing_empty()
-
- $self->on_write_error( $errno )
-
-=back
-
-The first argument to C<on_read()> is a reference to a plain perl string. The
-code should inspect and remove any data it likes, but is not required to
-remove all, or indeed any of the data. Any data remaining in the buffer will
-be preserved for the next call, the next time more data is received from the
-handle.
+The first argument is a reference to a plain perl string. The code should
+inspect and remove any data it likes, but is not required to remove all, or
+indeed any of the data. Any data remaining in the buffer will be preserved for
+the next call, the next time more data is received from the handle.
 
 In this way, it is easy to implement code that reads records of some form when
 completed, but ignores partially-received records, until all the data is
-present. If the method is confident no more useful data remains, it should
-return C<0>. If not, it should return C<1>, and the method will be called
+present. If the handler is confident no more useful data remains, it should
+return C<0>. If not, it should return C<1>, and the handler will be called
 again. This makes it easy to implement code that handles multiple incoming
 records at the same time. See the examples at the end of this documentation
 for more detail.
 
-The second argument to the C<on_read()> method is a scalar indicating whether
-the handle has been closed. Normally it is false, but will become true once
-the handle closes. A reference to the buffer is passed to the method in the
-usual way, so it may inspect data contained in it. Once the method returns a
-false value, it will not be called again, as the handle is now closed and no
-more data can arrive.
+The second argument is a scalar indicating whether the handle has been closed.
+Normally it is false, but will become true once the handle closes. A reference
+to the buffer is passed to the handler in the usual way, so it may inspect data
+contained in it. Once the handler returns a false value, it will not be called
+again, as the handle is now closed and no more data can arrive.
 
 The C<on_read()> code may also dynamically replace itself with a new callback
 by returning a CODE reference instead of C<0> or C<1>. The original callback
@@ -150,16 +139,25 @@ C<undef>. Whenever the callback is changed in this way, the new code is called
 again; even if the read buffer is currently empty. See the examples at the end
 of this documentation for more detail.
 
+=head2 on_read_error $errno
+
+Optional. Invoked when the C<sysread()> method on the read handle fails.
+
+=head2 on_write_error $errno
+
+Optional. Invoked when the C<syswrite()> method on the write handle fails.
+
 The C<on_read_error> and C<on_write_error> handlers are passed the value of
 C<$!> at the time the error occured. (The C<$!> variable itself, by its
 nature, may have changed from the original error by the time this handler
 runs so it should always use the value passed in).
 
 If an error occurs when the corresponding error callback is not supplied, and
-there is not a subclass method for it, then the C<close()> method is
-called instead.
+there is not a handler for it, then the C<close()> method is called instead.
 
-The C<on_outgoing_empty> handler is not passed any arguments.
+=head2 on_outgoing_empty
+
+Optional. Invoked when the writing data buffer becomes empty.
 
 =cut
 
@@ -194,30 +192,13 @@ Shortcut to specifying the same IO handle for both of the above.
 
 =item on_read => CODE
 
-A CODE reference for when more data is available in the internal receiving 
-buffer.
-
- $ret = $on_read->( $self, \$buffer, $handleclosed )
-
 =item on_read_error => CODE
-
-Optional. A CODE reference for when the C<sysread()> method on the read handle
-fails.
-
- $on_read_error->( $self, $errno )
 
 =item on_outgoing_empty => CODE
 
-Optional. A CODE reference for when the writing data buffer becomes empty.
-
- $on_outgoing_empty->( $self )
-
 =item on_write_error => CODE
 
-Optional. A CODE reference for when the C<syswrite()> method on the write
-handle fails.
-
- $on_write_error->( $self, $errno )
+CODE references for event handlers.
 
 =item autoflush => BOOL
 

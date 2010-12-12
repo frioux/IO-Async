@@ -50,19 +50,16 @@ started, then adding each interval thereafter.
 For a C<Timer> object that only runs a callback once, after a given delay, see
 instead L<IO::Async::Timer::Countdown>.
 
-This object may be used in one of two ways; as an instance with CODE
-references as callbacks, or as a base class with overridden methods.
+=cut
 
-=over 4
+=head1 EVENTS
 
-=item Subclassing
+The following events are invoked, either using subclass methods or CODE
+references in parameters:
 
-If a subclass is built, then it can override the following methods to handle
-events:
+=head2 on_tick
 
- $self->on_tick()
-
-=back
+Invoked on each interval of the timer.
 
 =cut
 
@@ -74,10 +71,7 @@ The following named parameters may be passed to C<new> or C<configure>:
 
 =item on_tick => CODE
 
-CODE reference to callback to invoke each interval. If not supplied, the
-subclass method will be called instead.
-
- $on_tick->( $self )
+CODE reference for the C<on_tick> event.
 
 =item interval => NUM
 
