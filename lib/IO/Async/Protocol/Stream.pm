@@ -169,7 +169,7 @@ sub teardown_transport
 
 =cut
 
-=head2 $self->write( $data )
+=head2 $protocol->write( $data )
 
 Writes the given data by calling the C<write> method on the contained
 transport stream.
