@@ -4,13 +4,16 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 24;
+use Test::More tests => 26;
 use Test::Refcount;
 
 use IO::Async::Loop;
 
 use IO::Async::Stream;
 use IO::Async::Protocol::Stream;
+
+use IO::Socket::INET;
+use Socket qw( SOCK_STREAM );
 
 my $loop = IO::Async::Loop->new;
 
@@ -163,6 +166,52 @@ $streamproto = IO::Async::Protocol::Stream->new(
 
 isa_ok( $streamproto->transport, "IO::Async::Stream", 'Protocol::Stream->new( handle ) shortcut creates Stream object' );
 is( $streamproto->transport->read_handle, $S1, 'Stream object has correct handle' );
+
+my $serversock = IO::Socket::INET->new(
+   Type      => SOCK_STREAM,
+   LocalHost => "localhost",
+   Listen    => 1,
+) or die "Cannot create server socket - $!";
+
+$streamproto = IO::Async::Protocol::Stream->new(
+   on_read => sub {
+      my $self = shift;
+      my ( $buffref, $closed ) = @_;
+      push @lines, $1 while $$buffref =~ s/^(.*\n)//;
+      return 0;
+   }
+);
+
+$loop->add( $streamproto );
+
+my $connected = 0;
+
+$streamproto->connect(
+   host    => $serversock->sockhost,
+   service => $serversock->sockport,
+   family  => $serversock->sockdomain,
+
+   on_connected => sub { $connected++ },
+
+   on_connect_error => sub { die "Test failed early - $_[-1]" },
+   on_resolve_error => sub { die "Test failed early - $_[-1]" },
+);
+
+wait_for { $connected };
+
+my $clientsock = $serversock->accept;
+
+is( $streamproto->transport->read_handle->peerport,
+    $serversock->sockport,
+    'Protocol is connected to server socket port' );
+
+$clientsock->syswrite( "A message\n" );
+
+undef @lines;
+
+wait_for { @lines };
+
+is( $lines[0], "A message\n", 'Protocol transport works' );
 
 package TestProtocol::Stream;
 use base qw( IO::Async::Protocol::Stream );

@@ -200,6 +200,52 @@ sub write
    $self->transport->write( $data, %args );
 }
 
+=head2 $protocol->connect( %args )
+
+Sets up a connection to a peer, and configures the underlying C<transport> for
+the Protocol.
+
+Takes the following named arguments:
+
+=over 8
+
+=item on_connected => CODE
+
+Optional. If supplied, will be invoked once the connection has been
+established.
+
+ $on_connected->( $protocol )
+
+=back
+
+Other arguments will be passed to the underlying C<IO::Async::Loop> C<connect>
+call.
+
+=cut
+
+sub connect
+{
+   my $self = shift;
+   my %args = @_;
+
+   my $loop = $self->get_loop or croak "Cannot ->connect a ".ref($self)." that is not in a Loop";
+
+   my $on_connected = delete $args{on_connected};
+
+   $loop->connect(
+      %args,
+      socktype => "stream",
+
+      on_stream => sub {
+         my ( $stream ) = @_;
+
+         $self->configure( transport => $stream );
+
+         $on_connected->( $self ) if $on_connected;
+      },
+   );
+}
+
 # Keep perl happy; keep Britain tidy
 1;
 
