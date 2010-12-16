@@ -525,9 +525,11 @@ Tests that the C<loop_once> and C<loop_forever> methods behave correctly
 
 =cut
 
-use constant count_tests_control => 3;
+use constant count_tests_control => 5;
 sub run_tests_control
 {
+   time_between { $loop->loop_once( 0 ) } 0, 0.1, 'loop_once(0) when idle';
+
    time_between { $loop->loop_once( 2 * AUT ) } 1.5, 2.5, 'loop_once(2) when idle';
 
    $loop->later( sub { $loop->loop_stop } );
