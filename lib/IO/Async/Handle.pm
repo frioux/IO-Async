@@ -104,6 +104,13 @@ as above. Must implement C<fileno> method in way that C<IO::Handle> does.
 
 CODE references for event handlers.
 
+=item want_readready => BOOL
+
+=item want_writeready => BOOL
+
+If present, enable or disable read- or write-ready notification as per the
+C<want_readready> and C<want_writeready> methods.
+
 =back
 
 It is required that a matching C<on_read_ready> or C<on_write_ready> are
@@ -189,6 +196,10 @@ sub configure
 
       # In case someone has reopened the filehandles during an on_closed handler
       undef $self->{handle_closing};
+   }
+
+   if( exists $params{want_readready} ) {
+      $self->want_readready( delete $params{want_readready} );
    }
 
    if( exists $params{want_writeready} ) {
