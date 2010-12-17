@@ -1,5 +1,15 @@
 Revision history for IO-Async
 
+0.32    ADDITIONS:
+         * IO::Async::Timer::Absolute
+         * Listener accessors for ->sockname, ->family, ->socktype
+
+        CHANGES:
+         * Implement and document Handle's want_{read,write}ready parameters
+         * Rearranged documentation for Notifier subclasses; new EVENTS
+           sections
+         * Correct location for #io-async channel on irc.perl.org
+
 0.31    ADDITIONS:
          * Delegate Protocol->close method and on_closed continuation to its
            transport object
