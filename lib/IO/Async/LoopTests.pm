@@ -471,15 +471,22 @@ Tests the Loop's support for watching child processes by PID
 
 =cut
 
+sub run_in_child(&)
+{
+   my $kid = fork();
+   defined $kid or die "Cannot fork() $!";
+   return $kid if $kid;
+
+   shift->();
+   die "Fell out of run_in_child!\n";
+}
+
 use constant count_tests_child => 6;
 sub run_tests_child
 {
-   my $kid = fork();
-   defined $kid or die "Cannot fork() - $!";
-
-   if( $kid == 0 ) {
+   my $kid = run_in_child {
       exit( 3 );
-   }
+   };
 
    my $exitcode;
 
@@ -499,14 +506,11 @@ sub run_tests_child
    # ignored or handled elsewhere.
    local $SIG{TERM} = "DEFAULT";
 
-   $kid = fork();
-   defined $kid or die "Cannot fork() - $!";
-
-   if( $kid == 0 ) {
+   $kid = run_in_child {
       sleep( 10 );
       # Just in case the parent died already and didn't kill us
       exit( 0 );
-   }
+   };
 
    $loop->watch_child( $kid => sub { ( undef, $exitcode ) = @_; } );
 
