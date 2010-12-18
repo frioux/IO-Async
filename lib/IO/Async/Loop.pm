@@ -9,7 +9,7 @@ use strict;
 use warnings;
 
 our $VERSION = '0.32';
-use constant NEED_API_VERSION => '0.24';
+use constant NEED_API_VERSION => '0.33';
 
 use Carp;
 
@@ -1401,13 +1401,13 @@ sub unwatch_idle
 =head2 $loop->watch_child( $pid, $code )
 
 This method adds a new handler for the termination of the given child process
-PID.
+PID, or all child processes.
 
 =over 8
 
 =item $pid
 
-The PID to watch.
+The PID to watch. Will report on all child processes if this is 0.
 
 =item $code
 
@@ -1420,12 +1420,17 @@ usefully, see C<WEXITSTATUS()> and others from C<POSIX>.
 
 =back
 
-After invocation, the handler is automatically removed.
+After invocation, the handler for a PID-specific watch is automatically
+removed. The all-child watch will remain until it is removed by
+C<unwatch_child>.
 
 This and C<unwatch_child> are optional; a subclass may implement neither, or
 both. If it implements neither then child watching will be performed by using
 C<watch_signal> to install a C<SIGCHLD> handler, which will use C<waitpid> to
 look for exited child processes.
+
+If both a PID-specific and an all-process watch are installed, there is no
+ordering guarantee as to which will be called first.
 
 =cut
 
@@ -1444,10 +1449,16 @@ sub watch_child
             my $zid = waitpid( -1, WNOHANG );
 
             last if !defined $zid or $zid < 1;
+            my $status = $?;
 
             if( defined $childwatches->{$zid} ) {
-               $childwatches->{$zid}->( $zid, $? );
+               $childwatches->{$zid}->( $zid, $status );
                delete $childwatches->{$zid};
+            }
+
+            if( defined $childwatches->{0} ) {
+               $childwatches->{0}->( $zid, $status );
+               # Don't delete it
             }
          }
       } );

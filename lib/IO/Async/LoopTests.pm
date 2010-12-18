@@ -481,7 +481,7 @@ sub run_in_child(&)
    die "Fell out of run_in_child!\n";
 }
 
-use constant count_tests_child => 6;
+use constant count_tests_child => 8;
 sub run_tests_child
 {
    my $kid = run_in_child {
@@ -521,6 +521,17 @@ sub run_tests_child
 
    ok( WIFSIGNALED($exitcode),          'WIFSIGNALED($exitcode) after SIGTERM' );
    is( WTERMSIG($exitcode),    SIGTERM, 'WTERMSIG($exitcode) after SIGTERM' );
+
+   my %kids;
+
+   $loop->watch_child( 0 => sub { my ( $kid ) = @_; delete $kids{$kid} } );
+
+   %kids = map { run_in_child { exit 0 } => 1 } 1 .. 3;
+
+   is( scalar keys %kids, 3, 'Waiting for 3 child processes' );
+
+   wait_for { !keys %kids };
+   ok( !keys %kids, 'All child processes reclaimed' );
 }
 
 =head2 control
