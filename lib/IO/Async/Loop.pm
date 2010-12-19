@@ -121,6 +121,11 @@ sub __new
       deferrals    => [],
    }, $class;
 
+   # It's possible this is a specific subclass constructor. We still want the
+   # magic IO::Async::Loop->new constructor to yield this if it's the first
+   # one
+   our $ONE_TRUE_LOOP ||= $self;
+
    return $self;
 }
 
@@ -133,6 +138,27 @@ constructor. It works by making a list of likely candidate classes, then
 trying each one in turn, C<require>ing the module then calling its C<new>
 method. If either of these operations fails, the next subclass is tried. If
 no class was successful, then an exception is thrown.
+
+The constructed object is cached, and will be returned again by a subsequent
+call. The cache will also be set by a constructor on a specific subclass. This
+behaviour makes it possible to simply use the normal constructor in a module
+that wishes to interract with the main program's Loop, such as an integration
+module for another event system.
+
+For example, the following two C<$loop> variables will refer to the same
+object:
+
+ use IO::Async::Loop;
+ use IO::Async::Loop::Poll;
+
+ my $loop_poll = IO::Async::Loop::Poll->new;
+
+ my $loop = IO::Async::Loop->new;
+
+While it is not advised to do so under normal circumstances, if the program
+really wishes to construct more than one Loop object, it can call the
+constructor C<really_new>, or invoke one of the subclass-specific constructors
+directly.
 
 The list of candidates is formed from the following choices, in this order:
 
@@ -202,6 +228,11 @@ sub __try_new
 }
 
 sub new
+{
+   return our $ONE_TRUE_LOOP ||= shift->really_new;
+}
+
+sub really_new
 {
    shift;  # We're going to ignore the class name actually given
 

@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 4;
+use Test::More tests => 5;
 
 use IO::Async::Loop;
 
@@ -15,8 +15,11 @@ $loop = IO::Async::Loop->new();
 
 isa_ok( $loop, "IO::Async::Loop::Poll", 'Magic constructor in default mode' );
 
+is( IO::Async::Loop->new, $loop, 'IO::Async::Loop->new again yields same loop' );
+
 {
    local $ENV{IO_ASYNC_LOOP} = "t::StupidLoop";
+   undef $IO::Async::Loop::ONE_TRUE_LOOP;
 
    $loop = IO::Async::Loop->new();
 
@@ -25,6 +28,7 @@ isa_ok( $loop, "IO::Async::Loop::Poll", 'Magic constructor in default mode' );
 
 {
    local $IO::Async::Loop::LOOP = "t::StupidLoop";
+   undef $IO::Async::Loop::ONE_TRUE_LOOP;
 
    $loop = IO::Async::Loop->new();
 
@@ -33,6 +37,7 @@ isa_ok( $loop, "IO::Async::Loop::Poll", 'Magic constructor in default mode' );
 
 {
    local $IO::Async::Loop::LOOP = "Select";
+   undef $IO::Async::Loop::ONE_TRUE_LOOP;
 
    $loop = IO::Async::Loop->new();
 

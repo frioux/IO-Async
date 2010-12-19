@@ -10,11 +10,11 @@ use IO::Async::Loop;
 
 my $loop = IO::Async::Loop->new();
 
-is_oneref( $loop, '$loop has refcount 1' );
+is_refcount( $loop, 2, '$loop has refcount 2 initially' );
 
 testing_loop( $loop );
 
-is_refcount( $loop, 2, '$loop has refcount 2 after adding to IO::Async::Test' );
+is_refcount( $loop, 3, '$loop has refcount 3 after adding to IO::Async::Test' );
 
 my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
 

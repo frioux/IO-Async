@@ -83,7 +83,7 @@ sub run_tests
    my ( $testclass, @tests ) = @_;
 
    my $count = 0;
-   $count += __PACKAGE__->can( "count_tests_$_" )->() + 2 for @tests;
+   $count += __PACKAGE__->can( "count_tests_$_" )->() + 3 for @tests;
 
    plan tests => $count;
 
@@ -96,6 +96,12 @@ sub run_tests
 
    foreach my $test ( @tests ) {
       $loop = $testclass->new();
+
+      is( IO::Async::Loop->new, $loop, 'magic constructor yields $loop' );
+
+      # Kill the reference in $ONE_TRUE_LOOP so as not to upset the refcounts
+      # and to ensure we get a new one each time
+      undef $IO::Async::Loop::ONE_TRUE_LOOP;
 
       is_oneref( $loop, '$loop has refcount 1' );
 

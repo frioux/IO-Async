@@ -18,7 +18,7 @@ use IO::Async::Loop::Poll;
 my $loop = IO::Async::Loop::Poll->new();
 
 testing_loop( $loop );
-is_refcount( $loop, 2, '$loop has refcount 2 after adding to IO::Async::Test' );
+is_refcount( $loop, 3, '$loop has refcount 3 after adding to IO::Async::Test' );
 
 my $code = IO::Async::DetachedCode->new(
    loop => $loop,
@@ -370,4 +370,4 @@ is( $result, "Here is a random string", '$result after call with modified ENV' )
 is_oneref( $code, '$code has refcount 1 at EOF' );
 undef $code;
 
-is_refcount( $loop, 2, '$loop has refcount 2 at EOF' );
+is_refcount( $loop, 3, '$loop has refcount 3 at EOF' );
