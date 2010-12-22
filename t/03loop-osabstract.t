@@ -2,13 +2,15 @@
 
 use strict;
 
-use Test::More tests => 28;
+use Test::More tests => 29;
 
 use IO::Async::Loop::Poll;
 
 use Socket qw( AF_INET SOCK_STREAM SOCK_DGRAM );
 
 use POSIX qw( SIGTERM );
+
+use Time::HiRes qw( time );
 
 my $loop = IO::Async::Loop::Poll->new();
 
@@ -70,3 +72,5 @@ foreach my $family ( undef, AF_INET ) {
 }
 
 is( $loop->signame2num( 'TERM' ), SIGTERM, '$loop->signame2num' );
+
+cmp_ok( $loop->time - time, "<", 0.1, '$loop->time gives the current time' );

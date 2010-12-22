@@ -15,7 +15,7 @@ use Carp;
 
 use Socket;
 use IO::Socket;
-use Time::HiRes qw( time );
+use Time::HiRes qw(); # empty import
 use POSIX qw( WNOHANG );
 
 # Try to load IO::Socket::INET6 but don't worry if we don't have it
@@ -1016,6 +1016,21 @@ sub signame2num
    return $sig_num{$signame};
 }
 
+=head2 $time = $loop->time
+
+Returns the current UNIX time in fractional seconds. This is currently
+equivalent to C<Time::HiRes::time()> but provided here as a utility for
+programs to obtain the time current used by C<IO::Async> for its own timing
+purposes.
+
+=cut
+
+sub time
+{
+   my $self = shift;
+   return Time::HiRes::time();
+}
+
 =head1 LOW-LEVEL METHODS
 
 As C<IO::Async::Loop> is an abstract base class, specific subclasses of it are
@@ -1228,7 +1243,7 @@ sub _build_time
       $time = $params{time};
    }
    elsif( exists $params{delay} ) {
-      my $now = exists $params{now} ? $params{now} : time();
+      my $now = exists $params{now} ? $params{now} : $self->time;
 
       $time = $now + $params{delay};
    }
@@ -1560,7 +1575,7 @@ sub _adjust_timeout
    my $nexttime = $timequeue->next_time;
    return unless defined $nexttime;
 
-   my $now = exists $params{now} ? $params{now} : time();
+   my $now = exists $params{now} ? $params{now} : $self->time;
    my $timer_delay = $nexttime - $now;
 
    if( $timer_delay < 0 ) {
