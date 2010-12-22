@@ -21,6 +21,13 @@ use Carp;
 our $READLEN  = 8192;
 our $WRITELEN = 8192;
 
+# Indicies in writequeue elements
+use constant {
+   WQ_DATA     => 0,
+   WQ_ON_FLUSH => 1,
+   WQ_GENSUB   => 2,
+};
+
 =head1 NAME
 
 C<IO::Async::Stream> - event callbacks and write bufering for a stream
@@ -165,7 +172,7 @@ sub _init
 {
    my $self = shift;
 
-   $self->{writequeue} = []; # Queue of ARRAYs. Each will be [ $data, $on_flushed ]
+   $self->{writequeue} = []; # Queue of ARRAYs. Each will be [ $data, $on_flushed, $gensub ]
    $self->{readbuff} = "";
 
    $self->{read_len}  = $READLEN;
@@ -311,9 +318,21 @@ sub _flush_one
 {
    my $self = shift;
 
-   my $head = $self->{writequeue}[0];
+   my $head = $self->{writequeue}[WQ_DATA];
 
-   my $len = $self->write_handle->syswrite( $head->[0], $self->{write_len} );
+   if( !length $head->[WQ_DATA] ) {
+      my $gensub = $head->[WQ_GENSUB] or die "Internal consistency problem - empty writequeue item without a gensub\n";
+      $head->[WQ_DATA] = $gensub->( $self );
+
+      if( !defined $head->[WQ_DATA] ) {
+         $head->[WQ_ON_FLUSH]->( $self ) if $head->[WQ_ON_FLUSH];
+         shift @{ $self->{writequeue} };
+
+         return 1;
+      }
+   }
+
+   my $len = $self->write_handle->syswrite( $head->[WQ_DATA], $self->{write_len} );
 
    if( !defined $len ) {
       my $errno = $!;
@@ -338,10 +357,10 @@ sub _flush_one
       return 0;
    }
 
-   substr( $head->[0], 0, $len ) = "";
+   substr( $head->[WQ_DATA], 0, $len ) = "";
 
-   if( !length $head->[0] ) {
-      $head->[1]->( $self ) if $head->[1];
+   if( !length $head->[WQ_DATA] and !$head->[WQ_GENSUB] ) {
+      $head->[WQ_ON_FLUSH]->( $self ) if $head->[WQ_ON_FLUSH];
       shift @{ $self->{writequeue} };
    }
 
@@ -415,6 +434,24 @@ will have been written by the time this method returns. If it fails to write
 completely, then the data is queued as if C<autoflush> were not set, and will
 be flushed as normal.
 
+C<$data> can either be a plain string, or a CODE reference. If it is a CODE
+reference, it will be invoked to generate data to be written. Each time the
+filehandle is ready to receive more data to it, the function is invoked, and
+what it returns written to the filehandle. Once the function has finished
+generating data it should return undef. The function is passed the Stream
+object as its first argument.
+
+For example, to stream the contents of an existing opened filehandle:
+
+ open my $fileh, "<", $path or die "Cannot open $path - $!";
+
+ $stream->write( sub {
+    my ( $stream ) = @_;
+
+    sysread $fileh, my $buffer, 8192 or return;
+    return $buffer;
+ } );
+
 Takes the following optional named parameters in C<%params>:
 
 =over 8
@@ -439,7 +476,17 @@ sub write
    carp "Cannot write data to a Stream that is closing" and return if $self->{stream_closing};
    croak "Cannot write data to a Stream with no write_handle" unless my $handle = $self->write_handle;
 
-   push @{ $self->{writequeue} }, [ $data, $params{on_flush} ];
+   push @{ $self->{writequeue} }, my $elem = [];
+
+   if( ref $data eq "CODE" ) {
+      $elem->[WQ_DATA] = "";
+      $elem->[WQ_GENSUB] = $data;
+   }
+   else {
+      $elem->[WQ_DATA] = $data;
+   }
+   
+   $elem->[WQ_ON_FLUSH] = $params{on_flush};
 
    if( $self->{autoflush} ) {
       1 while !$self->_is_empty and $self->_flush_one;

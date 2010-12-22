@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 22;
+use Test::More tests => 26;
 use Test::Refcount;
 
 use POSIX qw( EAGAIN ECONNRESET );
@@ -75,6 +75,33 @@ $stream->write( "hello again\n", on_flush => sub {
 wait_for { $flushed };
 
 is( read_data( $S2 ), "hello again\n", 'flushed data does get flushed' );
+
+my $done;
+
+$stream->write(
+   sub {
+      is( $_[0], $stream, 'Writersub $_[0] is $stream' );
+      return $done++ ? undef : "a lazy message\n";
+   },
+   on_flush => sub { $flushed++ },
+);
+
+$flushed = 0;
+wait_for { $flushed };
+
+is( read_data( $S2 ), "a lazy message\n", 'lazy data was written' );
+
+my @chunks = ( "some ", "message chunks ", "here\n" );
+
+$stream->write(
+   sub { return shift @chunks },
+   on_flush => sub { $flushed++ },
+);
+
+$flushed = 0;
+wait_for { $flushed };
+
+is( read_data( $S2 ), "some message chunks here\n", 'multiple lazy data was written' );
 
 $stream->configure( autoflush => 1 );
 $stream->write( "immediate\n" );
