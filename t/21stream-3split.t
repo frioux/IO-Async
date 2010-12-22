@@ -156,26 +156,24 @@ $loop->remove( $stream );
 
 undef $stream;
 
-{
-   my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot socketpair - $!";
+( $S1, $S2 ) = $loop->socketpair() or die "Cannot socketpair - $!";
 
-   my $stream = IO::Async::Stream->new(
-      handle => $S1,
-      on_read => sub { },
-   );
+$stream = IO::Async::Stream->new(
+   handle => $S1,
+   on_read => sub { },
+);
 
-   $stream->write( "hello" );
+$stream->write( "hello" );
 
-   $loop->add( $stream );
+$loop->add( $stream );
 
-   is_refcount( $stream, 2, '$stream has two references' );
-   undef $stream; # Only ref is now in the Loop
+is_refcount( $stream, 2, '$stream has two references' );
+undef $stream; # Only ref is now in the Loop
 
-   $S2->close;
+$S2->close;
 
-   # $S1 should now be both read- and write-ready.
-   lives_ok sub { $loop->loop_once }, 'read+write-ready closed Stream doesn\'t die';
-}
+# $S1 should now be both read- and write-ready.
+lives_ok sub { $loop->loop_once }, 'read+write-ready closed Stream doesn\'t die';
 
 undef $stream;
 

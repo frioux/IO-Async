@@ -98,32 +98,30 @@ is_oneref( $stream, 'writing $stream refcount 1 finally' );
 
 undef $stream;
 
-{
-   $stream = IO::Async::Stream->new(
-      write_handle => $S1,
-      write_len => 2,
-   );
+$stream = IO::Async::Stream->new(
+   write_handle => $S1,
+   write_len => 2,
+);
 
-   $loop->add( $stream );
+$loop->add( $stream );
 
-   $stream->write( "partial" );
+$stream->write( "partial" );
 
-   $loop->loop_once( 0.1 );
+$loop->loop_once( 0.1 );
 
-   is( read_data( $S2 ), "pa", 'data after writing buffer with write_len=2 without write_all');
+is( read_data( $S2 ), "pa", 'data after writing buffer with write_len=2 without write_all');
 
-   $loop->loop_once( 0.1 ) for 1 .. 3;
+$loop->loop_once( 0.1 ) for 1 .. 3;
 
-   is( read_data( $S2 ), "rtial", 'data finally after writing buffer with write_len=2 without write_all' );
+is( read_data( $S2 ), "rtial", 'data finally after writing buffer with write_len=2 without write_all' );
 
-   $stream->configure( write_all => 1 );
+$stream->configure( write_all => 1 );
 
-   $stream->write( "partial" );
+$stream->write( "partial" );
 
-   $loop->loop_once( 0.1 );
+$loop->loop_once( 0.1 );
 
-   is( read_data( $S2 ), "partial", 'data after writing buffer with write_len=2 with write_all');
-}
+is( read_data( $S2 ), "partial", 'data after writing buffer with write_len=2 with write_all');
 
 # Socket errors
 

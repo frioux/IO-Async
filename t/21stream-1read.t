@@ -106,40 +106,38 @@ is_oneref( $stream, 'reading $stream refcount 1 finally' );
 
 undef $stream;
 
-{
-   my @chunks;
+my @chunks;
 
-   $stream = IO::Async::Stream->new(
-      read_handle => $S1,
-      read_len => 2,
-      on_read => sub {
-         my ( $self, $buffref, $closed ) = @_;
-         push @chunks, $$buffref;
-         $$buffref = "";
-      },
-   );
+$stream = IO::Async::Stream->new(
+   read_handle => $S1,
+   read_len => 2,
+   on_read => sub {
+      my ( $self, $buffref, $closed ) = @_;
+      push @chunks, $$buffref;
+      $$buffref = "";
+   },
+);
 
-   $loop->add( $stream );
+$loop->add( $stream );
 
-   $S2->syswrite( "partial" );
+$S2->syswrite( "partial" );
 
-   wait_for { scalar @chunks };
+wait_for { scalar @chunks };
 
-   is_deeply( \@chunks, [ "pa" ], '@lines with read_len=2 without read_all' );
+is_deeply( \@chunks, [ "pa" ], '@lines with read_len=2 without read_all' );
 
-   wait_for { @chunks == 4 };
+wait_for { @chunks == 4 };
 
-   is_deeply( \@chunks, [ "pa", "rt", "ia", "l" ], '@lines finally with read_len=2 without read_all' );
+is_deeply( \@chunks, [ "pa", "rt", "ia", "l" ], '@lines finally with read_len=2 without read_all' );
 
-   undef @chunks;
-   $stream->configure( read_all => 1 );
+undef @chunks;
+$stream->configure( read_all => 1 );
 
-   $S2->syswrite( "partial" );
+$S2->syswrite( "partial" );
 
-   wait_for { scalar @chunks };
+wait_for { scalar @chunks };
 
-   is_deeply( \@chunks, [ "pa", "rt", "ia", "l" ], '@lines with read_len=2 with read_all' );
-}
+is_deeply( \@chunks, [ "pa", "rt", "ia", "l" ], '@lines with read_len=2 with read_all' );
 
 my $no_on_read_stream;
 lives_ok( sub { $no_on_read_stream = IO::Async::Stream->new( handle => $S1 ) },
