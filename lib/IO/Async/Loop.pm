@@ -541,7 +541,8 @@ sub detach_signal
    my ( $signal, $id ) = @_;
 
    # Can't use grep because we have to preserve the addresses
-   my $attaches = $self->{sigattaches}->{$signal};
+   my $attaches = $self->{sigattaches}->{$signal} or return;
+
    for (my $i = 0; $i < @$attaches; ) {
       $i++, next unless \$attaches->[$i] == $id;
 

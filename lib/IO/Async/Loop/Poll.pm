@@ -245,7 +245,8 @@ sub unwatch_io
 
    $self->__unwatch_io( %params );
 
-   my $poll = $self->{poll};
+   # Guard for global destruction
+   my $poll = $self->{poll} or return;
 
    my $handle = $params{handle};
 
