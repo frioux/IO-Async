@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 86;
+use Test::More tests => 88;
 use Test::Exception;
 use Test::Refcount;
 
@@ -284,6 +284,17 @@ ok( !$stream->want_writeready, 'want_writeready after wait' );
 is( $empty, 1, '$empty after writing buffer' );
 
 is( read_data( $S2 ), "message\n", 'data after writing buffer' );
+
+my $flushed;
+
+$stream->write( "hello again\n", on_flush => sub {
+   is( $_[0], $stream, 'on_flush $_[0] is $stream' );
+   $flushed++
+} );
+
+wait_for { $flushed };
+
+is( read_data( $S2 ), "hello again\n", 'flushed data does get flushed' );
 
 $stream->configure( autoflush => 1 );
 $stream->write( "immediate\n" );

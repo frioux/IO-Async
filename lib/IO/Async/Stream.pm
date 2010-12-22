@@ -165,7 +165,7 @@ sub _init
 {
    my $self = shift;
 
-   $self->{writequeue} = [];
+   $self->{writequeue} = []; # Queue of ARRAYs. Each will be [ $data, $on_flushed ]
    $self->{readbuff} = "";
 
    $self->{read_len}  = $READLEN;
@@ -311,9 +311,9 @@ sub _flush_one
 {
    my $self = shift;
 
-   my $headref = \$self->{writequeue}[0];
+   my $head = $self->{writequeue}[0];
 
-   my $len = $self->write_handle->syswrite( $$headref, $self->{write_len} );
+   my $len = $self->write_handle->syswrite( $head->[0], $self->{write_len} );
 
    if( !defined $len ) {
       my $errno = $!;
@@ -338,9 +338,10 @@ sub _flush_one
       return 0;
    }
 
-   substr( $$headref, 0, $len ) = "";
+   substr( $head->[0], 0, $len ) = "";
 
-   if( !length $$headref ) {
+   if( !length $head->[0] ) {
+      $head->[1]->( $self ) if $head->[1];
       shift @{ $self->{writequeue} };
    }
 
@@ -403,7 +404,7 @@ sub close_now
    $self->SUPER::close;
 }
 
-=head2 $stream->write( $data )
+=head2 $stream->write( $data, %params )
 
 This method adds data to the outgoing data queue, or writes it immediately,
 according to the C<autoflush> parameter.
@@ -414,17 +415,31 @@ will have been written by the time this method returns. If it fails to write
 completely, then the data is queued as if C<autoflush> were not set, and will
 be flushed as normal.
 
+Takes the following optional named parameters in C<%params>:
+
+=over 8
+
+=item on_flush => CODE
+
+A CODE reference which will be invoked once the data queued by this C<write>
+call has been flushed. This will be invoked even if the buffer itself is not
+yet empty; if more data has been queued since the call.
+
+ $on_flush->( $stream )
+
+=back
+
 =cut
 
 sub write
 {
    my $self = shift;
-   my ( $data ) = @_;
+   my ( $data, %params ) = @_;
 
    carp "Cannot write data to a Stream that is closing" and return if $self->{stream_closing};
    croak "Cannot write data to a Stream with no write_handle" unless my $handle = $self->write_handle;
 
-   push @{ $self->{writequeue} }, $data;
+   push @{ $self->{writequeue} }, [ $data, $params{on_flush} ];
 
    if( $self->{autoflush} ) {
       1 while !$self->_is_empty and $self->_flush_one;
