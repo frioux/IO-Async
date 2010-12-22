@@ -1,5 +1,15 @@
 Revision history for IO-Async
 
+0.33    ADDITIONS:
+         * Allow watching child PID 0, to capture every child process exit
+         * $loop->time accessor
+         * Stream->write( sub { ... } ) dynamic stream generation
+         * Stream->write( $data, on_flush => sub { ... } ) callback
+
+        CHANGES:
+         * IO::Async::Loop->new magic constructor now caches the loop; useful
+           for wrapping modules, other event system integration, etc..
+
 0.32    ADDITIONS:
          * IO::Async::Timer::Absolute
          * Listener accessors for ->sockname, ->family, ->socktype
