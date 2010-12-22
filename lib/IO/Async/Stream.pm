@@ -307,6 +307,40 @@ sub _is_empty
    return !length $self->{writebuff};
 }
 
+sub _flush_one
+{
+   my $self = shift;
+
+   my $len = $self->write_handle->syswrite( $self->{writebuff}, $self->{write_len} );
+
+   if( !defined $len ) {
+      my $errno = $!;
+
+      return 0 if _nonfatal_error( $errno );
+
+      if( defined $self->{on_write_error} ) {
+         $self->{on_write_error}->( $self, $errno );
+      }
+      elsif( $self->can( "on_write_error" ) ) {
+         $self->on_write_error( $errno );
+      }
+      else {
+         $self->close_now;
+      }
+
+      return 0;
+   }
+
+   if( $len == 0 ) {
+      $self->close_now;
+      return 0;
+   }
+
+   substr( $self->{writebuff}, 0, $len ) = "";
+
+   return 1;
+}
+
 =head2 $stream->close
 
 A synonym for C<close_when_empty>. This should not be used when the deferred
@@ -387,13 +421,7 @@ sub write
    $self->{writebuff} .= $data;
 
    if( $self->{autoflush} ) {
-      while( length $self->{writebuff} ) {
-         my $len = $handle->syswrite( $self->{writebuff}, $self->{write_len} );
-
-         last if !$len; # stop on any errors and defer back to the non-autoflush path
-
-         substr( $self->{writebuff}, 0, $len ) = "";
-      }
+      1 while !$self->_is_empty and $self->_flush_one;
 
       if( $self->_is_empty ) {
          $self->want_writeready( 0 );
@@ -470,38 +498,7 @@ sub on_write_ready
 {
    my $self = shift;
 
-   my $handle = $self->write_handle;
-
-   while( !$self->_is_empty ) {
-      my $len = $handle->syswrite( $self->{writebuff}, $self->{write_len} );
-
-      if( !defined $len ) {
-         my $errno = $!;
-
-         return if _nonfatal_error( $errno );
-
-         if( defined $self->{on_write_error} ) {
-            $self->{on_write_error}->( $self, $errno );
-         }
-         elsif( $self->can( "on_write_error" ) ) {
-            $self->on_write_error( $errno );
-         }
-         else {
-            $self->close_now;
-         }
-
-         return;
-      }
-
-      if( $len == 0 ) {
-         $self->close_now;
-         return;
-      }
-
-      substr( $self->{writebuff}, 0, $len ) = "";
-
-      last unless $self->{write_all};
-   }
+   1 while !$self->_is_empty and $self->_flush_one and $self->{write_all};
 
    # All data successfully flushed
    if( $self->_is_empty ) {
