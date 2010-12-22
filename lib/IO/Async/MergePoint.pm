@@ -22,7 +22,7 @@ C<IO::Async::MergePoint> - resynchronise diverged control flow
 
 This module as now been moved to its own dist of L<Async::MergePoint>.
 
-It is kept here as a trivial subclass for backward compatibilty. Eventually
+It is kept here as a trivial subclass for backward compatibility. Eventually
 this subclass may be removed. Any code using C<IO::Async::MergePoint> should
 instead use L<Async::MergePoint>.
 

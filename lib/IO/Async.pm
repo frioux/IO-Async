@@ -131,7 +131,7 @@ order.
 =head2 Merge Points
 
 The L<IO::Async::MergePoint> object class allows for a program to wait on the
-completion of multiple seperate subtasks. It allows for each subtask to return
+completion of multiple separate subtasks. It allows for each subtask to return
 some data, which will be collected and given to the callback provided to the
 merge point, which is called when every subtask has completed.
 
