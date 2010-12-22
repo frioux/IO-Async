@@ -165,7 +165,7 @@ sub _init
 {
    my $self = shift;
 
-   $self->{writebuff} = "";
+   $self->{writequeue} = [];
    $self->{readbuff} = "";
 
    $self->{read_len}  = $READLEN;
@@ -304,14 +304,16 @@ sub _nonfatal_error
 sub _is_empty
 {
    my $self = shift;
-   return !length $self->{writebuff};
+   return !@{ $self->{writequeue} };
 }
 
 sub _flush_one
 {
    my $self = shift;
 
-   my $len = $self->write_handle->syswrite( $self->{writebuff}, $self->{write_len} );
+   my $headref = \$self->{writequeue}[0];
+
+   my $len = $self->write_handle->syswrite( $$headref, $self->{write_len} );
 
    if( !defined $len ) {
       my $errno = $!;
@@ -336,7 +338,11 @@ sub _flush_one
       return 0;
    }
 
-   substr( $self->{writebuff}, 0, $len ) = "";
+   substr( $$headref, 0, $len ) = "";
+
+   if( !length $$headref ) {
+      shift @{ $self->{writequeue} };
+   }
 
    return 1;
 }
@@ -391,7 +397,7 @@ sub close_now
 {
    my $self = shift;
 
-   $self->{writebuff} = "";
+   undef @{ $self->{writequeue} };
    undef $self->{stream_closing};
 
    $self->SUPER::close;
@@ -418,7 +424,7 @@ sub write
    carp "Cannot write data to a Stream that is closing" and return if $self->{stream_closing};
    croak "Cannot write data to a Stream with no write_handle" unless my $handle = $self->write_handle;
 
-   $self->{writebuff} .= $data;
+   push @{ $self->{writequeue} }, $data;
 
    if( $self->{autoflush} ) {
       1 while !$self->_is_empty and $self->_flush_one;
