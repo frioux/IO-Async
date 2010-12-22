@@ -301,6 +301,12 @@ sub _nonfatal_error
           $errno == EINTR;
 }
 
+sub _is_empty
+{
+   my $self = shift;
+   return !length $self->{writebuff};
+}
+
 =head2 $stream->close
 
 A synonym for C<close_when_empty>. This should not be used when the deferred
@@ -334,7 +340,7 @@ sub close_when_empty
 {
    my $self = shift;
 
-   return $self->SUPER::close if length( $self->{writebuff} ) == 0;
+   return $self->SUPER::close if $self->_is_empty;
 
    $self->{stream_closing} = 1;
 }
@@ -378,24 +384,22 @@ sub write
    carp "Cannot write data to a Stream that is closing" and return if $self->{stream_closing};
    croak "Cannot write data to a Stream with no write_handle" unless my $handle = $self->write_handle;
 
-   if( $self->{autoflush} ) {
-      $data = $self->{writebuff} . $data if length $self->{writebuff};
+   $self->{writebuff} .= $data;
 
-      while( length $data ) {
-         my $len = $handle->syswrite( $data, $self->{write_len} );
+   if( $self->{autoflush} ) {
+      while( length $self->{writebuff} ) {
+         my $len = $handle->syswrite( $self->{writebuff}, $self->{write_len} );
 
          last if !$len; # stop on any errors and defer back to the non-autoflush path
 
-         substr( $data, 0, $len ) = "";
+         substr( $self->{writebuff}, 0, $len ) = "";
       }
 
-      if( !length $data ) {
+      if( $self->_is_empty ) {
          $self->want_writeready( 0 );
          return;
       }
    }
-
-   $self->{writebuff} .= $data;
 
    $self->want_writeready( 1 );
 }
@@ -468,7 +472,7 @@ sub on_write_ready
 
    my $handle = $self->write_handle;
 
-   while( length $self->{writebuff} ) {
+   while( !$self->_is_empty ) {
       my $len = $handle->syswrite( $self->{writebuff}, $self->{write_len} );
 
       if( !defined $len ) {
@@ -500,7 +504,7 @@ sub on_write_ready
    }
 
    # All data successfully flushed
-   if( length( $self->{writebuff} ) == 0 ) {
+   if( $self->_is_empty ) {
       $self->want_writeready( 0 );
 
       my $on_outgoing_empty = $self->{on_outgoing_empty}
