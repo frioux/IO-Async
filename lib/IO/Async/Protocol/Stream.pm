@@ -157,10 +157,7 @@ sub setup_transport
          my $self = shift;
          my ( $transport, $buffref, $closed ) = @_;
 
-         my $on_read = $self->{on_read} ||
-                        $self->can( 'on_read' );
-
-         $on_read->( $self, $buffref, $closed );
+         $self->invoke_event( on_read => $buffref, $closed );
       } ),
    );
 }
