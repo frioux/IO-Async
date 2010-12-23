@@ -104,6 +104,13 @@ The following named parameters may be passed to C<new> or C<configure>:
 
 CODE reference for the C<on_read> event.
 
+=item handle => IO
+
+A shortcut for the common case where the transport only needs to be a plain
+C<IO::Async::Stream> object. If this argument is provided without a
+C<transport> object, a new C<IO::Async::Stream> object will be built around
+the given IO handle, and used as the transport.
+
 =back
 
 =cut
@@ -115,6 +122,11 @@ sub configure
 
    for (qw( on_read )) {
       $self->{$_} = delete $params{$_} if exists $params{$_};
+   }
+
+   if( !exists $params{transport} and my $handle = delete $params{handle} ) {
+      require IO::Async::Stream;
+      $params{transport} = IO::Async::Stream->new( handle => $handle );
    }
 
    $self->SUPER::configure( %params );

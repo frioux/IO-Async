@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 18;
+use Test::More tests => 20;
 use Test::Refcount;
 
 use IO::Async::Loop;
@@ -135,6 +135,13 @@ undef @lines;
 $loop->remove( $streamproto );
 
 undef $streamproto;
+
+$streamproto = IO::Async::Protocol::Stream->new(
+   handle => $S1,
+);
+
+isa_ok( $streamproto->transport, "IO::Async::Stream", 'Protocol::Stream->new( handle ) shortcut creates Stream object' );
+is( $streamproto->transport->read_handle, $S1, 'Stream object has correct handle' );
 
 package TestProtocol::Stream;
 use base qw( IO::Async::Protocol::Stream );
