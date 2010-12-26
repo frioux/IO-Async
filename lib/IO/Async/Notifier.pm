@@ -430,6 +430,52 @@ sub _capture_weakself
    };
 }
 
+=head2 $mref = $notifier->_replace_weakself( $code )
+
+Returns a new CODE ref which, when invoked, will invoke the originally-passed
+ref, with a reference to the Notifier replacing its first argument. The
+Notifier reference is stored weakly in C<$mref>, so this CODE ref may be
+stored in the Notifier itself without creating a cycle.
+
+For example,
+
+ my $mref = $notifier->_replace_weakself( sub {
+    my ( $notifier, $arg ) = @_;
+    print "Notifier $notifier got argument $arg\n";
+ } );
+
+ $mref->( $object, 123 );
+
+This is provided as a utility for Notifier subclasses to use for event
+callbacks on other objects, where the delegated object is passed in the
+function's arguments.
+
+The C<$code> argument may also be a plain string, which will be used as a
+method name; the returned CODE ref will then invoke that method on the object.
+
+=cut
+
+sub _replace_weakself
+{
+   my $self = shift;
+   my ( $code ) = @_;   # actually bare method names work too
+
+   if( !ref $code ) {
+      my $class = ref $self;
+      my $coderef = $self->can( $code ) or
+         croak qq(Can't locate object method "$code" via package "$class");
+
+      $code = $coderef;
+   }
+
+   weaken $self;
+
+   return sub {
+      $_[0] = $self;
+      goto &$code;
+   };
+}
+
 =head2 $callback = $notifier->make_event_cb( $event_name )
 
 Returns a C<CODE> reference which, when invoked, will execute the given event
