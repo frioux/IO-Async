@@ -142,71 +142,17 @@ object.
 
 =head2 $pid = $loop->detach_child( %params )
 
-This method creates a new child process to run a given code block.
-
-=over 8
-
-=item code => CODE
-
-A block of code to execute in the child process. It will be called in scalar
-context inside an C<eval> block. The return value will be used as the
-C<exit()> code from the child if it returns (or 255 if it returned C<undef> or
-thows an exception).
-
-=item on_exit => CODE
-
-A optional continuation to be called when the child processes exits. It will
-be invoked in the following way:
-
- $on_exit->( $pid, $exitcode )
-
-The second argument is passed the plain perl C<$?> value. To use that
-usefully, see C<WEXITSTATUS()> and others from C<POSIX>.
-
-This key is optional; if not supplied, the calling code should install a
-handler using the C<watch_child()> method.
-
-=item keep_signals => BOOL
-
-Optional boolean. If missing or false, any CODE references in the C<%SIG> hash
-will be removed and restored back to C<DEFAULT> in the child process. If true,
-no adjustment of the C<%SIG> hash will be performed.
-
-=back
+This method creates a new child process to run a given code block. It is a
+legacy wrapper around C<IO::Async::Loop> C<fork>.
 
 =cut
 
 sub detach_child
 {
    my $self = shift;
-   my %params = @_;
-
-   my $code = $params{code};
-
-   my $kid = fork();
-   defined $kid or croak "Cannot fork() - $!";
-
-   if( $kid == 0 ) {
-      unless( $params{keep_signals} ) {
-         foreach( keys %SIG ) {
-            next if m/^__(WARN|DIE)__$/;
-            $SIG{$_} = "DEFAULT" if ref $SIG{$_} eq "CODE";
-         }
-      }
-
-      my $exitvalue = eval { $code->() };
-
-      defined $exitvalue or $exitvalue = -1;
-      _exit( $exitvalue );
-   }
 
    my $loop = $self->{loop};
-
-   if( defined $params{on_exit} ) {
-      $loop->watch_child( $kid => $params{on_exit} );
-   }
-
-   return $kid;
+   return $loop->fork( @_ );
 }
 
 =head2 $pid = $loop->spawn_child( %params )
@@ -308,7 +254,7 @@ sub spawn_child
       };
    }
 
-   my $kid = $loop->detach_child( 
+   my $kid = $loop->fork( 
       code => sub {
          # Child
          close( $readpipe );

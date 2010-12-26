@@ -23,7 +23,7 @@ sub wait_for_exit
    return wait_for { defined $exitcode };
 }
 
-$loop->detach_child(
+$loop->fork(
    code    => sub { return 5; },
    on_exit => sub { ( undef, $exitcode ) = @_ },
 );
@@ -32,7 +32,7 @@ wait_for_exit;
 
 is( WEXITSTATUS($exitcode), 5, 'WEXITSTATUS($exitcode) after child exit' );
 
-$loop->detach_child(
+$loop->fork(
    code    => sub { die "error"; },
    on_exit => sub { ( undef, $exitcode ) = @_ },
 );
@@ -43,7 +43,7 @@ is( WEXITSTATUS($exitcode), 255, 'WEXITSTATUS($exitcode) after child die' );
 
 $SIG{INT} = sub { exit( 22 ) };
 
-$loop->detach_child(
+$loop->fork(
    code    => sub { kill SIGINT, $$ },
    on_exit => sub { ( undef, $exitcode ) = @_ },
 );
@@ -53,7 +53,7 @@ wait_for_exit;
 is( WIFSIGNALED($exitcode), 1, 'WIFSIGNALED($exitcode) after child SIGINT' );
 is( WTERMSIG($exitcode), SIGINT, 'WTERMSIG($exitcode) after child SIGINT' );
 
-$loop->detach_child(
+$loop->fork(
    code    => sub { kill SIGINT, $$ },
    on_exit => sub { ( undef, $exitcode ) = @_ },
    keep_signals => 1,

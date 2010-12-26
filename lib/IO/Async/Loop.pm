@@ -18,7 +18,7 @@ use Carp;
 use Socket;
 use IO::Socket;
 use Time::HiRes qw(); # empty import
-use POSIX qw( WNOHANG );
+use POSIX qw( _exit WNOHANG );
 
 # Try to load IO::Socket::INET6 but don't worry if we don't have it
 eval { require IO::Socket::INET6 };
@@ -595,21 +595,15 @@ sub disable_childmanager
 
 =head2 $pid = $loop->detach_child( %params )
 
-This method creates a new child process to run a given code block. For more
-detail, see the C<detach_child()> method on the L<IO::Async::ChildManager>
-class.
+This method creates a new child process to run a given code block. It is a
+legacy wrapper around the C<fork()> method.
 
 =cut
 
 sub detach_child
 {
    my $self = shift;
-   my %params = @_;
-
-   my $childmanager = $self->{childmanager} ||=
-      $self->__new_feature( "IO::Async::ChildManager" );
-
-   $childmanager->detach_child( %params );
+   $self->fork( @_ );
 }
 
 =head2 $code = $loop->detach_code( %params )
@@ -636,7 +630,7 @@ sub detach_code
 =head2 $loop->spawn_child( %params )
 
 This method creates a new child process to run a given code block or command.
-For more detail, see the C<detach_child()> method on the
+For more detail, see the C<spawn_child()> method on the
 L<IO::Async::ChildManager> class.
 
 =cut
@@ -1038,6 +1032,76 @@ sub time
 {
    my $self = shift;
    return Time::HiRes::time();
+}
+
+=head2 $pid = $loop->fork( %params )
+
+This method creates a new child process to run a given code block, returning
+its process ID.
+
+=over 8
+
+=item code => CODE
+
+A block of code to execute in the child process. It will be called in scalar
+context inside an C<eval> block. The return value will be used as the
+C<exit()> code from the child if it returns (or 255 if it returned C<undef> or
+thows an exception).
+
+=item on_exit => CODE
+
+A optional continuation to be called when the child processes exits. It will
+be invoked in the following way:
+
+ $on_exit->( $pid, $exitcode )
+
+The second argument is passed the plain perl C<$?> value. To use that
+usefully, see C<WEXITSTATUS()> and others from C<POSIX>.
+
+This key is optional; if not supplied, the calling code should install a
+handler using the C<watch_child()> method.
+
+=item keep_signals => BOOL
+
+Optional boolean. If missing or false, any CODE references in the C<%SIG> hash
+will be removed and restored back to C<DEFAULT> in the child process. If true,
+no adjustment of the C<%SIG> hash will be performed.
+
+=back
+
+=cut
+
+sub fork
+{
+   my $self = shift;
+   my %params = @_;
+
+   my $code = $params{code} or croak "Expected 'code' as a CODE reference";
+
+   my $kid = fork();
+   defined $kid or croak "Cannot fork() - $!";
+
+   if( $kid == 0 ) {
+      unless( $params{keep_signals} ) {
+         foreach( keys %SIG ) {
+            next if m/^__(WARN|DIE)__$/;
+            $SIG{$_} = "DEFAULT" if ref $SIG{$_} eq "CODE";
+         }
+      }
+
+      my $exitvalue = eval { $code->() };
+
+      defined $exitvalue or $exitvalue = -1;
+      _exit( $exitvalue );
+   }
+
+   my $loop = $self->{loop};
+
+   if( defined $params{on_exit} ) {
+      $self->watch_child( $kid => $params{on_exit} );
+   }
+
+   return $kid;
 }
 
 =head1 LOW-LEVEL METHODS
