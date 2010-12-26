@@ -188,9 +188,17 @@ transport stream.
 sub write
 {
    my $self = shift;
-   my ( $data ) = @_;
+   my ( $data, %args ) = @_;
 
-   $self->transport->write( $data );
+   if( ref $data eq "CODE" ) {
+      $data = $self->_replace_weakself( $data );
+   }
+
+   if( $args{on_flush} ) {
+      $args{on_flush} = $self->_replace_weakself( $args{on_flush} );
+   }
+
+   $self->transport->write( $data, %args );
 }
 
 # Keep perl happy; keep Britain tidy

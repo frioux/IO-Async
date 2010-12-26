@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 20;
+use Test::More tests => 24;
 use Test::Refcount;
 
 use IO::Async::Loop;
@@ -81,6 +81,27 @@ my $response = "";
 wait_for_stream { $response =~ m/\n/ } $S2 => $response;
 
 is( $response, "response\n", 'response written by protocol' );
+
+my $done;
+my $flushed;
+
+$streamproto->write(
+   sub {
+      is( $_[0], $streamproto, 'writersub $_[0] is $streamproto' );
+      return $done++ ? undef : "a lazy message\n";
+   },
+   on_flush => sub {
+      is( $_[0], $streamproto, 'on_flush $_[0] is $streamproto' );
+      $flushed = 1;
+   },
+);
+
+wait_for { $flushed };
+
+$response = "";
+wait_for_stream { $response =~ m/\n/ } $S2 => $response;
+
+is( $response, "a lazy message\n", 'response written by protocol writersub' );
 
 my $closed = 0;
 $streamproto->configure(
