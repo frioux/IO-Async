@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 27;
+use Test::More tests => 28;
 use Test::Exception;
 use Test::Refcount;
 
@@ -65,8 +65,11 @@ $mref = $notifier->_replace_weakself( sub { @args = @_ } );
 
 is_oneref( $notifier, '$notifier has refcount 1 after _replace_weakself' );
 
-$mref->( bless( [], "OtherClass" ), 456 );
+my $outerself = bless [], "OtherClass";
+$mref->( $outerself, 456 );
 is_deeply( \@args, [ $notifier, 456 ], '@args after invoking replacer $mref' );
+
+isa_ok( $outerself, "OtherClass", '$outerself unchanged' );
 
 undef @args;
 

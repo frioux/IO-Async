@@ -471,7 +471,9 @@ sub _replace_weakself
    weaken $self;
 
    return sub {
-      $_[0] = $self;
+      # Don't assign to $_[0] directly or we will change caller's first argument
+      shift @_;
+      unshift @_, $self;
       goto &$code;
    };
 }
