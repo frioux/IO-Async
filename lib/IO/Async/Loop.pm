@@ -583,8 +583,15 @@ sub later
 }
 
 # The following two methods are no longer needed; included just to keep legacy code happy
-sub enable_childmanager  { }
-sub disable_childmanager { }
+sub enable_childmanager
+{
+   carp "Loop->enable_childmanager is no longer needed; do not call it.";
+}
+
+sub disable_childmanager
+{
+   carp "Loop->disable_childmanager is no longer needed; do not call it.";
+}
 
 =head2 $pid = $loop->detach_child( %params )
 
