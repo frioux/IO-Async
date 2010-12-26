@@ -38,10 +38,9 @@ protocol.
     my $line = $1;
 
     if( $line =~ m/^HELLO (.*)/ ) {
-       my ( $name ) = @_;
+       my $name = $1;
 
-       my $on_hello = $self->{on_hello} || $self->can( 'on_hello' );
-       $on_hello->( $self, $name );
+       $self->invoke_event( on_hello => $name );
     }
 
     return 1;
