@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 28;
+use Test::More tests => 32;
 use Test::Exception;
 use Test::Refcount;
 
@@ -99,6 +99,14 @@ is_deeply( \@subargs, [ $notifier, 78 ], '@subargs after ->invoke_event' );
 
 undef @subargs;
 
+is_deeply( $notifier->maybe_invoke_event( 'frobnicate', 'a'..'c' ),
+           [ $notifier, 'a'..'c' ],
+           'return value from ->maybe_invoke_event' );
+
+is( $notifier->maybe_invoke_event( 'mangle' ), undef, 'return value from ->maybe_invoke_event on missing event' );
+
+undef @subargs;
+
 my $cb = $notifier->make_event_cb( 'frobnicate' );
 
 is( ref $cb, "CODE", '->make_event_cb returns a CODE reference' );
@@ -106,6 +114,9 @@ is_oneref( $notifier, '$notifier has refcount 1 after ->make_event_cb' );
 
 $cb->( 90 );
 is_deeply( \@subargs, [ $notifier, 90 ], '@subargs after ->make_event_cb->()' );
+
+isa_ok( $notifier->maybe_make_event_cb( 'frobnicate' ), "CODE", '->maybe_make_event_cb yields CODE ref' );
+is( $notifier->maybe_make_event_cb( 'mangle' ), undef, '->maybe_make_event_cb on missing event yields undef' );
 
 undef @subargs;
 

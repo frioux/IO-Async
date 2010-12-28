@@ -503,11 +503,30 @@ sub make_event_cb
    return $self->_capture_weakself( $code );
 }
 
-=head2 $notifier->invoke_event( $event_name, @args )
+=head2 $callback = $notifier->maybe_make_event_cb( $event_name )
+
+Similar to C<make_event_cb> but will return C<undef> if the object cannot
+handle the named event, rather than throwing an exception.
+
+=cut
+
+sub maybe_make_event_cb
+{
+   my $self = shift;
+   my ( $event_name ) = @_;
+
+   my $code = $self->{$event_name} || $self->can( $event_name )
+      or return undef;
+
+   return $self->_capture_weakself( $code );
+}
+
+=head2 @ret = $notifier->invoke_event( $event_name, @args )
 
 Invokes the given event handler, passing in the given arguments. Event
 handlers may either be subclass methods, or parameters given to the C<new> or
-C<configure> method.
+C<configure> method. Returns whatever the underlying method or CODE reference
+returned.
 
 =cut
 
@@ -519,7 +538,28 @@ sub invoke_event
    my $code = $self->{$event_name} || $self->can( $event_name )
       or croak "$self cannot handle $event_name event";
 
-   $code->( $self, @args );
+   return $code->( $self, @args );
+}
+
+=head2 $retref = $notifier->maybe_invoke_event( $event_name, @args )
+
+Similar to C<invoke_event> but will return C<undef> if the object cannot
+handle the name event, rather than throwing an exception. In order to
+distinguish this from an event-handling function that simply returned
+C<undef>, if the object does handle the event, the list that it returns will
+be returned in an ARRAY reference.
+
+=cut
+
+sub maybe_invoke_event
+{
+   my $self = shift;
+   my ( $event_name, @args ) = @_;
+
+   my $code = $self->{$event_name} || $self->can( $event_name )
+      or return undef;
+
+   return [ $code->( $self, @args ) ];
 }
 
 # Keep perl happy; keep Britain tidy
