@@ -184,11 +184,9 @@ sub connect
       $on_transport => sub {
          my ( $transport ) = @_;
 
-         $self->connect(
-            %args,
-            transport => $transport,
-            on_connected => $on_connected,
-         );
+         $self->configure( transport => $transport );
+
+         $on_connected->( $self ) if $on_connected;
       },
    );
 }
