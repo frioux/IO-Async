@@ -118,6 +118,65 @@ sub transport
    return $self->{transport};
 }
 
+=head2 $protocol->connect( %args )
+
+Sets up a connection to a peer, and configures the underlying C<transport> for
+the Protocol.
+
+Takes the following named arguments:
+
+=over 8
+
+=item socktype => STRING or INT
+
+Required. Identifies the socket type, and the type of continuation that will
+be used. If this value is C<"stream"> or C<SOCK_STREAM> then C<on_stream>
+continuation will be used; otherwise C<on_socket> will be used.
+
+=item on_connected => CODE
+
+Optional. If supplied, will be invoked once the connection has been
+established.
+
+ $on_connected->( $protocol )
+
+=back
+
+Other arguments will be passed to the underlying C<IO::Async::Loop> C<connect>
+call.
+
+=cut
+
+sub connect
+{
+   my $self = shift;
+   my %args = @_;
+
+   my $socktype = $args{socktype} or croak "Expected socktype";
+
+   my $on_transport = do {
+      no warnings 'numeric';
+      $socktype eq "stream" || $socktype == Socket::SOCK_STREAM()
+   } ? "on_stream" : "on_socket";
+
+   my $loop = $self->get_loop or croak "Cannot ->connect a ".ref($self)." that is not in a Loop";
+
+   my $on_connected = delete $args{on_connected};
+
+   $loop->connect(
+      %args,
+      socktype => "stream",
+
+      $on_transport => sub {
+         my ( $transport ) = @_;
+
+         $self->configure( transport => $transport );
+
+         $on_connected->( $self ) if $on_connected;
+      },
+   );
+}
+
 =head1 TRANSPORT DELEGATION
 
 The following methods are delegated to the transport object
