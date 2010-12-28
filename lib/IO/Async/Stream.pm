@@ -339,15 +339,8 @@ sub _flush_one
 
       return 0 if _nonfatal_error( $errno );
 
-      if( defined $self->{on_write_error} ) {
-         $self->{on_write_error}->( $self, $errno );
-      }
-      elsif( $self->can( "on_write_error" ) ) {
-         $self->on_write_error( $errno );
-      }
-      else {
-         $self->close_now;
-      }
+      $self->maybe_invoke_event( on_write_error => $errno )
+         or $self->close_now;
 
       return 0;
    }
@@ -515,15 +508,8 @@ sub on_read_ready
 
          return if _nonfatal_error( $errno );
 
-         if( defined $self->{on_read_error} ) {
-            $self->{on_read_error}->( $self, $errno );
-         }
-         elsif( $self->can( "on_read_error" ) ) {
-            $self->on_read_error( $errno );
-         }
-         else {
-            $self->close_now;
-         }
+         $self->maybe_invoke_event( on_read_error => $errno )
+            or $self->close_now;
 
          return;
       }
@@ -572,10 +558,7 @@ sub on_write_ready
    if( $self->_is_empty ) {
       $self->want_writeready( 0 );
 
-      my $on_outgoing_empty = $self->{on_outgoing_empty}
-                               || $self->can( "on_outgoing_empty" );
-
-      $on_outgoing_empty->( $self ) if $on_outgoing_empty;
+      $self->maybe_invoke_event( on_outgoing_empty => );
 
       $self->close_now if $self->{stream_closing};
    }

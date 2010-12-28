@@ -273,15 +273,8 @@ sub on_read_ready
 
          my $errno = $!;
 
-         if( defined $self->{on_recv_error} ) {
-            $self->{on_recv_error}->( $self, $errno );
-         }
-         elsif( $self->can( "on_recv_error" ) ) {
-            $self->on_recv_error( $errno );
-         }
-         else {
-            $self->close;
-         }
+         $self->maybe_invoke_event( on_recv_error => $errno )
+            or $self->close;
 
          return;
       }
@@ -317,15 +310,8 @@ sub on_write_ready
 
          my $errno = $!;
 
-         if( defined $self->{on_send_error} ) {
-            $self->{on_send_error}->( $self, $errno );
-         }
-         elsif( $self->can( "on_send_error" ) ) {
-            $self->on_send_error( $errno );
-         }
-         else {
-            $self->close;
-         }
+         $self->maybe_invoke_event( on_send_error => $errno )
+            or $self->close;
 
          return;
       }
@@ -341,10 +327,7 @@ sub on_write_ready
    if( !$sendqueue or !@$sendqueue ) {
       $self->want_writeready( 0 );
 
-      my $on_outgoing_empty = $self->{on_outgoing_empty}
-                               || $self->can( "on_outgoing_empty" );
-
-      $on_outgoing_empty->( $self ) if $on_outgoing_empty;
+      $self->maybe_invoke_event( on_outgoing_empty => );
    }
 }
 
