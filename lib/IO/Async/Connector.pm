@@ -39,8 +39,8 @@ This object is used indirectly via an C<IO::Async::Loop>:
        ...
     },
 
-    on_resolve_error => sub { print STDERR "Cannot resolve - $_[0]\n"; },
-    on_connect_error => sub { print STDERR "Cannot connect\n"; },
+    on_resolve_error => sub { die "Cannot resolve - $_[-1]\n"; },
+    on_connect_error => sub { die "Cannot connect - $_[0] failed $_[-1]\n"; },
  );
 
 =head1 DESCRIPTION
@@ -61,16 +61,11 @@ routes are valid on the system. In this case, the first C<connect()> syscall
 will fail. This isn't yet a fatal error, if there are more addresses to try,
 perhaps some IPv4 ones.
 
-For this reason, the error reporting cannot report which failure is
-responsible for the failure to connect. On success, the C<on_connected>
-continuation is invoked with a connected socket. When all addresses have been
-tried and failed, C<on_connect_error> is invoked, though no error string can
-be provided, as there isn't a "clear winner" which is responsible for the
-failure.
-
-To be aware of individual failures, the optional C<on_fail> callback can be
-used. This will be invoked on each individual C<socket()> or C<connect()>
-failure, which may be useful for debugging or logging.
+For this reason, it is possible that the operation eventually succeeds even
+though some system calls initially fail. To be aware of individual failures,
+the optional C<on_fail> callback can be used. This will be invoked on each
+individual C<socket()> or C<connect()> failure, which may be useful for
+debugging or logging.
 
 Because this module simply uses the C<getaddrinfo> resolver, it will be fully
 IPv6-aware if the underlying platform's resolver is. This allows programs to
@@ -142,6 +137,7 @@ sub _connect_addresses
    my $loop = $self->{loop};
 
    my $sock;
+   my ( $connecterr, $binderr, $socketerr );
 
    kforeach( $addrlist,
       sub {
@@ -152,11 +148,13 @@ sub _connect_addresses
          $sock = $loop->socket( $family, $socktype, $protocol );
 
          if( !$sock ) {
+            $socketerr = $!;
             $on_fail->( "socket", $family, $socktype, $protocol, $! ) if $on_fail;
             goto &$knext;
          }
 
          if( $localaddr and not $sock->bind( $localaddr ) ) {
+            $binderr = $!;
             $on_fail->( "bind", $sock, $localaddr, $! ) if $on_fail;
             undef $sock;
             goto &$knext;
@@ -172,6 +170,7 @@ sub _connect_addresses
             goto &$klast;
          }
          elsif( $! != EINPROGRESS ) {
+            $connecterr = $!;
             $on_fail->( "connect", $sock, $peeraddr, $! ) if $on_fail;
             undef $sock;
             goto &$knext;
@@ -186,6 +185,7 @@ sub _connect_addresses
 
                goto &$klast if !defined $err;
 
+               $connecterr = $!;
                $on_fail->( "connect", $sock, $peeraddr, $err ) if $on_fail;
                undef $sock;
                goto &$knext;
@@ -194,10 +194,14 @@ sub _connect_addresses
       },
       sub {
          if( $sock ) {
-            $on_connected->( $sock );
+            return $on_connected->( $sock );
          }
          else {
-            $on_connect_error->();
+            return $on_connect_error->( connect => $connecterr ) if $connecterr;
+            return $on_connect_error->( bind    => $binderr    ) if $binderr;
+            return $on_connect_error->( socket  => $socketerr  ) if $socketerr;
+            # If it gets this far then something went wrong
+            die 'Oops; $loop->connect failed but no error cause was found';
          }
       }
    );
@@ -269,9 +273,12 @@ This is most useful for C<SOCK_DGRAM> or C<SOCK_RAW> sockets.
 =item on_connect_error => CODE
 
 A continuation that is invoked after all of the addresses have been tried, and
-none of them succeeded. Because there is no one error message that stands out
-as particularly noteworthy, none is given to this continuation. To track
-individual errors, see the C<on_fail> callback.
+none of them succeeded. It will be passed the most significant error that
+occurred, and the name of the operation it occurred in. Errors from the
+C<connect()> syscall are considered most significant, then C<bind()>, then
+finally C<socket()>.
+
+ $on_connect_error->( $syscall, $! )
 
 =item on_fail => CODE
 

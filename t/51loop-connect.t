@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 14;
+use Test::More tests => 16;
 
 use IO::Socket::INET;
 use POSIX qw( ENOENT );
@@ -173,17 +173,20 @@ SKIP: {
    my $failop;
    my $failerr;
 
-   my $error = 0;
+   my @error;
 
    $loop->connect(
       addr => [ AF_INET, SOCK_STREAM, 0, pack_sockaddr_in( $port, inet_aton("127.0.0.1") ) ],
       on_connected => sub { die "Test died early - connect succeeded\n"; },
       on_fail => sub { $failop = shift @_; $failerr = pop @_; },
-      on_connect_error => sub { $error = 1 },
+      on_connect_error => sub { @error = @_; },
    );
 
-   wait_for { $error };
+   wait_for { @error };
 
    is( $failop, "connect", '$failop is connect' );
    is( "$failerr", $failure, "\$failerr is '$failure'" );
+
+   is( $error[0], "connect", '$error[0] is connect' );
+   is( "$error[1]", $failure, "\$error[1] is '$failure'" );
 }
