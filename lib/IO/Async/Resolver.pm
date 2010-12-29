@@ -13,6 +13,8 @@ our $VERSION = '0.33';
 use Socket::GetAddrInfo qw( :newapi getaddrinfo getnameinfo );
 use Socket qw( SOCK_STREAM SOCK_DGRAM SOCK_RAW );
 
+use Time::HiRes qw( alarm );
+
 use Carp;
 
 my $started = 0;
@@ -68,10 +70,17 @@ sub new
 
    my $code = $loop->detach_code(
       code => sub {
-         my ( $type, @data ) = @_;
+         my ( $type, $timeout, @data ) = @_;
 
          if( my $code = $METHODS{$type} ) {
-            return $code->( @data );
+            local $SIG{ALRM} = sub { die "Timed out\n" };
+
+            alarm( $timeout );
+            my @ret = eval { $code->( @data ) };
+            alarm( 0 );
+
+            die $@ if $@;
+            return @ret;
          }
          else {
             die "Unrecognised resolver request '$type'";
@@ -114,6 +123,11 @@ list of available operations.
 Arguments to pass to the resolver function. Exact meaning depends on the
 specific function chosen by the C<type>; see BUILT-IN RESOLVERS.
 
+=item timeout => NUMBER
+
+Optional. Timeout in seconds, after which the resolver operation will abort
+with a timeout exception. If not supplied, a default of 10 seconds will apply.
+
 =item on_resolved => CODE
 
 A continuation that is invoked when the resolver function returns a successful
@@ -143,9 +157,11 @@ sub resolve
    my $on_error = $args{on_error};
    ref $on_error or croak "Expected 'on_error' to be a reference";
 
+   my $timeout = $args{timeout} || 10;
+
    my $code = $self->{code};
    $code->call(
-      args      => [ $type, @{$args{data}} ],
+      args      => [ $type, $timeout, @{$args{data}} ],
       on_return => $on_resolved,
       on_error  => $on_error,
    );
