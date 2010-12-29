@@ -7,6 +7,7 @@ my $build = Module::Build->new(
    module_name => 'IO::Async',
    requires => {
       'Async::MergePoint' => 0,
+      'CPS' => 0,
       'Heap' => '0.80',
       'IO::Poll' => 0,
       'Socket::GetAddrInfo' => '0.18',

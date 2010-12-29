@@ -13,6 +13,8 @@ our $VERSION = '0.33';
 use POSIX qw( EINPROGRESS );
 use Socket qw( SOL_SOCKET SO_ERROR );
 
+use CPS qw( kforeach );
+
 use Carp;
 
 =head1 NAME
@@ -140,70 +142,65 @@ sub _connect_addresses
    my $loop = $self->{loop};
 
    my $sock;
-   my $addr;
 
-   while( $addr = shift @$addrlist ) {
-      unless( $sock = $loop->socket( $addr->{family}, $addr->{socktype}, $addr->{protocol} ) ) {
-         $on_fail->( "socket", $addr->{family}, $addr->{socktype}, $addr->{protocol}, $! ) if $on_fail;
-         next;
-      }
+   kforeach( $addrlist,
+      sub {
+         my ( $addr, $knext, $klast ) = @_;
+         my ( $family, $socktype, $protocol, $localaddr, $peeraddr ) = 
+            @{$addr}{qw( family socktype protocol localaddr peeraddr )};
 
-      if( $addr->{localaddr} and not $sock->bind( $addr->{localaddr} ) ) {
-         $on_fail->( "bind", $sock, $addr->{localaddr}, $! ) if $on_fail;
-         undef $sock;
-         next;
-      }
+         $sock = $loop->socket( $family, $socktype, $protocol );
 
-      last;
-   }
-
-   if( not $sock and not @$addrlist ) {
-      # Have now ran out of addresses to use
-      $on_connect_error->();
-      return;
-   }
-
-   $sock->blocking( 0 );
-
-   my $ret = connect( $sock, $addr->{peeraddr} );
-   if( $ret ) {
-      # Succeeded already? Dubious, but OK. Can happen e.g. with connections to
-      # localhost, or UNIX sockets, or something like that.
-      $on_connected->( $sock );
-      return; # All done
-   }
-   elsif( $! != EINPROGRESS ) {
-      $on_fail->( "connect", $sock, $addr->{peeraddr}, $! ) if $on_fail;
-      $self->_connect_addresses( $addrlist, $on_connected, $on_connect_error, $on_fail );
-      return;
-   }
-
-   $loop->watch_io(
-      handle => $sock,
-
-      on_write_ready => sub {
-         # Whatever happens we want to remove this watch, it's now done its job.
-         # Do it early before we forget
-
-         $loop->unwatch_io( handle => $sock, on_write_ready => 1 );
-
-         my $err = _get_sock_err( $sock );
-
-         if( !defined $err ) {
-             $on_connected->( $sock );
-             return;
+         if( !$sock ) {
+            $on_fail->( "socket", $family, $socktype, $protocol, $! ) if $on_fail;
+            goto &$knext;
          }
 
-         $on_fail->( "connect", $sock, $addr->{peeraddr}, $err ) if $on_fail;
+         if( $localaddr and not $sock->bind( $localaddr ) ) {
+            $on_fail->( "bind", $sock, $localaddr, $! ) if $on_fail;
+            undef $sock;
+            goto &$knext;
+         }
 
-         # Try the next one
-         $self->_connect_addresses( $addrlist, $on_connected, $on_connect_error, $on_fail );
-         return;
+         $sock->blocking( 0 );
+
+         # TODO: $sock->connect returns success masking EINPROGRESS
+         my $ret = connect( $sock, $peeraddr );
+         if( $ret ) {
+            # Succeeded already? Dubious, but OK. Can happen e.g. with connections to
+            # localhost, or UNIX sockets, or something like that.
+            goto &$klast;
+         }
+         elsif( $! != EINPROGRESS ) {
+            $on_fail->( "connect", $sock, $peeraddr, $! ) if $on_fail;
+            undef $sock;
+            goto &$knext;
+         }
+
+         $loop->watch_io(
+            handle => $sock,
+            on_write_ready => sub {
+               $loop->unwatch_io( handle => $sock, on_write_ready => 1 );
+
+               my $err = _get_sock_err( $sock );
+
+               goto &$klast if !defined $err;
+
+               $on_fail->( "connect", $sock, $peeraddr, $err ) if $on_fail;
+               undef $sock;
+               goto &$knext;
+            },
+         );
       },
+      sub {
+         if( $sock ) {
+            $on_connected->( $sock );
+         }
+         else {
+            $on_connect_error->();
+         }
+      }
    );
-
-   # All done for now; all we can do is wait on that to complete
-   return;
 }
 
 =head2 $loop->connect( %params )
