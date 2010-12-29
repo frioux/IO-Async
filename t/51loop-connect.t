@@ -61,22 +61,27 @@ is( $sock->sockhost, "127.0.0.1", '$sock->sockhost is 127.0.0.1' );
 $listensock->accept; # Throw it away
 undef $sock; # This too
 
-$loop->connect(
-   local_host => "127.0.0.2",
-   host     => $listensock->sockhost,
-   service  => $listensock->sockport,
-   socktype => $listensock->socktype,
-   on_connected => sub { $sock = shift; },
-   on_resolve_error => sub { die "Test died early - resolve error $_[0]\n"; },
-   on_connect_error => sub { die "Test died early - connect error $_[0]\n"; },
-);
+SKIP: {
+   # Some OSes can't bind() locally to other addresses on 127./8
+   skip "Cannot bind to 127.0.0.2", 1 unless IO::Socket::INET->new( LocalHost => "127.0.0.2" );
 
-wait_for { $sock };
+   $loop->connect(
+      local_host => "127.0.0.2",
+      host     => $listensock->sockhost,
+      service  => $listensock->sockport,
+      socktype => $listensock->socktype,
+      on_connected => sub { $sock = shift; },
+      on_resolve_error => sub { die "Test died early - resolve error $_[0]\n"; },
+      on_connect_error => sub { die "Test died early - connect error $_[0]\n"; },
+   );
 
-is( $sock->sockhost, "127.0.0.2", '$sock->sockhost is 127.0.0.2' );
+   wait_for { $sock };
 
-$listensock->accept; # Throw it away
-undef $sock; # This too
+   is( $sock->sockhost, "127.0.0.2", '$sock->sockhost is 127.0.0.2' );
+
+   $listensock->accept; # Throw it away
+   undef $sock; # This too
+}
 
 # Now try on_stream event
 
