@@ -13,7 +13,7 @@ our $VERSION = '0.33';
 use POSIX qw( EINPROGRESS );
 use Socket qw( SOL_SOCKET SO_ERROR );
 
-use CPS qw( kforeach );
+use CPS qw( kpar kforeach );
 
 use Carp;
 
@@ -382,104 +382,101 @@ sub connect
 
    my $on_fail = $params{on_fail};
 
+   my $loop = $self->{loop};
+
+   my $family   = $params{family}   || 0;
+   my $socktype = $params{socktype} || 0;
+   my $protocol = $params{protocol} || 0;
+   my $flags    = $params{flags}    || 0;
+
    my @localaddrs;
    my @peeraddrs;
 
-   my $start = sub {
-      return unless @localaddrs and @peeraddrs;
+   kpar(
+      sub {
+         my ( $k ) = @_;
+         if( exists $params{host} and exists $params{service} ) {
+            my $on_resolve_error = $params{on_resolve_error} or croak "Expected 'on_resolve_error' callback";
 
-      my @addrs;
+            my $host    = $params{host}    or croak "Expected 'host'";
+            my $service = $params{service} or croak "Expected 'service'";
 
-      foreach my $local ( @localaddrs ) {
-         foreach my $peer ( @peeraddrs ) {
-            # Skip if the family, socktype, or protocol don't match
-            next if defined $local->[0] and defined $peer->[0] and
-               $local->[0] != $peer->[0];
-            next if defined $local->[1] and defined $peer->[1] and
-               $local->[1] != $peer->[1];
-            next if defined $local->[2] and defined $peer->[2] and
-               $local->[2] != $peer->[2];
+            $loop->resolve(
+               type => 'getaddrinfo',
+               data => [ $host, $service, $family, $socktype, $protocol, $flags ],
 
-            push @addrs, {
-               family    => $local->[0] || $peer->[0],
-               socktype  => $local->[1] || $peer->[1],
-               protocol  => $local->[2] || $peer->[2],
-               localaddr => $local->[3],
-               peeraddr  => $peer->[3],
-            };
+               on_error => $on_resolve_error,
+
+               on_resolved => sub {
+                  @peeraddrs = @_;
+                  goto &$k;
+               },
+            );
          }
+         elsif( exists $params{addrs} or exists $params{addr} ) {
+            @peeraddrs = exists $params{addrs} ? @{ $params{addrs} } : ( $params{addr} );
+            goto &$k;
+         }
+         else {
+            croak "Expected 'host' and 'service' or 'addrs' or 'addr' arguments";
+         }
+      },
+      sub {
+         my ( $k ) = @_;
+         if( exists $params{local_host} or exists $params{local_service} ) {
+            my $on_resolve_error = $params{on_resolve_error} or croak "Expected 'on_resolve_error' callback";
+
+            # Empty is fine on either of these
+            my $host    = $params{local_host};
+            my $service = $params{local_service};
+
+            $loop->resolve(
+               type => 'getaddrinfo',
+               data => [ $host, $service, $family, $socktype, $protocol, $flags ],
+
+               on_error => $on_resolve_error,
+
+               on_resolved => sub {
+                  @localaddrs = @_;
+                  goto &$k;
+               },
+            );
+         }
+         elsif( exists $params{local_addrs} or exists $params{local_addr} ) {
+            @localaddrs = exists $params{local_addrs} ? @{ $params{local_addrs} } : ( $params{local_addr} );
+            goto &$k;
+         }
+         else {
+            @localaddrs = ( [] );
+            goto &$k;
+         }
+      },
+      sub {
+         my @addrs;
+
+         foreach my $local ( @localaddrs ) {
+            foreach my $peer ( @peeraddrs ) {
+               # Skip if the family, socktype, or protocol don't match
+               next if defined $local->[0] and defined $peer->[0] and
+                  $local->[0] != $peer->[0];
+               next if defined $local->[1] and defined $peer->[1] and
+                  $local->[1] != $peer->[1];
+               next if defined $local->[2] and defined $peer->[2] and
+                  $local->[2] != $peer->[2];
+
+               push @addrs, {
+                  family    => $local->[0] || $peer->[0],
+                  socktype  => $local->[1] || $peer->[1],
+                  protocol  => $local->[2] || $peer->[2],
+                  localaddr => $local->[3],
+                  peeraddr  => $peer->[3],
+               };
+            }
+         }
+
+         $self->_connect_addresses( \@addrs, $on_connected, $on_connect_error, $on_fail );
       }
-
-      $self->_connect_addresses( \@addrs, $on_connected, $on_connect_error, $on_fail );
-   };
-
-   if( exists $params{host} and exists $params{service} ) {
-      my $on_resolve_error = $params{on_resolve_error} or croak "Expected 'on_resolve_error' callback";
-
-      my $host    = $params{host}    or croak "Expected 'host'";
-      my $service = $params{service} or croak "Expected 'service'";
-
-      my $loop = $self->{loop};
-
-      my $family   = $params{family}   || 0;
-      my $socktype = $params{socktype} || 0;
-      my $protocol = $params{protocol} || 0;
-      my $flags    = $params{flags}    || 0;
-
-      $loop->resolve(
-         type => 'getaddrinfo',
-         data => [ $host, $service, $family, $socktype, $protocol, $flags ],
-
-         on_error => $on_resolve_error,
-
-         on_resolved => sub {
-            @peeraddrs = @_;
-            $start->();
-         },
-      );
-   }
-   elsif( exists $params{addrs} or exists $params{addr} ) {
-      @peeraddrs = exists $params{addrs} ? @{ $params{addrs} } : ( $params{addr} );
-      $start->();
-   }
-   else {
-      croak "Expected 'host' and 'service' or 'addrs' or 'addr' arguments";
-   }
-
-   if( exists $params{local_host} or exists $params{local_service} ) {
-      my $on_resolve_error = $params{on_resolve_error} or croak "Expected 'on_resolve_error' callback";
-
-      # Empty is fine on either of these
-      my $host    = $params{local_host};
-      my $service = $params{local_service};
-
-      my $loop = $self->{loop};
-
-      my $family   = $params{family}   || 0;
-      my $socktype = $params{socktype} || 0;
-      my $protocol = $params{protocol} || 0;
-      my $flags    = $params{flags}    || 0;
-
-      $loop->resolve(
-         type => 'getaddrinfo',
-         data => [ $host, $service, $family, $socktype, $protocol, $flags ],
-
-         on_error => $on_resolve_error,
-
-         on_resolved => sub {
-            @localaddrs = @_;
-            $start->();
-         },
-      );
-   }
-   elsif( exists $params{local_addrs} or exists $params{local_addr} ) {
-      @localaddrs = exists $params{local_addrs} ? @{ $params{local_addrs} } : ( $params{local_addr} );
-      $start->();
-   }
-   else {
-      @localaddrs = ( [] );
-      $start->();
-   }
+   );
 }
 
 # Keep perl happy; keep Britain tidy
