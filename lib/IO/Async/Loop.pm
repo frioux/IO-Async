@@ -685,6 +685,19 @@ sub run_child
    $childmanager->run_child( %params );
 }
 
+=head2 $loop->resolver
+
+Returns the internally-stored L<IO::Async::Resolver> object, used for name
+resolution operations by the C<resolve>, C<connect> and C<listen> methods.
+
+=cut
+
+sub resolver
+{
+   my $self = shift;
+   return $self->{resolver} ||= $self->__new_feature( "IO::Async::Resolver" );
+}
+
 =head2 $loop->resolve( %params )
 
 This method performs a single name resolution operation. It uses an
@@ -698,9 +711,7 @@ sub resolve
    my $self = shift;
    my ( %params ) = @_;
 
-   my $resolver = $self->{resolver} ||= $self->__new_feature( "IO::Async::Resolver" );
-
-   $resolver->resolve( %params );
+   $self->resolver->resolve( %params );
 }
 
 =head2 $loop->connect( %params )

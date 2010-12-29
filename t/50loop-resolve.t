@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 6;
+use Test::More tests => 7;
 use Test::Exception;
 
 use Socket qw( AF_INET SOCK_STREAM );
@@ -15,6 +15,8 @@ use IO::Async::Loop::Poll;
 my $loop = IO::Async::Loop::Poll->new();
 
 testing_loop( $loop );
+
+isa_ok( $loop->resolver, "IO::Async::Resolver", '$loop->resolver' );
 
 my $result;
 
