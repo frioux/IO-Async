@@ -289,6 +289,8 @@ generated. I.e.
 
  $on_fail->( "socket", $family, $socktype, $protocol, $! );
 
+ $on_fail->( "bind", $sock, $address, $! );
+
  $on_fail->( "connect", $sock, $address, $! );
 
 Because of the "try all" nature when given a list of multiple addresses, this
