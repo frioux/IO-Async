@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 12;
+use Test::More tests => 14;
 
 use IO::Socket::INET;
 use POSIX qw( ENOENT );
@@ -55,6 +55,25 @@ wait_for { $sock };
 isa_ok( $sock, "IO::Socket::INET", 'by host/service: $sock isa IO::Socket::INET' );
 is_deeply( [ unpack_sockaddr_in $sock->peername ],
            [ unpack_sockaddr_in $addr ], 'by host/service: $sock->getpeername is $addr' );
+
+is( $sock->sockhost, "127.0.0.1", '$sock->sockhost is 127.0.0.1' );
+
+$listensock->accept; # Throw it away
+undef $sock; # This too
+
+$loop->connect(
+   local_host => "127.0.0.2",
+   host     => $listensock->sockhost,
+   service  => $listensock->sockport,
+   socktype => $listensock->socktype,
+   on_connected => sub { $sock = shift; },
+   on_resolve_error => sub { die "Test died early - resolve error $_[0]\n"; },
+   on_connect_error => sub { die "Test died early - connect error $_[0]\n"; },
+);
+
+wait_for { $sock };
+
+is( $sock->sockhost, "127.0.0.2", '$sock->sockhost is 127.0.0.2' );
 
 $listensock->accept; # Throw it away
 undef $sock; # This too
