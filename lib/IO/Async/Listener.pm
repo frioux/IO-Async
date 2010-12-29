@@ -364,9 +364,10 @@ Optional. A callback that is invoked when the listening socket is ready.
 =item on_listen_error => CODE
 
 A continuation this is invoked after all of the addresses have been tried, and
-none of them succeeded. Becasue there is no one error message that stands out
-as particularly noteworthy, none is given to this continuation. To track
-individual errors, see the C<on_fail> callback.
+none of them succeeded. It will be passed the most significant error that
+occurred, and the name of the operation it occurred in. Errors from the
+C<listen()> syscall are considered most significant, then C<bind()>, then
+C<sockopt()>, then finally C<socket()>.
 
 =item on_fail => CODE
 
@@ -433,29 +434,35 @@ sub listen
       my $reuseaddr = 1;
       $reuseaddr = 0 if defined $params{reuseaddr} and not $params{reuseaddr};
 
+      my ( $listenerr, $binderr, $sockopterr, $socketerr );
+
       foreach my $addr ( @$addrlist ) {
          my ( $family, $socktype, $proto, $address ) = @$addr;
 
          my $sock;
 
          unless( $sock = $loop->socket( $family, $socktype, $proto ) ) {
+            $socketerr = $!;
             $on_fail->( "socket", $family, $socktype, $proto, $! ) if $on_fail;
             next;
          }
 
          if( $reuseaddr ) {
             unless( $sock->sockopt( SO_REUSEADDR, 1 ) ) {
+               $sockopterr = $!;
                $on_fail->( "sockopt", $sock, SO_REUSEADDR, 1, $! ) if $on_fail;
                next;
             }
          }
 
          unless( $sock->bind( $address ) ) {
+            $binderr = $!;
             $on_fail->( "bind", $sock, $address, $! ) if $on_fail;
             next;
          }
 
          unless( $sock->listen( $queuesize ) ) {
+            $listenerr = $!;
             $on_fail->( "listen", $sock, $queuesize, $! ) if $on_fail;
             next;
          }
@@ -468,7 +475,11 @@ sub listen
       }
 
       # If we got this far, then none of the addresses succeeded
-      $on_listen_error->();
+      return $on_listen_error->( listen  => $listenerr  ) if $listenerr;
+      return $on_listen_error->( bind    => $binderr    ) if $binderr;
+      return $on_listen_error->( sockopt => $sockopterr ) if $sockopterr;
+      return $on_listen_error->( socket  => $socketerr  ) if $socketerr;
+      die 'Oops; $loop->listen failed but no error cause was found';
    }
 
    elsif( defined $params{service} ) {

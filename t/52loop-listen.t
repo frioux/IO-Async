@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 14;
+use Test::More tests => 17;
 use Test::Exception;
 
 use IO::Socket::INET;
@@ -123,19 +123,22 @@ is_deeply( [ unpack_sockaddr_in $newclient->peername ],
 # it's likely we'll fail to bind TCP port 22 or 80.
 
 my $badport;
+my $failure;
 foreach my $port ( 22, 80 ) {
    IO::Socket::INET->new( Type => SOCK_STREAM, LocalPort => $port, Listen => 1, ReuseAddr => 1 ) and next;
       
    $badport = $port;
+   $failure = $!;
    last;
 }
 
 SKIP: {
    skip "No bind()-failing ports found", 1 unless defined $badport;
 
-   my ( $failcall, @failargs, $failbang );
+   my $failop;
+   my $failerr;
 
-   my $errored = 0;
+   my @error;
 
    $loop->listen(
       family   => AF_INET,
@@ -148,13 +151,15 @@ SKIP: {
 
       on_accept => sub { "DUMMY" }, # really hope this doesn't happen ;)
 
-      on_fail => sub { $failbang = pop; ( $failcall, @failargs ) = @_; },
-      on_listen_error => sub { $errored = 1 },
+      on_fail => sub { $failop = shift; $failerr = pop; },
+      on_listen_error => sub { @error = @_; },
    );
 
-   wait_for { $errored };
+   wait_for { @error };
 
-   # We hope it's the bind() call that failed. Not quite sure what bang might
-   # be. EPERM or EADDRINUSE or various things. Best not to be sensitive on it
-   is( $failcall, "bind", "bind() to bad port $badport fails ($failbang)" );
+   is( $failop, "bind", '$failop is bind' );
+   is( "$failerr", $failure, "\$failerr is '$failure'" );
+
+   is( $error[0], "bind", '$error[0] is bind' );
+   is( "$error[1]", $failure, "\$error[1] is '$failure'" );
 }
