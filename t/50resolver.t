@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 8;
+use Test::More tests => 10;
 use Test::Exception;
 
 use Socket qw( AF_INET SOCK_STREAM );
@@ -111,7 +111,7 @@ my ( $err, @addrs ) = getaddrinfo( "localhost", "www", { family => AF_INET, sock
 undef $result;
 
 $resolver->resolve(
-   type => 'getaddrinfo',
+   type => 'getaddrinfo_array',
    data => [ "localhost", "www", AF_INET, SOCK_STREAM ],
    on_resolved => sub { $result = [ 'resolved', @_ ] },
    on_error    => sub { $result = [ 'error',    @_ ] },
@@ -120,14 +120,37 @@ $resolver->resolve(
 wait_for { $result };
 
 if( $err ) {
-   is( $result->[0], "error", 'getaddrinfo - error' );
-   is_deeply( $result->[1], "$err\n", 'getaddrinfo - error message' );
+   is( $result->[0], "error", 'getaddrinfo_array - error' );
+   is_deeply( $result->[1], "$err\n", 'getaddrinfo_array - error message' );
 }
 else {
-   is( $result->[0], "resolved", 'getaddrinfo - resolved' );
+   is( $result->[0], "resolved", 'getaddrinfo_array - resolved' );
 
    my @got = @{$result}[1..$#$result];
    my @expect = map { [ @{$_}{qw( family socktype protocol addr canonname )} ] } @addrs;
 
-   is_deeply( \@got, \@expect, 'getaddrinfo - resolved addresses' );
+   is_deeply( \@got, \@expect, 'getaddrinfo_array - resolved addresses' );
+}
+undef $result;
+
+$resolver->resolve(
+   type => 'getaddrinfo_hash',
+   data => [ host => "localhost", service => "www", family => AF_INET, socktype => SOCK_STREAM ],
+   on_resolved => sub { $result = [ 'resolved', @_ ] },
+   on_error    => sub { $result = [ 'error',    @_ ] },
+);
+
+wait_for { $result };
+
+if( $err ) {
+   is( $result->[0], "error", 'getaddrinfo_hash - error' );
+   is_deeply( $result->[1], "$err\n", 'getaddrinfo_hash - error message' );
+}
+else {
+   is( $result->[0], "resolved", 'getaddrinfo_hash - resolved' );
+
+   my @got = @{$result}[1..$#$result];
+   my @expect = @addrs;
+
+   is_deeply( \@got, \@expect, 'getaddrinfo_hash - resolved addresses' );
 }

@@ -149,6 +149,10 @@ sub resolve
 
    my $type = $args{type};
    defined $type or croak "Expected 'type'";
+
+   # Legacy
+   $type = "getaddrinfo_array" if $type eq "getaddrinfo";
+
    exists $METHODS{$type} or croak "Expected 'type' to be an existing resolver method, got '$type'";
 
    my $on_resolved = $args{on_resolved};
@@ -249,19 +253,40 @@ register_resolver getnetbyaddr => sub { return getnetbyaddr( $_[0], $_[1] ) or d
 register_resolver getprotobyname   => sub { return getprotobyname( $_[0] ) or die "$!\n" };
 register_resolver getprotobynumber => sub { return getprotobynumber( $_[0] ) or die "$!\n" };
 
-# The two Socket::GetAddrInfo-based ones
+# The Socket::GetAddrInfo-based ones
 
 =pod
 
-The following two resolver names are implemented using the same-named
-functions from the C<Socket::GetAddrInfo> module.
+The following three resolver names are implemented using the the
+C<Socket::GetAddrInfo> module.
 
- getaddrinfo getnameinfo
+ getaddrinfo_hash
+ getaddrinfo_array
+ getnameinfo
 
-The C<getaddrinfo> resolver mangles the result of the function, so that the
-returned value is more useful to the caller. It splits up the list of 5-tuples
-into a list of ARRAY refs, where each referenced array contains one of the
-tuples of 5 values. The C<getnameinfo> resolver returns its result unchanged.
+The C<getaddrinfo_hash> resolver takes arguments in a hash of name/value pairs
+and returns a list of hash structures, as the C<getaddrinfo> function does under
+the C<:newapi> tag. For neatness it takes all its arguments as named values;
+taking the host and service names from arguments called C<host> and C<service>
+respectively; all the remaining arguments are passed into the hints hash.
+
+The C<getaddrinfo_array> resolver behaves more like the C<:Socket6api> version
+of the function. It takes hints in a flat list, and mangles the result of the
+function, so that the returned value is more useful to the caller. It splits
+up the list of 5-tuples into a list of ARRAY refs, where each referenced array
+contains one of the tuples of 5 values.
+
+As an extra convenience to the caller, both resolvers will also accept plain
+string names for the C<socktype> argument, converting C<stream>, C<dgram> or
+C<raw> into the appropriate C<SOCK_*> value.
+
+For backward-compatibility with older code, the resolver name C<getaddrinfo>
+is currently aliased to C<getaddrinfo_array>; but any code that wishes to rely
+on the array-like nature of its arguments and return values, should request it
+specifically by name, as this alias will be changed in a later version of
+C<IO::Async>.
+
+The C<getnameinfo> resolver returns its result in the same form as C<:newapi>.
 
 Because this module simply uses the system's C<getaddrinfo> resolver, it will
 be fully IPv6-aware if the underlying platform's resolver is. This allows
@@ -269,7 +294,26 @@ programs to be fully IPv6-capable.
 
 =cut
 
-register_resolver getaddrinfo => sub {
+register_resolver getaddrinfo_hash => sub {
+   my %args = @_;
+
+   my $host    = delete $args{host};
+   my $service = delete $args{service};
+
+   if( defined $args{socktype} ) {
+      $args{socktype} = SOCK_STREAM if $args{socktype} eq 'stream';
+      $args{socktype} = SOCK_DGRAM  if $args{socktype} eq 'dgram';
+      $args{socktype} = SOCK_RAW    if $args{socktype} eq 'raw';
+   }
+
+   my ( $err, @addrs ) = getaddrinfo( $host, $service, \%args );
+
+   die $err if $err;
+
+   return @addrs;
+};
+
+register_resolver getaddrinfo_array => sub {
    my ( $host, $service, $family, $socktype, $protocol, $flags ) = @_;
 
    if( defined $socktype ) {
