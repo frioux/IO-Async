@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 7;
+use Test::More tests => 8;
 use Test::Exception;
 
 use Socket qw( AF_INET SOCK_STREAM );
@@ -16,13 +16,14 @@ my $loop = IO::Async::Loop::Poll->new();
 
 testing_loop( $loop );
 
-isa_ok( $loop->resolver, "IO::Async::Resolver", '$loop->resolver' );
+my $resolver = $loop->resolver;
+isa_ok( $resolver, "IO::Async::Resolver", '$loop->resolver' );
 
 my $result;
 
 my @pwuid = getpwuid( $< );
 
-$loop->resolve(
+$resolver->resolve(
    type => 'getpwuid',
    data => [ $< ], 
    on_resolved => sub { $result = [ @_ ] },
@@ -33,6 +34,19 @@ wait_for { $result };
 
 is_deeply( $result, \@pwuid, 'getpwuid' );
 
+undef $result;
+
+$loop->resolve(
+   type => 'getpwuid',
+   data => [ $< ],
+   on_resolved => sub { $result = [ @_ ] },
+   on_error => sub { die "Test died early" },
+);
+
+wait_for { $result };
+
+is_deeply( $result, \@pwuid, 'getpwuid via $loop->resolve' );
+
 SKIP: {
    my $user_name = $result->[0];
    skip "getpwnam - No user name", 1 unless defined $user_name;
@@ -41,7 +55,7 @@ SKIP: {
 
    undef $result;
 
-   $loop->resolve(
+   $resolver->resolve(
       type => 'getpwnam',
       data => [ $user_name ],
       on_resolved => sub { $result = [ @_ ] },
@@ -57,7 +71,7 @@ my @proto = getprotobyname( "tcp" );
 
 undef $result;
 
-$loop->resolve(
+$resolver->resolve(
    type => 'getprotobyname',
    data => [ "tcp" ],
    on_resolved => sub { $result = [ @_ ] },
@@ -76,7 +90,7 @@ SKIP: {
 
    undef $result;
 
-   $loop->resolve(
+   $resolver->resolve(
       type => 'getprotobynumber',
       data => [ $proto_number ],
       on_resolved => sub { $result = [ @_ ] },
@@ -96,7 +110,7 @@ my ( $err, @addrs ) = getaddrinfo( "localhost", "www", { family => AF_INET, sock
 
 undef $result;
 
-$loop->resolve(
+$resolver->resolve(
    type => 'getaddrinfo',
    data => [ "localhost", "www", AF_INET, SOCK_STREAM ],
    on_resolved => sub { $result = [ 'resolved', @_ ] },
