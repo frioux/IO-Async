@@ -11,6 +11,18 @@ use warnings;
 our $VERSION = '0.33';
 
 use Socket::GetAddrInfo qw( :newapi getaddrinfo getnameinfo );
+
+# We're going to implement methods called getaddrinfo and getnameinfo.
+# We therefore need to rename these imports. We couldn't just perform an empty
+# import and call fully-qualified because Socket::GetAddrInfo's import method
+# does special magic
+BEGIN {
+   my $stash = do { no strict 'refs'; \%{__PACKAGE__."::"} };
+
+   $stash->{_getaddrinfo} = delete $stash->{getaddrinfo};
+   $stash->{_getnameinfo} = delete $stash->{getnameinfo};
+}
+
 use Socket qw( SOCK_STREAM SOCK_DGRAM SOCK_RAW );
 
 use Time::HiRes qw( alarm );
@@ -171,6 +183,125 @@ sub resolve
    );
 }
 
+=head2 $resolver->getaddrinfo( %args )
+
+A shortcut wrapper around the C<getaddrinfo> resolver, taking its arguments in
+a more convenient form.
+
+=over 8
+
+=item host => STRING
+
+=item service => STRING
+
+The host and service names to look up. At least one must be provided.
+
+=item family => INT
+
+=item socktype => INT
+
+=item protocol => INT
+
+Hint values used to filter the results.
+
+=item flags => INT
+
+Flags to control the C<getaddrinfo(3)> function. See the C<AI_*> constants in
+L<Socket::GetAddrInfo> for more detail.
+
+=item timeout => NUMBER
+
+Time in seconds after which to abort the lookup with a C<Timed out> exception
+
+=item on_resolved => CODE
+
+Callback which is invoked after a successful lookup. Will be passed a list of
+HASH references; each containing one result. Each result will contain fields
+called C<family>, C<socktype>, C<protocol> and C<addr>. If requested by
+C<AI_CANONNAME> then the C<canonname> field will also be valid.
+
+ $on_resolved->( @addrs )
+
+=item on_error => CODE
+
+Callback which is invoked after a failed lookup, including for a timeout.
+
+ $on_error->( $exception )
+
+=back
+
+=cut
+
+sub getaddrinfo
+{
+   my $self = shift;
+   my %args = @_;
+
+   $self->resolve(
+      type    => "getaddrinfo_hash",
+      # I really want hash slices
+      data    => [ map { exists $args{$_} ? ( $_ => $args{$_} ) : () } qw( host service family socktype protocol flags ) ],
+      timeout => $args{timeout},
+      on_resolved => $args{on_resolved},
+      on_error    => $args{on_error},
+   );
+}
+
+=head2 $resolver->getnameinfo( %args )
+
+A shortcut wrapper around the C<getnameinfo> resolver, taking its arguments in
+a more convenient form.
+
+=over 8
+
+=item addr => STRING
+
+The packed socket address to look up.
+
+=item flags => INT
+
+Flags to control the C<getnameinfo(3)> function. See the C<NI_*> constants in
+L<Socket::GetAddrInfo> for more detail.
+
+=item timeout => NUMBER
+
+Time in seconds after which to abort the lookup with a C<Timed out> exception
+
+=item on_resolved => CODE
+
+Callback which is invoked after a successful lookup. 
+
+ $on_resolved->( $host, $service )
+
+=item on_error => CODE
+
+Callback which is invoked after a failed lookup, including for a timeout.
+
+ $on_error->( $exception )
+
+=back
+
+=cut
+
+sub getnameinfo
+{
+   my $self = shift;
+   my %args = @_;
+
+   my $on_resolved = $args{on_resolved};
+   ref $on_resolved or croak "Expected 'on_resolved' to be a reference";
+
+   $self->resolve(
+      type    => "getnameinfo",
+      data    => [ $args{addr}, $args{flags} ],
+      timeout => $args{timeout},
+      on_resolved => sub {
+         $on_resolved->( @{ $_[0] } ); # unpack the ARRAY ref
+      },
+      on_error    => $args{on_error},
+   );
+}
+
 =head1 FUNCTIONS
 
 =cut
@@ -306,7 +437,7 @@ register_resolver getaddrinfo_hash => sub {
       $args{socktype} = SOCK_RAW    if $args{socktype} eq 'raw';
    }
 
-   my ( $err, @addrs ) = getaddrinfo( $host, $service, \%args );
+   my ( $err, @addrs ) = _getaddrinfo( $host, $service, \%args );
 
    die $err if $err;
 
@@ -328,7 +459,7 @@ register_resolver getaddrinfo_array => sub {
    $hints{protocol} = $protocol if defined $protocol;
    $hints{flags}    = $flags    if defined $flags;
 
-   my ( $err, @addrs ) = getaddrinfo( $host, $service, \%hints );
+   my ( $err, @addrs ) = _getaddrinfo( $host, $service, \%hints );
 
    die "$err\n" if $err;
 
@@ -341,7 +472,7 @@ register_resolver getaddrinfo_array => sub {
 register_resolver getnameinfo => sub {
    my ( $addr, $flags ) = @_;
 
-   my ( $err, $host, $service ) = getnameinfo( $addr, $flags );
+   my ( $err, $host, $service ) = _getnameinfo( $addr, $flags || 0 );
 
    die "$err\n" if $err;
 

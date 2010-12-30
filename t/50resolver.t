@@ -4,11 +4,11 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 10;
+use Test::More tests => 14;
 use Test::Exception;
 
-use Socket qw( AF_INET SOCK_STREAM );
-use Socket::GetAddrInfo qw( :newapi getaddrinfo );
+use Socket qw( AF_INET SOCK_STREAM pack_sockaddr_in INADDR_LOOPBACK );
+use Socket::GetAddrInfo qw( :newapi getaddrinfo getnameinfo );
 
 use IO::Async::Loop::Poll;
 
@@ -153,4 +153,51 @@ else {
    my @expect = @addrs;
 
    is_deeply( \@got, \@expect, 'getaddrinfo_hash - resolved addresses' );
+}
+
+undef $result;
+
+$resolver->getaddrinfo(
+   host     => "localhost",
+   service  => "www",
+   family   => AF_INET,
+   socktype => SOCK_STREAM,
+   on_resolved => sub { $result = [ 'resolved', @_ ] },
+   on_error    => sub { $result = [ 'error',    @_ ] },
+);
+
+wait_for { $result };
+
+if( $err ) {
+   is( $result->[0], "error", '$resolver->getaddrinfo - error' );
+   is_deeply( $result->[1], "$err\n", '$resolver->getaddrinfo - error message' );
+}
+else {
+   is( $result->[0], "resolved", '$resolver->getaddrinfo - resolved' );
+
+   my @got = @{$result}[1..$#$result];
+
+   is_deeply( \@got, \@addrs, '$resolver->getaddrinfo - resolved addresses' );
+}
+
+my $testaddr = pack_sockaddr_in( 80, INADDR_LOOPBACK );
+( $err, my $testhost, my $testserv ) = getnameinfo( $testaddr );
+
+undef $result;
+
+$resolver->getnameinfo(
+   addr => $testaddr,
+   on_resolved => sub { $result = [ 'resolved', @_ ] },
+   on_error    => sub { $result = [ 'error',    @_ ] },
+);
+
+wait_for { $result };
+
+if( $err ) {
+   is( $result->[0], "error", '$resolver->getnameinfo - error' );
+   is_deeply( $result->[1], "$err\n", '$resolver->getnameinfo - error message' );
+}
+else {
+   is( $result->[0], "resolved", '$resolver->getnameinfo - resolved' );
+   is_deeply( [ @{$result}[1..2] ], [ $testhost, $testserv ], '$resolver->getnameinfo - resolved names' );
 }
