@@ -222,13 +222,17 @@ Reference to an array of (possibly-multiple) address structures to attempt to
 connect to. Each should be in the layout described for C<addr>. Such a layout
 is returned by the C<getaddrinfo> named resolver.
 
-=item addr => ARRAY
+=item addr => HASH or ARRAY
 
 Shortcut for passing a single address to connect to; it may be passed directly
 with this key, instead of in another array on its own.
 
 The address (or each element of the C<addrs> array) should be a reference to
-an array, with at least the following elements:
+either a hash with the following keys:
+ 
+ family, socktype, protocol, addr
+
+or an array, with the following elements:
 
  [ $family, $socktype, $protocol, $address ]
 
@@ -240,7 +244,7 @@ C<pack_sockaddr_un>. See also the C<EXAMPLES> section,
 
 =item local_addrs => ARRAY
 
-=item local_addr => ARRAY
+=item local_addr => HASH or ARRAY
 
 Optional. Similar to the C<addrs> or C<addr> parameters, these specify a local
 address or set of addresses to C<bind()> the socket to before C<connect()>ing
@@ -384,10 +388,8 @@ sub connect
 
    my $loop = $self->{loop};
 
-   my $family   = $params{family}   || 0;
-   my $socktype = $params{socktype} || 0;
-   my $protocol = $params{protocol} || 0;
-   my $flags    = $params{flags}    || 0;
+   my %gai_hints;
+   exists $params{$_} and $gai_hints{$_} = $params{$_} for qw( family socktype protocol flags );
 
    my @localaddrs;
    my @peeraddrs;
@@ -401,9 +403,10 @@ sub connect
             my $host    = $params{host}    or croak "Expected 'host'";
             my $service = $params{service} or croak "Expected 'service'";
 
-            $loop->resolve(
-               type => 'getaddrinfo',
-               data => [ $host, $service, $family, $socktype, $protocol, $flags ],
+            $loop->resolver->getaddrinfo(
+               host    => $host,
+               service => $service,
+               %gai_hints,
 
                on_error => $on_resolve_error,
 
@@ -430,9 +433,10 @@ sub connect
             my $host    = $params{local_host};
             my $service = $params{local_service};
 
-            $loop->resolve(
-               type => 'getaddrinfo',
-               data => [ $host, $service, $family, $socktype, $protocol, $flags ],
+            $loop->resolver->getaddrinfo(
+               host    => $host,
+               service => $service,
+               %gai_hints,
 
                on_error => $on_resolve_error,
 
@@ -447,7 +451,7 @@ sub connect
             goto &$k;
          }
          else {
-            @localaddrs = ( [] );
+            @localaddrs = ( {} );
             goto &$k;
          }
       },
@@ -455,21 +459,27 @@ sub connect
          my @addrs;
 
          foreach my $local ( @localaddrs ) {
+            my ( $l_family, $l_socktype, $l_protocol, $l_addr ) = 
+               ref $local eq "ARRAY" ? @$local
+                                     : @{$local}{qw( family socktype protocol addr )};
             foreach my $peer ( @peeraddrs ) {
-               # Skip if the family, socktype, or protocol don't match
-               next if defined $local->[0] and defined $peer->[0] and
-                  $local->[0] != $peer->[0];
-               next if defined $local->[1] and defined $peer->[1] and
-                  $local->[1] != $peer->[1];
-               next if defined $local->[2] and defined $peer->[2] and
-                  $local->[2] != $peer->[2];
+               my ( $p_family, $p_socktype, $p_protocol, $p_addr ) = 
+                  ref $peer eq "ARRAY" ? @$peer
+                                        : @{$peer}{qw( family socktype protocol addr )};
+
+               next if defined $l_family and defined $p_family and
+                  $l_family != $p_family;
+               next if defined $l_socktype and defined $p_socktype and
+                  $l_socktype != $p_socktype;
+               next if defined $l_protocol and defined $p_protocol and
+                  $l_protocol != $p_protocol;
 
                push @addrs, {
-                  family    => $local->[0] || $peer->[0],
-                  socktype  => $local->[1] || $peer->[1],
-                  protocol  => $local->[2] || $peer->[2],
-                  localaddr => $local->[3],
-                  peeraddr  => $peer->[3],
+                  family    => $l_family   || $p_family,
+                  socktype  => $l_socktype || $p_socktype,
+                  protocol  => $l_protocol || $p_protocol,
+                  localaddr => $l_addr,
+                  peeraddr  => $p_addr,
                };
             }
          }
@@ -497,12 +507,11 @@ TCP port 8001 on address 10.0.0.1:
  ...
 
  $loop->connect(
-    addr => [
-       PF_INET,
-       SOCK_STREAM,
-       0, # Don't need to supply a protocol as kernel will do that
-       pack_sockaddr_in( 8001, inet_aton( "10.0.0.1" ) ),
-    ],
+    addr => {
+       family   => PF_INET,
+       socktype => SOCK_STREAM,
+       addr     => pack_sockaddr_in( 8001, inet_aton( "10.0.0.1" ) ),
+    },
     ...
  );
 
@@ -513,12 +522,11 @@ This example shows another way to connect to a UNIX socket at F<echo.sock>.
  ...
 
  $loop->connect(
-    addr => [
-       PF_UNIX,
-       SOCK_STREAM,
-       0, # Don't need to supply a protocol as kernel will do that
-       pack_sockaddr_un( "echo.sock" ),
-    ],
+    addr => {
+       family   => PF_UNIX,
+       socktype => SOCK_STREAM,
+       addr     => pack_sockaddr_un( "echo.sock" ),
+    },
     ...
  );
 

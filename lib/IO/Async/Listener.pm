@@ -299,7 +299,11 @@ Shortcut for passing a single address to listen on; it may be passed directly
 with this key, instead of in another array of its own.
 
 The address (or each element of the C<addrs> array) should be a reference to
-an array, with at least the following elements:
+either a hash with the following keys:
+ 
+ family, socktype, protocol, addr
+
+or an array, with the following elements:
 
  [ $family, $socktype, $protocol, $address ]
 
@@ -437,7 +441,9 @@ sub listen
       my ( $listenerr, $binderr, $sockopterr, $socketerr );
 
       foreach my $addr ( @$addrlist ) {
-         my ( $family, $socktype, $proto, $address ) = @$addr;
+         my ( $family, $socktype, $proto, $address ) = 
+            ref $addr eq "ARRAY" ? @$addr
+                                 : @{$addr}{qw( family socktype protocol addr )};
 
          my $sock;
 
@@ -491,15 +497,15 @@ sub listen
       my $service = delete $params{service};
       defined $service or $service = ""; # might be 0
 
-      my $family   = delete $params{family} || 0;
-      my $socktype = delete $params{socktype} || 0;
-      my $protocol = delete $params{protocol} || 0;
+      my %gai_hints;
+      exists $params{$_} and $gai_hints{$_} = $params{$_} for qw( family socktype protocol flags );
 
-      my $flags = ( delete $params{flags} || 0 ) | AI_PASSIVE;
+      $gai_hints{flags} |= AI_PASSIVE;
 
-      $loop->resolve(
-         type => 'getaddrinfo',
-         data => [ $host, $service, $family, $socktype, $protocol, $flags ],
+      $loop->resolver->getaddrinfo(
+         host    => $host,
+         service => $service,
+         %gai_hints,
 
          on_resolved => sub {
             $self->listen( 
@@ -577,12 +583,11 @@ TCP port 8001 on address 10.0.0.1:
  ...
 
  $listener->listen(
-    addr => [
-       PF_INET,
-       SOCK_STREAM,
-       0, # Don't need to supply a protocol as kernel will do that
-       pack_sockaddr_in( 8001, inet_aton( "10.0.0.1" ) ),
-    ],
+    addr => {
+       family   => PF_INET,
+       socktype => SOCK_STREAM,
+       addr     => pack_sockaddr_in( 8001, inet_aton( "10.0.0.1" ) ),
+    },
     ...
  );
 
@@ -594,12 +599,11 @@ earlier example:
  ...
 
  $listener->listen(
-    addr => [
-       PF_UNIX,
-       SOCK_STREAM,
-       0, # Don't need to supply a protocol as kernel will do that
-       pack_sockaddr_un( "echo.sock" ),
-    ],
+    addr => {
+       family   => PF_UNIX,
+       socktype => SOCK_STREAM,
+       addr     => pack_sockaddr_un( "echo.sock" ),
+    },
     ...
  );
 
