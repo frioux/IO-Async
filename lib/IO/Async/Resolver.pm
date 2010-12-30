@@ -517,6 +517,16 @@ C<IO::Async::Resolver> itself.
 
 =item *
 
+Have C<getaddrinfo> try a synchronous lookup first, using C<AI_NUMERICHOST>
+and C<AI_NUMERICSERV>, and only performing async. if that fails.
+
+=item *
+
+Have C<getnameinfo> perform a synchronous lookup if the C<NI_NUMERICHOST> and
+C<NI_NUMERICSERV> flags are both present.
+
+=item *
+
 Look into (system-specific) ways of accessing asynchronous resolvers directly
 
 =back
