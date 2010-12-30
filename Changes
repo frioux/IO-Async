@@ -1,5 +1,24 @@
 Revision history for IO-Async
 
+0.34    ADDITIONS:
+         * New Notifier methods ->_replace_weakself, ->maybe_invoke_event,
+           ->maybe_make_event_cb
+         * New Protocol method ->connect
+         * New subclass Protocol::LineStream
+         * Direct Resolver->getaddrinfo and ->getnameinfo methods
+
+        CHANGES:
+         * New Protocol::Stream->new( handle => $io ) parameters, which
+           creates an IO::Async::Stream to use as a transport
+         * Renamed Loop->detach_child to Loop->fork
+         * Pass errno values into ->connect on_connect_error and
+           ->listen on_listen_error
+         * Support timeouts on Resolver operations
+         * Allow direct access to Resolver via Loop->resolver
+
+        BUGFIXES:
+         * Make sure Protocol::Stream handles writersub and on_flush callback
+
 0.33    ADDITIONS:
          * Allow watching child PID 0, to capture every child process exit
          * $loop->time accessor
