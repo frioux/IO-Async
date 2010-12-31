@@ -14,7 +14,7 @@ our $VERSION = '0.34';
 use IO::Async::Handle;
 
 use POSIX qw( EAGAIN );
-use Socket::GetAddrInfo qw( :Socket6api AI_PASSIVE );
+use Socket::GetAddrInfo qw( AI_PASSIVE );
 
 use Socket qw( sockaddr_family SOL_SOCKET SO_ACCEPTCONN SO_REUSEADDR SO_TYPE );
 
