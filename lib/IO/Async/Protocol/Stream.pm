@@ -59,7 +59,7 @@ protocol implementation would be likely to contain.
 
 =head1 DESCRIPTION
 
-This subclass of L<IO::Async:Notifier> is intended to stand as a base class
+This subclass of L<IO::Async::Protocol> is intended to stand as a base class
 for implementing stream-based protocols. It provides an interface similar to
 L<IO::Async::Stream>, primarily, a C<write> method and an C<on_read> event
 handler.
