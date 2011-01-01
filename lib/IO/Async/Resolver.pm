@@ -439,7 +439,7 @@ register_resolver getaddrinfo_hash => sub {
 
    my ( $err, @addrs ) = _getaddrinfo( $host, $service, \%args );
 
-   die $err if $err;
+   die "$err\n" if $err;
 
    return @addrs;
 };
