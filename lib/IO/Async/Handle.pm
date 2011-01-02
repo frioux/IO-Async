@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2006-2010 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2006-2011 -- leonerd@leonerd.org.uk
 
 package IO::Async::Handle;
 
@@ -165,7 +165,7 @@ sub configure
             croak 'Expected that read_handle can fileno()';
          }
 
-         if( !$self->{on_read_ready} and !$self->can( 'on_read_ready' ) ) {
+         unless( $self->can_event( 'on_read_ready' ) ) {
             croak 'Expected either a on_read_ready callback or an ->on_read_ready method';
          }
       }
@@ -186,7 +186,7 @@ sub configure
             croak 'Expected that write_handle can fileno()';
          }
 
-         if( !$self->{on_write_ready} and !$self->can( 'on_write_ready' ) ) {
+         unless( $self->can_event( 'on_write_ready' ) ) {
             # This used not to be fatal. Make it just a warning for now.
             carp 'A write handle was provided but neither a on_write_ready callback nor an ->on_write_ready method were. Perhaps you mean \'read_handle\' instead?';
          }
@@ -337,12 +337,7 @@ sub close
    return if $self->{handle_closing};
    $self->{handle_closing} = 1;
 
-   if( $self->{on_closed} ) {
-      $self->{on_closed}->( $self );
-   }
-   elsif( $self->can( "on_closed" ) ) {
-      $self->on_closed;
-   }
+   $self->maybe_invoke_event( on_closed => );
 
    if( my $parent = $self->{parent} ) {
       $parent->remove_child( $self );

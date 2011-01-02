@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2010 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2011 -- leonerd@leonerd.org.uk
 
 package IO::Async::Socket;
 
@@ -196,7 +196,7 @@ sub configure
    $self->SUPER::configure( %params );
 
    if( $self->get_loop and defined $self->read_handle ) {
-      $self->{on_recv} or $self->can( "on_recv" ) or
+      $self->can_event( "on_recv" ) or
          croak 'Expected either an on_recv callback or to be able to ->on_recv';
    }
 }
@@ -206,7 +206,7 @@ sub _add_to_loop
    my $self = shift;
 
    if( defined $self->read_handle ) {
-      $self->{on_recv} or $self->can( "on_recv" ) or
+      $self->can_event( "on_recv" ) or
          croak 'Expected either an on_recv callback or to be able to ->on_recv';
    }
 
@@ -284,10 +284,7 @@ sub on_read_ready
          return;
       }
 
-      my $on_recv = $self->{on_recv}
-                     || $self->can( "on_recv" );
-
-      $on_recv->( $self, $data, $addr );
+      $self->invoke_event( on_recv => $data, $addr );
 
       last unless $self->{recv_all};
    }

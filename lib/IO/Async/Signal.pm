@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2009-2010 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2009-2011 -- leonerd@leonerd.org.uk
 
 package IO::Async::Signal;
 
@@ -109,7 +109,7 @@ sub configure
       }
    }
 
-   if( !$self->{on_receipt} and !$self->can( 'on_receipt' ) ) {
+   unless( $self->can_event( 'on_receipt' ) ) {
       croak 'Expected either a on_receipt callback or an ->on_receipt method';
    }
 

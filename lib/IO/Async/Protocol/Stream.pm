@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2010 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2010-2011 -- leonerd@leonerd.org.uk
 
 package IO::Async::Protocol::Stream;
 
@@ -131,7 +131,7 @@ sub configure
    $self->SUPER::configure( %params );
 
    if( $self->get_loop ) {
-      $self->{on_read} or $self->can( "on_read" ) or
+      $self->can_event( "on_read" ) or
          croak 'Expected either an on_read callback or to be able to ->on_read';
    }
 }
@@ -140,7 +140,7 @@ sub _add_to_loop
 {
    my $self = shift;
 
-   $self->{on_read} or $self->can( "on_read" ) or
+   $self->can_event( "on_read" ) or
       croak 'Expected either an on_read callback or to be able to ->on_read';
 }
 

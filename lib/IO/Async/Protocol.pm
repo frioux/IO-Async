@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2010 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2011 -- leonerd@leonerd.org.uk
 
 package IO::Async::Protocol;
 
@@ -230,10 +230,7 @@ sub setup_transport
          my $self = shift;
          my ( $transport ) = @_;
 
-         my $on_closed = $self->{on_closed} ||
-                          $self->can( 'on_closed' );
-
-         $on_closed->( $self ) if $on_closed;
+         $self->maybe_invoke_event( on_closed => );
       } ),
    );
 }

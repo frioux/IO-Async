@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2008-2010 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2008-2011 -- leonerd@leonerd.org.uk
 
 package IO::Async::Listener;
 
@@ -184,7 +184,7 @@ sub configure
       $self->SUPER::configure( read_handle => $handle );
    }
 
-   if( !$self->{on_accept} and !$self->can( 'on_accept' ) ) {
+   unless( $self->can_event( 'on_accept' ) ) {
       croak 'Expected either a on_accept callback or an ->on_accept method';
    }
 

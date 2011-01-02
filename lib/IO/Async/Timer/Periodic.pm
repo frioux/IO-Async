@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2009-2010 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2009-2011 -- leonerd@leonerd.org.uk
 
 package IO::Async::Timer::Periodic;
 
@@ -107,7 +107,7 @@ sub configure
       $self->{interval} = $interval;
    }
 
-   if( !$self->{on_tick} and !$self->can( 'on_tick' ) ) {
+   unless( $self->can_event( 'on_tick' ) ) {
       croak 'Expected either a on_tick callback or an ->on_tick method';
    }
 
