@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2006-2010 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2006-2011 -- leonerd@leonerd.org.uk
 
 package IO::Async::Notifier;
 
@@ -478,6 +478,22 @@ sub _replace_weakself
    };
 }
 
+=head2 $code = $notifier->can_event( $event_name )
+
+Returns a C<CODE> reference if the object can perform the given event name,
+either by a configured C<CODE> reference parameter, or by implementing a
+method. If the object is unable to handle this event, C<undef> is returned.
+
+=cut
+
+sub can_event
+{
+   my $self = shift;
+   my ( $event_name ) = @_;
+
+   return $self->{$event_name} || $self->can( $event_name );
+}
+
 =head2 $callback = $notifier->make_event_cb( $event_name )
 
 Returns a C<CODE> reference which, when invoked, will execute the given event
@@ -497,7 +513,7 @@ sub make_event_cb
    my $self = shift;
    my ( $event_name ) = @_;
 
-   my $code = $self->{$event_name} || $self->can( $event_name )
+   my $code = $self->can_event( $event_name )
       or croak "$self cannot handle $event_name event";
 
    return $self->_capture_weakself( $code );
@@ -515,7 +531,7 @@ sub maybe_make_event_cb
    my $self = shift;
    my ( $event_name ) = @_;
 
-   my $code = $self->{$event_name} || $self->can( $event_name )
+   my $code = $self->can_event( $event_name )
       or return undef;
 
    return $self->_capture_weakself( $code );
@@ -535,7 +551,7 @@ sub invoke_event
    my $self = shift;
    my ( $event_name, @args ) = @_;
 
-   my $code = $self->{$event_name} || $self->can( $event_name )
+   my $code = $self->can_event( $event_name )
       or croak "$self cannot handle $event_name event";
 
    return $code->( $self, @args );
@@ -556,7 +572,7 @@ sub maybe_invoke_event
    my $self = shift;
    my ( $event_name, @args ) = @_;
 
-   my $code = $self->{$event_name} || $self->can( $event_name )
+   my $code = $self->can_event( $event_name )
       or return undef;
 
    return [ $code->( $self, @args ) ];
