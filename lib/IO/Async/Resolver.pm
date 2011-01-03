@@ -272,6 +272,15 @@ Callback which is invoked after a failed lookup, including for a timeout.
 
 =back
 
+As a specific optimsation, this method will try to perform a lookup of numeric
+values synchronously, rather than asynchronously, if it looks likely to
+succeed.
+
+Specifically, if the service name is entirely numeric, and the hostname looks
+like an IPv4 or IPv6 string, a synchronous lookup will first be performed
+using the C<AI_NUMERICHOST> and C<AI_NUMERICSERV> flags. If this gives an
+C<EAI_NONAME> error, then the lookup is performed asynchronously instead.
+
 =cut
 
 sub getaddrinfo
@@ -287,9 +296,10 @@ sub getaddrinfo
    $args{socktype} = _getsocktypebyname( $args{socktype} ) if defined $args{socktype};
 
    # It's likely this will succeed with AI_NUMERICHOST|AI_NUMERICSERV if
-   #   host contains only [\d.] (IPv4)
-   #    or host contains only [[:xdigit:]:] (IPv6)
+   #   host contains only [\d.] (IPv4) or [[:xdigit:]:] (IPv6)
    #   service contains only \d
+   # These tests don't have to be perfect as if it fails we'll get EAI_NONAME
+   # and just try it asynchronously anyway
    if( ( $host =~ m/^[\d.]+$/ or $host =~ m/^[[:xdigit:]:]$/ ) and
        $service =~ m/^\d+$/ ) {
 
@@ -353,6 +363,10 @@ Callback which is invoked after a failed lookup, including for a timeout.
  $on_error->( $exception )
 
 =back
+
+As a specific optimsation, this method will try to perform a lookup of numeric
+values synchronously, rather than asynchronously, if both the
+C<NI_NUMERICHOST> and C<NI_NUMERICSERV> flags are given.
 
 =cut
 
