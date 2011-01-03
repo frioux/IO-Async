@@ -231,6 +231,8 @@ sub setup_transport
          my ( $transport ) = @_;
 
          $self->maybe_invoke_event( on_closed => );
+
+         $self->configure( transport => undef );
       } ),
    );
 }

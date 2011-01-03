@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 20;
+use Test::More tests => 21;
 use Test::Identity;
 use Test::Refcount;
 
@@ -99,6 +99,8 @@ $proto->transport->close;
 wait_for { $closed };
 
 is( $closed, 1, '$closed after stream close' );
+
+is( $proto->transport, undef, '$proto->transport is undef after close' );
 
 is_refcount( $proto, 2, '$proto has refcount 2 before removal from Loop' );
 
