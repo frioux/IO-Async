@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 15;
+use Test::More tests => 17;
 use Test::Exception;
 
 use Socket qw( AF_INET SOCK_STREAM pack_sockaddr_in INADDR_LOOPBACK );
@@ -193,6 +193,24 @@ my ( $localhost_err, @localhost_addrs ) = getaddrinfo( "localhost", "www", { fam
 
       is_deeply( \@got, \@localhost_addrs, '$resolver->getaddrinfo - resolved addresses' );
    }
+}
+
+{
+   my $result;
+
+   $resolver->getaddrinfo(
+      host     => "127.0.0.1",
+      service  => "80",
+      socktype => SOCK_STREAM,
+      on_resolved => sub { $result = [ 'resolved', @_ ] },
+      on_error    => sub { $result = [ 'error',    @_ ] },
+   );
+
+   is( $result->[0], 'resolved', '$resolver->getaddrinfo on numeric host/service is synchronous' );
+
+   my @got = @{$result}[1..$#$result];
+
+   is_deeply( \@got, \@localhost_addrs, '$resolver->getaddrinfo resolved addressess synchronously' );
 }
 
 my $testaddr = pack_sockaddr_in( 80, INADDR_LOOPBACK );

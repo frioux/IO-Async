@@ -12,7 +12,9 @@ our $VERSION = '0.34';
 
 use Socket::GetAddrInfo qw(
    :newapi getaddrinfo getnameinfo
+   AI_NUMERICHOST AI_NUMERICSERV
    NI_NUMERICHOST NI_NUMERICSERV
+   EAI_NONAME
 );
 
 # We're going to implement methods called getaddrinfo and getnameinfo.
@@ -276,6 +278,37 @@ sub getaddrinfo
 {
    my $self = shift;
    my %args = @_;
+
+   my $host    = $args{host}    || "";
+   my $service = $args{service} || "";
+   my $flags   = $args{flags}   || 0;
+
+   $args{family}   = _getfamilybyname( $args{family} )     if defined $args{family};
+   $args{socktype} = _getsocktypebyname( $args{socktype} ) if defined $args{socktype};
+
+   # It's likely this will succeed with AI_NUMERICHOST|AI_NUMERICSERV if
+   #   host contains only [\d.] (IPv4)
+   #    or host contains only [[:xdigit:]:] (IPv6)
+   #   service contains only \d
+   if( ( $host =~ m/^[\d.]+$/ or $host =~ m/^[[:xdigit:]:]$/ ) and
+       $service =~ m/^\d+$/ ) {
+
+       my ( $err, @results ) = _getaddrinfo( $host, $service,
+          { %args, flags => $flags | AI_NUMERICHOST|AI_NUMERICSERV }
+       );
+
+       if( !$err ) {
+          $args{on_resolved}->( @results );
+          return;
+       }
+       elsif( $err == EAI_NONAME ) {
+          # fallthrough to async case
+       }
+       else {
+          $args{on_error}->( "$err\n" );
+          return;
+       }
+   }
 
    $self->resolve(
       type    => "getaddrinfo_hash",
@@ -563,11 +596,6 @@ C<IO::Async::Resolver> itself.
 =head1 TODO
 
 =over 4
-
-=item *
-
-Have C<getaddrinfo> try a synchronous lookup first, using C<AI_NUMERICHOST>
-and C<AI_NUMERICSERV>, and only performing async. if that fails.
 
 =item *
 
