@@ -102,6 +102,17 @@ references in parameters:
 
 Invoked whenever a new client connects to the socket.
 
+=head2 on_stream $stream
+
+An alternative to C<on_accept>, this an instance of L<IO::Async::Stream> when
+a new client connects. This is provided as a convenience for the common case
+that a Stream object is required as the transport for a Protocol object.
+
+=head2 on_socket $socket
+
+Similar to C<on_stream>, but constructs an instance of L<IO::Async::Socket>.
+This is most useful for C<SOCK_DGRAM> or C<SOCK_RAW> sockets.
+
 =cut
 
 =head1 PARAMETERS
@@ -112,23 +123,13 @@ The following named parameters may be passed to C<new> or C<configure>:
 
 =item on_accept => CODE
 
-CODE reference for the C<on_accept> event.
-
 =item on_stream => CODE
-
-An alternative to C<on_accept>, a continuation that is passed an instance
-of L<IO::Async::Stream> when a new client connects. This is provided as a
-convenience for the common case that a Stream object is required as the
-transport for a Protocol object.
-
- $on_stream->( $self, $stream )
 
 =item on_socket => CODE
 
-Similar to C<on_stream>, but constructs an instance of L<IO::Async::Socket>.
-This is most useful for C<SOCK_DGRAM> or C<SOCK_RAW> sockets.
-
- $on_socket->( $self, $socket )
+CODE reference for the event handlers. Because of the mutually-exclusive
+nature of their behaviour, only one of these may be set at a time. Setting one
+will remove the other two.
 
 =item handle => IO
 
@@ -138,31 +139,19 @@ The IO handle containing an existing listen-mode socket.
 
 =cut
 
+my @acceptor_events  = qw( on_accept on_stream on_socket );
+
 sub configure
 {
    my $self = shift;
    my %params = @_;
 
-   if( exists $params{on_accept} ) {
-      $self->{on_accept} = delete $params{on_accept};
-   }
-   elsif( exists $params{on_stream} ) {
-      my $on_stream = delete $params{on_stream};
-      require IO::Async::Stream;
-      # TODO: It doesn't make sense to put a SOCK_DGRAM in an
-      # IO::Async::Stream but currently we don't detect this
-      $self->{on_accept} = sub {
-         my ( $self, $handle ) = @_;
-         $on_stream->( $self, IO::Async::Stream->new( handle => $handle ) );
-      };
-   }
-   elsif( exists $params{on_socket} ) {
-      my $on_socket = delete $params{on_socket};
-      require IO::Async::Socket;
-      $self->{on_accept} = sub {
-         my ( $self, $handle ) = @_;
-         $on_socket->( $self, IO::Async::Socket->new( handle => $handle ) );
-      };
+   if( grep exists $params{$_}, @acceptor_events ) {
+      grep( defined $_, @params{@acceptor_events} ) <= 1 or
+         croak "Can only set at most one of 'on_accept', 'on_stream' or 'on_socket'";
+
+      # Don't exists-test, so we'll clear the other two
+      $self->{$_} = delete $params{$_} for @acceptor_events;
    }
 
    croak "Cannot set 'on_read_ready' on a Listener" if exists $params{on_read_ready};
@@ -184,8 +173,8 @@ sub configure
       $self->SUPER::configure( read_handle => $handle );
    }
 
-   unless( $self->can_event( 'on_accept' ) ) {
-      croak 'Expected either a on_accept callback or an ->on_accept method';
+   unless( grep $self->can_event( $_ ), @acceptor_events ) {
+      croak "Expected to be able to 'on_accept', 'on_stream' or 'on_socket'";
    }
 
    if( keys %params ) {
@@ -197,17 +186,27 @@ sub on_read_ready
 {
    my $self = shift;
 
-   my $newclient = $self->read_handle->accept();
+   my $handle = $self->read_handle->accept;
 
-   if( defined $newclient ) {
-      $newclient->blocking( 0 );
+   if( defined $handle ) {
+      $handle->blocking( 0 );
 
-      # TODO: make class/callback
-      if( $self->{on_accept} ) {
-         $self->{on_accept}->( $self, $newclient );
+      if( my $on_stream = $self->can_event( "on_stream" ) ) {
+         # TODO: It doesn't make sense to put a SOCK_DGRAM in an
+         # IO::Async::Stream but currently we don't detect this
+         require IO::Async::Stream;
+         $on_stream->( $self, IO::Async::Stream->new( handle => $handle ) );
+      }
+      elsif( my $on_socket = $self->can_event( "on_socket" ) ) {
+         require IO::Async::Socket;
+         $on_socket->( $self, IO::Async::Socket->new( handle => $handle ) );
+      }
+      # on_accept needs to be last in case of multiple layers of subclassing
+      elsif( my $on_accept = $self->can_event( "on_accept" ) ) {
+         $on_accept->( $self, $handle );
       }
       else {
-         $self->on_accept( $newclient );
+         die "ARG! Missing on_accept,on_stream,on_socket!";
       }
    }
    elsif( $! == EAGAIN ) {
