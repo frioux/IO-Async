@@ -26,7 +26,15 @@ BEGIN {
    $stash->{_getnameinfo} = delete $stash->{getnameinfo};
 }
 
-use Socket qw( SOCK_STREAM SOCK_DGRAM SOCK_RAW );
+use Socket qw(
+   AF_INET
+   SOCK_STREAM SOCK_DGRAM SOCK_RAW
+);
+
+BEGIN {
+   eval { Socket->import( 'AF_INET6' ); 1 } or
+      eval { require Socket6; Socket6->import( 'AF_INET6' ) }
+}
 
 use Time::HiRes qw( alarm );
 
@@ -72,6 +80,20 @@ other requests behind it. To mitigate this, multiple worker processes can be
 used; see the C<workers> argument to the constructor.
 
 =cut
+
+sub _getfamilybyname
+{
+   my ( $name ) = @_;
+
+   return undef unless defined $name;
+
+   return $name if $name =~ m/^\d+$/;
+
+   return AF_INET    if $name eq "inet";
+   return AF_INET6() if $name eq "inet6" and defined &AF_INET6;
+
+   croak "Unrecognised socktype name '$name'";
+}
 
 sub _getsocktypebyname
 {
@@ -214,9 +236,9 @@ a more convenient form.
 
 The host and service names to look up. At least one must be provided.
 
-=item family => INT
+=item family => INT or STRING
 
-=item socktype => INT
+=item socktype => INT or STRING
 
 =item protocol => INT
 
@@ -440,8 +462,9 @@ up the list of 5-tuples into a list of ARRAY refs, where each referenced array
 contains one of the tuples of 5 values.
 
 As an extra convenience to the caller, both resolvers will also accept plain
-string names for the C<socktype> argument, converting C<stream>, C<dgram> or
-C<raw> into the appropriate C<SOCK_*> value.
+string names for the C<family> argument, converting C<inet> and possibly
+C<inet6> into the appropriate C<AF_*> value, and for the C<socktype> argument,
+converting C<stream>, C<dgram> or C<raw> into the appropriate C<SOCK_*> value.
 
 For backward-compatibility with older code, the resolver name C<getaddrinfo>
 is currently aliased to C<getaddrinfo_array>; but any code that wishes to rely
@@ -463,7 +486,8 @@ register_resolver getaddrinfo_hash => sub {
    my $host    = delete $args{host};
    my $service = delete $args{service};
 
-   $args{socktype} = _getsocktypebyname( $args{socktype} );
+   $args{family}   = _getfamilybyname( $args{family} )     if defined $args{family};
+   $args{socktype} = _getsocktypebyname( $args{socktype} ) if defined $args{socktype};
 
    my ( $err, @addrs ) = _getaddrinfo( $host, $service, \%args );
 
@@ -475,6 +499,7 @@ register_resolver getaddrinfo_hash => sub {
 register_resolver getaddrinfo_array => sub {
    my ( $host, $service, $family, $socktype, $protocol, $flags ) = @_;
 
+   $family   = _getfamilybyname( $family );
    $socktype = _getsocktypebyname( $socktype );
 
    my %hints;
