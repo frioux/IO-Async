@@ -67,8 +67,8 @@ if( $INADDR_LOOPBACK ne INADDR_LOOPBACK ) {
 }
 
 $loop->listen(
-   family   => AF_INET,
-   socktype => 'stream',
+   family   => "inet",
+   socktype => "stream",
    service  => "", # Ask the kernel to allocate a port for us
    host     => "localhost",
 
@@ -141,8 +141,8 @@ SKIP: {
    my @error;
 
    $loop->listen(
-      family   => AF_INET,
-      socktype => 'stream',
+      family   => "inet",
+      socktype => "stream",
       service  => $badport,
 
       on_resolve_error => sub { die "Test died early - resolve error $_[0]\n"; },

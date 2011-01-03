@@ -122,7 +122,7 @@ my ( $localhost_err, @localhost_addrs ) = getaddrinfo( "localhost", "www", { fam
 
    $resolver->resolve(
       type => 'getaddrinfo_array',
-      data => [ "localhost", "www", AF_INET, SOCK_STREAM ],
+      data => [ "localhost", "www", "inet", "stream" ],
       on_resolved => sub { $result = [ 'resolved', @_ ] },
       on_error    => sub { $result = [ 'error',    @_ ] },
    );
@@ -148,7 +148,7 @@ my ( $localhost_err, @localhost_addrs ) = getaddrinfo( "localhost", "www", { fam
 
    $resolver->resolve(
       type => 'getaddrinfo_hash',
-      data => [ host => "localhost", service => "www", family => AF_INET, socktype => SOCK_STREAM ],
+      data => [ host => "localhost", service => "www", family => "inet", socktype => "stream" ],
       on_resolved => sub { $result = [ 'resolved', @_ ] },
       on_error    => sub { $result = [ 'error',    @_ ] },
    );
@@ -174,8 +174,8 @@ my ( $localhost_err, @localhost_addrs ) = getaddrinfo( "localhost", "www", { fam
    $resolver->getaddrinfo(
       host     => "localhost",
       service  => "www",
-      family   => AF_INET,
-      socktype => SOCK_STREAM,
+      family   => "inet",
+      socktype => "stream",
       on_resolved => sub { $result = [ 'resolved', @_ ] },
       on_error    => sub { $result = [ 'error',    @_ ] },
    );
