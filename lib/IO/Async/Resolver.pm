@@ -73,6 +73,21 @@ used; see the C<workers> argument to the constructor.
 
 =cut
 
+sub _getsocktypebyname
+{
+   my ( $name ) = @_;
+
+   return undef unless defined $name;
+
+   return $name if $name =~ m/^\d+$/;
+
+   return SOCK_STREAM if $name eq "stream";
+   return SOCK_DGRAM  if $name eq "dgram";
+   return SOCK_RAW    if $name eq "raw";
+
+   croak "Unrecognised socktype name '$name'";
+}
+
 # Internal constructor
 sub new
 {
@@ -448,11 +463,7 @@ register_resolver getaddrinfo_hash => sub {
    my $host    = delete $args{host};
    my $service = delete $args{service};
 
-   if( defined $args{socktype} ) {
-      $args{socktype} = SOCK_STREAM if $args{socktype} eq 'stream';
-      $args{socktype} = SOCK_DGRAM  if $args{socktype} eq 'dgram';
-      $args{socktype} = SOCK_RAW    if $args{socktype} eq 'raw';
-   }
+   $args{socktype} = _getsocktypebyname( $args{socktype} );
 
    my ( $err, @addrs ) = _getaddrinfo( $host, $service, \%args );
 
@@ -464,11 +475,7 @@ register_resolver getaddrinfo_hash => sub {
 register_resolver getaddrinfo_array => sub {
    my ( $host, $service, $family, $socktype, $protocol, $flags ) = @_;
 
-   if( defined $socktype ) {
-      $socktype = SOCK_STREAM if $socktype eq 'stream';
-      $socktype = SOCK_DGRAM  if $socktype eq 'dgram';
-      $socktype = SOCK_RAW    if $socktype eq 'raw';
-   }
+   $socktype = _getsocktypebyname( $socktype );
 
    my %hints;
    $hints{family}   = $family   if defined $family;
