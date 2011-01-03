@@ -10,7 +10,10 @@ use warnings;
 
 our $VERSION = '0.34';
 
-use Socket::GetAddrInfo qw( :newapi getaddrinfo getnameinfo );
+use Socket::GetAddrInfo qw(
+   :newapi getaddrinfo getnameinfo
+   NI_NUMERICHOST NI_NUMERICSERV
+);
 
 # We're going to implement methods called getaddrinfo and getnameinfo.
 # We therefore need to rename these imports. We couldn't just perform an empty
@@ -291,9 +294,23 @@ sub getnameinfo
    my $on_resolved = $args{on_resolved};
    ref $on_resolved or croak "Expected 'on_resolved' to be a reference";
 
+   my $flags = $args{flags} || 0;
+
+   if( $flags & (NI_NUMERICHOST|NI_NUMERICSERV) ) {
+      # This is a numeric-only lookup that can be done synchronously
+      my ( $err, $host, $service ) = _getnameinfo( $args{addr}, $flags );
+      if( $err ) {
+         $args{on_error}->( "$err\n" );
+      }
+      else {
+         $on_resolved->( $host, $service );
+      }
+      return;
+   }
+
    $self->resolve(
       type    => "getnameinfo",
-      data    => [ $args{addr}, $args{flags} ],
+      data    => [ $args{addr}, $flags ],
       timeout => $args{timeout},
       on_resolved => sub {
          $on_resolved->( @{ $_[0] } ); # unpack the ARRAY ref
@@ -519,11 +536,6 @@ C<IO::Async::Resolver> itself.
 
 Have C<getaddrinfo> try a synchronous lookup first, using C<AI_NUMERICHOST>
 and C<AI_NUMERICSERV>, and only performing async. if that fails.
-
-=item *
-
-Have C<getnameinfo> perform a synchronous lookup if the C<NI_NUMERICHOST> and
-C<NI_NUMERICSERV> flags are both present.
 
 =item *
 
