@@ -440,9 +440,7 @@ sub listen
       my ( $listenerr, $binderr, $sockopterr, $socketerr );
 
       foreach my $addr ( @$addrlist ) {
-         my ( $family, $socktype, $proto, $address ) = 
-            ref $addr eq "ARRAY" ? @$addr
-                                 : @{$addr}{qw( family socktype protocol addr )};
+         my ( $family, $socktype, $proto, $address ) = $loop->unpack_addrinfo( $addr );
 
          my $sock;
 

@@ -460,19 +460,14 @@ sub connect
 
          foreach my $local ( @localaddrs ) {
             my ( $l_family, $l_socktype, $l_protocol, $l_addr ) = 
-               ref $local eq "ARRAY" ? @$local
-                                     : @{$local}{qw( family socktype protocol addr )};
+               $loop->unpack_addrinfo( $local, 'local_addr' );
             foreach my $peer ( @peeraddrs ) {
                my ( $p_family, $p_socktype, $p_protocol, $p_addr ) = 
-                  ref $peer eq "ARRAY" ? @$peer
-                                        : @{$peer}{qw( family socktype protocol addr )};
+                  $loop->unpack_addrinfo( $peer );
 
-               next if defined $l_family and defined $p_family and
-                  $l_family != $p_family;
-               next if defined $l_socktype and defined $p_socktype and
-                  $l_socktype != $p_socktype;
-               next if defined $l_protocol and defined $p_protocol and
-                  $l_protocol != $p_protocol;
+               next if $l_family   and $p_family   and $l_family   != $p_family;
+               next if $l_socktype and $p_socktype and $l_socktype != $p_socktype;
+               next if $l_protocol and $p_protocol and $l_protocol != $p_protocol;
 
                push @addrs, {
                   family    => $l_family   || $p_family,
