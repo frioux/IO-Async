@@ -295,23 +295,9 @@ is returned by the C<getaddrinfo> named resolver.
 =item addr => ARRAY
 
 Shortcut for passing a single address to listen on; it may be passed directly
-with this key, instead of in another array of its own.
-
-The address (or each element of the C<addrs> array) should be a reference to
-either a hash with the following keys:
- 
- family, socktype, protocol, addr
-
-or an array, with the following elements:
-
- [ $family, $socktype, $protocol, $address ]
-
-The first three arguments will be passed to a C<socket()> call and, if
-successful, the fourth to a C<bind()> call on the resulting socket. The socket
-will then be C<listen()>ed to put it into listening mode. Any trailing
-elements in this array will be ignored. Note that C<$address> must be a packed
-socket address, such as returned by C<pack_sockaddr_in> or
-C<pack_sockaddr_un>. See also the C<EXAMPLES> section,
+with this key, instead of in another array of its own. This should be in a
+format recognised by L<IO::Async::Loop>'s C<unpack_addrinfo> method. See also
+the C<EXAMPLES> section.
 
 =back
 
@@ -575,14 +561,14 @@ The C<addr> or C<addrs> parameters should contain a packed socket address.
 This example shows how to use the C<Socket> functions to construct one for
 TCP port 8001 on address 10.0.0.1:
 
- use Socket qw( PF_INET SOCK_STREAM pack_sockaddr_in inet_aton );
+ use Socket qw( pack_sockaddr_in inet_aton );
 
  ...
 
  $listener->listen(
     addr => {
-       family   => PF_INET,
-       socktype => SOCK_STREAM,
+       family   => "inet",
+       socktype => "stream",
        addr     => pack_sockaddr_in( 8001, inet_aton( "10.0.0.1" ) ),
     },
     ...
@@ -591,14 +577,14 @@ TCP port 8001 on address 10.0.0.1:
 This example shows another way to listen on a UNIX socket, similar to the
 earlier example:
 
- use Socket qw( PF_UNIX SOCK_STREAM pack_sockaddr_un );
+ use Socket qw( pack_sockaddr_un );
 
  ...
 
  $listener->listen(
     addr => {
-       family   => PF_UNIX,
-       socktype => SOCK_STREAM,
+       family   => "unix",
+       socktype => "stream",
        addr     => pack_sockaddr_un( "echo.sock" ),
     },
     ...

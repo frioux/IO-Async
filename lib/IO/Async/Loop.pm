@@ -1092,6 +1092,9 @@ the appropriate C<AF_*> constant.
 The socktype may also be given as a symbolic string; C<stream>, C<dgram> or
 C<raw>; this will be converted to the appropriate C<SOCK_*> constant.
 
+Note that the addr field must be a packed socket address, such as returned
+by C<pack_sockaddr_in> or C<pack_sockaddr_un>.
+
 =cut
 
 use constant {
