@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2007-2010 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2007-2011 -- leonerd@leonerd.org.uk
 
 package IO::Async::Loop;
 
@@ -1028,6 +1028,58 @@ sub signame2num
    %sig_num or $self->_init_signum;
 
    return $sig_num{$signame};
+}
+
+=head2 ( $family, $socktype, $protocol, $addr ) = $loop->unpack_addrinfo( $ai )
+
+Given an ARRAY or HASH reference value containing an addrinfo, returns a
+family, socktype and protocol argument suitable for a C<socket> call and an
+address suitable for C<connect> or C<bind>.
+
+If given an ARRAY it should be in the following form:
+
+ [ $family, $socktype, $protocol, $addr ]
+
+If given a HASH it should contain the following keys:
+
+ family socktype protocol addr
+
+Each field in the result will be initialised to 0 (or empty string for the
+address) if not defined in the C<$ai> value.
+
+=cut
+
+use constant {
+   ADDRINFO_FAMILY => 0,
+   ADDRINFO_SOCKTYPE => 1,
+   ADDRINFO_PROTOCOL => 2,
+   ADDRINFO_ADDR => 3,
+};
+
+sub unpack_addrinfo
+{
+   my $self = shift;
+   my ( $ai, $argname ) = @_;
+
+   $argname ||= "addr";
+
+   my @ai;
+
+   if( ref $ai eq "ARRAY" ) {
+      @ai = @$ai;
+   }
+   elsif( ref $ai eq "HASH" ) {
+      @ai = @{$ai}{qw( family socktype protocol addr )};
+   }
+   else {
+      croak "Expected '$argname' to be an ARRAY or HASH reference";
+   }
+
+   # Make sure all fields are defined
+   $ai[$_] ||= 0 for ADDRINFO_FAMILY, ADDRINFO_SOCKTYPE, ADDRINFO_PROTOCOL;
+   $ai[ADDRINFO_ADDR]  = "" if !defined $ai[ADDRINFO_ADDR];
+
+   return @ai;
 }
 
 =head2 $time = $loop->time

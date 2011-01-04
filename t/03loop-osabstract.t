@@ -2,11 +2,11 @@
 
 use strict;
 
-use Test::More tests => 29;
+use Test::More tests => 31;
 
 use IO::Async::Loop::Poll;
 
-use Socket qw( AF_INET SOCK_STREAM SOCK_DGRAM );
+use Socket qw( AF_INET SOCK_STREAM SOCK_DGRAM pack_sockaddr_in inet_aton );
 
 use POSIX qw( SIGTERM );
 
@@ -72,5 +72,19 @@ foreach my $family ( undef, AF_INET ) {
 }
 
 is( $loop->signame2num( 'TERM' ), SIGTERM, '$loop->signame2num' );
+
+my $sinaddr = pack_sockaddr_in( 56, inet_aton( "1.2.3.4" ) );
+
+is_deeply( [ $loop->unpack_addrinfo( [ AF_INET, SOCK_STREAM, 0, $sinaddr ] ) ],
+           [ AF_INET, SOCK_STREAM, 0, $sinaddr ],
+           '$loop->unpack_addrinfo( ARRAY )' );
+
+is_deeply( [ $loop->unpack_addrinfo( {
+               family   => AF_INET,
+               socktype => SOCK_STREAM,
+               addr     => $sinaddr 
+             } ) ],
+           [ AF_INET, SOCK_STREAM, 0, $sinaddr ],
+           '$loop->unpack_addrinfo( HASH )' );
 
 cmp_ok( $loop->time - time, "<", 0.1, '$loop->time gives the current time' );
