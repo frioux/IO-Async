@@ -75,13 +75,13 @@ is( $loop->signame2num( 'TERM' ), SIGTERM, '$loop->signame2num' );
 
 my $sinaddr = pack_sockaddr_in( 56, inet_aton( "1.2.3.4" ) );
 
-is_deeply( [ $loop->unpack_addrinfo( [ AF_INET, SOCK_STREAM, 0, $sinaddr ] ) ],
+is_deeply( [ $loop->unpack_addrinfo( [ "inet", "stream", 0, $sinaddr ] ) ],
            [ AF_INET, SOCK_STREAM, 0, $sinaddr ],
            '$loop->unpack_addrinfo( ARRAY )' );
 
 is_deeply( [ $loop->unpack_addrinfo( {
-               family   => AF_INET,
-               socktype => SOCK_STREAM,
+               family   => "inet",
+               socktype => "stream",
                addr     => $sinaddr 
              } ) ],
            [ AF_INET, SOCK_STREAM, 0, $sinaddr ],

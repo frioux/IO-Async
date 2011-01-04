@@ -15,7 +15,12 @@ use constant NEED_API_VERSION => '0.33';
 
 use Carp;
 
-use Socket;
+use Socket qw( AF_INET AF_UNIX SOCK_STREAM SOCK_DGRAM SOCK_RAW );
+BEGIN {
+   # Not quite sure where we'll find AF_INET6
+   eval { Socket->import( 'AF_INET6' ); 1 } or
+      eval { require Socket6; Socket6->import( 'AF_INET6' ) }
+}
 use IO::Socket;
 use Time::HiRes qw(); # empty import
 use POSIX qw( _exit WNOHANG );
@@ -1047,7 +1052,43 @@ If given a HASH it should contain the following keys:
 Each field in the result will be initialised to 0 (or empty string for the
 address) if not defined in the C<$ai> value.
 
+The family type may also be given as a symbolic string; C<inet> or possibly
+C<inet6> if the host system supports it; this will be converted to the
+appropriate C<AF_*> constant.
+
+The socktype may also be given as a symbolic string; C<stream>, C<dgram> or
+C<raw>; this will be converted to the appropriate C<SOCK_*> constant.
+
 =cut
+
+sub _getfamilybyname
+{
+   my ( $name ) = @_;
+
+   return undef unless defined $name;
+
+   return $name if $name =~ m/^\d+$/;
+
+   return AF_INET    if $name eq "inet";
+   return AF_INET6() if $name eq "inet6" and defined &AF_INET6;
+
+   croak "Unrecognised socktype name '$name'";
+}
+
+sub _getsocktypebyname
+{
+   my ( $name ) = @_;
+
+   return undef unless defined $name;
+
+   return $name if $name =~ m/^\d+$/;
+
+   return SOCK_STREAM if $name eq "stream";
+   return SOCK_DGRAM  if $name eq "dgram";
+   return SOCK_RAW    if $name eq "raw";
+
+   croak "Unrecognised socktype name '$name'";
+}
 
 use constant {
    ADDRINFO_FAMILY => 0,
@@ -1074,6 +1115,9 @@ sub unpack_addrinfo
    else {
       croak "Expected '$argname' to be an ARRAY or HASH reference";
    }
+
+   $ai[ADDRINFO_FAMILY]   = _getfamilybyname( $ai[ADDRINFO_FAMILY] );
+   $ai[ADDRINFO_SOCKTYPE] = _getsocktypebyname( $ai[ADDRINFO_SOCKTYPE] );
 
    # Make sure all fields are defined
    $ai[$_] ||= 0 for ADDRINFO_FAMILY, ADDRINFO_SOCKTYPE, ADDRINFO_PROTOCOL;

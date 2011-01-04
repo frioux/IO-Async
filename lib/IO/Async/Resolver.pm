@@ -28,14 +28,11 @@ BEGIN {
    $stash->{_getnameinfo} = delete $stash->{getnameinfo};
 }
 
-use Socket qw(
-   AF_INET
-   SOCK_STREAM SOCK_DGRAM SOCK_RAW
-);
-
 BEGIN {
-   eval { Socket->import( 'AF_INET6' ); 1 } or
-      eval { require Socket6; Socket6->import( 'AF_INET6' ) }
+   # More cheating
+   require IO::Async::Loop;
+   *_getfamilybyname   = \&IO::Async::Loop::_getfamilybyname;
+   *_getsocktypebyname = \&IO::Async::Loop::_getsocktypebyname;
 }
 
 use Time::HiRes qw( alarm );
@@ -82,35 +79,6 @@ other requests behind it. To mitigate this, multiple worker processes can be
 used; see the C<workers> argument to the constructor.
 
 =cut
-
-sub _getfamilybyname
-{
-   my ( $name ) = @_;
-
-   return undef unless defined $name;
-
-   return $name if $name =~ m/^\d+$/;
-
-   return AF_INET    if $name eq "inet";
-   return AF_INET6() if $name eq "inet6" and defined &AF_INET6;
-
-   croak "Unrecognised socktype name '$name'";
-}
-
-sub _getsocktypebyname
-{
-   my ( $name ) = @_;
-
-   return undef unless defined $name;
-
-   return $name if $name =~ m/^\d+$/;
-
-   return SOCK_STREAM if $name eq "stream";
-   return SOCK_DGRAM  if $name eq "dgram";
-   return SOCK_RAW    if $name eq "raw";
-
-   croak "Unrecognised socktype name '$name'";
-}
 
 # Internal constructor
 sub new
