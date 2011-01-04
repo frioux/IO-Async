@@ -10,7 +10,7 @@ use Test::Refcount;
 
 use POSIX qw( EAGAIN ECONNRESET );
 
-use Socket qw( AF_INET SOCK_DGRAM pack_sockaddr_in unpack_sockaddr_in );
+use Socket qw( pack_sockaddr_in unpack_sockaddr_in );
 
 use IO::Async::Loop;
 
@@ -20,7 +20,7 @@ my $loop = IO::Async::Loop->new();
 
 testing_loop( $loop );
 
-my ( $S1, $S2 ) = $loop->socketpair( AF_INET, SOCK_DGRAM ) or die "Cannot socketpair - $!";
+my ( $S1, $S2 ) = $loop->socketpair( "inet", "dgram" ) or die "Cannot socketpair - $!";
 
 # Need sockets in nonblocking mode
 $S1->blocking( 0 );

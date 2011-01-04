@@ -25,7 +25,7 @@ my $addr = $listensock->sockname;
 my $sock;
 
 $loop->connect(
-   addr => { family => AF_INET, socktype => SOCK_STREAM, addr => $addr },
+   addr => { family => "inet", socktype => "stream", addr => $addr },
    on_connected => sub { $sock = shift; },
    on_connect_error => sub { die "Test died early - connect error $_[0]\n"; },
 );
@@ -113,7 +113,7 @@ my $udpsock = IO::Socket::INET->new( LocalAddr => 'localhost', Protocol => 'udp'
 my $socket;
 
 $loop->connect(
-   addr => [ AF_INET, SOCK_DGRAM, 0, $udpsock->sockname ],
+   addr => { family => "inet", socktype => "dgram", addr => $udpsock->sockname },
    on_socket => sub { $socket = shift; },
    on_connect_error => sub { die "Test died early - connect error $_[0]\n"; },
 );
@@ -136,7 +136,7 @@ SKIP: {
    my $failerr;
 
    $loop->connect(
-      addr => [ AF_UNIX, SOCK_STREAM, 0, pack_sockaddr_un( "/some/path/we/know/breaks" ) ],
+      addr => { family => "unix", socktype => "stream", addr => pack_sockaddr_un( "/some/path/we/know/breaks" ) },
       on_connected => sub { die "Test died early - connect succeeded\n"; },
       on_fail => sub { $failop = shift @_; $failerr = pop @_; },
       on_connect_error => sub { $error = 1 },
@@ -176,7 +176,7 @@ SKIP: {
    my @error;
 
    $loop->connect(
-      addr => { family => AF_INET, socktype => SOCK_STREAM, addr => pack_sockaddr_in( $port, inet_aton("127.0.0.1") ) },
+      addr => { family => "inet", socktype => "stream", addr => pack_sockaddr_in( $port, inet_aton("127.0.0.1") ) },
       on_connected => sub { die "Test died early - connect succeeded\n"; },
       on_fail => sub { $failop = shift @_; $failerr = pop @_; },
       on_connect_error => sub { @error = @_; },

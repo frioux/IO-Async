@@ -166,7 +166,7 @@ $loop->add( $listener );
 my $listen_self;
 
 $listener->listen(
-   addr => [ AF_INET, SOCK_STREAM, 0, pack_sockaddr_in( 0, $INADDR_ANY ) ],
+   addr => { family => "inet", socktype => "stream", addr => pack_sockaddr_in( 0, $INADDR_ANY ) },
    on_listen => sub { $listen_self = shift },
    on_listen_error => sub { die "Test died early - $_[0] - $_[-1]\n"; },
 );

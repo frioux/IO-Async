@@ -14,8 +14,8 @@ use Time::HiRes qw( time );
 
 my $loop = IO::Async::Loop::Poll->new();
 
-foreach my $family ( undef, AF_INET ) {
-   my ( $S1, $S2 ) = $loop->socketpair( $family, SOCK_STREAM )
+foreach my $family ( undef, "inet" ) {
+   my ( $S1, $S2 ) = $loop->socketpair( $family, "stream" )
       or die "Could not socketpair - $!";
 
    isa_ok( $S1, "IO::Socket", '$S1 isa IO::Socket' );
@@ -35,7 +35,7 @@ foreach my $family ( undef, AF_INET ) {
    $S2->syswrite( "Goodbye" );
    is( do { my $b; $S1->sysread( $b, 8192 ); $b }, "Goodbye", '$S2 --writes-> $S1' );
 
-   ( $S1, $S2 ) = $loop->socketpair( $family, SOCK_DGRAM )
+   ( $S1, $S2 ) = $loop->socketpair( $family, "dgram" )
       or die "Could not socketpair - $!";
 
    isa_ok( $S1, "IO::Socket", '$S1 isa IO::Socket' );
