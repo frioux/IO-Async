@@ -876,6 +876,36 @@ sub socket
    return IO::Socket->new->socket( $family, $socktype, $proto );
 }
 
+sub _getfamilybyname
+{
+   my ( $name ) = @_;
+
+   return undef unless defined $name;
+
+   return $name if $name =~ m/^\d+$/;
+
+   return AF_INET    if $name eq "inet";
+   return AF_INET6() if $name eq "inet6" and defined &AF_INET6;
+   return AF_UNIX    if $name eq "unix";
+
+   croak "Unrecognised socktype name '$name'";
+}
+
+sub _getsocktypebyname
+{
+   my ( $name ) = @_;
+
+   return undef unless defined $name;
+
+   return $name if $name =~ m/^\d+$/;
+
+   return SOCK_STREAM if $name eq "stream";
+   return SOCK_DGRAM  if $name eq "dgram";
+   return SOCK_RAW    if $name eq "raw";
+
+   croak "Unrecognised socktype name '$name'";
+}
+
 =head2 ( $S1, $S2 ) = $loop->socketpair( $family, $socktype, $proto )
 
 An abstraction of the C<socketpair()> syscall, where any argument may be
@@ -889,6 +919,9 @@ Additionally, this method supports building connected C<SOCK_STREAM> or
 C<SOCK_DGRAM> pairs in the C<AF_INET> family even if the underlying platform's
 C<socketpair(2)> does not, by connecting two normal sockets together.
 
+C<$family> and C<$socktype> may also be given symbolically similar to the
+behaviour of C<unpack_addrinfo>.
+
 =cut
 
 sub socketpair
@@ -897,12 +930,12 @@ sub socketpair
    my ( $family, $socktype, $proto ) = @_;
 
    # PF_UNSPEC and undef are both false
-   $family ||= AF_UNIX;
+   $family = _getfamilybyname( $family ) || AF_UNIX;
 
    # SOCK_STREAM is the most likely
-   defined $socktype or $socktype = SOCK_STREAM;
+   $socktype = _getsocktypebyname( $socktype ) || SOCK_STREAM;
 
-   defined $proto or $proto = 0;
+   $proto ||= 0;
 
    my ( $S1, $S2 ) = IO::Socket->new->socketpair( $family, $socktype, $proto );
    return ( $S1, $S2 ) if defined $S1;
@@ -1053,42 +1086,13 @@ Each field in the result will be initialised to 0 (or empty string for the
 address) if not defined in the C<$ai> value.
 
 The family type may also be given as a symbolic string; C<inet> or possibly
-C<inet6> if the host system supports it; this will be converted to the
-appropriate C<AF_*> constant.
+C<inet6> if the host system supports it, or C<unix>; this will be converted to
+the appropriate C<AF_*> constant.
 
 The socktype may also be given as a symbolic string; C<stream>, C<dgram> or
 C<raw>; this will be converted to the appropriate C<SOCK_*> constant.
 
 =cut
-
-sub _getfamilybyname
-{
-   my ( $name ) = @_;
-
-   return undef unless defined $name;
-
-   return $name if $name =~ m/^\d+$/;
-
-   return AF_INET    if $name eq "inet";
-   return AF_INET6() if $name eq "inet6" and defined &AF_INET6;
-
-   croak "Unrecognised socktype name '$name'";
-}
-
-sub _getsocktypebyname
-{
-   my ( $name ) = @_;
-
-   return undef unless defined $name;
-
-   return $name if $name =~ m/^\d+$/;
-
-   return SOCK_STREAM if $name eq "stream";
-   return SOCK_DGRAM  if $name eq "dgram";
-   return SOCK_RAW    if $name eq "raw";
-
-   croak "Unrecognised socktype name '$name'";
-}
 
 use constant {
    ADDRINFO_FAMILY => 0,
