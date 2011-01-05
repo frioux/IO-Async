@@ -469,17 +469,30 @@ sub write
    carp "Cannot write data to a Stream that is closing" and return if $self->{stream_closing};
    croak "Cannot write data to a Stream with no write_handle" unless my $handle = $self->write_handle;
 
-   push @{ $self->{writequeue} }, my $elem = [];
+   # Combine short writes we can
+   my $tail = @{ $self->{writequeue} } ? $self->{writequeue}[-1] : undef;
 
-   if( ref $data eq "CODE" ) {
-      $elem->[WQ_DATA] = "";
-      $elem->[WQ_GENSUB] = $data;
+   if( $tail and
+       !ref $data and
+       !$tail->[WQ_GENSUB] and
+       length($data) + length($tail->[WQ_DATA]) < $self->{write_len} and
+       !$params{on_flush} and
+       !$tail->[WQ_ON_FLUSH]) {
+      $tail->[WQ_DATA] .= $data;
    }
    else {
-      $elem->[WQ_DATA] = $data;
+      push @{ $self->{writequeue} }, my $elem = [];
+
+      if( ref $data eq "CODE" ) {
+         $elem->[WQ_DATA] = "";
+         $elem->[WQ_GENSUB] = $data;
+      }
+      else {
+         $elem->[WQ_DATA] = $data;
+      }
+
+      $elem->[WQ_ON_FLUSH] = $params{on_flush};
    }
-   
-   $elem->[WQ_ON_FLUSH] = $params{on_flush};
 
    if( $self->{autoflush} ) {
       1 while !$self->_is_empty and $self->_flush_one;
