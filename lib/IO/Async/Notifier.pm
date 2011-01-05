@@ -13,6 +13,9 @@ our $VERSION = '0.34';
 use Carp;
 use Scalar::Util qw( weaken );
 
+# Perl 5.8.4 cannot do trampolines by modiying @_ then goto &$code
+use constant HAS_BROKEN_TRAMPOLINES => ( $] == "5.008004" );
+
 =head1 NAME
 
 C<IO::Async::Notifier> - base class for C<IO::Async> event objects
@@ -425,8 +428,13 @@ sub _capture_weakself
    weaken $self;
 
    return sub {
-      unshift @_, $self;
-      goto &$code;
+      if( HAS_BROKEN_TRAMPOLINES ) {
+         return $code->( $self, @_ );
+      }
+      else {
+         unshift @_, $self;
+         goto &$code;
+      }
    };
 }
 
@@ -471,10 +479,15 @@ sub _replace_weakself
    weaken $self;
 
    return sub {
-      # Don't assign to $_[0] directly or we will change caller's first argument
-      shift @_;
-      unshift @_, $self;
-      goto &$code;
+      if( HAS_BROKEN_TRAMPOLINES ) {
+         return $code->( $self, @_[1..$#_] );
+      }
+      else {
+         # Don't assign to $_[0] directly or we will change caller's first argument
+         shift @_;
+         unshift @_, $self;
+         goto &$code;
+      }
    };
 }
 
