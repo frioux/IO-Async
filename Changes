@@ -1,5 +1,26 @@
 Revision history for IO-Async
 
+0.35    ADDITIONS:
+         * Loop->unpack_addrinfo
+
+        CHANGES:
+         * Recognise 'inet' and 'unix' as socket families
+         * Recognise 'stream', 'dgram' and 'raw' as socket types
+         * Recognise nicer HASH-based addrinfo layout in ->connect and
+           ->listen
+         * Listener now has on_stream / on_socket as full events, not just
+           CODEref parameters
+         * Make Resolver->getaddrinfo try synchronously if given numeric names
+         * Make Resolver->getnameinfo run synchronously if given
+           NI_NUMERICHOST|NI_NUMERICSERV flags
+         * Try to combine small data buffers from Stream->write calls if
+           possible
+
+        BUGFIXES:
+         * Linefeed in die case of getaddrinfo_hash to preserve exeception
+           string
+         * Deconfigure Protocol->transport after it is closed
+
 0.34    ADDITIONS:
          * New Notifier methods ->_replace_weakself, ->maybe_invoke_event,
            ->maybe_make_event_cb
