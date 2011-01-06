@@ -40,7 +40,12 @@ references in parameters:
 
 =head2 on_finish $exitcode
 
-Invoked when the process exits.
+Invoked when the process exits by normal means.
+
+=head2 on_error $exitcode, $error_errno, $error
+
+Invoked when the process exits by an exception from C<code>, or by failing to
+C<exec()> the given command.
 
 =cut
 
@@ -100,7 +105,9 @@ The following named parameters may be passed to C<new> or C<configure>:
 
 =item on_finish => CODE
 
-CODE reference for the C<on_exit> event.
+=item on_error => CODE
+
+CODE reference for the event handlers.
 
 =back
 
@@ -114,7 +121,7 @@ sub configure
    my $self = shift;
    my %params = @_;
 
-   foreach (qw( on_finish )) {
+   foreach (qw( on_finish on_error )) {
       $self->{$_} = delete $params{$_} if exists $params{$_};
    }
 
@@ -138,6 +145,23 @@ sub _add_to_loop
          undef $self->{pid};
 
          $self->invoke_event( on_finish => $exitcode );
+
+         if( my $parent = $self->parent ) {
+            $parent->remove_child( $self );
+         }
+         else {
+            $self->get_loop->remove( $self );
+         }
+      } ),
+
+      on_error => $self->_capture_weakself( sub {
+         my ( $self, undef, $exitcode, $dollarbang, $dollarat ) = @_;
+         $self->{exitcode}   = $exitcode;
+         $self->{dollarbang} = $dollarbang;
+         $self->{dollarat}   = $dollarat;
+         undef $self->{pid};
+
+         $self->invoke_event( on_error => $exitcode, $dollarbang, $dollarat );
 
          if( my $parent = $self->parent ) {
             $parent->remove_child( $self );
@@ -189,6 +213,32 @@ sub exitstatus
 {
    my $self = shift;
    return defined $self->{exitcode} ? WEXITSTATUS( $self->{exitcode} ) : undef;
+}
+
+=head2 $error = $process->error
+
+If the process exited due to an exception, returns the exception that was
+thrown. Otherwise, returns C<undef>.
+
+=cut
+
+sub error
+{
+   my $self = shift;
+   return $self->{dollarat};
+}
+
+=head2 $errno = $process->error_errno
+
+If the process exited due to an exception, returns the value of C<$!> at the
+time the exception was thrown. Otherwise, returns C<undef>.
+
+=cut
+
+sub error_errno
+{
+   my $self = shift;
+   return $self->{dollarbang};
 }
 
 # Keep perl happy; keep Britain tidy
