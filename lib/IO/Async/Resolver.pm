@@ -12,7 +12,7 @@ our $VERSION = '0.35';
 
 use Socket::GetAddrInfo qw(
    :newapi getaddrinfo getnameinfo
-   AI_NUMERICHOST AI_NUMERICSERV
+   AI_NUMERICHOST
    NI_NUMERICHOST NI_NUMERICSERV
    EAI_NONAME
 );
@@ -246,8 +246,8 @@ succeed.
 
 Specifically, if the service name is entirely numeric, and the hostname looks
 like an IPv4 or IPv6 string, a synchronous lookup will first be performed
-using the C<AI_NUMERICHOST> and C<AI_NUMERICSERV> flags. If this gives an
-C<EAI_NONAME> error, then the lookup is performed asynchronously instead.
+using the C<AI_NUMERICHOST> flag. If this gives an C<EAI_NONAME> error, then
+the lookup is performed asynchronously instead.
 
 =cut
 
@@ -263,16 +263,18 @@ sub getaddrinfo
    $args{family}   = _getfamilybyname( $args{family} )     if defined $args{family};
    $args{socktype} = _getsocktypebyname( $args{socktype} ) if defined $args{socktype};
 
-   # It's likely this will succeed with AI_NUMERICHOST|AI_NUMERICSERV if
-   #   host contains only [\d.] (IPv4) or [[:xdigit:]:] (IPv6)
-   #   service contains only \d
-   # These tests don't have to be perfect as if it fails we'll get EAI_NONAME
-   # and just try it asynchronously anyway
+   # It's likely this will succeed with AI_NUMERICHOST if host contains only
+   # [\d.] (IPv4) or [[:xdigit:]:] (IPv6)
+   # Technically we should pass AI_NUMERICSERV but not all platforms support
+   # it, but since we're checking service contains only \d we should be fine.
+
+   # These address tests don't have to be perfect as if it fails we'll get
+   # EAI_NONAME and just try it asynchronously anyway
    if( ( $host =~ m/^[\d.]+$/ or $host =~ m/^[[:xdigit:]:]$/ ) and
        $service =~ m/^\d+$/ ) {
 
        my ( $err, @results ) = _getaddrinfo( $host, $service,
-          { %args, flags => $flags | AI_NUMERICHOST|AI_NUMERICSERV }
+          { %args, flags => $flags | AI_NUMERICHOST }
        );
 
        if( !$err ) {
