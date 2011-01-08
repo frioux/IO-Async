@@ -37,8 +37,6 @@ C<IO::Async::Timer::Absolute> - event callback at a fixed future time
     },
  );
 
- $timer->start;
-
  $loop->add( $timer );
 
  $loop->loop_forever;
