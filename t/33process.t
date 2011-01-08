@@ -4,7 +4,8 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 49;
+use Test::More tests => 56;
+use Test::Refcount;
 
 use POSIX qw( WIFEXITED WEXITSTATUS ENOENT );
 use constant ENOENT_MESSAGE => do { local $! = ENOENT; "$!" };
@@ -18,25 +19,27 @@ my $loop = IO::Async::Loop->new();
 testing_loop( $loop );
 
 {
-   my $exitcode;
+   my ( $invocant, $exitcode );
 
-   my $process;
-   
-   $process = IO::Async::Process->new(
+   my $process = IO::Async::Process->new(
       code => sub { return 0 },
-      on_finish => sub {
-         is( $_[0], $process, '$_[0] in on_finish is $process' );
-         ( undef, $exitcode ) = @_;
-      },
+      on_finish => sub { ( $invocant, $exitcode ) = @_; },
    );
+
+   is_oneref( $process, '$process has refcount 1 before $loop->add' );
 
    ok( !$process->is_running, '$process is not yet running' );
 
    $loop->add( $process );
 
+   is_refcount( $process, 2, '$process has refcount 2 after $loop->add' );
+
    ok( $process->is_running, '$process is running' );
 
    wait_for { defined $exitcode };
+
+   is( $invocant, $process, '$_[0] in on_finish is $process' );
+   undef $invocant; # refcount
 
    ok( WIFEXITED($exitcode),      'WIFEXITED($exitcode) after sub { 0 }' );
    is( WEXITSTATUS($exitcode), 0, 'WEXITSTATUS($exitcode) after sub { 0 }' );
@@ -47,6 +50,8 @@ testing_loop( $loop );
    is( $process->exitstatus, 0, '$process->exitstatus after sub { 0 }' );
 
    ok( !defined $process->get_loop, '$process no longer in Loop' );
+
+   is_oneref( $process, '$process has refcount 1 before EOS' );
 }
 
 {
@@ -64,17 +69,24 @@ testing_loop( $loop );
 }
 
 {
-   my ( $exception, $exitcode );
+   my ( $invocant, $exception, $exitcode );
 
    my $process = IO::Async::Process->new(
       code => sub { die "An exception\n" },
       on_finish => sub { die "Test failed early\n" },
-      on_exception => sub { ( undef, $exception, undef, $exitcode ) = @_ },
+      on_exception => sub { ( $invocant, $exception, undef, $exitcode ) = @_ },
    );
+
+   is_oneref( $process, '$process has refcount 1 before $loop->add' );
 
    $loop->add( $process );
 
+   is_refcount( $process, 2, '$process has refcount 2 after $loop->add' );
+
    wait_for { defined $exitcode };
+
+   is( $invocant, $process, '$_[0] in on_exception is $process' );
+   undef $invocant; # refcount
 
    ok( WIFEXITED($exitcode),        'WIFEXITED($exitcode) after sub { die }' );
    is( WEXITSTATUS($exitcode), 255, 'WEXITSTATUS($exitcode) after sub { die }' );
@@ -83,6 +95,8 @@ testing_loop( $loop );
    ok( $process->is_exited,           '$process->is_exited after sub { die }' );
    is( $process->exitstatus, 255,     '$process->exitstatus after sub { die }' );
    is( $process->exception, "An exception\n", '$process->exception after sub { die }' );
+
+   is_oneref( $process, '$process has refcount 1 before EOS' );
 }
 
 {
