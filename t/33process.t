@@ -64,12 +64,12 @@ testing_loop( $loop );
 }
 
 {
-   my ( $exitcode, $error );
+   my ( $exitcode, $exception );
 
    my $process = IO::Async::Process->new(
-      code => sub { die "An error\n" },
+      code => sub { die "An exception\n" },
       on_finish => sub { die "Test failed early\n" },
-      on_error => sub { ( undef, $exitcode, undef, $error ) = @_ },
+      on_error => sub { ( undef, $exitcode, undef, $exception ) = @_ },
    );
 
    $loop->add( $process );
@@ -78,11 +78,11 @@ testing_loop( $loop );
 
    ok( WIFEXITED($exitcode),        'WIFEXITED($exitcode) after sub { die }' );
    is( WEXITSTATUS($exitcode), 255, 'WEXITSTATUS($exitcode) after sub { die }' );
-   is( $error, "An error\n",        '$error after sub { die }' );
+   is( $exception, "An exception\n",        '$exception after sub { die }' );
 
    ok( $process->is_exited,           '$process->is_exited after sub { die }' );
    is( $process->exitstatus, 255,     '$process->exitstatus after sub { die }' );
-   is( $process->error, "An error\n", '$process->error after sub { die }' );
+   is( $process->exception, "An exception\n", '$process->exception after sub { die }' );
 }
 
 {
@@ -118,12 +118,12 @@ testing_loop( $loop );
    my $donotexist = "/bin/donotexist";
    $donotexist .= "X" while -e $donotexist;
 
-   my ( $exitcode, $errno, $error );
+   my ( $exitcode, $errno, $exception );
 
    my $process = IO::Async::Process->new(
       command => $donotexist,
       on_finish => sub { die "Test failed early\n" },
-      on_error => sub { ( undef, $exitcode, $errno, $error ) = @_ },
+      on_error => sub { ( undef, $exitcode, $errno, $exception ) = @_ },
    );
 
    $loop->add( $process );
@@ -135,7 +135,7 @@ testing_loop( $loop );
 
    ok( $process->is_exited,           '$process->is_exited after donotexist' );
    is( $process->exitstatus, 255,     '$process->exitstatus after donotexist' );
-   is( $process->error_errno+0,  ENOENT,         '$process->errno number after donotexist' );
-   is( $process->error_errno."", ENOENT_MESSAGE, '$process->errno string after donotexist' );
-   is( $process->error, "", '$process->error after donotexist' );
+   is( $process->errno,  ENOENT,         '$process->errno number after donotexist' );
+   is( $process->errstr, ENOENT_MESSAGE, '$process->errno string after donotexist' );
+   is( $process->exception, "", '$process->exception after donotexist' );
 }

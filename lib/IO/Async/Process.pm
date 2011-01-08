@@ -42,10 +42,11 @@ references in parameters:
 
 Invoked when the process exits by normal means.
 
-=head2 on_error $exitcode, $error_errno, $error
+=head2 on_error $exitcode, $errno, $exception
 
 Invoked when the process exits by an exception from C<code>, or by failing to
-C<exec()> the given command.
+C<exec()> the given command. C<$errno> will be a dualvar, containing both
+number and string values.
 
 =cut
 
@@ -215,30 +216,43 @@ sub exitstatus
    return defined $self->{exitcode} ? WEXITSTATUS( $self->{exitcode} ) : undef;
 }
 
-=head2 $error = $process->error
+=head2 $exception = $process->exception
 
 If the process exited due to an exception, returns the exception that was
 thrown. Otherwise, returns C<undef>.
 
 =cut
 
-sub error
+sub exception
 {
    my $self = shift;
    return $self->{dollarat};
 }
 
-=head2 $errno = $process->error_errno
+=head2 $errno = $process->errno
 
-If the process exited due to an exception, returns the value of C<$!> at the
-time the exception was thrown. Otherwise, returns C<undef>.
+If the process exited due to an exception, returns the numerical value of
+C<$!> at the time the exception was thrown. Otherwise, returns C<undef>.
 
 =cut
 
-sub error_errno
+sub errno
 {
    my $self = shift;
-   return $self->{dollarbang};
+   return $self->{dollarbang}+0;
+}
+
+=head2 $errstr = $process->errstr
+
+If the process exited due to an exception, returns the string value of
+C<$!> at the time the exception was thrown. Otherwise, returns C<undef>.
+
+=cut
+
+sub errstr
+{
+   my $self = shift;
+   return $self->{dollarbang}."";
 }
 
 # Keep perl happy; keep Britain tidy
