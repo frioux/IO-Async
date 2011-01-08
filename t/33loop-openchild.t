@@ -112,9 +112,6 @@ sub child_out_reader
    return 0;
 }
 
-my( $syncpipe_r, $syncpipe_w ) = $loop->pipepair() or die "Cannot pipepair - $!";
-$syncpipe_w->autoflush;
-
 $loop->open_child(
    code    => sub { print "hello\n"; 0 },
    stdout  => { on_read => \&child_out_reader },
