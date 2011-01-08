@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 28;
+use Test::More tests => 44;
 
 use POSIX qw( WIFEXITED WEXITSTATUS ENOENT );
 use constant ENOENT_MESSAGE => do { local $! = ENOENT; "$!" };
@@ -138,4 +138,140 @@ testing_loop( $loop );
    is( $process->errno,  ENOENT,         '$process->errno number after donotexist' );
    is( $process->errstr, ENOENT_MESSAGE, '$process->errno string after donotexist' );
    is( $process->exception, "", '$process->exception after donotexist' );
+}
+
+{
+   my @stdout_lines;
+
+   my $process = IO::Async::Process->new(
+      code => sub { print "hello\n"; return 0 },
+      stdout => {
+         on_read => sub {
+            my ( undef, $buffref ) = @_;
+            push @stdout_lines, $1 while $$buffref =~ s/^(.*\n)//;
+            return 0;
+         },
+      },
+      on_finish => sub { },
+   );
+
+   $loop->add( $process );
+
+   wait_for { !$process->is_running };
+
+   ok( $process->is_exited,     '$process->is_exited after sub { print }' );
+   is( $process->exitstatus, 0, '$process->exitstatus after sub { print }' );
+
+   is_deeply( \@stdout_lines, [ "hello\n" ], '@stdout_lines after sub { print }' );
+}
+
+{
+   my @stdout_lines;
+
+   my $process = IO::Async::Process->new(
+      command => [ $^X, "-e", 'print "hello\n"' ],
+      stdout => {
+         on_read => sub {
+            my ( undef, $buffref ) = @_;
+            push @stdout_lines, $1 while $$buffref =~ s/^(.*\n)//;
+            return 0;
+         },
+      },
+      on_finish => sub { },
+   );
+
+   $loop->add( $process );
+
+   wait_for { !$process->is_running };
+
+   ok( $process->is_exited,     '$process->is_exited after perl STDOUT' );
+   is( $process->exitstatus, 0, '$process->exitstatus after perl STDOUT' );
+
+   is_deeply( \@stdout_lines, [ "hello\n" ], '@stdout_lines after perl STDOUT' );
+}
+
+{
+   my @stdout_lines;
+   my @stderr_lines;
+
+   my $process = IO::Async::Process->new(
+      command => [ $^X, "-e", 'print STDOUT "output\n"; print STDERR "error\n";' ],
+      stdout => {
+         on_read => sub {
+            my ( undef, $buffref ) = @_;
+            push @stdout_lines, $1 while $$buffref =~ s/^(.*\n)//;
+            return 0;
+         },
+      },
+      stderr => {
+         on_read => sub {
+            my ( undef, $buffref ) = @_;
+            push @stderr_lines, $1 while $$buffref =~ s/^(.*\n)//;
+            return 0;
+         },
+      },
+      on_finish => sub { },
+   );
+
+   $loop->add( $process );
+
+   wait_for { !$process->is_running };
+
+   ok( $process->is_exited,     '$process->is_exited after perl STDOUT/STDERR' );
+   is( $process->exitstatus, 0, '$process->exitstatus after perl STDOUT/STDERR' );
+
+   is_deeply( \@stdout_lines, [ "output\n" ], '@stdout_lines after perl STDOUT/STDERR' );
+   is_deeply( \@stderr_lines, [ "error\n" ], '@stderr_lines after perl STDOUT/STDERR' );
+}
+
+{
+   my @stdout_lines;
+
+   my $process = IO::Async::Process->new(
+      command => [ $^X, "-pe", '1' ],
+      stdin   => { from => "some data\n" },
+      stdout  => {
+         on_read => sub {
+            my ( undef, $buffref ) = @_;
+            push @stdout_lines, $1 while $$buffref =~ s/^(.*\n)//;
+            return 0;
+         },
+      },
+      on_finish => sub { },
+   );
+
+   $loop->add( $process );
+
+   wait_for { !$process->is_running };
+
+   ok( $process->is_exited,     '$process->is_exited after perl STDIN->STDOUT' );
+   is( $process->exitstatus, 0, '$process->exitstatus after perl STDIN->STDOUT' );
+
+   is_deeply( \@stdout_lines, [ "some data\n" ], '@stdout_lines after perl STDIN->STDOUT' );
+}
+
+{
+   my @stdout_lines;
+
+   my $process = IO::Async::Process->new(
+      command => [ $^X, "-pe", '1' ],
+      fd0 => { from => "some data\n" },
+      fd1 => {
+         on_read => sub {
+            my ( undef, $buffref ) = @_;
+            push @stdout_lines, $1 while $$buffref =~ s/^(.*\n)//;
+            return 0;
+         },
+      },
+      on_finish => sub { },
+   );
+
+   $loop->add( $process );
+
+   wait_for { !$process->is_running };
+
+   ok( $process->is_exited,     '$process->is_exited after perl STDIN->STDOUT using fd[n]' );
+   is( $process->exitstatus, 0, '$process->exitstatus after perl STDIN->STDOUT using fd[n]' );
+
+   is_deeply( \@stdout_lines, [ "some data\n" ], '@stdout_lines after perl STDIN->STDOUT using fd[n]' );
 }

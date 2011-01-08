@@ -118,6 +118,27 @@ CODE reference for the event handlers.
 Once the C<on_finish> continuation has been invoked, the C<IO::Async::Process>
 object is removed from the containing C<IO::Async::Loop> object.
 
+The following parameters may be passed to C<new>, or to C<configure> before
+the process has been started (i.e. before it has been added to the C<Loop>).
+Once the process is running these cannot be changed.
+
+=over 8
+
+=item fdI<n> => HASH
+
+A hash describing how to set up file descriptor I<n>. This should contain the
+same layout as for L<IO::Async::ChildManager> 's C<open_child> keys.
+
+=item stdin => ...
+
+=item stdout => ...
+
+=item stderr => ...
+
+Shortcuts for C<fd0>, C<fd1> and C<fd2> respectively.
+
+=back
+
 =cut
 
 sub configure
@@ -127,6 +148,21 @@ sub configure
 
    foreach (qw( on_finish on_exception )) {
       $self->{$_} = delete $params{$_} if exists $params{$_};
+   }
+
+   # All these parameters can only be configured while the process isn't
+   # running
+   my %setup_params;
+   foreach (qw( stdin stdout stderr ), grep { m/^fd\d+$/ } keys %params ) {
+      $setup_params{$_} = delete $params{$_} if exists $params{$_};
+   }
+
+   if( $self->is_running ) {
+      keys %setup_params and croak "Cannot configure a running Process with " . join ", ", keys %setup_params;
+   }
+
+   foreach ( keys %setup_params ) {
+      $self->{more_params}{$_} = $setup_params{$_};
    }
 
    $self->SUPER::configure( %params );
@@ -142,6 +178,8 @@ sub _add_to_loop
    $self->{pid} = $loop->open_child(
       code    => $self->{code},
       command => $self->{command},
+
+      %{ $self->{more_params} },
 
       on_finish => $self->_capture_weakself( sub {
          my ( $self, undef, $exitcode ) = @_;
