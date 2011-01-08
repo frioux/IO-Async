@@ -128,8 +128,7 @@ sub _add_to_loop
    $self->{cb} ||= $self->_capture_weakself( sub {
       my ( $self, $pid, $exitcode ) = @_;
 
-      $self->{on_exit} ? $self->{on_exit}->( $self, $exitcode )
-                       : $self->on_exit( $exitcode );
+      $self->invoke_event( on_exit => $exitcode );
 
       # Since this is a oneshot, we'll have to remove it from the loop or
       # parent Notifier
