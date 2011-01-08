@@ -59,47 +59,12 @@ C<< Loop->open_child >>'s C<on_error>.
 
 =head2 $process = IO::Async::Process->new( %args )
 
-Constructs a new C<IO::Async::Process> object and returns it. One of the
-following arguments must be passed, to give the program to be executed by the
-child process.
-
-=over 8
-
-=item command => ARRAY or STRING
-
-Either a reference to an array containing the command and its arguments, or a
-plain string containing the command. This value is passed into perl's
-C<exec()> function.
-
-=item code => CODE
-
-A block of code to execute in the child process. It will be called in scalar
-context inside an C<eval> block.
-
-=back
+Constructs a new C<IO::Async::Process> object and returns it.
 
 Once constructed, the C<Process> will need to be added to the C<Loop> before
 the child process is started.
 
 =cut
-
-sub _init
-{
-   my $self = shift;
-   my ( $params ) = @_;
-
-   $self->SUPER::_init( $params );
-
-   foreach (qw( code command )) {
-      $self->{$_} = delete $params->{$_} if exists $params->{$_};
-   }
-
-   $self->{code} and $self->{command} and
-      croak "Cannot pass both 'code' and 'command' to ".__PACKAGE__;
-
-   $self->{code} or $self->{command} or
-      croak "Require either 'code' or 'command' for ".__PACKAGE__;
-}
 
 =head1 PARAMETERS
 
@@ -123,6 +88,17 @@ the process has been started (i.e. before it has been added to the C<Loop>).
 Once the process is running these cannot be changed.
 
 =over 8
+
+=item command => ARRAY or STRING
+
+Either a reference to an array containing the command and its arguments, or a
+plain string containing the command. This value is passed into perl's
+C<exec()> function.
+
+=item code => CODE
+
+A block of code to execute in the child process. It will be called in scalar
+context inside an C<eval> block.
 
 =item fdI<n> => HASH
 
@@ -153,13 +129,17 @@ sub configure
    # All these parameters can only be configured while the process isn't
    # running
    my %setup_params;
-   foreach (qw( stdin stdout stderr ), grep { m/^fd\d+$/ } keys %params ) {
+   foreach (qw( code command stdin stdout stderr ), grep { m/^fd\d+$/ } keys %params ) {
       $setup_params{$_} = delete $params{$_} if exists $params{$_};
    }
 
    if( $self->is_running ) {
       keys %setup_params and croak "Cannot configure a running Process with " . join ", ", keys %setup_params;
    }
+
+   defined( exists $setup_params{code} ? $setup_params{code} : $self->{more_params}{code} ) +
+      defined( exists $setup_params{command} ? $setup_params{command} : $self->{more_params}{command} ) <= 1 or
+      croak "Cannot have both 'code' and 'command'";
 
    foreach ( keys %setup_params ) {
       $self->{more_params}{$_} = $setup_params{$_};
@@ -171,6 +151,10 @@ sub configure
 sub _add_to_loop
 {
    my $self = shift;
+
+   $self->{more_params}{code} or $self->{more_params}{command} or
+      croak "Require either 'code' or 'command' in $self";
+
    $self->SUPER::_add_to_loop( @_ );
 
    my $loop = $self->get_loop;
