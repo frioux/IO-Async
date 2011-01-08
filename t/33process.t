@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 44;
+use Test::More tests => 49;
 
 use POSIX qw( WIFEXITED WEXITSTATUS ENOENT );
 use constant ENOENT_MESSAGE => do { local $! = ENOENT; "$!" };
@@ -83,6 +83,26 @@ testing_loop( $loop );
    ok( $process->is_exited,           '$process->is_exited after sub { die }' );
    is( $process->exitstatus, 255,     '$process->exitstatus after sub { die }' );
    is( $process->exception, "An exception\n", '$process->exception after sub { die }' );
+}
+
+{
+   my $exitcode;
+
+   my $process = IO::Async::Process->new(
+      code => sub { die "An exception\n" },
+      on_finish => sub { ( undef, $exitcode ) = @_ },
+   );
+
+   $loop->add( $process );
+
+   wait_for { defined $exitcode };
+
+   ok( WIFEXITED($exitcode),        'WIFEXITED($exitcode) after sub { die } on_finish' );
+   is( WEXITSTATUS($exitcode), 255, 'WEXITSTATUS($exitcode) after sub { die } on_finish' );
+
+   ok( $process->is_exited,           '$process->is_exited after sub { die } on_finish' );
+   is( $process->exitstatus, 255,     '$process->exitstatus after sub { die } on_finish' );
+   is( $process->exception, "An exception\n", '$process->exception after sub { die } on_finish' );
 }
 
 {

@@ -42,7 +42,7 @@ references in parameters:
 
 Invoked when the process exits by normal means.
 
-=head2 on_exception $exception, $errno, $exitcode, $errno
+=head2 on_exception $exception, $errno, $exitcode
 
 Invoked when the process exits by an exception from C<code>, or by failing to
 C<exec()> the given command. C<$errno> will be a dualvar, containing both
@@ -50,6 +50,9 @@ number and string values.
 
 Note that this has a different name and a different argument order from
 C<< Loop->open_child >>'s C<on_error>.
+
+If this is not provided and the process exits with an exception, then
+C<on_finish> is invoked instead, being passed just the exit code.
 
 =cut
 
@@ -187,7 +190,8 @@ sub _add_to_loop
          $self->{dollarat}   = $dollarat;
          undef $self->{pid};
 
-         $self->invoke_event( on_exception => $dollarat, $dollarbang, $exitcode );
+         $self->maybe_invoke_event( on_exception => $dollarat, $dollarbang, $exitcode ) or
+            $self->invoke_event( on_finish => $exitcode );
 
          if( my $parent = $self->parent ) {
             $parent->remove_child( $self );
