@@ -64,12 +64,12 @@ testing_loop( $loop );
 }
 
 {
-   my ( $exitcode, $exception );
+   my ( $exception, $exitcode );
 
    my $process = IO::Async::Process->new(
       code => sub { die "An exception\n" },
       on_finish => sub { die "Test failed early\n" },
-      on_error => sub { ( undef, $exitcode, undef, $exception ) = @_ },
+      on_exception => sub { ( undef, $exception, undef, $exitcode ) = @_ },
    );
 
    $loop->add( $process );
@@ -118,12 +118,12 @@ testing_loop( $loop );
    my $donotexist = "/bin/donotexist";
    $donotexist .= "X" while -e $donotexist;
 
-   my ( $exitcode, $errno, $exception );
+   my ( $exception, $errno );
 
    my $process = IO::Async::Process->new(
       command => $donotexist,
       on_finish => sub { die "Test failed early\n" },
-      on_error => sub { ( undef, $exitcode, $errno, $exception ) = @_ },
+      on_exception => sub { ( undef, $exception, $errno ) = @_ },
    );
 
    $loop->add( $process );

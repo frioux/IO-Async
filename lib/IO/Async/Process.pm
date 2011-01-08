@@ -42,11 +42,14 @@ references in parameters:
 
 Invoked when the process exits by normal means.
 
-=head2 on_error $exitcode, $errno, $exception
+=head2 on_exception $exception, $errno, $exitcode, $errno
 
 Invoked when the process exits by an exception from C<code>, or by failing to
 C<exec()> the given command. C<$errno> will be a dualvar, containing both
 number and string values.
+
+Note that this has a different name and a different argument order from
+C<< Loop->open_child >>'s C<on_error>.
 
 =cut
 
@@ -106,7 +109,7 @@ The following named parameters may be passed to C<new> or C<configure>:
 
 =item on_finish => CODE
 
-=item on_error => CODE
+=item on_exception => CODE
 
 CODE reference for the event handlers.
 
@@ -122,7 +125,7 @@ sub configure
    my $self = shift;
    my %params = @_;
 
-   foreach (qw( on_finish on_error )) {
+   foreach (qw( on_finish on_exception )) {
       $self->{$_} = delete $params{$_} if exists $params{$_};
    }
 
@@ -162,7 +165,7 @@ sub _add_to_loop
          $self->{dollarat}   = $dollarat;
          undef $self->{pid};
 
-         $self->invoke_event( on_error => $exitcode, $dollarbang, $dollarat );
+         $self->invoke_event( on_exception => $dollarat, $dollarbang, $exitcode );
 
          if( my $parent = $self->parent ) {
             $parent->remove_child( $self );
