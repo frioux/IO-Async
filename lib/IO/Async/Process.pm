@@ -17,6 +17,8 @@ use POSIX qw(
    WIFEXITED WEXITSTATUS
 );
 
+use IO::Async::MergePoint;
+
 =head1 NAME
 
 C<IO::Async::Process> - start and manage a child process
@@ -105,8 +107,23 @@ context inside an C<eval> block.
 
 =item fdI<n> => HASH
 
-A hash describing how to set up file descriptor I<n>. This should contain the
-same layout as for L<IO::Async::ChildManager> 's C<open_child> keys.
+A hash describing how to set up file descriptor I<n>. The hash may contain one
+of the following sets of keys:
+
+=over 4
+
+=item on_read => CODE
+
+The child will be given the writing end of a pipe. The reading end will be
+wrapped by an C<IO::Async::Stream> using this C<on_read> callback function.
+
+=item from => STRING
+
+The child will be given the reading end of a pipe. The string given by the
+C<from> parameter will be written to the child. When all of the data has been
+written the pipe will be closed.
+
+=back
 
 =item stdin => ...
 
@@ -140,12 +157,16 @@ sub configure
       keys %setup_params and croak "Cannot configure a running Process with " . join ", ", keys %setup_params;
    }
 
-   defined( exists $setup_params{code} ? $setup_params{code} : $self->{more_params}{code} ) +
-      defined( exists $setup_params{command} ? $setup_params{command} : $self->{more_params}{command} ) <= 1 or
+   defined( exists $setup_params{code} ? $setup_params{code} : $self->{code} ) +
+      defined( exists $setup_params{command} ? $setup_params{command} : $self->{command} ) <= 1 or
       croak "Cannot have both 'code' and 'command'";
 
+   foreach (qw( code command )) {
+      $self->{$_} = delete $setup_params{$_} if exists $setup_params{$_};
+   }
+
    foreach ( keys %setup_params ) {
-      $self->{more_params}{$_} = $setup_params{$_};
+      $self->{fd_args}{$_} = $setup_params{$_};
    }
 
    $self->SUPER::configure( %params );
@@ -154,44 +175,97 @@ sub configure
 sub _add_to_loop
 {
    my $self = shift;
+   my ( $loop ) = @_;
 
-   $self->{more_params}{code} or $self->{more_params}{command} or
+   $self->{code} or $self->{command} or
       croak "Require either 'code' or 'command' in $self";
 
-   $self->SUPER::_add_to_loop( @_ );
+   my $fd_args = $self->{fd_args};
 
-   my $loop = $self->get_loop;
+   my @setup;
+   my %filehandles;
 
-   $self->{pid} = $loop->open_child(
+   foreach my $key ( keys %$fd_args ) {
+      my $value = $fd_args->{$key};
+
+      my $orig_key = $key;
+
+      # Rewrite stdin/stdout/stderr
+      $key eq "stdin"  and $key = "fd0";
+      $key eq "stdout" and $key = "fd1";
+      $key eq "stderr" and $key = "fd2";
+
+      ref $value eq "HASH" or croak "Expected '$orig_key' to be a HASH ref";
+
+      my $op;
+
+      if( exists $value->{on_read} ) {
+         ref $value->{on_read} or croak "Expected 'on_read' for '$orig_key' to be a reference";
+         scalar keys %$value == 1 or croak "Found other keys than 'on_read' for '$orig_key'";
+
+         $op = "pipe_read";
+      }
+      elsif( exists $value->{from} ) {
+         ref $value->{from} eq "" or croak "Expected 'from' for '$orig_key' not to be a reference";
+         scalar keys %$value == 1 or croak "Found other keys than 'from' for '$orig_key'";
+
+         $op = "pipe_write";
+      }
+      else {
+         croak "Cannot recognise what to do with '$orig_key'";
+      }
+
+      my ( $myfd, $childfd );
+
+      if( $op eq "pipe_read" ) {
+         ( $myfd, $childfd ) = $loop->pipepair() or croak "Unable to pipe() - $!";
+      }
+      elsif( $op eq "pipe_write" ) {
+         ( $childfd, $myfd ) = $loop->pipepair() or croak "Unable to pipe() - $!";
+      }
+
+      $filehandles{$key} = [ $myfd, $childfd, $value ];
+      push @setup, $key => [ dup => $childfd ];
+   }
+
+   my $mergepoint = IO::Async::MergePoint->new(
+      needs => [ "exit", keys %filehandles ],
+   );
+
+   $self->{pid} = $loop->spawn_child(
       code    => $self->{code},
       command => $self->{command},
 
-      %{ $self->{more_params} },
+      setup => \@setup,
 
-      on_finish => $self->_capture_weakself( sub {
-         my ( $self, undef, $exitcode ) = @_;
+      on_exit => sub {
+         my ( undef, $exitcode, $dollarbang, $dollarat ) = @_;
+         $mergepoint->done( "exit", [ $exitcode, $dollarbang, $dollarat ] );
+      },
+   );
+
+   my $is_code = defined $self->{code};
+
+   $mergepoint->close(
+      on_finished => $self->_capture_weakself( sub {
+         my $self = shift;
+         my %items = @_;
+         my ( $exitcode, $dollarbang, $dollarat ) = @{ $items{exit} };
+
          $self->{exitcode} = $exitcode;
-         undef $self->{pid};
-
-         $self->invoke_event( on_finish => $exitcode );
-
-         if( my $parent = $self->parent ) {
-            $parent->remove_child( $self );
-         }
-         else {
-            $self->get_loop->remove( $self );
-         }
-      } ),
-
-      on_error => $self->_capture_weakself( sub {
-         my ( $self, undef, $exitcode, $dollarbang, $dollarat ) = @_;
-         $self->{exitcode}   = $exitcode;
          $self->{dollarbang} = $dollarbang;
          $self->{dollarat}   = $dollarat;
+
          undef $self->{pid};
 
-         $self->maybe_invoke_event( on_exception => $dollarat, $dollarbang, $exitcode ) or
+         if( $is_code ? $dollarat eq "" : $dollarbang == 0 ) {
             $self->invoke_event( on_finish => $exitcode );
+         }
+         else {
+            $self->maybe_invoke_event( on_exception => $dollarat, $dollarbang, $exitcode ) or
+               # Don't have a way to report dollarbang/dollarat
+               $self->invoke_event( on_finish => $exitcode );
+         }
 
          if( my $parent = $self->parent ) {
             $parent->remove_child( $self );
@@ -201,6 +275,49 @@ sub _add_to_loop
          }
       } ),
    );
+
+   $self->SUPER::_add_to_loop( @_ );
+
+   # Now set up filehandle stuff
+
+   foreach my $fd ( keys %filehandles ) {
+      my ( $myfd, $childfd, $fdopts ) = @{ $filehandles{$fd} };
+
+      close( $childfd );
+
+      my $notifier;
+
+      if( exists $fdopts->{on_read} ) {
+         my $on_read = $fdopts->{on_read};
+
+         $notifier = IO::Async::Stream->new(
+            read_handle => $myfd,
+
+            on_read => $on_read,
+
+            on_closed => sub {
+               $mergepoint->done( $fd );
+            },
+         );
+      }
+      elsif( exists $fdopts->{from} ) {
+         $notifier = IO::Async::Stream->new(
+            write_handle => $myfd,
+
+            on_outgoing_empty => sub {
+               $notifier->close;
+            },
+
+            on_closed => sub {
+               $mergepoint->done( $fd );
+            },
+         );
+
+         $notifier->write( $fdopts->{from} );
+      }
+
+      $self->add_child( $notifier );
+   }
 }
 
 =head1 METHODS
