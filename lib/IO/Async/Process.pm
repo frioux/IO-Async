@@ -339,6 +339,19 @@ sub _add_to_loop
 
 =cut
 
+=head2 $pid = $process->pid
+
+Returns the process ID of the process, if it has been started, or C<undef> if
+not.
+
+=cut
+
+sub pid
+{
+   my $self = shift;
+   return $self->{pid};
+}
+
 =head2 $running = $process->is_running
 
 Returns true if the Process has been started, and has not yet finished.
