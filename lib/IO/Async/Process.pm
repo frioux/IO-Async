@@ -298,6 +298,7 @@ sub _add_to_loop
          $mergepoint->done( "exit" );
       },
    );
+   $self->{running} = 1;
 
    $self->SUPER::_add_to_loop( @_ );
 
@@ -314,7 +315,7 @@ sub _add_to_loop
          $self->{dollarbang} = $dollarbang;
          $self->{dollarat}   = $dollarat;
 
-         undef $self->{pid};
+         undef $self->{running};
 
          if( $is_code ? $dollarat eq "" : $dollarbang == 0 ) {
             $self->invoke_event( on_finish => $exitcode );
@@ -342,7 +343,8 @@ sub _add_to_loop
 =head2 $pid = $process->pid
 
 Returns the process ID of the process, if it has been started, or C<undef> if
-not.
+not. Its value is preserved after the process exits, so it may be inspected
+during the C<on_finish> or C<on_exception> events.
 
 =cut
 
@@ -361,7 +363,7 @@ Returns true if the Process has been started, and has not yet finished.
 sub is_running
 {
    my $self = shift;
-   return defined $self->{pid};
+   return $self->{running};
 }
 
 =head2 $exited = $process->is_exited

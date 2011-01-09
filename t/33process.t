@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 58;
+use Test::More tests => 61;
 use Test::Refcount;
 
 use POSIX qw( WIFEXITED WEXITSTATUS ENOENT );
@@ -29,12 +29,14 @@ testing_loop( $loop );
    is_oneref( $process, '$process has refcount 1 before $loop->add' );
 
    ok( !$process->is_running, '$process is not yet running' );
+   ok( !defined $process->pid, '$process has no PID yet' );
 
    $loop->add( $process );
 
    is_refcount( $process, 2, '$process has refcount 2 after $loop->add' );
 
    ok( $process->is_running, '$process is running' );
+   ok( defined $process->pid, '$process now has a PID' );
 
    wait_for { defined $exitcode };
 
@@ -45,6 +47,7 @@ testing_loop( $loop );
    is( WEXITSTATUS($exitcode), 0, 'WEXITSTATUS($exitcode) after sub { 0 }' );
 
    ok( !$process->is_running, '$process no longer running' );
+   ok( defined $process->pid, '$process still has PID after exit' );
 
    ok( $process->is_exited,     '$process->is_exited after sub { 0 }' );
    is( $process->exitstatus, 0, '$process->exitstatus after sub { 0 }' );
