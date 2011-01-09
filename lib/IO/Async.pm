@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2008-2010 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2008-2011 -- leonerd@leonerd.org.uk
 
 package IO::Async;
 
@@ -128,6 +128,14 @@ callback when the given signal is received by the process. Multiple objects
 watching the same signal can be used; they will all invoke in no particular
 order.
 
+=head2 Processes Management
+
+An L<IO::Async::PID> object invokes its event when a given child process
+exits. An L<IO::Async::Process> object can start a new child process running
+either a given block of code, or executing a given command, set up pipes on
+its filehandles, write to or read from these pipes, and invoke its event when
+the child process exits.
+
 =head2 Merge Points
 
 The L<IO::Async::MergePoint> object class allows for a program to wait on the
@@ -160,10 +168,9 @@ implementation exists for the specific OS it runs on.
 
 The L<IO::Async::Loop> object provides a number of methods to facilitate the
 running of child processes. C<spawn_child> is primarily a wrapper around the
-typical C<fork()>/C<exec()> style of starting child processes, C<open_child>
-builds on this to provide management of child process file handles and streams
-connected to them, and finally C<run_child> builds on that to provide a method
-similar to perl's C<readpipe()> (which is used to implement backticks C<``>).
+typical C<fork()>/C<exec()> style of starting child processes, and
+C<run_child> provide a method similar to perl's C<readpipe()> (which is used
+to implement backticks C<``>).
 
 =head2 Detached Code
 
