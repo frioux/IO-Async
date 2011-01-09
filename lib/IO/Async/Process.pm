@@ -180,11 +180,27 @@ sub configure
       $self->{$_} = delete $setup_params{$_} if exists $setup_params{$_};
    }
 
+   $self->configure_fd( 0, %{ delete $setup_params{stdin}  } ) if $setup_params{stdin};
+   $self->configure_fd( 1, %{ delete $setup_params{stdout} } ) if $setup_params{stdout};
+   $self->configure_fd( 2, %{ delete $setup_params{stderr} } ) if $setup_params{stderr};
+
+   # All the rest are fd\d+
    foreach ( keys %setup_params ) {
-      $self->{fd_args}{$_} = $setup_params{$_};
+      my ( $fd ) = m/^fd(\d+)$/ or croak "Expected 'fd\\d+'";
+      $self->configure_fd( $fd, %{ $setup_params{$_} } );
    }
 
    $self->SUPER::configure( %params );
+}
+
+sub configure_fd
+{
+   my $self = shift;
+   my ( $fd, %args ) = @_;
+
+   $self->is_running and croak "Cannot configure fd $fd in a running Process";
+
+   $self->{fd_args}{"fd$fd"} = \%args;
 }
 
 sub _prepare
@@ -198,31 +214,24 @@ sub _prepare
    foreach my $key ( keys %$fd_args ) {
       my $fdopts = $fd_args->{$key};
 
-      my $orig_key = $key;
-
-      # Rewrite stdin/stdout/stderr
-      $key eq "stdin"  and $key = "fd0";
-      $key eq "stdout" and $key = "fd1";
-      $key eq "stderr" and $key = "fd2";
-
-      ref $fdopts eq "HASH" or croak "Expected '$orig_key' to be a HASH ref";
+      ref $fdopts eq "HASH" or croak "Expected '$key' to be a HASH ref";
 
       my $op;
 
       if( exists $fdopts->{on_read} ) {
-         ref $fdopts->{on_read} or croak "Expected 'on_read' for '$orig_key' to be a reference";
-         scalar keys %$fdopts == 1 or croak "Found other keys than 'on_read' for '$orig_key'";
+         ref $fdopts->{on_read} or croak "Expected 'on_read' for '$key' to be a reference";
+         scalar keys %$fdopts == 1 or croak "Found other keys than 'on_read' for '$key'";
 
          $op = "pipe_read";
       }
       elsif( exists $fdopts->{from} ) {
-         ref $fdopts->{from} eq "" or croak "Expected 'from' for '$orig_key' not to be a reference";
-         scalar keys %$fdopts == 1 or croak "Found other keys than 'from' for '$orig_key'";
+         ref $fdopts->{from} eq "" or croak "Expected 'from' for '$key' not to be a reference";
+         scalar keys %$fdopts == 1 or croak "Found other keys than 'from' for '$key'";
 
          $op = "pipe_write";
       }
       else {
-         croak "Cannot recognise what to do with '$orig_key'";
+         croak "Cannot recognise what to do with '$key'";
       }
 
       my ( $myfd, $childfd );
