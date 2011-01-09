@@ -105,6 +105,11 @@ C<exec()> function.
 A block of code to execute in the child process. It will be called in scalar
 context inside an C<eval> block.
 
+=item setup => ARRAY
+
+Optional reference to an array to pass to the underlying C<Loop>
+C<spawn_child> method.
+
 =item fdI<n> => HASH
 
 A hash describing how to set up file descriptor I<n>. The hash may contain one
@@ -149,7 +154,7 @@ sub configure
    # All these parameters can only be configured while the process isn't
    # running
    my %setup_params;
-   foreach (qw( code command stdin stdout stderr ), grep { m/^fd\d+$/ } keys %params ) {
+   foreach (qw( code command setup stdin stdout stderr ), grep { m/^fd\d+$/ } keys %params ) {
       $setup_params{$_} = delete $params{$_} if exists $params{$_};
    }
 
@@ -161,7 +166,7 @@ sub configure
       defined( exists $setup_params{command} ? $setup_params{command} : $self->{command} ) <= 1 or
       croak "Cannot have both 'code' and 'command'";
 
-   foreach (qw( code command )) {
+   foreach (qw( code command setup )) {
       $self->{$_} = delete $setup_params{$_} if exists $setup_params{$_};
    }
 
@@ -273,6 +278,9 @@ sub _add_to_loop
 
    $self->_prepare( $loop );
 
+   my @setup;
+   $self->{$_} and push @setup, @{ $self->{$_} } for qw( setup more_setup );
+
    my $mergepoint = $self->{mergepoint};
    
    $mergepoint->needs( "exit" );
@@ -283,7 +291,7 @@ sub _add_to_loop
       code    => $self->{code},
       command => $self->{command},
 
-      setup => $self->{more_setup},
+      setup => \@setup,
 
       on_exit => sub {
          ( undef, $exitcode, $dollarbang, $dollarat ) = @_;

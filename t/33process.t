@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 56;
+use Test::More tests => 58;
 use Test::Refcount;
 
 use POSIX qw( WIFEXITED WEXITSTATUS ENOENT );
@@ -308,4 +308,33 @@ testing_loop( $loop );
    is( $process->exitstatus, 0, '$process->exitstatus after perl STDIN->STDOUT using fd[n]' );
 
    is_deeply( \@stdout_lines, [ "some data\n" ], '@stdout_lines after perl STDIN->STDOUT using fd[n]' );
+}
+
+{
+   $ENV{TEST_KEY} = "foo";
+
+   my @stdout_lines;
+
+   my $process = IO::Async::Process->new(
+      code => sub { print "$ENV{TEST_KEY}\n"; },
+      setup => [
+         env => { TEST_KEY => "bar" },
+      ],
+      stdout  => {
+         on_read => sub {
+            my ( undef, $buffref ) = @_;
+            push @stdout_lines, $1 while $$buffref =~ s/^(.*\n)//;
+            return 0;
+         },
+      },
+      on_finish => sub { },
+   );
+
+   $loop->add( $process );
+
+   wait_for { !$process->is_running };
+
+   ok( $process->is_exited,     '$process->is_exited after %ENV test' );
+
+   is_deeply( \@stdout_lines, [ "bar\n" ], '@stdout_lines after %ENV test' );
 }
