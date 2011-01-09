@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2007-2009 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2007-2011 -- leonerd@leonerd.org.uk
 
 package IO::Async::ChildManager;
 
@@ -647,233 +647,22 @@ sub _spawn_in_child
 =head2 $pid = $loop->open_child( %params )
 
 This creates a new child process to run the given code block or command, and
-attaches filehandles to it that the parent will watch. The C<%params> hash
-takes the following keys:
+attaches filehandles to it that the parent will watch. This method is a light
+wrapper around constructing a new L<IO::Async::Process> object, provided
+largely for backward compatibility. New code ought to construct such an object
+directly, as it may provide more features than are available here.
 
-=over 8
-
-=item command => ARRAY or STRING
-
-=item code => CODE
-
-The command or code to run in the child process (as per the C<spawn> method)
-
-=item on_finish => CODE
-
-A continuation to be called when the child process exits and has closed all of
-the filehandles that were set up for it. It will be invoked in the following
-way:
-
- $on_finish->( $pid, $exitcode )
-
-The second argument is passed the plain perl C<$?> value. To use that
-usefully, see C<WEXITSTATUS()> and others from C<POSIX>.
-
-=item on_error => CODE
-
-Optional continuation to be called when the child code block throws an
-exception, or the command could not be C<exec()>ed. It will be invoked in the
-following way (as per C<spawn>)
-
- $on_error->( $pid, $exitcode, $dollarbang, $dollarat )
-
-If this continuation is not supplied, then C<on_finish> is used instead. The
-value of C<$!> and C<$@> will not be reported.
-
-=item setup => ARRAY
-
-Optional reference to an array to pass to the underlying C<spawn> method.
-
-=back
-
-In addition, the hash takes keys that define how to set up file descriptors in
-the child process. (If the C<setup> array is also given, these operations will
-be performed after those specified by C<setup>.)
-
-=over 8
-
-=item fdI<n> => HASH
-
-A hash describing how to set up file descriptor I<n>. The hash may contain one
-of the following sets of keys:
-
-=over 4
-
-=item on_read => CODE
-
-The child will be given the writing end of a pipe. The reading end will be
-wrapped by an C<IO::Async::Stream> using this C<on_read> callback function.
-
-=item from => STRING
-
-The child will be given the reading end of a pipe. The string given by the
-C<from> parameter will be written to the child. When all of the data has been
-written the pipe will be closed.
-
-=back
-
-=item stdin => ...
-
-=item stdout => ...
-
-=item stderr => ...
-
-Shortcuts for C<fd0>, C<fd1> and C<fd2> respectively.
-
-=back
+For more detail on this legacy interface, see the L<IO::Async::Loop>
+C<open_child> documentation directly.
 
 =cut
 
 sub open_child
 {
    my $self = shift;
-   my %params = @_;
-
-   my %subparams;
-   my @setup;
-   my %filehandles;
-
-   my $on_finish = delete $params{on_finish};
-   ref $on_finish or croak "Expected 'on_finish' to be a reference";
-
-   my $on_error = delete $params{on_error};
-   if( $on_error ) {
-      ref $on_error or croak "Expected 'on_error' to be a reference";
-   }
-
-   $params{on_exit} and croak "Cannot pass 'on_exit' parameter through ChildManager->open";
-
-   if( $params{setup} ) {
-      ref $params{setup} eq "ARRAY" or croak "Expected 'setup' to be an ARRAY ref";
-      @setup = @{ $params{setup} };
-      delete $params{setup};
-   }
 
    my $loop = $self->{loop};
-
-   foreach my $key ( keys %params ) {
-      my $value = $params{$key};
-
-      my $orig_key = $key;
-
-      # Rewrite stdin/stdout/stderr
-      $key eq "stdin"  and $key = "fd0";
-      $key eq "stdout" and $key = "fd1";
-      $key eq "stderr" and $key = "fd2";
-
-      if( $key =~  m/^fd\d+$/ ) {
-         ref $value eq "HASH" or croak "Expected '$orig_key' to be a HASH ref";
-
-         my $op;
-
-         if( exists $value->{on_read} ) {
-            ref $value->{on_read} or croak "Expected 'on_read' for '$orig_key' to be a reference";
-            scalar keys %$value == 1 or croak "Found other keys than 'on_read' for '$orig_key'";
-
-            $op = "pipe_read";
-         }
-         elsif( exists $value->{from} ) {
-            ref $value->{from} eq "" or croak "Expected 'from' for '$orig_key' not to be a reference";
-            scalar keys %$value == 1 or croak "Found other keys than 'from' for '$orig_key'";
-
-            $op = "pipe_write";
-         }
-         else {
-            croak "Cannot recognise what to do with '$orig_key'";
-         }
-
-         my ( $myfd, $childfd );
-
-         if( $op eq "pipe_read" ) {
-            ( $myfd, $childfd ) = $loop->pipepair() or croak "Unable to pipe() - $!";
-         }
-         elsif( $op eq "pipe_write" ) {
-            ( $childfd, $myfd ) = $loop->pipepair() or croak "Unable to pipe() - $!";
-         }
-
-         $filehandles{$key} = [ $myfd, $childfd, $value ];
-         push @setup, $key => [ dup => $childfd ];
-      }
-      else {
-         $subparams{$orig_key} = $value;
-      }
-   }
-
-   my $pid;
-
-   my $mergepoint = IO::Async::MergePoint->new(
-      needs => [ "exit", keys %filehandles ],
-
-      on_finished => sub {
-         my %items = @_;
-         my ( $exitcode, $dollarbang, $dollarat ) = @{ $items{exit} };
-
-         if( $params{code} and $dollarat eq "" or $params{command} and $dollarbang == 0 ) {
-            $on_finish->( $pid, $exitcode );
-         }
-         else {
-            if( $on_error ) {
-               $on_error->( $pid, $exitcode, $dollarbang, $dollarat );
-            }
-            else {
-               $on_finish->( $pid, $exitcode ); # Don't have a way to report dollarbang/dollarat
-            }
-         }
-      },
-   );
-
-   $pid = $loop->spawn_child( %subparams, 
-      setup => \@setup,
-      on_exit => sub {
-         my ( undef, $exitcode, $dollarbang, $dollarat ) = @_;
-         $mergepoint->done( "exit", [ $exitcode, $dollarbang, $dollarat ] );
-      },
-   );
-
-   return undef unless defined $pid;
-
-   # Now install the handlers
-
-   foreach my $fd ( keys %filehandles ) {
-      my ( $myfd, $childfd, $fdopts ) = @{ $filehandles{$fd} };
-
-      close( $childfd );
-
-      my $notifier;
-
-      if( exists $fdopts->{on_read} ) {
-         my $on_read = $fdopts->{on_read};
-
-         $notifier = IO::Async::Stream->new(
-            read_handle => $myfd,
-
-            on_read => $on_read,
-
-            on_closed => sub {
-               $mergepoint->done( $fd );
-            },
-         );
-      }
-      elsif( exists $fdopts->{from} ) {
-         $notifier = IO::Async::Stream->new(
-            write_handle => $myfd,
-
-            on_outgoing_empty => sub {
-               $notifier->close;
-            },
-
-            on_closed => sub {
-               $mergepoint->done( $fd );
-            },
-         );
-
-         $notifier->write( $fdopts->{from} );
-      }
-
-      $loop->add( $notifier );
-   }
-
-   return $pid;
+   return $loop->open_child( @_ );
 }
 
 =head2 $pid = $loop->run_child( %params )
