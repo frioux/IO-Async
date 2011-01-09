@@ -276,6 +276,8 @@ sub _add_to_loop
    
    $mergepoint->needs( "exit" );
 
+   my ( $exitcode, $dollarbang, $dollarat );
+
    $self->{pid} = $loop->spawn_child(
       code    => $self->{code},
       command => $self->{command},
@@ -283,8 +285,8 @@ sub _add_to_loop
       setup => $self->{more_setup},
 
       on_exit => sub {
-         my ( undef, $exitcode, $dollarbang, $dollarat ) = @_;
-         $mergepoint->done( "exit", [ $exitcode, $dollarbang, $dollarat ] );
+         ( undef, $exitcode, $dollarbang, $dollarat ) = @_;
+         $mergepoint->done( "exit" );
       },
    );
 
@@ -298,7 +300,6 @@ sub _add_to_loop
       on_finished => $self->_capture_weakself( sub {
          my $self = shift;
          my %items = @_;
-         my ( $exitcode, $dollarbang, $dollarat ) = @{ $items{exit} };
 
          $self->{exitcode} = $exitcode;
          $self->{dollarbang} = $dollarbang;
