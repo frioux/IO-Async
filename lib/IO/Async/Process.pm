@@ -71,6 +71,16 @@ the child process is started.
 
 =cut
 
+sub _init
+{
+   my $self = shift;
+   $self->SUPER::_init( @_ );
+
+   $self->{more_setup} = {};
+   $self->{to_close}   = {};
+   $self->{mergepoint} = IO::Async::MergePoint->new;
+}
+
 =head1 PARAMETERS
 
 The following named parameters may be passed to C<new> or C<configure>:
@@ -183,10 +193,7 @@ sub _prepare
    my ( $loop ) = @_;
 
    my $fd_args = $self->{fd_args};
-
-   $self->{more_setup}  = \my @setup;
-   $self->{to_close} = \my @to_close;
-   $self->{mergepoint} = my $mergepoint = IO::Async::MergePoint->new;
+   my $mergepoint = $self->{mergepoint};
 
    foreach my $key ( keys %$fd_args ) {
       my $fdopts = $fd_args->{$key};
@@ -227,8 +234,8 @@ sub _prepare
          ( $childfd, $myfd ) = $loop->pipepair() or croak "Unable to pipe() - $!";
       }
 
-      push @setup, $key => [ dup => $childfd ];
-      push @to_close, $childfd;
+      $self->{more_setup}{$key} = [ dup => $childfd ];
+      $self->{to_close}{$childfd->fileno} = $childfd;
 
       $mergepoint->needs( $key );
 
@@ -279,7 +286,8 @@ sub _add_to_loop
    $self->_prepare( $loop );
 
    my @setup;
-   $self->{$_} and push @setup, @{ $self->{$_} } for qw( setup more_setup );
+   push @setup, @{ $self->{setup} } if $self->{setup};
+   push @setup, %{ $self->{more_setup} };
 
    my $mergepoint = $self->{mergepoint};
    
@@ -302,7 +310,7 @@ sub _add_to_loop
 
    $self->SUPER::_add_to_loop( @_ );
 
-   $_->close for @{ delete $self->{to_close} };
+   $_->close for values %{ delete $self->{to_close} };
 
    my $is_code = defined $self->{code};
 
