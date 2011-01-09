@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 26;
+use Test::More tests => 28;
 use Test::Refcount;
 
 use POSIX qw( EAGAIN ECONNRESET );
@@ -149,6 +149,28 @@ $stream->write( "partial" );
 $loop->loop_once( 0.1 );
 
 is( read_data( $S2 ), "partial", 'data after writing buffer with write_len=2 with write_all');
+
+$loop->remove( $stream );
+
+{
+   my $stream = IO::Async::Stream->new;
+
+   undef $flushed;
+
+   $stream->write( "Prequeued data", on_flush => sub { $flushed++ } );
+
+   $stream->configure( write_handle => $S1 );
+
+   $loop->add( $stream );
+
+   wait_for { $flushed };
+
+   ok( 1, 'prequeued data gets flushed' );
+
+   is( read_data( $S2 ), "Prequeued data", 'prequeued data gets written' );
+
+   $loop->remove( $stream );
+}
 
 # Socket errors
 

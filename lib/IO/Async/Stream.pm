@@ -292,6 +292,10 @@ sub _add_to_loop
    }
 
    $self->SUPER::_add_to_loop( @_ );
+
+   if( !$self->_is_empty ) {
+      $self->want_writeready( 1 );
+   }
 }
 
 =head1 METHODS
@@ -459,6 +463,10 @@ yet empty; if more data has been queued since the call.
 
 =back
 
+If the object is not yet a member of a loop and doesn't yet have a
+C<write_handle>, then calls to the C<write> method will simply queue the data
+and return. It will be flushed when the object is added to the loop.
+
 =cut
 
 sub write
@@ -467,7 +475,12 @@ sub write
    my ( $data, %params ) = @_;
 
    carp "Cannot write data to a Stream that is closing" and return if $self->{stream_closing};
-   croak "Cannot write data to a Stream with no write_handle" unless my $handle = $self->write_handle;
+
+   # Allow writes without a filehandle if we're not yet in a Loop, just don't
+   # try to flush them
+   my $handle = $self->write_handle;
+
+   croak "Cannot write data to a Stream with no write_handle" if !$handle and $self->get_loop;
 
    # Combine short writes we can
    my $tail = @{ $self->{writequeue} } ? $self->{writequeue}[-1] : undef;
@@ -493,6 +506,8 @@ sub write
 
       $elem->[WQ_ON_FLUSH] = $params{on_flush};
    }
+
+   return unless $handle;
 
    if( $self->{autoflush} ) {
       1 while !$self->_is_empty and $self->_flush_one;
