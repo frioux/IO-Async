@@ -247,7 +247,8 @@ sub _prepare
             write_handle => $myfd,
 
             on_outgoing_empty => sub {
-               $notifier->close;
+               my ( $stream ) = @_;
+               $stream->close;
             },
 
             on_closed => sub {
