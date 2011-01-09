@@ -76,7 +76,6 @@ sub _init
    my $self = shift;
    $self->SUPER::_init( @_ );
 
-   $self->{more_setup} = {};
    $self->{to_close}   = {};
    $self->{mergepoint} = IO::Async::MergePoint->new;
 }
@@ -193,6 +192,12 @@ sub configure
    $self->SUPER::configure( %params );
 }
 
+# These are from the perspective of the parent
+use constant {
+   FD_WANTS_READ  => 0x1,
+   FD_WANTS_WRITE => 0x2,
+};
+
 sub configure_fd
 {
    my $self = shift;
@@ -200,88 +205,77 @@ sub configure_fd
 
    $self->is_running and croak "Cannot configure fd $fd in a running Process";
 
-   $self->{fd_args}{"fd$fd"} = \%args;
+   my $notifier = $self->{fd_notifier}{$fd} ||= IO::Async::Stream->new;
+   my $wants = $self->{fd_wants}{$fd} || 0;
+
+   if( my $on_read = delete $args{on_read} ) {
+      $notifier->configure( on_read => $on_read );
+
+      $wants |= FD_WANTS_READ;
+   }
+
+   if( my $from = delete $args{from} ) {
+      $notifier->write( $from );
+      $notifier->configure( on_outgoing_empty => sub {
+         my ( $notifier ) = @_;
+         $notifier->close;
+      } );
+
+      $wants |= FD_WANTS_WRITE;
+   }
+
+   keys %args and croak "Unexpected extra keys for fd $fd - " . join ", ", keys %args;
+
+   $self->{fd_wants}{$fd} = $wants;
 }
 
-sub _prepare
+sub _prepare_fds
 {
    my $self = shift;
    my ( $loop ) = @_;
 
-   my $fd_args = $self->{fd_args};
+   my $fd_notifier = $self->{fd_notifier};
+   my $fd_wants    = $self->{fd_wants};
+
    my $mergepoint = $self->{mergepoint};
 
-   foreach my $key ( keys %$fd_args ) {
-      my $fdopts = $fd_args->{$key};
+   my @setup;
 
-      ref $fdopts eq "HASH" or croak "Expected '$key' to be a HASH ref";
-
-      my $op;
-
-      if( exists $fdopts->{on_read} ) {
-         ref $fdopts->{on_read} or croak "Expected 'on_read' for '$key' to be a reference";
-         scalar keys %$fdopts == 1 or croak "Found other keys than 'on_read' for '$key'";
-
-         $op = "pipe_read";
-      }
-      elsif( exists $fdopts->{from} ) {
-         ref $fdopts->{from} eq "" or croak "Expected 'from' for '$key' not to be a reference";
-         scalar keys %$fdopts == 1 or croak "Found other keys than 'from' for '$key'";
-
-         $op = "pipe_write";
-      }
-      else {
-         croak "Cannot recognise what to do with '$key'";
-      }
+   foreach my $fd ( keys %$fd_wants ) {
+      my $notifier = $fd_notifier->{$fd};
+      my $wants    = $fd_wants->{$fd};
 
       my ( $myfd, $childfd );
 
-      if( $op eq "pipe_read" ) {
+      if( $wants == FD_WANTS_READ ) {
          ( $myfd, $childfd ) = $loop->pipepair() or croak "Unable to pipe() - $!";
+         $notifier->configure( read_handle => $myfd );
       }
-      elsif( $op eq "pipe_write" ) {
+      elsif( $wants == FD_WANTS_WRITE ) {
          ( $childfd, $myfd ) = $loop->pipepair() or croak "Unable to pipe() - $!";
+         $notifier->configure( write_handle => $myfd );
+      }
+      else {
+         croak "Unsure what to do with fd_wants==$wants";
       }
 
-      $self->{more_setup}{$key} = [ dup => $childfd ];
+      my $key = "fd$fd";
+
+      push @setup, $key => [ dup => $childfd ];
       $self->{to_close}{$childfd->fileno} = $childfd;
 
       $mergepoint->needs( $key );
 
-      my $notifier;
-
-      if( exists $fdopts->{on_read} ) {
-         my $on_read = $fdopts->{on_read};
-
-         $notifier = IO::Async::Stream->new(
-            read_handle => $myfd,
-
-            on_read => $on_read,
-
-            on_closed => sub {
-               $mergepoint->done( $key );
-            },
-         );
-      }
-      elsif( exists $fdopts->{from} ) {
-         $notifier = IO::Async::Stream->new(
-            write_handle => $myfd,
-
-            on_outgoing_empty => sub {
-               my ( $stream ) = @_;
-               $stream->close;
-            },
-
-            on_closed => sub {
-               $mergepoint->done( $key );
-            },
-         );
-
-         $notifier->write( $fdopts->{from} );
-      }
+      $notifier->configure(
+         on_closed => sub {
+            $mergepoint->done( $key );
+         },
+      );
 
       $self->add_child( $notifier );
    }
+
+   return @setup;
 }
 
 sub _add_to_loop
@@ -292,11 +286,10 @@ sub _add_to_loop
    $self->{code} or $self->{command} or
       croak "Require either 'code' or 'command' in $self";
 
-   $self->_prepare( $loop );
-
    my @setup;
    push @setup, @{ $self->{setup} } if $self->{setup};
-   push @setup, %{ $self->{more_setup} };
+
+   push @setup, $self->_prepare_fds( $loop );
 
    my $mergepoint = $self->{mergepoint};
    
