@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2009,2010 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2009-2011 -- leonerd@leonerd.org.uk
 
 package IO::Async::LoopTests;
 
@@ -366,24 +366,34 @@ Tests the Loop's ability to watch POSIX signals
 
 =cut
 
-use constant count_tests_signal => 11;
+use constant count_tests_signal => 14;
 sub run_tests_signal
 {
-   my $caught;
+   my $caught = 0;
 
-   $loop->watch_signal( TERM => sub { $caught = 1 } );
+   $loop->watch_signal( TERM => sub { $caught++ } );
 
    is_oneref( $loop, '$loop has refcount 1 after watch_signal()' );
 
    $loop->loop_once( 0.1 );
 
-   is( $caught, undef, '$caught idling' );
+   is( $caught, 0, '$caught idling' );
 
    kill SIGTERM, $$;
 
+   is( $caught, 0, '$caught before ->loop_once' );
+
    $loop->loop_once( 0.1 );
 
-   is( $caught, 1, '$caught after raise' );
+   is( $caught, 1, '$caught after ->loop_once' );
+
+   kill SIGTERM, $$;
+
+   is( $caught, 1, 'second raise is still deferred' );
+
+   $loop->loop_once( 0.1 );
+
+   is( $caught, 2, '$caught after second ->loop_once' );
 
    is_oneref( $loop, '$loop has refcount 1 before unwatch_signal()' );
 
