@@ -12,9 +12,9 @@ use constant ENOENT_MESSAGE => do { local $! = ENOENT; "$!" };
 
 use IO::Async::Process;
 
-use IO::Async::Loop;
+use IO::Async::Loop::Poll;
 
-my $loop = IO::Async::Loop->new();
+my $loop = IO::Async::Loop::Poll->new();
 
 testing_loop( $loop );
 
