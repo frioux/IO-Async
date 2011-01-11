@@ -205,20 +205,20 @@ sub configure_fd
 
    $self->is_running and croak "Cannot configure fd $fd in a running Process";
 
-   my $notifier = $self->{fd_notifier}{$fd} ||= IO::Async::Stream->new;
-   my $wants = $self->{fd_wants}{$fd} || 0;
+   my $handle = $self->{fd_handle}{$fd} ||= IO::Async::Stream->new;
+   my $wants  = $self->{fd_wants}{$fd}  || 0;
 
    if( my $on_read = delete $args{on_read} ) {
-      $notifier->configure( on_read => $on_read );
+      $handle->configure( on_read => $on_read );
 
       $wants |= FD_WANTS_READ;
    }
 
    if( my $from = delete $args{from} ) {
-      $notifier->write( $from );
-      $notifier->configure( on_outgoing_empty => sub {
-         my ( $notifier ) = @_;
-         $notifier->close;
+      $handle->write( $from );
+      $handle->configure( on_outgoing_empty => sub {
+         my ( $handle ) = @_;
+         $handle->close;
       } );
 
       $wants |= FD_WANTS_WRITE;
@@ -234,26 +234,26 @@ sub _prepare_fds
    my $self = shift;
    my ( $loop ) = @_;
 
-   my $fd_notifier = $self->{fd_notifier};
-   my $fd_wants    = $self->{fd_wants};
+   my $fd_handle = $self->{fd_handle};
+   my $fd_wants  = $self->{fd_wants};
 
    my $mergepoint = $self->{mergepoint};
 
    my @setup;
 
    foreach my $fd ( keys %$fd_wants ) {
-      my $notifier = $fd_notifier->{$fd};
-      my $wants    = $fd_wants->{$fd};
+      my $handle = $fd_handle->{$fd};
+      my $wants  = $fd_wants->{$fd};
 
       my ( $myfd, $childfd );
 
       if( $wants == FD_WANTS_READ ) {
          ( $myfd, $childfd ) = $loop->pipepair() or croak "Unable to pipe() - $!";
-         $notifier->configure( read_handle => $myfd );
+         $handle->configure( read_handle => $myfd );
       }
       elsif( $wants == FD_WANTS_WRITE ) {
          ( $childfd, $myfd ) = $loop->pipepair() or croak "Unable to pipe() - $!";
-         $notifier->configure( write_handle => $myfd );
+         $handle->configure( write_handle => $myfd );
       }
       else {
          croak "Unsure what to do with fd_wants==$wants";
@@ -266,13 +266,13 @@ sub _prepare_fds
 
       $mergepoint->needs( $key );
 
-      $notifier->configure(
+      $handle->configure(
          on_closed => sub {
             $mergepoint->done( $key );
          },
       );
 
-      $self->add_child( $notifier );
+      $self->add_child( $handle );
    }
 
    return @setup;
@@ -440,6 +440,48 @@ sub errstr
    my $self = shift;
    return $self->{dollarbang}."";
 }
+
+=head2 $stream = $process->fd( $fd )
+
+Returns the L<IO::Async::Stream> associated with the given FD number. This
+must have been set up by a C<configure> argument prior to adding the
+C<Process> object to the C<Loop>.
+
+The returned C<Stream> object have its read or write handle set to the other
+end of a pipe connected to that FD number in the child process. Typically,
+this will be used to call the C<write> method on, to write more data into the
+child, or to set an C<on_read> handler to read data out of the child.
+
+The C<on_closed> event for these streams must not be changed, or it will break
+the close detection used by the C<Process> object and the C<on_finish> event
+will not be invoked.
+
+=cut
+
+sub fd
+{
+   my $self = shift;
+   my ( $fd ) = @_;
+
+   return $self->{fd_handle}{$fd} or
+      croak "$self does not have an fd Stream for $fd";
+}
+
+=head2 $stream = $process->stdin
+
+=head2 $stream = $process->stdout
+
+=head2 $stream = $process->stderr
+
+Shortcuts for calling C<fd> with 0, 1, or 2 respectively, to obtain the
+L<IO::Async::Stream> representing the standard input, output, or error streams
+of the child process.
+
+=cut
+
+sub stdin  { shift->fd( 0 ) }
+sub stdout { shift->fd( 1 ) }
+sub stderr { shift->fd( 2 ) }
 
 # Keep perl happy; keep Britain tidy
 1;

@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 61;
+use Test::More tests => 67;
 use Test::Refcount;
 
 use POSIX qw( WIFEXITED WEXITSTATUS ENOENT );
@@ -192,7 +192,11 @@ testing_loop( $loop );
       on_finish => sub { },
    );
 
+   isa_ok( $process->stdout, "IO::Async::Stream", '$process->stdout' );
+
    $loop->add( $process );
+
+   ok( defined $process->stdout->read_handle, '$process->stdout has read_handle' );
 
    wait_for { !$process->is_running };
 
@@ -250,7 +254,11 @@ testing_loop( $loop );
       on_finish => sub { },
    );
 
+   isa_ok( $process->stderr, "IO::Async::Stream", '$process->stderr' );
+
    $loop->add( $process );
+
+   ok( defined $process->stderr->read_handle, '$process->stderr has read_handle' );
 
    wait_for { !$process->is_running };
 
@@ -277,7 +285,11 @@ testing_loop( $loop );
       on_finish => sub { },
    );
 
+   isa_ok( $process->stdin, "IO::Async::Stream", '$process->stdin' );
+
    $loop->add( $process );
+
+   ok( defined $process->stdin->write_handle, '$process->stdin has write_handle' );
 
    wait_for { !$process->is_running };
 
