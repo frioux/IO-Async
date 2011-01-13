@@ -55,6 +55,10 @@ C<IO::Async::PID> - event callback on exit of a child process
 This subclass of L<IO::Async::Notifier> invokes its callback when a process
 exits.
 
+For most use cases, a L<IO::Async::Process> object provides more control of
+setting up the process, connecting filehandles to it, sending data to and
+receiving data from it.
+
 =cut
 
 =head1 EVENTS

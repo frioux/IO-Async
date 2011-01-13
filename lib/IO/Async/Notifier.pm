@@ -103,6 +103,10 @@ L<IO::Async::Signal> - event callback on receipt of a POSIX signal
 
 L<IO::Async::PID> - event callback on exit of a child process
 
+=item *
+
+L<IO::Async::Process> - start and manage a child process
+
 =back
 
 For more detail, see the SYNOPSIS section in one of the above.
