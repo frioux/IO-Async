@@ -555,9 +555,12 @@ sockets.
 
  $loop->loop_forever;
 
-=head2 Passing Packed Socket Addresses
+=head2 Passing Plain Socket Addresses
 
-The C<addr> or C<addrs> parameters should contain a packed socket address.
+The C<addr> or C<addrs> parameters should contain a definition of a plain
+socket address in a form that the L<IO::Async::Loop> C<unpack_addrinfo> method
+can use.
+
 This example shows how to use the C<Socket> functions to construct one for
 TCP port 8001 on address 10.0.0.1:
 
