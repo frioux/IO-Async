@@ -205,6 +205,8 @@ sub configure_fd
 
    $self->is_running and croak "Cannot configure fd $fd in a running Process";
 
+   require IO::Async::Stream;
+
    my $handle = $self->{fd_handle}{$fd} ||= IO::Async::Stream->new;
    my $wants  = $self->{fd_wants}{$fd}  || 0;
 
