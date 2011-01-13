@@ -25,7 +25,33 @@ C<IO::Async::Process> - start and manage a child process
 
 =head1 SYNOPSIS
 
- TODO
+ use IO::Async::Process;
+
+ use IO::Async::Loop;
+ my $loop = IO::Async::Loop->new();
+
+ my $process = IO::Async::Process->new(
+    command => [ "tr", "a-z", "n-za-m" ],
+    stdin => {
+       from => "hello world\n",
+    },
+    stdout => {
+       on_read => sub {
+          my ( $stream, $buffref ) = @_;
+          $$buffref =~ s/^(.*)\n// or return 0;
+
+          print "Rot13 of 'hello world' is '$1'\n";
+       },
+    },
+    
+    on_finish => sub {
+       $loop->loop_stop;
+    },
+ );
+
+ $loop->add( $process );
+
+ $loop->loop_forever;
 
 =head1 DESCRIPTION
 
