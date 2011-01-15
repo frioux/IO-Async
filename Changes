@@ -1,5 +1,17 @@
 Revision history for IO-Async
 
+0.36    ADDITIONS:
+         * IO::Async::Processo
+
+        CHANGES:
+         * Allow prequeuing of ->write data in Stream
+         * Check that signal handling remains properly deferred in LoopTests
+         * Miscellaneous documentation and examples updates
+
+        BUGFIXES:
+         * RT 64558 - getaddrinfo() returns duplicate addresses for localhost
+         * Don't rely on having NI_NUMERICSERV
+
 0.35    ADDITIONS:
          * Loop->unpack_addrinfo
 
