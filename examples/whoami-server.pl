@@ -27,9 +27,8 @@ my $listener = IO::Async::Listener->new(
 
       $clientstream->write( "Your address is " . $peeraddr . "\n" );
 
-      $loop->resolve(
-         type => 'getnameinfo',
-         data => [ $socket->peername ],
+      $loop->resolver->getnameinfo(
+         addr => $socket->peername,
 
          on_resolved => sub {
             my ( $host, $service ) = @_;
