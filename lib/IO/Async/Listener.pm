@@ -71,7 +71,7 @@ This object can also be used indirectly via an C<IO::Async::Loop>:
     service  => "echo",
     socktype => 'stream',
 
-    on_accept => sub {
+    on_stream => sub {
        ...
     },
 

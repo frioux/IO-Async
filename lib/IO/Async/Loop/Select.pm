@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2007-2009 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2007-2011 -- leonerd@leonerd.org.uk
 
 package IO::Async::Loop::Select;
 
@@ -21,22 +21,15 @@ C<IO::Async::Loop::Select> - use C<IO::Async> with C<select(2)>
 
 =head1 SYNOPSIS
 
+Normally an instance of this class would not be directly constructed by a
+program. It may however, be useful for runinng L<IO::Async> with an existing
+program already using a C<select()> call.
+
  use IO::Async::Loop::Select;
 
  my $loop = IO::Async::Loop::Select->new();
 
  $loop->add( ... );
-
- $loop->loop_forever();
-
-Or
-
- while(1) {
-    $loop->loop_once();
-    ...
- }
-
-Or
 
  while(1) {
     my ( $rvec, $wvec, $evec ) = ('') x 3;

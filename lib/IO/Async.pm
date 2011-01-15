@@ -30,12 +30,10 @@ C<IO::Async> - Asynchronous event-driven programming
     service  => 12345,
     socktype => 'stream',
 
-    on_connected => sub {
-       my ( $socket ) = @_;
+    on_stream => sub {
+       my ( $stream ) = @_;
 
-       my $stream = IO::Async::Stream->new(
-          handle => $socket,
-
+       $stream->configure(
           on_read => sub {
              my ( $self, $buffref, $closed ) = @_;
 
@@ -52,7 +50,8 @@ C<IO::Async> - Asynchronous event-driven programming
        $loop->add( $stream );
     },
 
-    ...
+    on_resolve_error => sub { die "Cannot resolve - $_[-1]\n"; },
+    on_connect_error => sub { die "Cannot connect - $_[0] failed $_[-1]\n"; },
  );
 
  $loop->loop_forever();

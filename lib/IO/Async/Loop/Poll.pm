@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2007-2010 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2007-2011 -- leonerd@leonerd.org.uk
 
 package IO::Async::Loop::Poll;
 
@@ -30,22 +30,9 @@ C<IO::Async::Loop::Poll> - use C<IO::Async> with C<poll(2)>
 
 =head1 SYNOPSIS
 
- use IO::Async::Loop::Poll;
-
- my $loop = IO::Async::Loop::Poll->new();
-
- $loop->add( ... );
-
- $loop->loop_forever();
-
-Or
-
- while(1) {
-    $loop->loop_once();
-    ...
- }
-
-Or
+Normally an instance of this class would not be directly constructed by a
+program. It may however, be useful for runinng L<IO::Async> with an existing
+program already using an C<IO::Poll> object.
 
  use IO::Poll;
  use IO::Async::Loop::Poll;

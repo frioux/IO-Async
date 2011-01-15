@@ -53,12 +53,31 @@ This object is used indirectly via an C<IO::Async::Loop>:
  use IO::Async::Loop;
  my $loop = IO::Async::Loop->new();
 
- $loop->resolve( type => 'getpwuid', data => [ $< ],
-    on_resolved => 
-       sub { print "My passwd ent: " . join( "|", @_ ) . "\n" },
+ $loop->resolver->getaddrinfo(
+    host    => "www.example.com",
+    service => "http",
 
-    on_error =>
-       sub { print "Cannot look up my passwd ent - $_[0]\n" },
+    on_resolved => sub {
+       foreach my $addr ( @_ ) {
+          printf "http://www.example.com can be reached at " .
+             "socket(%d,%d,%d) + connect('%v02x')\n",
+             @{$addr}{qw( family socktype protocol addr )};
+       }
+    },
+
+    on_error => sub {
+       print "Cannot look up www.example.com - $_[-1]\n";
+    },
+ );
+
+ $loop->resolve( type => 'getpwuid', data => [ $< ],
+    on_resolved => sub {
+       print "My passwd ent: " . join( "|", @_ ) . "\n";
+    },
+
+    on_error => sub {
+       print "Cannot look up my passwd ent - $_[-1]\n";
+    },
  );
 
  $loop->loop_forever;

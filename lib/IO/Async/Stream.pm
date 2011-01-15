@@ -35,20 +35,14 @@ filehandle
 
 =head1 SYNOPSIS
 
- use IO::Socket::INET;
  use IO::Async::Stream;
 
  use IO::Async::Loop;
  my $loop = IO::Async::Loop->new();
 
- my $socket = IO::Socket::INET->new(
-    PeerHost => "some.other.host",
-    PeerPort => 12345,
-    Blocking => 0,                   # This line is very important
- );
-
  my $stream = IO::Async::Stream->new(
-    handle => $socket,
+    read_handle  => \*STDIN,
+    write_handle => \*STDOUT,
 
     on_read => sub {
        my ( $self, $buffref, $closed ) = @_;
@@ -92,22 +86,16 @@ Or
     }
  );
 
-Or
-
- use IO::Handle;
-
- my $stream = IO::Async::Stream->new(
-    read_handle  => \*STDIN,
-    write_handle => \*STDOUT,
-    ...
- );
-
 =head1 DESCRIPTION
 
 This subclass of L<IO::Async::Handle> contains a filehandle that represents
 a byte-stream. It provides buffering for both incoming and outgoing data. It
 invokes the C<on_read> handler when new data is read from the filehandle. Data
 may be written to the filehandle by calling the C<write()> method.
+
+For implementing real network protocols that are based on messages sent over a
+byte-stream (such as a TCP socket), it may be more appropriate to use a
+subclass of L<IO::Async::Protocol::Stream>.
 
 =cut
 
@@ -642,6 +630,9 @@ is ready (i.e. a whole line), and to remove it from the buffer. If no data is
 available then C<0> is returned, to indicate it should not be tried again. If
 a line was successfully extracted, then C<1> is returned, to indicate it
 should try again in case more lines exist in the buffer.
+
+For implementing real network protocols that are based on lines of text it may
+be more appropriate to use a subclass of L<IO::Async::Protocol::LineStream>.
 
 =head2 Dynamic replacement of C<on_read()>
 
