@@ -670,100 +670,21 @@ sub open_child
 This creates a new child process to run the given code block or command,
 capturing its STDOUT and STDERR streams. When the process exits, a
 continuation is invoked being passed the exitcode, and content of the streams.
+This method is a light wrapper around constructing a new L<IO::Async::Process>
+object, provided largely for backward compatibility. New code ought to construct
+such an object directly, as it may provide more features than are available here.
 
-=over 8
-
-=item command => ARRAY or STRING
-
-=item code => CODE
-
-The command or code to run in the child process (as per the C<spawn> method)
-
-=item on_finish => CODE
-
-A continuation to be called when the child process exits and closed its STDOUT
-and STDERR streams. It will be invoked in the following way:
-
- $on_finish->( $pid, $exitcode, $stdout, $stderr )
-
-The second argument is passed the plain perl C<$?> value. To use that
-usefully, see C<WEXITSTATUS()> and others from C<POSIX>.
-
-=item stdin => STRING
-
-Optional. String to pass in to the child process's STDIN stream.
-
-=item setup => ARRAY
-
-Optional reference to an array to pass to the underlying C<spawn> method.
-
-=back
-
-This method is intended mainly as an IO::Async-compatible replacement for the
-perl C<readpipe> function (`backticks`), allowing it to replace
-
-  my $output = `command here`;
-
-with
-
- $loop->run_child(
-    command => "command here", 
-    on_finish => sub {
-       my ( undef, $exitcode, $output ) = @_;
-       ...
-    }
- );
+For more detail on this legacy interface, see the L<IO::Async::Loop>
+C<run_child> documentation directly.
 
 =cut
 
 sub run_child
 {
    my $self = shift;
-   my %params = @_;
-
-   my $on_finish = delete $params{on_finish};
-   ref $on_finish or croak "Expected 'on_finish' to be a reference";
-
-   my $child_out;
-   my $child_err;
-
-   my %subparams;
-
-   if( my $child_stdin = delete $params{stdin} ) {
-      ref $child_stdin and croak "Expected 'stdin' not to be a reference";
-      $subparams{stdin} = { from => $child_stdin };
-   }
-
-   $subparams{code}    = delete $params{code};
-   $subparams{command} = delete $params{command};
-   $subparams{setup}   = delete $params{setup};
-
-   croak "Unrecognised parameters " . join( ", ", keys %params ) if keys %params;
 
    my $loop = $self->{loop};
-   $loop->open_child(
-      %subparams,
-      stdout => {
-         on_read => sub { 
-            my ( $stream, $buffref, $closed ) = @_;
-            $child_out = $$buffref if $closed;
-            return 0;
-         }
-      },
-
-      stderr => { 
-         on_read => sub {
-            my ( $stream, $buffref, $closed ) = @_;
-            $child_err = $$buffref if $closed;
-            return 0;
-         }
-      },
-
-      on_finish => sub {
-         my ( $kid, $exitcode ) = @_;
-         $on_finish->( $kid, $exitcode, $child_out, $child_err );
-      },
-   );
+   return $loop->run_child( @_ );
 }
 
 # Keep perl happy; keep Britain tidy
