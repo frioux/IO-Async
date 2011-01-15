@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2009 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2009-2011 -- leonerd@leonerd.org.uk
 
 package IO::Async::Timer;
 
@@ -153,13 +153,19 @@ sub start
 
 =head2 $timer->stop
 
-Stops the Timer if it is running.
+Stops the Timer if it is running. If it has not yet been added to the C<Loop>
+but there is a start pending, this will cancel it.
 
 =cut
 
 sub stop
 {
    my $self = shift;
+
+   if( $self->{pending} ) {
+      delete $self->{pending};
+      return;
+   }
 
    my $loop = $self->get_loop or croak "Cannot stop a Timer that is not in a Loop";
 
