@@ -30,12 +30,13 @@ $loop->loop_forever;
 package ProxyListener;
 use base qw( IO::Async::Listener );
 
-sub on_accept
+sub on_stream
 {
    my $self = shift;
-   my ( $socket1 ) = @_;
+   my ( $stream1 ) = @_;
 
    # $socket is just an IO::Socket reference
+   my $socket1 = $stream1->read_handle;
    my $peeraddr = $socket1->peerhost . ":" . $socket1->peerport;
 
    print STDERR "Accepted new connection from $peeraddr\n";
@@ -44,15 +45,10 @@ sub on_accept
       host    => $CONNECT_HOST,
       service => $CONNECT_PORT,
 
-      on_connected => sub {
-         my ( $socket2 ) = @_;
+      on_stream => sub {
+         my ( $stream2 ) = @_;
 
-         # Now we need two Streams, cross-connected.
-         my ( $stream1, $stream2 );
-
-         $stream1 = IO::Async::Stream->new(
-            handle => $socket1,
-
+         $stream1->configure(
             on_read => sub {
                my ( $self, $buffref, $closed ) = @_;
                # Just copy all the data
@@ -65,9 +61,7 @@ sub on_accept
             },
          );
 
-         $stream2 = IO::Async::Stream->new(
-            handle => $socket2,
-
+         $stream2->configure(
             on_read => sub {
                my ( $self, $buffref, $closed ) = @_;
                # Just copy all the data

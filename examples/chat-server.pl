@@ -29,20 +29,19 @@ use base qw( IO::Async::Listener );
 
 my @clients;
 
-sub on_accept
+sub on_stream
 {
    my $self = shift;
-   my ( $socket ) = @_;
+   my ( $stream ) = @_;
 
    # $socket is just an IO::Socket reference
+   my $socket = $stream->read_handle;
    my $peeraddr = $socket->peerhost . ":" . $socket->peerport;
 
    # Inform the others
    $_->write( "$peeraddr joins\n" ) for @clients;
 
-   my $clientstream = IO::Async::Stream->new(
-      handle => $socket,
-
+   $stream->configure(
       on_read => sub {
          my ( $self, $buffref, $closed ) = @_;
 
@@ -67,6 +66,6 @@ sub on_accept
       },
    );
 
-   $loop->add( $clientstream );
-   push @clients, $clientstream;
+   $loop->add( $stream );
+   push @clients, $stream;
 }
