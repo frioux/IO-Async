@@ -196,6 +196,8 @@ my ( $localhost_err, @localhost_addrs ) = getaddrinfo( "localhost", "www", { fam
 }
 
 {
+   my ( $lo_err, @lo_addrs ) = getaddrinfo( "127.0.0.1", "80", { socktype => SOCK_STREAM } );
+
    my $result;
 
    $resolver->getaddrinfo(
@@ -210,12 +212,7 @@ my ( $localhost_err, @localhost_addrs ) = getaddrinfo( "localhost", "www", { fam
 
    my @got = @{$result}[1..$#$result];
 
-   # GNU libc returns a duplicate AF_INET entry for "localhost" if /etc/hosts
-   # also contains a line    "::1    localhost"
-   #     https://rt.cpan.org/Ticket/Display.html?id=64558
-   # We're only expecting one result anyway, it should be unique. So just
-   # test the first one.
-   is_deeply( $got[0], $localhost_addrs[0], '$resolver->getaddrinfo resolved address synchronously' );
+   is_deeply( \@got, \@lo_addrs, '$resolver->getaddrinfo resolved addresses synchronously' );
 }
 
 my $testaddr = pack_sockaddr_in( 80, INADDR_LOOPBACK );
