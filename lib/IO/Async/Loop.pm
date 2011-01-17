@@ -827,8 +827,8 @@ sub run_child
    my $on_finish = delete $params{on_finish};
    ref $on_finish or croak "Expected 'on_finish' to be a reference";
 
-   my $child_out;
-   my $child_err;
+   my $stdout;
+   my $stderr;
 
    my %subparams;
 
@@ -843,29 +843,21 @@ sub run_child
 
    croak "Unrecognised parameters " . join( ", ", keys %params ) if keys %params;
 
-   $self->open_child(
+   require IO::Async::Process;
+   my $process = IO::Async::Process->new(
       %subparams,
-      stdout => {
-         on_read => sub { 
-            my ( $stream, $buffref, $closed ) = @_;
-            $child_out = $$buffref if $closed;
-            return 0;
-         }
-      },
-
-      stderr => { 
-         on_read => sub {
-            my ( $stream, $buffref, $closed ) = @_;
-            $child_err = $$buffref if $closed;
-            return 0;
-         }
-      },
+      stdout => { into => \$stdout },
+      stderr => { into => \$stderr },
 
       on_finish => sub {
-         my ( $kid, $exitcode ) = @_;
-         $on_finish->( $kid, $exitcode, $child_out, $child_err );
+         my ( $process, $exitcode ) = @_;
+         $on_finish->( $process->pid, $exitcode, $stdout, $stderr );
       },
    );
+
+   $self->add( $process );
+
+   return $process->pid;
 }
 
 =head2 $loop->resolver
