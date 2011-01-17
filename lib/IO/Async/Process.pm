@@ -147,10 +147,35 @@ C<spawn_child> method.
 
 =item fdI<n> => HASH
 
-A hash describing how to set up file descriptor I<n>. The hash may contain one
-of the following sets of keys:
+A hash describing how to set up file descriptor I<n>. The hash may contain the
+following keys:
 
 =over 4
+
+=item via => STRING
+
+Configures how this file descriptor will be configured for the child process.
+Must be given one of the following mode names:
+
+=over 4
+
+=item pipe_read
+
+The child will be given the writing end of a C<pipe(2)>; the parent may read
+from the other.
+
+=item pipe_write
+
+The child will be given the reading end of a C<pipe(2)>; the parent may write
+to the other.
+
+=back
+
+Once the filehandle is set up, the C<fd> method (or its shortcuts of C<stdin>,
+C<stdout> or C<stderr>) may be used to access the C<IO::Async::Stream> object
+wrapped around it.
+
+The value of this argument is implied by any of the following alternatives.
 
 =item on_read => CODE
 
@@ -230,6 +255,11 @@ use constant {
    FD_VIA_PIPEWRITE => 2,
 };
 
+my %via_names = (
+   pipe_read  => FD_VIA_PIPEREAD,
+   pipe_write => FD_VIA_PIPEWRITE,
+);
+
 sub configure_fd
 {
    my $self = shift;
@@ -240,8 +270,17 @@ sub configure_fd
    require IO::Async::Stream;
 
    my $handle = $self->{fd_handle}{$fd} ||= IO::Async::Stream->new;
+   my $via = $self->{fd_via}{$fd};
 
    my ( $wants_read, $wants_write );
+
+   if( my $via_name = delete $args{via} ) {
+      defined $via and
+         croak "Cannot change the 'via' mode of fd$fd now that it is already configured";
+
+      $via = $via_names{$via_name} or
+         croak "Unrecognised 'via' name of '$via_name'";
+   }
 
    if( my $on_read = delete $args{on_read} ) {
       $handle->configure( on_read => $on_read );
@@ -273,16 +312,22 @@ sub configure_fd
 
    keys %args and croak "Unexpected extra keys for fd $fd - " . join ", ", keys %args;
 
-   my $via = $self->{fd_via}{$fd};
    if( !defined $via ) {
       $via = FD_VIA_PIPEREAD  if  $wants_read and !$wants_write;
       $via = FD_VIA_PIPEWRITE if !$wants_read and  $wants_write;
 
-      defined $via and $self->{fd_via}{$fd} = $via;
+   }
+   elsif( $via == FD_VIA_PIPEREAD ) {
+      $wants_write and croak "fd$fd would want writing but has via = pipe_read";
+   }
+   elsif( $via == FD_VIA_PIPEWRITE ) {
+      $wants_read and croak "fd$fd would want writing but has via = pipe_write";
    }
    else {
       die "Need to check fd_via{$fd}\n";
    }
+
+   defined $via and $self->{fd_via}{$fd} = $via;
 }
 
 sub _prepare_fds

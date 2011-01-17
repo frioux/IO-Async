@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 27;
+use Test::More tests => 37;
 
 use IO::Async::Process;
 
@@ -13,6 +13,37 @@ use IO::Async::Loop::Poll;
 my $loop = IO::Async::Loop::Poll->new();
 
 testing_loop( $loop );
+
+{
+   my $process = IO::Async::Process->new(
+      code => sub { print "hello\n"; return 0 },
+      stdout => { via => "pipe_read" },
+      on_finish => sub { },
+   );
+
+   isa_ok( $process->stdout, "IO::Async::Stream", '$process->stdout' );
+   
+   my @stdout_lines;
+
+   $process->stdout->configure(
+      on_read => sub {
+         my ( undef, $buffref ) = @_;
+         push @stdout_lines, $1 while $$buffref =~ s/^(.*\n)//;
+         return 0;
+      },
+   );
+
+   $loop->add( $process );
+
+   ok( defined $process->stdout->read_handle, '$process->stdout has read_handle for sub { print }' );
+
+   wait_for { !$process->is_running };
+
+   ok( $process->is_exited,     '$process->is_exited after sub { print }' );
+   is( $process->exitstatus, 0, '$process->exitstatus after sub { print }' );
+
+   is_deeply( \@stdout_lines, [ "hello\n" ], '@stdout_lines after sub { print }' );
+}
 
 {
    my @stdout_lines;
@@ -33,14 +64,14 @@ testing_loop( $loop );
 
    $loop->add( $process );
 
-   ok( defined $process->stdout->read_handle, '$process->stdout has read_handle' );
+   ok( defined $process->stdout->read_handle, '$process->stdout has read_handle for sub { print } inline' );
 
    wait_for { !$process->is_running };
 
-   ok( $process->is_exited,     '$process->is_exited after sub { print }' );
-   is( $process->exitstatus, 0, '$process->exitstatus after sub { print }' );
+   ok( $process->is_exited,     '$process->is_exited after sub { print } inline' );
+   is( $process->exitstatus, 0, '$process->exitstatus after sub { print } inline' );
 
-   is_deeply( \@stdout_lines, [ "hello\n" ], '@stdout_lines after sub { print }' );
+   is_deeply( \@stdout_lines, [ "hello\n" ], '@stdout_lines after sub { print } inline' );
 }
 
 {
@@ -56,14 +87,14 @@ testing_loop( $loop );
 
    $loop->add( $process );
 
-   ok( defined $process->stdout->read_handle, '$process->stdout has read_handle' );
+   ok( defined $process->stdout->read_handle, '$process->stdout has read_handle for sub { print } into' );
 
    wait_for { !$process->is_running };
 
-   ok( $process->is_exited,     '$process->is_exited after sub { print }' );
-   is( $process->exitstatus, 0, '$process->exitstatus after sub { print }' );
+   ok( $process->is_exited,     '$process->is_exited after sub { print } into' );
+   is( $process->exitstatus, 0, '$process->exitstatus after sub { print } into' );
 
-   is( $stdout, "hello\n", '$stdout after sub { print }' )
+   is( $stdout, "hello\n", '$stdout after sub { print } into' )
 }
 
 {
@@ -116,6 +147,32 @@ testing_loop( $loop );
 
    my $process = IO::Async::Process->new(
       command => [ $^X, "-pe", '1' ],
+      stdin   => { via => "pipe_write" },
+      stdout  => { into => \$stdout },
+      on_finish => sub { },
+   );
+
+   isa_ok( $process->stdin, "IO::Async::Stream", '$process->stdin' );
+
+   $process->stdin->write( "some data\n", on_flush => sub { $_[0]->close } );
+
+   $loop->add( $process );
+
+   ok( defined $process->stdin->write_handle, '$process->stdin has write_handle for perl STDIN->STDOUT' );
+
+   wait_for { !$process->is_running };
+
+   ok( $process->is_exited,     '$process->is_exited after perl STDIN->STDOUT' );
+   is( $process->exitstatus, 0, '$process->exitstatus after perl STDIN->STDOUT' );
+
+   is( $stdout, "some data\n", '$stdout after perl STDIN->STDOUT' );
+}
+
+{
+   my $stdout;
+
+   my $process = IO::Async::Process->new(
+      command => [ $^X, "-pe", '1' ],
       stdin   => { from => "some data\n" },
       stdout  => { into => \$stdout },
       on_finish => sub { },
@@ -125,14 +182,14 @@ testing_loop( $loop );
 
    $loop->add( $process );
 
-   ok( defined $process->stdin->write_handle, '$process->stdin has write_handle' );
+   ok( defined $process->stdin->write_handle, '$process->stdin has write_handle for perl STDIN->STDOUT from' );
 
    wait_for { !$process->is_running };
 
-   ok( $process->is_exited,     '$process->is_exited after perl STDIN->STDOUT' );
-   is( $process->exitstatus, 0, '$process->exitstatus after perl STDIN->STDOUT' );
+   ok( $process->is_exited,     '$process->is_exited after perl STDIN->STDOUT from' );
+   is( $process->exitstatus, 0, '$process->exitstatus after perl STDIN->STDOUT from' );
 
-   is( $stdout, "some data\n", '$stdout after perl STDIN->STDOUT' );
+   is( $stdout, "some data\n", '$stdout after perl STDIN->STDOUT from' );
 }
 
 {
