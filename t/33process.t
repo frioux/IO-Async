@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 67;
+use Test::More tests => 72;
 use Test::Refcount;
 
 use POSIX qw( WIFEXITED WEXITSTATUS ENOENT );
@@ -204,6 +204,29 @@ testing_loop( $loop );
    is( $process->exitstatus, 0, '$process->exitstatus after sub { print }' );
 
    is_deeply( \@stdout_lines, [ "hello\n" ], '@stdout_lines after sub { print }' );
+}
+
+{
+   my $stdout;
+
+   my $process = IO::Async::Process->new(
+      code => sub { print "hello\n"; return 0 },
+      stdout => { into => \$stdout },
+      on_finish => sub { },
+   );
+
+   isa_ok( $process->stdout, "IO::Async::Stream", '$process->stdout' );
+
+   $loop->add( $process );
+
+   ok( defined $process->stdout->read_handle, '$process->stdout has read_handle' );
+
+   wait_for { !$process->is_running };
+
+   ok( $process->is_exited,     '$process->is_exited after sub { print }' );
+   is( $process->exitstatus, 0, '$process->exitstatus after sub { print }' );
+
+   is_deeply( $stdout, "hello\n", '$stdout after sub { print }' )
 }
 
 {

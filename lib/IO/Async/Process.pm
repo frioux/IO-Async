@@ -157,6 +157,12 @@ of the following sets of keys:
 The child will be given the writing end of a pipe. The reading end will be
 wrapped by an C<IO::Async::Stream> using this C<on_read> callback function.
 
+=item into => SCALAR
+
+The child will be given the reading end of a pipe. The referenced scalar will
+be filled by data read from the child process. This data may not be available
+until the pipe has been closed by the child.
+
 =item from => STRING
 
 The child will be given the reading end of a pipe. The string given by the
@@ -238,6 +244,17 @@ sub configure_fd
 
    if( my $on_read = delete $args{on_read} ) {
       $handle->configure( on_read => $on_read );
+
+      $wants |= FD_WANTS_READ;
+   }
+   elsif( my $into = delete $args{into} ) {
+      $handle->configure(
+         on_read => sub {
+            my ( undef, $buffref, $closed ) = @_;
+            $$into .= $$buffref if $closed;
+            return 0;
+         },
+      );
 
       $wants |= FD_WANTS_READ;
    }
