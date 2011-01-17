@@ -136,8 +136,7 @@ sub _add_to_loop
 
       # Since this is a oneshot, we'll have to remove it from the loop or
       # parent Notifier
-      $self->parent ? $self->parent->remove_child( $self ) 
-                    : $self->get_loop->remove( $self );
+      $self->_remove_from_outer;
    } );
 
    $loop->watch_child( $self->pid, $self->{cb} );

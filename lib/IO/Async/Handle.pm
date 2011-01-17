@@ -339,12 +339,7 @@ sub close
 
    $self->maybe_invoke_event( on_closed => );
 
-   if( my $parent = $self->{parent} ) {
-      $parent->remove_child( $self );
-   }
-   elsif( my $loop = $self->get_loop ) {
-      $loop->remove( $self );
-   }
+   $self->_remove_from_outer;
 
    my $read_handle = delete $self->{read_handle};
    $read_handle->close if defined $read_handle;

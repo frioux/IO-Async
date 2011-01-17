@@ -437,12 +437,7 @@ sub _add_to_loop
                $self->invoke_event( on_finish => $exitcode );
          }
 
-         if( my $parent = $self->parent ) {
-            $parent->remove_child( $self );
-         }
-         else {
-            $self->get_loop->remove( $self );
-         }
+         $self->_remove_from_outer;
       } ),
    );
 }

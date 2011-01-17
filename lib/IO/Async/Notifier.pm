@@ -317,6 +317,18 @@ sub remove_child
    }
 }
 
+sub _remove_from_outer
+{
+   my $self = shift;
+
+   if( my $parent = $self->parent ) {
+      $parent->remove_child( $self );
+   }
+   elsif( my $loop = $self->get_loop ) {
+      $loop->remove( $self );
+   }
+}
+
 =head1 SUBCLASS METHODS
 
 C<IO::Async::Notifier> is a base class provided so that specific subclasses of
