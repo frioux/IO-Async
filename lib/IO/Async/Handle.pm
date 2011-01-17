@@ -341,15 +341,38 @@ sub close
 
    $self->_remove_from_outer;
 
+   $self->close_read;
+   $self->close_write;
+
+}
+
+=head2 $handle->close_read
+
+=head2 $handle->close_write
+
+Closes the underlying read or write handle, and deconfigures it from the
+object. Neither of these methods will invoke the C<on_closed> event, nor
+remove the object from the Loop.
+
+=cut
+
+sub close_read
+{
+   my $self = shift;
+
    my $read_handle = delete $self->{read_handle};
    $read_handle->close if defined $read_handle;
 
-   my $write_handle = delete $self->{write_handle};
-   $write_handle->close if defined $write_handle and ( not defined $read_handle or $write_handle != $read_handle );
-
-   # Clear the want* states, so if we get a new handle and are re-opened,
-   # we'll rearm the underlying loop
    undef $self->{want_readready};
+}
+
+sub close_write
+{
+   my $self = shift;
+
+   my $write_handle = delete $self->{write_handle};
+   $write_handle->close if defined $write_handle;
+
    undef $self->{want_writeready};
 }
 
