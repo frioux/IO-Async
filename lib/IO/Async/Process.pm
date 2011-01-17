@@ -260,11 +260,12 @@ sub configure_fd
    }
 
    if( my $from = delete $args{from} ) {
-      $handle->write( $from );
-      $handle->configure( on_outgoing_empty => sub {
-         my ( $handle ) = @_;
-         $handle->close;
-      } );
+      $handle->write( $from,
+         on_flush => sub {
+            my ( $handle ) = @_;
+            $handle->close;
+         },
+      );
 
       $wants |= FD_WANTS_WRITE;
    }
