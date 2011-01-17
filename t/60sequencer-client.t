@@ -29,7 +29,7 @@ my $sequencer = IO::Async::Sequencer->new(
    },
 
    on_read => sub {
-      my ( $self, $buffref, $closed ) = @_;
+      my ( $self, $buffref, $eof ) = @_;
       return 0 unless $$buffref =~ s/^(.*)\n//;
       $self->incoming_response( $1 ), return 1 if $1 =~ m/^RESP:(.*)$/;
       # TODO: $self->incoming_response_error( "Response line did not begin 'RESP:'" ), return undef;
@@ -114,7 +114,7 @@ my $line;
 $sequencer->request(
    request => "hello",
    on_read => sub {
-      my ( $self, $buffref, $closed ) = @_;
+      my ( $self, $buffref, $eof ) = @_;
       return 0 unless $$buffref =~ s/^(.*)\n//;
       $line = $1;
       return undef;
@@ -148,7 +148,7 @@ $sequencer = IO::Async::Sequencer->new(
    },
 
    on_read => sub {
-      my ( $self, $buffref, $closed ) = @_;
+      my ( $self, $buffref, $eof ) = @_;
       return 0 unless $$buffref =~ s/^(.*)\n//;
       $self->incoming_response( $1 ), return 1 if $1 =~ m/^RESP:(.*)$/;
    },
@@ -200,7 +200,7 @@ is( $response[3], "3", 'Response to [3] of non-pipeline' );
 $sequencer->request(
    request => "four",
    on_read => sub {
-      my ( $self, $buffref, $closed ) = @_;
+      my ( $self, $buffref, $eof ) = @_;
       return 0 unless $$buffref =~ s/^(.*)\n//;
       $response[4] = $1, return undef if $1 =~ m/^RESP:(.*)$/;
       die;
@@ -210,7 +210,7 @@ $sequencer->request(
 $sequencer->request(
    request => "five",
    on_read => sub {
-      my ( $self, $buffref, $closed ) = @_;
+      my ( $self, $buffref, $eof ) = @_;
       return 0 unless $$buffref =~ s/^(.*)\n//;
       $response[5] = $1, return undef if $1 =~ m/^RESP:(.*)$/;
       die;
@@ -279,7 +279,7 @@ use base qw( IO::Async::Sequencer );
 sub on_read
 {
    my $self = shift;
-   my ( $buffref, $closed ) = @_;
+   my ( $buffref, $eof ) = @_;
 
    return 0 unless $$buffref =~ s/^(.*)\n//;
    $self->incoming_response( $1 ), return 1 if $1 =~ m/^RESPONSE:(.*)$/;

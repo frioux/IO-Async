@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2008 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2008-2011 -- leonerd@leonerd.org.uk
 
 package IO::Async::Sequencer;
 
@@ -31,7 +31,7 @@ When used as a client:
     handle => $sock,
 
     on_read => sub {
-       my ( $self, $buffref, $closed ) = @_;
+       my ( $self, $buffref, $eof ) = @_;
 
        return 0 unless $$buffref =~ s/^(.*)\n//;
        my $line = $1;
@@ -64,7 +64,7 @@ When used as a server:
     handle => $sock,
 
     on_read => sub {
-       my ( $self, $buffref, $closed ) = @_;
+       my ( $self, $buffref, $eof ) = @_;
 
        return 0 unless $$buffref =~ s/^(.*)\n//;
        my $line = $1;
@@ -218,7 +218,7 @@ sub _init
    # Since our ->configure() has banned 'on_read', we need to call SUPER one from here
    $self->SUPER::configure(
       on_read => sub {
-         my ( $self, $buffref, $closed ) = @_;
+         my ( $self, $buffref, $eof ) = @_;
 
          my $front = $self->{client_queue}[0];
 
@@ -378,7 +378,7 @@ A callback to use to parse the incoming stream while the response to this
 particular request is expected. It will be invoked the same as for
 C<IO::Async::Stream>; i.e.
 
- $on_read->( $self, $buffref, $closed )
+ $on_read->( $self, $buffref, $eof )
 
 This handler should return C<undef> when it has finished handling the
 response, so that the next one queued can be invoked (or the default if none
@@ -488,7 +488,7 @@ with CRLF-delimited lines.
  my $CRLF = "\x0d\x0a"; # More portable than \r\n
 
  sub on_read {
-    my ( $self, $buffref, $closed ) = @_;
+    my ( $self, $buffref, $eof ) = @_;
 
     $buffref =~ s/^(.*)$CRLF// and
        $self->incoming_request( $1 ), return 1;
@@ -535,7 +535,7 @@ input from the server - perhaps to generate an error condition of some kind.
     ...
 
     on_read => sub {
-       my ( $self, $buffref, $closed ) = @_;
+       my ( $self, $buffref, $eof ) = @_;
 
        print STDERR "Spurious input: $$buffref\n";
        $self->close;
@@ -551,7 +551,7 @@ input from the server - perhaps to generate an error condition of some kind.
  $sequencer->request(
     request => "some key",
     on_read => sub {
-       my ( $self, $buffref, $closed ) = @_;
+       my ( $self, $buffref, $eof ) = @_;
 
        return 0 unless $$buffref =~ s/^(.*)$CRLF//;
        my $line = $1;

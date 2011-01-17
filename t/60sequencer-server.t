@@ -31,7 +31,7 @@ my $sequencer = IO::Async::Sequencer->new(
    },
 
    on_read => sub {
-      my ( $self, $buffref, $closed ) = @_;
+      my ( $self, $buffref, $eof ) = @_;
       return 0 unless $$buffref =~ s/^(.*)\n//;
       $self->incoming_request( $1 ), return 1 if $1 =~ m/^REQ:(.*)$/;
    },
@@ -138,7 +138,7 @@ use base qw( IO::Async::Sequencer );
 sub on_read
 {
    my $self = shift;
-   my ( $buffref, $closed ) = @_;
+   my ( $buffref, $eof ) = @_;
 
    return 0 unless $$buffref =~ s/^(.*)\n//;
    $self->incoming_request( $1 ), return 1 if $1 =~ m/^REQUEST:(.*)$/;

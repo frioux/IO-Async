@@ -57,7 +57,7 @@ This object is used indirectly via an C<IO::Async::Loop>:
 
     stdout => {
        on_read => sub {
-          my ( $stream, $buffref, $closed ) = @_;
+          my ( $stream, $buffref, $eof ) = @_;
           if( $$buffref =~ s/^(.*)\n// ) {
              print "PING wrote: $1\n";
              return 1;
@@ -468,7 +468,7 @@ sub _spawn_in_parent
       read_handle => $readpipe,
 
       on_read => sub {
-         my ( $self, $buffref, $closed ) = @_;
+         my ( $self, $buffref, $eof ) = @_;
 
          if( !defined $dollarbang ) {
             if( length( $$buffref ) >= 2 * LENGTH_OF_I ) {
@@ -484,7 +484,7 @@ sub _spawn_in_parent
             }
          }
 
-         if( $closed ) {
+         if( $eof ) {
             $dollarbang = 0  if !defined $dollarbang;
             if( !defined $length_dollarat ) {
                $length_dollarat = 0;

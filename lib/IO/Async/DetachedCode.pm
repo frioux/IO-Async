@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2007,2008 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2007-2011 -- leonerd@leonerd.org.uk
 
 package IO::Async::DetachedCode;
 
@@ -495,11 +495,11 @@ sub _send_request
 # INNER FUNCTION
 sub _socket_incoming
 {
-   my ( $inner, $buffref, $closed ) = @_;
+   my ( $inner, $buffref, $eof ) = @_;
 
    my $handlermap = $inner->{result_handler};
 
-   if( $closed ) {
+   if( $eof ) {
       _child_error( $inner, 'closed' );
 
       $inner->{loop}->remove( $inner->{iostream} );

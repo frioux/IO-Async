@@ -290,8 +290,8 @@ sub configure_fd
    elsif( my $into = delete $args{into} ) {
       $handle->configure(
          on_read => sub {
-            my ( undef, $buffref, $closed ) = @_;
-            $$into .= $$buffref if $closed;
+            my ( undef, $buffref, $eof ) = @_;
+            $$into .= $$buffref if $eof;
             return 0;
          },
       );

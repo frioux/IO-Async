@@ -38,7 +38,7 @@ Usually not directly used by a program, but one valid use case may be:
     IO::Async::Stream->new_for_stdin(
        on_read => sub {
           my $self = shift;
-          my ( $buffref, $closed ) = @_;
+          my ( $buffref, $eof ) = @_;
           $$buffref =~ s/^(.*)\n// or return 0;
           print "You said $1\n";
           return 1;

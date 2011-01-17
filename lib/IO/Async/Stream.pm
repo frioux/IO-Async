@@ -45,7 +45,7 @@ filehandle
     write_handle => \*STDOUT,
 
     on_read => sub {
-       my ( $self, $buffref, $closed ) = @_;
+       my ( $self, $buffref, $eof ) = @_;
 
        if( $$buffref =~ s/^(.*\n)// ) {
           print "Received a line $1";
@@ -53,8 +53,8 @@ filehandle
           return 1;
        }
 
-       if( $closed ) {
-          print "Closed; last partial line is $$buffref\n";
+       if( $eof ) {
+          print "EOF; last partial line is $$buffref\n";
        }
 
        return 0;
@@ -69,7 +69,7 @@ Or
     handle => ...,
 
     on_read => sub {
-       my ( $self, $buffref, $closed ) = @_;
+       my ( $self, $buffref, $eof ) = @_;
 
        if( length $$buffref >= 16 ) {
           my $record = substr( $$buffref, 0, 16, "" );
@@ -78,8 +78,8 @@ Or
           return 1;
        }
 
-       if( $closed and length $$buffref ) {
-          print "Closed: a partial record still exists\n";
+       if( $eof and length $$buffref ) {
+          print "EOF: a partial record still exists\n";
        }
 
        return 0;
@@ -104,7 +104,7 @@ subclass of L<IO::Async::Protocol::Stream>.
 The following events are invoked, either using subclass methods or CODE
 references in parameters:
 
-=head2 $ret = on_read \$buffer, $handleclosed
+=head2 $ret = on_read \$buffer, $eof
 
 Invoked when more data is available in the internal receiving buffer.
 
@@ -121,11 +121,11 @@ again. This makes it easy to implement code that handles multiple incoming
 records at the same time. See the examples at the end of this documentation
 for more detail.
 
-The second argument is a scalar indicating whether the handle has been closed.
-Normally it is false, but will become true once the handle closes. A reference
-to the buffer is passed to the handler in the usual way, so it may inspect data
-contained in it. Once the handler returns a false value, it will not be called
-again, as the handle is now closed and no more data can arrive.
+The second argument is a scalar indicating whether the stream has reported an
+end-of-file (EOF) condition. A reference to the buffer is passed to the
+handler in the usual way, so it may inspect data contained in it. Once the
+handler returns a false value, it will not be called again, as the handle is
+now at EOF and no more data can arrive.
 
 The C<on_read()> code may also dynamically replace itself with a new callback
 by returning a CODE reference instead of C<0> or C<1>. The original callback
@@ -530,15 +530,15 @@ sub on_read_ready
          return;
       }
 
-      my $handleclosed = ( $len == 0 );
+      my $eof = ( $len == 0 );
 
-      $self->{readbuff} .= $data if( !$handleclosed );
+      $self->{readbuff} .= $data if( !$eof );
 
       while(1) {
          my $on_read = $self->{current_on_read}
                         || $self->can_event( "on_read" );
 
-         my $ret = $on_read->( $self, \$self->{readbuff}, $handleclosed );
+         my $ret = $on_read->( $self, \$self->{readbuff}, $eof );
 
          my $again;
 
@@ -551,13 +551,13 @@ sub on_read_ready
             $again = 1;
          }
          else {
-            $again = $ret && ( length( $self->{readbuff} ) > 0 || $handleclosed );
+            $again = $ret && ( length( $self->{readbuff} ) > 0 || $eof );
          }
 
          last if !$again;
       }
 
-      $self->close_now, return if $handleclosed;
+      $self->close_now, return if $eof;
 
       last unless $self->{read_all};
    }
@@ -614,7 +614,7 @@ prints them to the program's C<STDOUT> stream.
  sub on_read
  {
     my $self = shift;
-    my ( $buffref, $handleclosed ) = @_;
+    my ( $buffref, $eof ) = @_;
 
     if( $$buffref =~ s/^(.*\n)// ) {
        print "Received a line: $1";
@@ -644,7 +644,7 @@ prefix.
  sub on_read
  {
     my $self = shift;
-    my ( $buffref, $handleclosed ) = @_;
+    my ( $buffref, $eof ) = @_;
 
     if( $$buffref =~ s/^DATA (\d+):(.*)\n// ) {
        my $length = $1;
@@ -652,7 +652,7 @@ prefix.
 
        return sub {
           my $self = shift;
-          my ( $buffref, $handleclosed ) = @_;
+          my ( $buffref, $eof ) = @_;
 
           return 0 unless length $$buffref >= $length;
 

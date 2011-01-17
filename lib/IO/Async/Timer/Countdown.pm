@@ -191,7 +191,7 @@ For example, to expire an accepted connection after 30 seconds of inactivity:
        handle => $newclient,
 
        on_read => sub {
-          my ( $self, $buffref, $closed ) = @_;
+          my ( $self, $buffref, $eof ) = @_;
           $watchdog->reset;
 
           ...

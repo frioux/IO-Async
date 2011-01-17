@@ -30,7 +30,7 @@ my $stream = IO::Async::Stream->new(
    read_handle => $S1,
    on_read => sub {
       my $self = shift;
-      my ( $buffref, $buffclosed ) = @_;
+      my ( $buffref, $eof ) = @_;
 
       return 0 unless( $$buffref =~ s/^(.*\n)// );
 
@@ -82,7 +82,7 @@ my @new_lines;
 $stream->configure( 
    on_read => sub {
       my $self = shift;
-      my ( $buffref, $closed ) = @_;
+      my ( $buffref, $eof ) = @_;
 
       return 0 unless( $$buffref =~ s/^(.*\n)// );
 
@@ -112,7 +112,7 @@ $stream = IO::Async::Stream->new(
    read_handle => $S1,
    read_len => 2,
    on_read => sub {
-      my ( $self, $buffref, $closed ) = @_;
+      my ( $self, $buffref, $eof ) = @_;
       push @chunks, $$buffref;
       $$buffref = "";
    },
@@ -186,7 +186,7 @@ my $record;
 $stream = IO::Async::Stream->new(
    read_handle => $S1,
    on_read => sub {
-      my ( $self, $buffref, $closed ) = @_;
+      my ( $self, $buffref, $eof ) = @_;
       $outer_count++;
 
       return 0 unless $$buffref =~ s/^(.*\n)//;
@@ -194,7 +194,7 @@ $stream = IO::Async::Stream->new(
       my $length = $1;
 
       return sub {
-         my ( $self, $buffref, $closed ) = @_;
+         my ( $self, $buffref, $eof ) = @_;
          $inner_count++;
 
          return 0 unless length $$buffref >= $length;
@@ -314,7 +314,7 @@ use base qw( IO::Async::Stream );
 sub on_read
 {
    my $self = shift;
-   my ( $buffref, $buffclosed ) = @_;
+   my ( $buffref, $eof ) = @_;
 
    return 0 unless $$buffref =~ s/^(.*\n)//;
 

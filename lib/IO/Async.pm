@@ -35,7 +35,7 @@ C<IO::Async> - Asynchronous event-driven programming
 
        $stream->configure(
           on_read => sub {
-             my ( $self, $buffref, $closed ) = @_;
+             my ( $self, $buffref, $eof ) = @_;
 
              return 0 unless( $buffref =~ s/^(.*\n)// );
 

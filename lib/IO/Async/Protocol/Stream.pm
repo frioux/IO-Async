@@ -32,7 +32,7 @@ protocol.
  sub on_read
  {
     my $self = shift;
-    my ( $buffref, $closed ) = @_;
+    my ( $buffref, $eof ) = @_;
 
     return 0 unless $$buffref =~ s/^(.*)\n//;
     my $line = $1;
@@ -81,7 +81,7 @@ been configured with an C<on_read> callback handler.
 The following events are invoked, either using subclass methods or CODE
 references in parameters:
 
-=head2 $ret = on_read \$buffer, $handleclosed
+=head2 $ret = on_read \$buffer, $eof
 
 The C<on_read> handler is invoked identically to C<IO::Async::Stream>.
 
@@ -154,9 +154,9 @@ sub setup_transport
    $transport->configure( 
       on_read => $self->_capture_weakself( sub {
          my $self = shift;
-         my ( $transport, $buffref, $closed ) = @_;
+         my ( $transport, $buffref, $eof ) = @_;
 
-         $self->invoke_event( on_read => $buffref, $closed );
+         $self->invoke_event( on_read => $buffref, $eof );
       } ),
    );
 }

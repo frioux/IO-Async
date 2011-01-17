@@ -45,7 +45,7 @@ my $stream = IO::Async::Stream->new(
    write_handle => $S3,
    on_read => sub {
       my $self = shift;
-      my ( $buffref, $closed ) = @_;
+      my ( $buffref, $eof ) = @_;
 
       return 0 unless( $$buffref =~ s/^(.*\n)// );
 
@@ -89,7 +89,7 @@ my $closed;
 $stream = IO::Async::Stream->new(
    # No handle yet
    on_read => sub {
-      my ( $self, $buffref, $closed ) = @_;
+      my ( $self, $buffref, $eof ) = @_;
       $buffer .= $$buffref;
       $$buffref =  "";
       return 0;

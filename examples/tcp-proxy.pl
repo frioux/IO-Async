@@ -50,7 +50,7 @@ sub on_stream
 
          $stream1->configure(
             on_read => sub {
-               my ( $self, $buffref, $closed ) = @_;
+               my ( $self, $buffref, $eof ) = @_;
                # Just copy all the data
                $stream2->write( $$buffref ); $$buffref = "";
                return 0;
@@ -63,7 +63,7 @@ sub on_stream
 
          $stream2->configure(
             on_read => sub {
-               my ( $self, $buffref, $closed ) = @_;
+               my ( $self, $buffref, $eof ) = @_;
                # Just copy all the data
                $stream1->write( $$buffref ); $$buffref = "";
                return 0;

@@ -31,7 +31,7 @@ my $streamproto = IO::Async::Protocol::Stream->new(
    transport => IO::Async::Stream->new( handle => $S1 ),
    on_read => sub {
       my $self = shift;
-      my ( $buffref, $closed ) = @_;
+      my ( $buffref, $eof ) = @_;
 
       return 0 unless( $$buffref =~ s/^(.*\n)// );
 
@@ -62,7 +62,7 @@ my @new_lines;
 $streamproto->configure( 
    on_read => sub {
       my $self = shift;
-      my ( $buffref, $closed ) = @_;
+      my ( $buffref, $eof ) = @_;
 
       return 0 unless( $$buffref =~ s/^(.*\n)// );
 
@@ -176,7 +176,7 @@ my $serversock = IO::Socket::INET->new(
 $streamproto = IO::Async::Protocol::Stream->new(
    on_read => sub {
       my $self = shift;
-      my ( $buffref, $closed ) = @_;
+      my ( $buffref, $eof ) = @_;
       push @lines, $1 while $$buffref =~ s/^(.*\n)//;
       return 0;
    }
@@ -219,7 +219,7 @@ use base qw( IO::Async::Protocol::Stream );
 sub on_read
 {
    my $self = shift;
-   my ( $buffref, $buffclosed ) = @_;
+   my ( $buffref, $eof ) = @_;
 
    return 0 unless $$buffref =~ s/^(.*\n)//;
 

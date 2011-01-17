@@ -106,7 +106,7 @@ sub configure
 sub on_read
 {
    my $self = shift;
-   my ( $buffref, $closed ) = @_;
+   my ( $buffref, $eof ) = @_;
 
    $$buffref =~ s/^(.*?)$self->{eol_pattern}// or return 0;
 

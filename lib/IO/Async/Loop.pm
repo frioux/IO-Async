@@ -67,7 +67,7 @@ C<IO::Async::Loop> - core loop of the C<IO::Async> framework
 
  $loop->add( IO::Async::Stream->new_for_stdin(
     on_read => sub {
-       my ( $self, $buffref, $closed ) = @_;
+       my ( $self, $buffref, $eof ) = @_;
 
        if( $$buffref =~ s/^(.*)\n// ) {
           print "You typed a line $1\n";

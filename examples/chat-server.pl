@@ -43,7 +43,7 @@ sub on_stream
 
    $stream->configure(
       on_read => sub {
-         my ( $self, $buffref, $closed ) = @_;
+         my ( $self, $buffref, $eof ) = @_;
 
          if( $$buffref =~ s/^(.*\n)// ) {
             # eat a line from the stream input
