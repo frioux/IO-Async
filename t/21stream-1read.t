@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 44;
+use Test::More tests => 48;
 use Test::Exception;
 use Test::Refcount;
 
@@ -251,6 +251,38 @@ my @sub_lines;
    $loop->remove( $stream );
 
    is_oneref( $stream, 'dynamic reading $stream has refcount 1 finally' );
+}
+
+# EOF
+{
+   my ( $rd, $wr ) = mkhandles;
+
+   my $eof = 0;
+   my $partial;
+
+   my $stream = IO::Async::Stream->new( read_handle => $rd,
+      on_read => sub {
+         my ( undef, $buffref, $eof ) = @_;
+         $partial = $$buffref if $eof;
+         return 0;
+      },
+      on_read_eof => sub { $eof++ },
+   );
+
+   $loop->add( $stream );
+
+   $wr->syswrite( "Incomplete" );
+
+   $wr->close;
+
+   is( $eof, 0, 'EOF indication before wait' );
+
+   wait_for { $eof };
+
+   is( $eof, 1, 'EOF indication after wait' );
+   is( $partial, "Incomplete", 'EOF stream retains partial input' );
+
+   ok( !defined $stream->get_loop, 'EOF stream no longer member of Loop' );
 }
 
 # Close

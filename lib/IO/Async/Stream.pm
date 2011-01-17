@@ -134,6 +134,12 @@ C<undef>. Whenever the callback is changed in this way, the new code is called
 again; even if the read buffer is currently empty. See the examples at the end
 of this documentation for more detail.
 
+=head2 on_read_eof
+
+Optional. Invoked when the read handle indicates an end-of-file (EOF)
+condition. If there is any data in the buffer still to be processed, the
+C<on_read> event will be invoked first, before this one.
+
 =head2 on_read_error $errno
 
 Optional. Invoked when the C<sysread()> method on the read handle fails.
@@ -257,8 +263,8 @@ sub configure
    my $self = shift;
    my %params = @_;
 
-   for (qw( on_read on_outgoing_empty on_read_error on_write_error
-            autoflush read_len read_all write_len write_all )) {
+   for (qw( on_read on_outgoing_empty on_read_eof on_read_error
+            on_write_error autoflush read_len read_all write_len write_all )) {
       $self->{$_} = delete $params{$_} if exists $params{$_};
    }
 
@@ -532,7 +538,7 @@ sub on_read_ready
 
       my $eof = ( $len == 0 );
 
-      $self->{readbuff} .= $data if( !$eof );
+      $self->{readbuff} .= $data if !$eof;
 
       while(1) {
          my $on_read = $self->{current_on_read}
@@ -557,7 +563,11 @@ sub on_read_ready
          last if !$again;
       }
 
-      $self->close_now, return if $eof;
+      if( $eof ) {
+         $self->maybe_invoke_event( on_read_eof => );
+         $self->close_now;
+         return;
+      }
 
       last unless $self->{read_all};
    }
