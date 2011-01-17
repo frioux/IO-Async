@@ -224,10 +224,10 @@ sub configure
    $self->SUPER::configure( %params );
 }
 
-# These are from the perspective of the parent
 use constant {
-   FD_WANTS_READ  => 0x1,
-   FD_WANTS_WRITE => 0x2,
+   # These are from the perspective of the parent
+   FD_VIA_PIPEREAD  => 1,
+   FD_VIA_PIPEWRITE => 2,
 };
 
 sub configure_fd
@@ -240,12 +240,13 @@ sub configure_fd
    require IO::Async::Stream;
 
    my $handle = $self->{fd_handle}{$fd} ||= IO::Async::Stream->new;
-   my $wants  = $self->{fd_wants}{$fd}  || 0;
+
+   my ( $wants_read, $wants_write );
 
    if( my $on_read = delete $args{on_read} ) {
       $handle->configure( on_read => $on_read );
 
-      $wants |= FD_WANTS_READ;
+      $wants_read++;
    }
    elsif( my $into = delete $args{into} ) {
       $handle->configure(
@@ -256,7 +257,7 @@ sub configure_fd
          },
       );
 
-      $wants |= FD_WANTS_READ;
+      $wants_read++;
    }
 
    if( my $from = delete $args{from} ) {
@@ -267,12 +268,21 @@ sub configure_fd
          },
       );
 
-      $wants |= FD_WANTS_WRITE;
+      $wants_write++;
    }
 
    keys %args and croak "Unexpected extra keys for fd $fd - " . join ", ", keys %args;
 
-   $self->{fd_wants}{$fd} = $wants;
+   my $via = $self->{fd_via}{$fd};
+   if( !defined $via ) {
+      $via = FD_VIA_PIPEREAD  if  $wants_read and !$wants_write;
+      $via = FD_VIA_PIPEWRITE if !$wants_read and  $wants_write;
+
+      defined $via and $self->{fd_via}{$fd} = $via;
+   }
+   else {
+      die "Need to check fd_via{$fd}\n";
+   }
 }
 
 sub _prepare_fds
@@ -281,28 +291,28 @@ sub _prepare_fds
    my ( $loop ) = @_;
 
    my $fd_handle = $self->{fd_handle};
-   my $fd_wants  = $self->{fd_wants};
+   my $fd_via    = $self->{fd_via};
 
    my $mergepoint = $self->{mergepoint};
 
    my @setup;
 
-   foreach my $fd ( keys %$fd_wants ) {
+   foreach my $fd ( keys %$fd_via ) {
       my $handle = $fd_handle->{$fd};
-      my $wants  = $fd_wants->{$fd};
+      my $via    = $fd_via->{$fd};
 
       my ( $myfd, $childfd );
 
-      if( $wants == FD_WANTS_READ ) {
+      if( $via == FD_VIA_PIPEREAD ) {
          ( $myfd, $childfd ) = $loop->pipepair() or croak "Unable to pipe() - $!";
          $handle->configure( read_handle => $myfd );
       }
-      elsif( $wants == FD_WANTS_WRITE ) {
+      elsif( $via == FD_VIA_PIPEWRITE ) {
          ( $childfd, $myfd ) = $loop->pipepair() or croak "Unable to pipe() - $!";
          $handle->configure( write_handle => $myfd );
       }
       else {
-         croak "Unsure what to do with fd_wants==$wants";
+         croak "Unsure what to do with fd_via==$via";
       }
 
       my $key = "fd$fd";
