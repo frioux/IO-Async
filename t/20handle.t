@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 67;
+use Test::More tests => 72;
 use Test::Exception;
 use Test::Refcount;
 use Test::Warn;
@@ -247,11 +247,14 @@ my $sub_writeready = 0;
    my $readready  = 0;
    my $writeready = 0;
 
+   my $closed = 0;
+
    my $handle = IO::Async::Handle->new(
       read_handle  => $Srd1,
       write_handle => $Swr1,
       on_read_ready  => sub { $readready++ },
       on_write_ready => sub { $writeready++ },
+      on_closed      => sub { $closed++ },
       want_writeready => 1,
    );
 
@@ -262,9 +265,12 @@ my $sub_writeready = 0;
    is( $Srd2->syswrite( "Oops\n" ), undef, 'syswrite into EOF read handle' );
 
    wait_for { $writeready };
+   is( $writeready, 1, '$writeready after ->close_read' );
 
    $handle->write_handle->syswrite( "Still works\n" );
    is( $Swr2->getline, "Still works\n", 'write handle still works' );
+
+   is( $closed, 0, 'not $closed after ->close_read' );
 
    is( $handle->get_loop, $loop, 'Handle still member of Loop after ->close_read' );
 
@@ -277,11 +283,20 @@ my $sub_writeready = 0;
    $Srd2->syswrite( "Also works\n" );
 
    wait_for { $readready };
+   is( $readready, 1, '$readready after ->close_write' );
 
    is( $handle->read_handle->getline, "Also works\n", 'read handle still works' );
    is( $Swr2->getline, undef, 'sysread from EOF write handle' );
 
    is( $handle->get_loop, $loop, 'Handle still member of Loop after ->close_write' );
+
+   is( $closed, 0, 'not $closed after ->close_read' );
+
+   $handle->close_read;
+
+   is( $closed, 1, '$closed after ->close_read + ->close_write' );
+
+   $loop->loop_once( 0.1 );
 
    $loop->remove( $handle );
 }

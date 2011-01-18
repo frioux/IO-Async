@@ -337,13 +337,18 @@ sub close
    return if $self->{handle_closing};
    $self->{handle_closing} = 1;
 
+   $self->want_readready( 0 );
+   $self->want_writeready( 0 );
+
+   my $read_handle = delete $self->{read_handle};
+   $read_handle->close if defined $read_handle;
+
+   my $write_handle = delete $self->{write_handle};
+   $write_handle->close if defined $write_handle;
+
    $self->maybe_invoke_event( on_closed => );
 
    $self->_remove_from_outer;
-
-   $self->close_read;
-   $self->close_write;
-
 }
 
 =head2 $handle->close_read
@@ -364,6 +369,9 @@ sub close_read
 
    my $read_handle = delete $self->{read_handle};
    $read_handle->close if defined $read_handle;
+
+   $self->{write_handle} or
+      $self->maybe_invoke_event( on_closed => );
 }
 
 sub close_write
@@ -374,6 +382,9 @@ sub close_write
 
    my $write_handle = delete $self->{write_handle};
    $write_handle->close if defined $write_handle;
+
+   $self->{read_handle} or
+      $self->maybe_invoke_event( on_closed => );
 }
 
 =head2 $handle = $handle->read_handle
