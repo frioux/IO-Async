@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 37;
+use Test::More tests => 46;
 
 use IO::Async::Process;
 
@@ -210,4 +210,61 @@ testing_loop( $loop );
    is( $process->exitstatus, 0, '$process->exitstatus after perl STDIN->STDOUT using fd[n]' );
 
    is( $stdout, "some data\n", '$stdout after perl STDIN->STDOUT using fd[n]' );
+}
+
+{
+   my $output;
+
+   my $process = IO::Async::Process->new(
+      command => [ $^X, "-pe", '1' ],
+      stdio => { via => "pipe_rdwr" },
+      on_finish => sub { },
+   );
+
+   isa_ok( $process->stdio, "IO::Async::Stream", '$process->stdio' );
+
+   my @output_lines;
+
+   $process->stdio->write( "some data\n", on_flush => sub { $_[0]->close_write } );
+   $process->stdio->configure(
+      on_read => sub {
+         my ( undef, $buffref ) = @_;
+         push @output_lines, $1 while $$buffref =~ s/^(.*\n)//;
+         return 0;
+      },
+   );
+
+   $loop->add( $process );
+
+   ok( defined $process->stdio->read_handle,  '$process->stdio has read_handle for perl STDIO' );
+   ok( defined $process->stdio->write_handle, '$process->stdio has write_handle for perl STDIO' );
+
+   wait_for { !$process->is_running };
+
+   ok( $process->is_exited,     '$process->is_exited after perl STDIO' );
+   is( $process->exitstatus, 0, '$process->exitstatus after perl STDIO' );
+
+   is_deeply( \@output_lines, [ "some data\n" ], '@output_lines after perl STDIO' );
+}
+
+{
+   my $output;
+
+   my $process = IO::Async::Process->new(
+      command => [ $^X, "-pe", '1' ],
+      stdio => {
+         from => "some data\n",
+         into => \$output,
+      },
+      on_finish => sub { },
+   );
+
+   $loop->add( $process );
+
+   wait_for { !$process->is_running };
+
+   ok( $process->is_exited,     '$process->is_exited after perl STDIN->STDOUT using stdio' );
+   is( $process->exitstatus, 0, '$process->exitstatus after perl STDIN->STDOUT using stdio' );
+
+   is( $output, "some data\n", '$stdout after perl STDIN->STDOUT using stdio' );
 }

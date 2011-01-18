@@ -169,6 +169,12 @@ from the other.
 The child will be given the reading end of a C<pipe(2)>; the parent may write
 to the other.
 
+=item pipe_rdwr
+
+Only valid on the C<stdio> filehandle. The child will be given the reading end
+of one C<pipe(2)> on STDIN and the writing end of another on STDOUT. A single
+Stream object will be created in the parent configured for both filehandles.
+
 =back
 
 Once the filehandle is set up, the C<fd> method (or its shortcuts of C<stdin>,
@@ -204,6 +210,12 @@ written the pipe will be closed.
 
 Shortcuts for C<fd0>, C<fd1> and C<fd2> respectively.
 
+=item stdio => ...
+
+Special filehandle to affect STDIN and STDOUT at the same time. This
+filehandle supports being configured for both reading and writing at the same
+time.
+
 =back
 
 =cut
@@ -220,7 +232,7 @@ sub configure
    # All these parameters can only be configured while the process isn't
    # running
    my %setup_params;
-   foreach (qw( code command setup stdin stdout stderr ), grep { m/^fd\d+$/ } keys %params ) {
+   foreach (qw( code command setup stdin stdout stderr stdio ), grep { m/^fd\d+$/ } keys %params ) {
       $setup_params{$_} = delete $params{$_} if exists $params{$_};
    }
 
@@ -240,6 +252,8 @@ sub configure
    $self->configure_fd( 1, %{ delete $setup_params{stdout} } ) if $setup_params{stdout};
    $self->configure_fd( 2, %{ delete $setup_params{stderr} } ) if $setup_params{stderr};
 
+   $self->configure_fd( 'io', %{ delete $setup_params{stdio} } ) if $setup_params{stdio};
+
    # All the rest are fd\d+
    foreach ( keys %setup_params ) {
       my ( $fd ) = m/^fd(\d+)$/ or croak "Expected 'fd\\d+'";
@@ -253,11 +267,13 @@ use constant {
    # These are from the perspective of the parent
    FD_VIA_PIPEREAD  => 1,
    FD_VIA_PIPEWRITE => 2,
+   FD_VIA_PIPERDWR  => 3, # Only valid for stdio pseudo-fd
 };
 
 my %via_names = (
    pipe_read  => FD_VIA_PIPEREAD,
    pipe_write => FD_VIA_PIPEWRITE,
+   pipe_rdwr  => FD_VIA_PIPERDWR,
 );
 
 sub configure_fd
@@ -266,6 +282,13 @@ sub configure_fd
    my ( $fd, %args ) = @_;
 
    $self->is_running and croak "Cannot configure fd $fd in a running Process";
+
+   if( $fd eq "io" ) {
+      exists $self->{fd_handle}{$_} and croak "Cannot configure stdio since fd$_ is already defined" for 0 .. 1;
+   }
+   elsif( $fd == 0 or $fd == 1 ) {
+      exists $self->{fd_handle}{io} and croak "Cannot configure fd$fd since stdio is already defined";
+   }
 
    require IO::Async::Stream;
 
@@ -303,7 +326,7 @@ sub configure_fd
       $handle->write( $from,
          on_flush => sub {
             my ( $handle ) = @_;
-            $handle->close;
+            $handle->close_write;
          },
       );
 
@@ -315,17 +338,23 @@ sub configure_fd
    if( !defined $via ) {
       $via = FD_VIA_PIPEREAD  if  $wants_read and !$wants_write;
       $via = FD_VIA_PIPEWRITE if !$wants_read and  $wants_write;
-
+      $via = FD_VIA_PIPERDWR  if  $wants_read and  $wants_write;
    }
    elsif( $via == FD_VIA_PIPEREAD ) {
-      $wants_write and croak "fd$fd would want writing but has via = pipe_read";
+      $wants_write and $via = FD_VIA_PIPERDWR;
    }
    elsif( $via == FD_VIA_PIPEWRITE ) {
-      $wants_read and croak "fd$fd would want writing but has via = pipe_write";
+      $wants_read and $via = FD_VIA_PIPERDWR;
+   }
+   elsif( $via == FD_VIA_PIPERDWR ) {
+      # Fine
    }
    else {
       die "Need to check fd_via{$fd}\n";
    }
+
+   $via == FD_VIA_PIPERDWR and $fd ne "io" and
+      croak "Cannot both read and write simultaneously on fd$fd";
 
    defined $via and $self->{fd_via}{$fd} = $via;
 }
@@ -346,27 +375,42 @@ sub _prepare_fds
       my $handle = $fd_handle->{$fd};
       my $via    = $fd_via->{$fd};
 
-      my ( $myfd, $childfd );
+      my $key = $fd eq "io" ? "stdio" : "fd$fd";
 
       if( $via == FD_VIA_PIPEREAD ) {
-         ( $myfd, $childfd ) = $loop->pipepair() or croak "Unable to pipe() - $!";
+         my ( $myfd, $childfd ) = $loop->pipepair() or croak "Unable to pipe() - $!";
+
          $handle->configure( read_handle => $myfd );
+
+         push @setup, $key => [ dup => $childfd ];
+         $self->{to_close}{$childfd->fileno} = $childfd;
       }
       elsif( $via == FD_VIA_PIPEWRITE ) {
-         ( $childfd, $myfd ) = $loop->pipepair() or croak "Unable to pipe() - $!";
+         my ( $childfd, $myfd ) = $loop->pipepair() or croak "Unable to pipe() - $!";
+
          $handle->configure( write_handle => $myfd );
+
+         push @setup, $key => [ dup => $childfd ];
+         $self->{to_close}{$childfd->fileno} = $childfd;
+      }
+      elsif( $via == FD_VIA_PIPERDWR ) {
+         $key eq "stdio" or croak "Oops - should only be FD_VIA_PIPERDWR on stdio";
+         # Can't use pipequad here for now because we need separate FDs so we
+         # can ->close them properly
+         my ( $myread, $childwrite ) = $loop->pipepair() or croak "Unable to pipe() - $!";
+         my ( $childread, $mywrite ) = $loop->pipepair() or croak "Unable to pipe() - $!";
+
+         $handle->configure( read_handle => $myread, write_handle => $mywrite );
+
+         push @setup, stdin => [ dup => $childread ], stdout => [ dup => $childwrite ];
+         $self->{to_close}{$childread->fileno}  = $childread;
+         $self->{to_close}{$childwrite->fileno} = $childwrite;
       }
       else {
          croak "Unsure what to do with fd_via==$via";
       }
 
-      my $key = "fd$fd";
-
-      push @setup, $key => [ dup => $childfd ];
-      $self->{to_close}{$childfd->fileno} = $childfd;
-
       $mergepoint->needs( $key );
-
       $handle->configure(
          on_closed => sub {
             $mergepoint->done( $key );
@@ -569,15 +613,18 @@ sub fd
 
 =head2 $stream = $process->stderr
 
-Shortcuts for calling C<fd> with 0, 1, or 2 respectively, to obtain the
-L<IO::Async::Stream> representing the standard input, output, or error streams
-of the child process.
+=head2 $stream = $process->stdio
+
+Shortcuts for calling C<fd> with 0, 1, 2 or C<io> respectively, to obtain the
+L<IO::Async::Stream> representing the standard input, output, error, or
+combined input/output streams of the child process.
 
 =cut
 
 sub stdin  { shift->fd( 0 ) }
 sub stdout { shift->fd( 1 ) }
 sub stderr { shift->fd( 2 ) }
+sub stdio  { shift->fd( 'io' ) }
 
 # Keep perl happy; keep Britain tidy
 1;
