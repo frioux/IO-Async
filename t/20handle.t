@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 72;
+use Test::More tests => 73;
 use Test::Exception;
 use Test::Refcount;
 use Test::Warn;
@@ -296,9 +296,7 @@ my $sub_writeready = 0;
 
    is( $closed, 1, '$closed after ->close_read + ->close_write' );
 
-   $loop->loop_once( 0.1 );
-
-   $loop->remove( $handle );
+   is( $handle->get_loop, undef, '$handle no longer member of Loop' );
 }
 
 # Late-binding of handle
