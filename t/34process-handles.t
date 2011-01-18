@@ -146,7 +146,7 @@ testing_loop( $loop );
    my $stdout;
 
    my $process = IO::Async::Process->new(
-      command => [ $^X, "-pe", '1' ],
+      command => [ $^X, "-pe", '$_ = uc' ],
       stdin   => { via => "pipe_write" },
       stdout  => { into => \$stdout },
       on_finish => sub { },
@@ -165,14 +165,14 @@ testing_loop( $loop );
    ok( $process->is_exited,     '$process->is_exited after perl STDIN->STDOUT' );
    is( $process->exitstatus, 0, '$process->exitstatus after perl STDIN->STDOUT' );
 
-   is( $stdout, "some data\n", '$stdout after perl STDIN->STDOUT' );
+   is( $stdout, "SOME DATA\n", '$stdout after perl STDIN->STDOUT' );
 }
 
 {
    my $stdout;
 
    my $process = IO::Async::Process->new(
-      command => [ $^X, "-pe", '1' ],
+      command => [ $^X, "-pe", '$_ = uc' ],
       stdin   => { from => "some data\n" },
       stdout  => { into => \$stdout },
       on_finish => sub { },
@@ -189,14 +189,14 @@ testing_loop( $loop );
    ok( $process->is_exited,     '$process->is_exited after perl STDIN->STDOUT from' );
    is( $process->exitstatus, 0, '$process->exitstatus after perl STDIN->STDOUT from' );
 
-   is( $stdout, "some data\n", '$stdout after perl STDIN->STDOUT from' );
+   is( $stdout, "SOME DATA\n", '$stdout after perl STDIN->STDOUT from' );
 }
 
 {
    my $stdout;
 
    my $process = IO::Async::Process->new(
-      command => [ $^X, "-pe", '1' ],
+      command => [ $^X, "-pe", '$_ = uc' ],
       fd0 => { from => "some data\n" },
       fd1 => { into => \$stdout },
       on_finish => sub { },
@@ -209,14 +209,14 @@ testing_loop( $loop );
    ok( $process->is_exited,     '$process->is_exited after perl STDIN->STDOUT using fd[n]' );
    is( $process->exitstatus, 0, '$process->exitstatus after perl STDIN->STDOUT using fd[n]' );
 
-   is( $stdout, "some data\n", '$stdout after perl STDIN->STDOUT using fd[n]' );
+   is( $stdout, "SOME DATA\n", '$stdout after perl STDIN->STDOUT using fd[n]' );
 }
 
 {
    my $output;
 
    my $process = IO::Async::Process->new(
-      command => [ $^X, "-pe", '1' ],
+      command => [ $^X, "-pe", '$_ = uc' ],
       stdio => { via => "pipe_rdwr" },
       on_finish => sub { },
    );
@@ -244,14 +244,14 @@ testing_loop( $loop );
    ok( $process->is_exited,     '$process->is_exited after perl STDIO' );
    is( $process->exitstatus, 0, '$process->exitstatus after perl STDIO' );
 
-   is_deeply( \@output_lines, [ "some data\n" ], '@output_lines after perl STDIO' );
+   is_deeply( \@output_lines, [ "SOME DATA\n" ], '@output_lines after perl STDIO' );
 }
 
 {
    my $output;
 
    my $process = IO::Async::Process->new(
-      command => [ $^X, "-pe", '1' ],
+      command => [ $^X, "-pe", '$_ = uc' ],
       stdio => {
          from => "some data\n",
          into => \$output,
@@ -266,5 +266,5 @@ testing_loop( $loop );
    ok( $process->is_exited,     '$process->is_exited after perl STDIN->STDOUT using stdio' );
    is( $process->exitstatus, 0, '$process->exitstatus after perl STDIN->STDOUT using stdio' );
 
-   is( $output, "some data\n", '$stdout after perl STDIN->STDOUT using stdio' );
+   is( $output, "SOME DATA\n", '$stdout after perl STDIN->STDOUT using stdio' );
 }
