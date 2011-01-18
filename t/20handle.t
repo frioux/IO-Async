@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 61;
+use Test::More tests => 67;
 use Test::Exception;
 use Test::Refcount;
 use Test::Warn;
@@ -235,6 +235,55 @@ my $sub_writeready = 0;
    $handle->close;
 
    is( $closed, 1, '$closed after ->close' );
+}
+
+# Close read/write
+{
+   my ( $Srd1, $Srd2 ) = mkhandles;
+   my ( $Swr1, $Swr2 ) = mkhandles;
+
+   local $SIG{PIPE} = "IGNORE";
+
+   my $readready  = 0;
+   my $writeready = 0;
+
+   my $handle = IO::Async::Handle->new(
+      read_handle  => $Srd1,
+      write_handle => $Swr1,
+      on_read_ready  => sub { $readready++ },
+      on_write_ready => sub { $writeready++ },
+      want_writeready => 1,
+   );
+
+   $loop->add( $handle );
+
+   $handle->close_read;
+
+   is( $Srd2->syswrite( "Oops\n" ), undef, 'syswrite into EOF read handle' );
+
+   wait_for { $writeready };
+
+   $handle->write_handle->syswrite( "Still works\n" );
+   is( $Swr2->getline, "Still works\n", 'write handle still works' );
+
+   is( $handle->get_loop, $loop, 'Handle still member of Loop after ->close_read' );
+
+   ( $Srd1, $Srd2 ) = mkhandles;
+
+   $handle->configure( read_handle => $Srd1 );
+
+   $handle->close_write;
+
+   $Srd2->syswrite( "Also works\n" );
+
+   wait_for { $readready };
+
+   is( $handle->read_handle->getline, "Also works\n", 'read handle still works' );
+   is( $Swr2->getline, undef, 'sysread from EOF write handle' );
+
+   is( $handle->get_loop, $loop, 'Handle still member of Loop after ->close_write' );
+
+   $loop->remove( $handle );
 }
 
 # Late-binding of handle

@@ -360,20 +360,20 @@ sub close_read
 {
    my $self = shift;
 
+   $self->want_readready( 0 );
+
    my $read_handle = delete $self->{read_handle};
    $read_handle->close if defined $read_handle;
-
-   undef $self->{want_readready};
 }
 
 sub close_write
 {
    my $self = shift;
 
+   $self->want_writeready( 0 );
+
    my $write_handle = delete $self->{write_handle};
    $write_handle->close if defined $write_handle;
-
-   undef $self->{want_writeready};
 }
 
 =head2 $handle = $handle->read_handle
