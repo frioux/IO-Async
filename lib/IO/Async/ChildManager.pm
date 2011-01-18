@@ -644,49 +644,6 @@ sub _spawn_in_child
    return $exitvalue;
 }
 
-=head2 $pid = $loop->open_child( %params )
-
-This creates a new child process to run the given code block or command, and
-attaches filehandles to it that the parent will watch. This method is a light
-wrapper around constructing a new L<IO::Async::Process> object, provided
-largely for backward compatibility. New code ought to construct such an object
-directly, as it may provide more features than are available here.
-
-For more detail on this legacy interface, see the L<IO::Async::Loop>
-C<open_child> documentation directly.
-
-=cut
-
-sub open_child
-{
-   my $self = shift;
-
-   my $loop = $self->{loop};
-   return $loop->open_child( @_ );
-}
-
-=head2 $pid = $loop->run_child( %params )
-
-This creates a new child process to run the given code block or command,
-capturing its STDOUT and STDERR streams. When the process exits, a
-continuation is invoked being passed the exitcode, and content of the streams.
-This method is a light wrapper around constructing a new L<IO::Async::Process>
-object, provided largely for backward compatibility. New code ought to construct
-such an object directly, as it may provide more features than are available here.
-
-For more detail on this legacy interface, see the L<IO::Async::Loop>
-C<run_child> documentation directly.
-
-=cut
-
-sub run_child
-{
-   my $self = shift;
-
-   my $loop = $self->{loop};
-   return $loop->run_child( @_ );
-}
-
 # Keep perl happy; keep Britain tidy
 1;
 
