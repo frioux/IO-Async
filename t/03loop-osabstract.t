@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 33;
+use Test::More tests => 34;
 
 use IO::Async::Loop::Poll;
 
@@ -96,6 +96,23 @@ is( $loop->signame2num( 'TERM' ), SIGTERM, '$loop->signame2num' );
                 } ) ],
               [ AF_INET, SOCK_STREAM, 0, $sinaddr ],
               '$loop->extract_addrinfo( HASH ) with inet, ip+port' );
+}
+
+SKIP: {
+   my $sin6addr = eval { Socket::pack_sockaddr_in6( 1234, Socket::inet_pton( Socket::AF_INET6(), "fe80::5678" ) ) } or
+                  eval { Socket6::pack_sockaddr_in6( 1234, Socket6::inet_pton( Socket6::AF_INET6(), "fe80::5678" ) ) };
+   skip "No pack_sockaddr_in6", 1 unless defined $sin6addr;
+
+   my $AF_INET6 = defined &Socket::AF_INET6 ? Socket::AF_INET6() : Socket6::AF_INET6();
+
+   is_deeply( [ $loop->extract_addrinfo( {
+                  family   => "inet6",
+                  socktype => "stream",
+                  ip       => "fe80::5678",
+                  port     => "1234",
+                } ) ],
+              [ Socket::AF_INET6(), SOCK_STREAM, 0, $sin6addr ],
+              '$loop->extract_addrinfo( HASH ) with inet6, ip+port' );
 }
 
 {

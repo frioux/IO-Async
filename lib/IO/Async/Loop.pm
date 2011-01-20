@@ -1334,6 +1334,31 @@ sub _extract_addrinfo_inet
    return Socket::pack_sockaddr_in( $port, Socket::inet_aton( $ip ) );
 }
 
+sub _extract_addrinfo_inet6
+{
+   my $self = shift;
+   my ( $ai ) = @_;
+
+   defined( my $port = $ai->{port} ) or croak "Expected 'port' for extract_addrinfo on family='inet6'";
+   defined( my $ip   = $ai->{ip}   ) or croak "Expected 'ip' for extract_addrinfo on family='inet6'";
+
+   my $scopeid  = $ai->{scopeid}  || 0;
+   my $flowinfo = $ai->{flowinfo} || 0;
+
+   # We're not quite sure where pack_sockaddr_in6 might come from. Perl's
+   # Socket module added it in 5.13.8 but before then Socket6 is our best bet.
+   # Socket6 isn't core though.
+   if( defined &Socket::pack_sockaddr_in6 ) {
+      return Socket::pack_sockaddr_in6( $port, Socket::inet_pton( Socket::AF_INET6(), $ip ), $scopeid, $flowinfo );
+   }
+   elsif( defined &Socket6::pack_sockaddr_in6_all ) {
+      return Socket6::pack_sockaddr_in6_all( $port, $flowinfo, Socket6::inet_pton( Socket6::AF_INET6(), $ip ), $scopeid );
+   }
+   else {
+      croak "Cannot pack_sockaddr_in6";
+   }
+}
+
 =item family => 'unix'
 
 Will pack a UNIX socket path from a key called C<path>.
