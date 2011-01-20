@@ -564,15 +564,12 @@ method can use.
 This example shows how to use the C<Socket> functions to construct one for
 TCP port 8001 on address 10.0.0.1:
 
- use Socket qw( pack_sockaddr_in inet_aton );
-
- ...
-
  $listener->listen(
     addr => {
        family   => "inet",
        socktype => "stream",
-       addr     => pack_sockaddr_in( 8001, inet_aton( "10.0.0.1" ) ),
+       port     => 8001,
+       ip       => "10.0.0.1",
     },
     ...
  );
@@ -580,15 +577,11 @@ TCP port 8001 on address 10.0.0.1:
 This example shows another way to listen on a UNIX socket, similar to the
 earlier example:
 
- use Socket qw( pack_sockaddr_un );
-
- ...
-
  $listener->listen(
     addr => {
        family   => "unix",
        socktype => "stream",
-       addr     => pack_sockaddr_un( "echo.sock" ),
+       path     => "echo.sock",
     },
     ...
  );

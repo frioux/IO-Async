@@ -10,7 +10,7 @@ use Test::Refcount;
 
 use POSIX qw( EAGAIN ECONNRESET );
 
-use Socket qw( pack_sockaddr_in unpack_sockaddr_in );
+use Socket qw( unpack_sockaddr_in );
 
 use IO::Async::Loop;
 

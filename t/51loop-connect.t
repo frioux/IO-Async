@@ -8,7 +8,7 @@ use Test::More tests => 16;
 
 use IO::Socket::INET;
 use POSIX qw( ENOENT );
-use Socket qw( AF_UNIX pack_sockaddr_un );
+use Socket qw( AF_UNIX );
 
 use IO::Async::Loop::Poll;
 
@@ -136,7 +136,7 @@ SKIP: {
    my $failerr;
 
    $loop->connect(
-      addr => { family => "unix", socktype => "stream", addr => pack_sockaddr_un( "/some/path/we/know/breaks" ) },
+      addr => { family => "unix", socktype => "stream", path => "/some/path/we/know/breaks" },
       on_connected => sub { die "Test died early - connect succeeded\n"; },
       on_fail => sub { $failop = shift @_; $failerr = pop @_; },
       on_connect_error => sub { $error = 1 },
@@ -176,7 +176,7 @@ SKIP: {
    my @error;
 
    $loop->connect(
-      addr => { family => "inet", socktype => "stream", addr => pack_sockaddr_in( $port, inet_aton("127.0.0.1") ) },
+      addr => { family => "inet", socktype => "stream", port => $port, ip => "127.0.0.1" },
       on_connected => sub { die "Test died early - connect succeeded\n"; },
       on_fail => sub { $failop = shift @_; $failerr = pop @_; },
       on_connect_error => sub { @error = @_; },
