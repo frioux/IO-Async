@@ -2,11 +2,11 @@
 
 use strict;
 
-use Test::More tests => 31;
+use Test::More tests => 33;
 
 use IO::Async::Loop::Poll;
 
-use Socket qw( AF_INET SOCK_STREAM SOCK_DGRAM pack_sockaddr_in inet_aton );
+use Socket qw( AF_INET AF_UNIX SOCK_STREAM SOCK_DGRAM pack_sockaddr_in pack_sockaddr_un inet_aton );
 
 use POSIX qw( SIGTERM );
 
@@ -87,6 +87,27 @@ is( $loop->signame2num( 'TERM' ), SIGTERM, '$loop->signame2num' );
                 } ) ],
               [ AF_INET, SOCK_STREAM, 0, $sinaddr ],
               '$loop->extract_addrinfo( HASH )' );
+
+   is_deeply( [ $loop->extract_addrinfo( {
+                  family   => "inet",
+                  socktype => "stream",
+                  ip       => "1.2.3.4",
+                  port     => "56",
+                } ) ],
+              [ AF_INET, SOCK_STREAM, 0, $sinaddr ],
+              '$loop->extract_addrinfo( HASH ) with inet, ip+port' );
+}
+
+{
+   my $sunaddr = pack_sockaddr_un( "foo.sock" );
+
+   is_deeply( [ $loop->extract_addrinfo( {
+                  family   => "unix",
+                  socktype => "stream",
+                  path     => "foo.sock",
+                } ) ],
+              [ AF_UNIX, SOCK_STREAM, 0, $sunaddr ],
+              '$loop->extract_addrinfo( HASH ) with unix, path' );
 }
 
 cmp_ok( $loop->time - time, "<", 0.1, '$loop->time gives the current time' );

@@ -1262,8 +1262,14 @@ the appropriate C<AF_*> constant.
 The socktype may also be given as a symbolic string; C<stream>, C<dgram> or
 C<raw>; this will be converted to the appropriate C<SOCK_*> constant.
 
-Note that the addr field must be a packed socket address, such as returned
-by C<pack_sockaddr_in> or C<pack_sockaddr_un>.
+Note that the C<addr> field, if provided, must be a packed socket address,
+such as returned by C<pack_sockaddr_in> or C<pack_sockaddr_un>.
+
+If the HASH form is used, rather than passing a packed socket address in the
+C<addr> field, certain other hash keys may be used instead for convenience on
+certain named families.
+
+=over 4
 
 =cut
 
@@ -1293,6 +1299,14 @@ sub extract_addrinfo
       croak "Expected '$argname' to be an ARRAY or HASH reference";
    }
 
+   if( defined $ai[ADDRINFO_FAMILY] and !defined $ai[ADDRINFO_ADDR] and ref $ai eq "HASH" ) {
+      my $family = $ai[ADDRINFO_FAMILY];
+      my $method = "_extract_addrinfo_$family";
+      my $code = $self->can( $method ) or croak "Cannot determine addr for extract_addrinfo on family='$family'";
+
+      $ai[ADDRINFO_ADDR] = $code->( $self, $ai );
+   }
+
    $ai[ADDRINFO_FAMILY]   = _getfamilybyname( $ai[ADDRINFO_FAMILY] );
    $ai[ADDRINFO_SOCKTYPE] = _getsocktypebyname( $ai[ADDRINFO_SOCKTYPE] );
 
@@ -1303,7 +1317,42 @@ sub extract_addrinfo
    return @ai;
 }
 
+=item family => 'inet'
+
+Will pack an IP address and port number from keys called C<ip> and C<port>.
+
+=cut
+
+sub _extract_addrinfo_inet
+{
+   my $self = shift;
+   my ( $ai ) = @_;
+
+   defined( my $port = $ai->{port} ) or croak "Expected 'port' for extract_addrinfo on family='inet'";
+   defined( my $ip   = $ai->{ip}   ) or croak "Expected 'ip' for extract_addrinfo on family='inet'";
+
+   return Socket::pack_sockaddr_in( $port, Socket::inet_aton( $ip ) );
+}
+
+=item family => 'unix'
+
+Will pack a UNIX socket path from a key called C<path>.
+
+=cut
+
+sub _extract_addrinfo_unix
+{
+   my $self = shift;
+   my ( $ai ) = @_;
+
+   defined( my $path = $ai->{path} ) or croak "Expected 'path' for extract_addrinfo on family='unix'";
+
+   return Socket::pack_sockaddr_un( $path );
+}
+
 =pod
+
+=back
 
 This method used to be called C<unpack_addrinfo>. A backward compatibility
 wrapper is provided temporarily, but will be removed in a later version.
