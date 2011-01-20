@@ -10,22 +10,34 @@ use warnings;
 
 our $VERSION = '0.36';
 
-use Socket::GetAddrInfo qw(
-   :newapi getaddrinfo getnameinfo
-   AI_NUMERICHOST
-   NI_NUMERICHOST NI_NUMERICSERV
-   EAI_NONAME
-);
-
-# We're going to implement methods called getaddrinfo and getnameinfo.
-# We therefore need to rename these imports. We couldn't just perform an empty
-# import and call fully-qualified because Socket::GetAddrInfo's import method
-# does special magic
 BEGIN {
-   my $stash = do { no strict 'refs'; \%{__PACKAGE__."::"} };
+   # We're going to implement methods called getaddrinfo and getnameinfo. We
+   # therefore need import them with different names prefixed with underscores
 
-   $stash->{_getaddrinfo} = delete $stash->{getaddrinfo};
-   $stash->{_getnameinfo} = delete $stash->{getnameinfo};
+   my @constants = qw(
+      AI_NUMERICHOST
+      NI_NUMERICHOST NI_NUMERICSERV
+      EAI_NONAME
+   );
+
+   # Perl 5.13.9 or above has Socket::getaddrinfo support in core.
+   # Before that we need to use Socket::GetAddrInfo
+   if( require Socket and defined &Socket::getaddrinfo ) {
+      Socket->import( @constants );
+
+      *_getaddrinfo = \&Socket::getaddrinfo;
+      *_getnameinfo = \&Socket::getnameinfo;
+   }
+   else {
+      # We can't just perform an empty import and call fully-qualified because
+      # Socket::GetAddrInfo's import method does special magic
+      require Socket::GetAddrInfo;
+      Socket::GetAddrInfo->import( qw( :newapi getaddrinfo getnameinfo ), @constants );
+
+      my $stash = do { no strict 'refs'; \%{__PACKAGE__."::"} };
+      $stash->{_getaddrinfo} = delete $stash->{getaddrinfo};
+      $stash->{_getnameinfo} = delete $stash->{getnameinfo};
+   }
 }
 
 BEGIN {
