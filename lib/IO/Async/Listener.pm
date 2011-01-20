@@ -296,7 +296,7 @@ is returned by the C<getaddrinfo> named resolver.
 
 Shortcut for passing a single address to listen on; it may be passed directly
 with this key, instead of in another array of its own. This should be in a
-format recognised by L<IO::Async::Loop>'s C<unpack_addrinfo> method. See also
+format recognised by L<IO::Async::Loop>'s C<extract_addrinfo> method. See also
 the C<EXAMPLES> section.
 
 =back
@@ -426,7 +426,7 @@ sub listen
       my ( $listenerr, $binderr, $sockopterr, $socketerr );
 
       foreach my $addr ( @$addrlist ) {
-         my ( $family, $socktype, $proto, $address ) = $loop->unpack_addrinfo( $addr );
+         my ( $family, $socktype, $proto, $address ) = $loop->extract_addrinfo( $addr );
 
          my $sock;
 
@@ -558,8 +558,8 @@ sockets.
 =head2 Passing Plain Socket Addresses
 
 The C<addr> or C<addrs> parameters should contain a definition of a plain
-socket address in a form that the L<IO::Async::Loop> C<unpack_addrinfo> method
-can use.
+socket address in a form that the L<IO::Async::Loop> C<extract_addrinfo>
+method can use.
 
 This example shows how to use the C<Socket> functions to construct one for
 TCP port 8001 on address 10.0.0.1:

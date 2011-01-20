@@ -1090,7 +1090,7 @@ C<SOCK_DGRAM> pairs in the C<AF_INET> family even if the underlying platform's
 C<socketpair(2)> does not, by connecting two normal sockets together.
 
 C<$family> and C<$socktype> may also be given symbolically similar to the
-behaviour of C<unpack_addrinfo>.
+behaviour of C<extract_addrinfo>.
 
 =cut
 
@@ -1238,7 +1238,7 @@ sub signame2num
    return $sig_num{$signame};
 }
 
-=head2 ( $family, $socktype, $protocol, $addr ) = $loop->unpack_addrinfo( $ai )
+=head2 ( $family, $socktype, $protocol, $addr ) = $loop->extract_addrinfo( $ai )
 
 Given an ARRAY or HASH reference value containing an addrinfo, returns a
 family, socktype and protocol argument suitable for a C<socket> call and an
@@ -1274,7 +1274,7 @@ use constant {
    ADDRINFO_ADDR => 3,
 };
 
-sub unpack_addrinfo
+sub extract_addrinfo
 {
    my $self = shift;
    my ( $ai, $argname ) = @_;
@@ -1302,6 +1302,15 @@ sub unpack_addrinfo
 
    return @ai;
 }
+
+=pod
+
+This method used to be called C<unpack_addrinfo>. A backward compatibility
+wrapper is provided temporarily, but will be removed in a later version.
+
+=cut
+
+sub unpack_addrinfo { goto &extract_addrinfo }
 
 =head2 $time = $loop->time
 
