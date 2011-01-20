@@ -3,6 +3,10 @@ use warnings;
 
 use Module::Build;
 
+# We only need Socket::GetAddrInfo if core's Socket doesn't provide a function
+# called getaddrinfo
+my $HAS_GETADDRINFO = eval { require Socket and defined &Socket::getaddrinfo };
+
 my $build = Module::Build->new(
    module_name => 'IO::Async',
    requires => {
@@ -10,9 +14,9 @@ my $build = Module::Build->new(
       'CPS' => 0,
       'Heap' => '0.80',
       'IO::Poll' => 0,
-      'Socket::GetAddrInfo' => '0.18',
       'Storable' => 0,
       'Time::HiRes' => 0,
+      ( $HAS_GETADDRINFO ? () : ( 'Socket::GetAddrInfo' => '0.18' ) ),
    },
    build_requires => {
       'File::Temp' => 0,
