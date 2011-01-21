@@ -1334,6 +1334,17 @@ sub _extract_addrinfo_inet
    return Socket::pack_sockaddr_in( $port, Socket::inet_aton( $ip ) );
 }
 
+=item family => 'inet6'
+
+Will pack an IP address and port number from keys called C<ip> and C<port>.
+Optionally will also include values from C<scopeid> and C<flowinfo> keys if
+provided.
+
+This will only work if a C<pack_sockaddr_in6()> function can be found, either
+in C<Socket> or C<Socket6>.
+
+=cut
+
 sub _extract_addrinfo_inet6
 {
    my $self = shift;
