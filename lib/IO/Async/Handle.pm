@@ -223,9 +223,7 @@ sub _watch_read
    my $fh = $self->read_handle or return;
 
    if( $want ) {
-      $self->{cb_r} ||= $self->{on_read_ready} ?
-         $self->_capture_weakself( $self->{on_read_ready} ) :
-         $self->_capture_weakself( 'on_read_ready' );
+      $self->{cb_r} ||= $self->make_event_cb( 'on_read_ready' );
 
       $loop->watch_io(
          handle => $fh,
@@ -249,9 +247,7 @@ sub _watch_write
    my $fh = $self->write_handle or return;
 
    if( $want ) {
-      $self->{cb_w} ||= $self->{on_write_ready} ?
-         $self->_capture_weakself( $self->{on_write_ready} ) :
-         $self->_capture_weakself( 'on_write_ready' );
+      $self->{cb_w} ||= $self->make_event_cb( 'on_write_ready' );
 
       $loop->watch_io(
          handle => $fh,

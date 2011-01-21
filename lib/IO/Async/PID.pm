@@ -129,8 +129,8 @@ sub _add_to_loop
 
    # on_exit continuation gets passed PID value; need to replace that with
    # $self
-   $self->{cb} ||= $self->_capture_weakself( sub {
-      my ( $self, $pid, $exitcode ) = @_;
+   $self->{cb} ||= $self->_replace_weakself( sub {
+      my ( $self, $exitcode ) = @_;
 
       $self->invoke_event( on_exit => $exitcode );
 
