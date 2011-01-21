@@ -140,21 +140,6 @@ object.
 
 =cut
 
-=head2 $pid = $loop->detach_child( %params )
-
-This method creates a new child process to run a given code block. It is a
-legacy wrapper around C<IO::Async::Loop> C<fork>.
-
-=cut
-
-sub detach_child
-{
-   my $self = shift;
-
-   my $loop = $self->{loop};
-   return $loop->fork( @_ );
-}
-
 =head2 $pid = $loop->spawn_child( %params )
 
 This method creates a new child process to run a given code block or command.
