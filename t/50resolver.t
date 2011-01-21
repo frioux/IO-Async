@@ -240,12 +240,11 @@ my ( $testerr, $testhost, $testserv ) = getnameinfo( $testaddr );
    my $result;
 
    $resolver->getnameinfo(
-      addr => $testaddr,
-      numerichost => 1,
-      numericserv => 1,
+      addr    => $testaddr,
+      numeric => 1,
       on_resolved => sub { $result = [ 'resolved', @_ ] },
       on_error    => sub { $result = [ 'error',    @_ ] },
    );
 
-   is_deeply( $result, [ resolved => "127.0.0.1", 80 ], '$resolver->getnameinfo with numerichost|numericserv is synchronous' );
+   is_deeply( $result, [ resolved => "127.0.0.1", 80 ], '$resolver->getnameinfo with numeric is synchronous' );
 }

@@ -363,6 +363,10 @@ L<Socket::GetAddrInfo> for more detail.
 
 If true, set the C<NI_NUMERICHOST>, C<NI_NUMERICSERV> or C<NI_DGRAM> flags.
 
+=item numeric => BOOL
+
+If true, sets both C<NI_NUMERICHOST> and C<NI_NUMERICSERV> flags.
+
 =item timeout => NUMBER
 
 Time in seconds after which to abort the lookup with a C<Timed out> exception
@@ -400,6 +404,8 @@ sub getnameinfo
    $flags |= NI_NUMERICHOST if $args{numerichost};
    $flags |= NI_NUMERICSERV if $args{numericserv};
    $flags |= NI_DGRAM       if $args{dgram};
+
+   $flags |= NI_NUMERICHOST|NI_NUMERICSERV if $args{numeric};
 
    if( $flags & (NI_NUMERICHOST|NI_NUMERICSERV) ) {
       # This is a numeric-only lookup that can be done synchronously
