@@ -356,7 +356,9 @@ sub close
 
 Closes the underlying read or write handle, and deconfigures it from the
 object. Neither of these methods will invoke the C<on_closed> event, nor
-remove the object from the Loop.
+remove the object from the Loop if there is still one open handle in the
+object. Only when both handles are closed, will C<on_closed> be fired, and the
+object removed.
 
 =cut
 
