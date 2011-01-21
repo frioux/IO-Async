@@ -15,8 +15,8 @@ BEGIN {
    # therefore need import them with different names prefixed with underscores
 
    my @constants = qw(
-      AI_NUMERICHOST
-      NI_NUMERICHOST NI_NUMERICSERV
+      AI_NUMERICHOST AI_PASSIVE
+      NI_NUMERICHOST NI_NUMERICSERV NI_DGRAM
       EAI_NONAME
    );
 
@@ -250,6 +250,12 @@ Hint values used to filter the results.
 Flags to control the C<getaddrinfo(3)> function. See the C<AI_*> constants in
 L<Socket::GetAddrInfo> for more detail.
 
+=item passive => BOOL
+
+If true, sets the C<AI_PASSIVE> flag. This is provided as a convenience to
+avoid the caller from having to import the C<AI_PASSIVE> constant from
+whichever of C<Socket> or C<Socket::GetAddrInfo> it happens to be provided by.
+
 =item timeout => NUMBER
 
 Time in seconds after which to abort the lookup with a C<Timed out> exception
@@ -290,6 +296,8 @@ sub getaddrinfo
    my $host    = $args{host}    || "";
    my $service = $args{service} || "";
    my $flags   = $args{flags}   || 0;
+
+   $flags |= AI_PASSIVE if $args{passive};
 
    $args{family}   = _getfamilybyname( $args{family} )     if defined $args{family};
    $args{socktype} = _getsocktypebyname( $args{socktype} ) if defined $args{socktype};
@@ -347,6 +355,14 @@ The packed socket address to look up.
 Flags to control the C<getnameinfo(3)> function. See the C<NI_*> constants in
 L<Socket::GetAddrInfo> for more detail.
 
+=item numerichost => BOOL
+
+=item numericserv => BOOL
+
+=item dgram => BOOL
+
+If true, set the C<NI_NUMERICHOST>, C<NI_NUMERICSERV> or C<NI_DGRAM> flags.
+
 =item timeout => NUMBER
 
 Time in seconds after which to abort the lookup with a C<Timed out> exception
@@ -380,6 +396,10 @@ sub getnameinfo
    ref $on_resolved or croak "Expected 'on_resolved' to be a reference";
 
    my $flags = $args{flags} || 0;
+
+   $flags |= NI_NUMERICHOST if $args{numerichost};
+   $flags |= NI_NUMERICSERV if $args{numericserv};
+   $flags |= NI_DGRAM       if $args{dgram};
 
    if( $flags & (NI_NUMERICHOST|NI_NUMERICSERV) ) {
       # This is a numeric-only lookup that can be done synchronously

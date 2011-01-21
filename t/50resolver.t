@@ -8,10 +8,7 @@ use Test::More tests => 17;
 use Test::Exception;
 
 use Socket qw( AF_INET SOCK_STREAM pack_sockaddr_in INADDR_LOOPBACK );
-use Socket::GetAddrInfo qw(
-   :newapi getaddrinfo getnameinfo
-   NI_NUMERICHOST NI_NUMERICSERV
-);
+use Socket::GetAddrInfo qw( :newapi getaddrinfo getnameinfo );
 
 use IO::Async::Loop::Poll;
 
@@ -244,10 +241,11 @@ my ( $testerr, $testhost, $testserv ) = getnameinfo( $testaddr );
 
    $resolver->getnameinfo(
       addr => $testaddr,
-      flags => NI_NUMERICHOST|NI_NUMERICSERV,
+      numerichost => 1,
+      numericserv => 1,
       on_resolved => sub { $result = [ 'resolved', @_ ] },
       on_error    => sub { $result = [ 'error',    @_ ] },
    );
 
-   is_deeply( $result, [ resolved => "127.0.0.1", 80 ], '$resolver->getnameinfo with flags=NI_NUMERICHOST|NI_NUMERICSERV is synchronous' );
+   is_deeply( $result, [ resolved => "127.0.0.1", 80 ], '$resolver->getnameinfo with numerichost|numericserv is synchronous' );
 }

@@ -14,7 +14,6 @@ our $VERSION = '0.37';
 use IO::Async::Handle;
 
 use POSIX qw( EAGAIN );
-use Socket::GetAddrInfo qw( AI_PASSIVE );
 
 use Socket qw( sockaddr_family SOL_SOCKET SO_ACCEPTCONN SO_REUSEADDR SO_TYPE );
 
@@ -483,11 +482,10 @@ sub listen
       my %gai_hints;
       exists $params{$_} and $gai_hints{$_} = $params{$_} for qw( family socktype protocol flags );
 
-      $gai_hints{flags} |= AI_PASSIVE;
-
       $loop->resolver->getaddrinfo(
          host    => $host,
          service => $service,
+         passive => 1,
          %gai_hints,
 
          on_resolved => sub {
