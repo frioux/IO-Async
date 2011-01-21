@@ -8,7 +8,7 @@ package IO::Async::Resolver;
 use strict;
 use warnings;
 
-our $VERSION = '0.36';
+our $VERSION = '0.37';
 
 BEGIN {
    # We're going to implement methods called getaddrinfo and getnameinfo. We

@@ -1,7 +1,19 @@
 Revision history for IO-Async
 
+0.37    ADDITIONS:
+         * Handle->close_read, ->close_write
+         * Stream on_read_eof event
+         * extract_addrinfo conveniences for 'inet', 'inet6' and 'unix'
+
+        CHANGES:
+         * Allow Process filehandles to set up plain pipes without read/write
+           behaviour on the associated Stream
+         * Renamed Loop->unpack_addrinfo to ->extract_addrinfo
+         * Prepare for Socket::getaddrinfo() in core; prefer it to
+           Socket::GetAddrInfo::getaddrinfo()
+
 0.36    ADDITIONS:
-         * IO::Async::Processo
+         * IO::Async::Process
 
         CHANGES:
          * Allow prequeuing of ->write data in Stream

@@ -9,7 +9,7 @@ use strict;
 use warnings;
 use base qw( IO::Async::Timer );
 
-our $VERSION = '0.36';
+our $VERSION = '0.37';
 
 use Carp;
 
