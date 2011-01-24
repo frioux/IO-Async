@@ -35,7 +35,7 @@ my $build = Module::Build->new(
       'Test::Warn' => 0,
    },
    license => 'perl',
-   create_makefile_pl => 'traditional',
+   create_makefile_pl => 'small',
    create_license => 1,
    create_readme  => 1,
 );
