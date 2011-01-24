@@ -3,9 +3,17 @@ use warnings;
 
 use Module::Build;
 
-# We only need Socket::GetAddrInfo if core's Socket doesn't provide a function
-# called getaddrinfo
-my $HAS_GETADDRINFO = eval { require Socket and defined &Socket::getaddrinfo };
+my %also_requires;
+
+# As of Perl 5.13.9, core's Socket now contains getaddrinfo, getnameinfo, and
+# all the associated constants.
+if( eval { require Socket and defined &Socket::getaddrinfo } ) {
+   # Was added in Socket 1.93
+   $also_requires{"Socket"} = '1.93';
+}
+else {
+   $also_requires{"Socket::GetAddrInfo"} = '0.18';
+}
 
 my $build = Module::Build->new(
    module_name => 'IO::Async',
@@ -16,7 +24,7 @@ my $build = Module::Build->new(
       'IO::Poll' => 0,
       'Storable' => 0,
       'Time::HiRes' => 0,
-      ( $HAS_GETADDRINFO ? () : ( 'Socket::GetAddrInfo' => '0.18' ) ),
+      %also_requires,
    },
    build_requires => {
       'File::Temp' => 0,
