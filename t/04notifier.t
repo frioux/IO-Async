@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 32;
+use Test::More tests => 35;
 use Test::Exception;
 use Test::Refcount;
 
@@ -12,6 +12,10 @@ use IO::Async::Notifier;
 my $loop = IO::Async::Loop->new;
 
 is_refcount( $loop, 2, '$loop has refcount 2 initially' );
+
+is_deeply( [ $loop->notifiers ],
+           [],
+           '$loop->notifiers empty' );
 
 my $notifier = IO::Async::Notifier->new( );
 
@@ -29,11 +33,19 @@ is_refcount( $notifier, 2, '$notifier has refcount 2 after adding to Loop' );
 
 is( $notifier->get_loop, $loop, 'get_loop $loop' );
 
+is_deeply( [ $loop->notifiers ],
+           [ $notifier ],
+           '$loop->notifiers contains new Notifier' );
+
 dies_ok( sub { $loop->add( $notifier ) }, 'adding again produces error' );
 
 $loop->remove( $notifier );
 
 is( $notifier->get_loop, undef, '$notifier->get_loop is undef' );
+
+is_deeply( [ $loop->notifiers ],
+           [],
+           '$loop->notifiers empty once more' );
 
 lives_ok( sub { $notifier->configure; },
           '$notifier->configure no params succeeds' );

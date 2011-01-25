@@ -368,6 +368,19 @@ sub _remove_noparentcheck
    return;
 }
 
+=head2 @notifiers = $loop->notifiers
+
+Returns a list of all the notifier objects currently stored in the Loop.
+
+=cut
+
+sub notifiers
+{
+   my $self = shift;
+   # Sort so the order remains stable under additions/removals
+   return map { $self->{notifiers}->{$_} } sort keys %{ $self->{notifiers} };
+}
+
 ###################
 # Looping support #
 ###################
