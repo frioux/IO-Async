@@ -1273,12 +1273,10 @@ certain named families.
 
 =cut
 
-use constant {
-   ADDRINFO_FAMILY => 0,
-   ADDRINFO_SOCKTYPE => 1,
-   ADDRINFO_PROTOCOL => 2,
-   ADDRINFO_ADDR => 3,
-};
+use constant ADDRINFO_FAMILY   => 0;
+use constant ADDRINFO_SOCKTYPE => 1;
+use constant ADDRINFO_PROTOCOL => 2;
+use constant ADDRINFO_ADDR     => 3;
 
 sub extract_addrinfo
 {

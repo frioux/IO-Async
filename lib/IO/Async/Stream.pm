@@ -22,11 +22,9 @@ our $READLEN  = 8192;
 our $WRITELEN = 8192;
 
 # Indicies in writequeue elements
-use constant {
-   WQ_DATA     => 0,
-   WQ_ON_FLUSH => 1,
-   WQ_GENSUB   => 2,
-};
+use constant WQ_DATA     => 0;
+use constant WQ_ON_FLUSH => 1;
+use constant WQ_GENSUB   => 2;
 
 =head1 NAME
 

@@ -263,12 +263,10 @@ sub configure
    $self->SUPER::configure( %params );
 }
 
-use constant {
-   # These are from the perspective of the parent
-   FD_VIA_PIPEREAD  => 1,
-   FD_VIA_PIPEWRITE => 2,
-   FD_VIA_PIPERDWR  => 3, # Only valid for stdio pseudo-fd
-};
+# These are from the perspective of the parent
+use constant FD_VIA_PIPEREAD  => 1;
+use constant FD_VIA_PIPEWRITE => 2;
+use constant FD_VIA_PIPERDWR  => 3; # Only valid for stdio pseudo-fd
 
 my %via_names = (
    pipe_read  => FD_VIA_PIPEREAD,
