@@ -20,7 +20,6 @@ use Test::Refcount;
 use IO::Async::Test qw();
 
 use POSIX qw( SIGTERM WIFEXITED WEXITSTATUS WIFSIGNALED WTERMSIG );
-use Socket qw( AF_INET SOCK_DGRAM );
 use Time::HiRes qw( time );
 
 our $VERSION = '0.37';
@@ -154,142 +153,148 @@ Tests the Loop's ability to watch filehandles for IO readiness
 use constant count_tests_io => 12;
 sub run_tests_io
 {
-   my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
+   {
+      my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
+      $_->blocking( 0 ) for $S1, $S2;
 
-   $_->blocking( 0 ) for $S1, $S2;
+      my $readready  = 0;
+      my $writeready = 0;
+      $loop->watch_io(
+         handle => $S1,
+         on_read_ready => sub { $readready = 1 },
+      );
 
-   my $readready  = 0;
-   my $writeready = 0;
+      is_oneref( $loop, '$loop has refcount 1 after watch_io on_read_ready' );
+      is( $readready, 0, '$readready still 0 before ->loop_once' );
 
-   $loop->watch_io(
-      handle => $S1,
-      on_read_ready => sub { $readready = 1 },
-   );
+      $loop->loop_once( 0.1 );
 
-   is_oneref( $loop, '$loop has refcount 1 after watch_io on_read_ready' );
-   is( $readready, 0, '$readready still 0 before ->loop_once' );
+      is( $readready, 0, '$readready when idle' );
 
-   $loop->loop_once( 0.1 );
+      $S2->syswrite( "data\n" );
 
-   is( $readready, 0, '$readready when idle' );
+      # We should still wait a little while even thought we expect to be ready
+      # immediately, because talking to ourself with 0 poll timeout is a race
+      # condition - we can still race with the kernel.
 
-   $S2->syswrite( "data\n" );
+      $loop->loop_once( 0.1 );
 
-   # We should still wait a little while even thought we expect to be ready
-   # immediately, because talking to ourself with 0 poll timeout is a race
-   # condition - we can still race with the kernel.
+      is( $readready, 1, '$readready after loop_once' );
 
-   $loop->loop_once( 0.1 );
+      # Ready $S1 to clear the data
+      $S1->getline(); # ignore return
 
-   is( $readready, 1, '$readready after loop_once' );
+      $loop->watch_io(
+         handle => $S1,
+         on_write_ready => sub { $writeready = 1 },
+      );
 
-   # Ready $S1 to clear the data
-   $S1->getline(); # ignore return
+      is_oneref( $loop, '$loop has refcount 1 after watch_io on_write_ready' );
 
-   $loop->watch_io(
-      handle => $S1,
-      on_write_ready => sub { $writeready = 1 },
-   );
+      $loop->loop_once( 0.1 );
 
-   is_oneref( $loop, '$loop has refcount 1 after watch_io on_write_ready' );
+      is( $writeready, 1, '$writeready after loop_once' );
 
-   $loop->loop_once( 0.1 );
+      $loop->unwatch_io(
+         handle => $S1,
+         on_write_ready => 1,
+      );
 
-   is( $writeready, 1, '$writeready after loop_once' );
+      $readready = 0;
+      $loop->loop_once( 0.1 );
 
-   $loop->unwatch_io(
-      handle => $S1,
-      on_write_ready => 1,
-   );
+      is( $readready, 0, '$readready before HUP' );
 
-   $readready = 0;
-   $loop->loop_once( 0.1 );
+      close( $S2 );
 
-   is( $readready, 0, '$readready before HUP' );
+      $readready = 0;
+      $loop->loop_once( 0.1 );
 
-   close( $S2 );
+      is( $readready, 1, '$readready after HUP' );
 
-   $readready = 0;
-   $loop->loop_once( 0.1 );
-
-   is( $readready, 1, '$readready after HUP' );
-
-   $loop->unwatch_io(
-      handle => $S1,
-      on_read_ready => 1,
-   );
+      $loop->unwatch_io(
+         handle => $S1,
+         on_read_ready => 1,
+      );
+   }
 
    # HUP of pipe - can be different to sockets on some architectures
+   {
+      my ( $P1, $P2 ) = $loop->pipepair() or die "Cannot pipepair - $!";
+      $_->blocking( 0 ) for $P1, $P2;
 
-   my ( $P1, $P2 ) = $loop->pipepair() or die "Cannot pipepair - $!";
+      my $readready = 0;
+      $loop->watch_io(
+         handle => $P1,
+         on_read_ready => sub { $readready = 1 },
+      );
 
-   $loop->watch_io(
-      handle => $P1,
-      on_read_ready => sub { $readready = 1 },
-   );
+      $loop->loop_once( 0.1 );
 
-   $readready = 0;
-   $loop->loop_once( 0.1 );
+      is( $readready, 0, '$readready before pipe HUP' );
 
-   is( $readready, 0, '$readready before pipe HUP' );
+      close( $P2 );
 
-   close( $P2 );
+      $readready = 0;
+      $loop->loop_once( 0.1 );
 
-   $readready = 0;
-   $loop->loop_once( 0.1 );
+      is( $readready, 1, '$readready after pipe HUP' );
 
-   is( $readready, 1, '$readready after pipe HUP' );
-
-   $loop->unwatch_io(
-      handle => $P1,
-      on_read_ready => 1,
-   );
+      $loop->unwatch_io(
+         handle => $P1,
+         on_read_ready => 1,
+      );
+   }
 
    # Check that combined read/write handlers can cancel each other
+   {
+      my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot socketpair - $!";
+      $_->blocking( 0 ) for $S1, $S2;
 
-   ( $S1, $S2 ) = $loop->socketpair() or die "Cannot socketpair - $!";
+      my $callcount = 0;
+      $loop->watch_io(
+         handle => $S1,
+         on_read_ready => sub {
+            $callcount++;
+            $loop->unwatch_io( handle => $S1, on_read_ready => 1, on_write_ready => 1 );
+         },
+         on_write_ready => sub {
+            $callcount++;
+            $loop->unwatch_io( handle => $S1, on_read_ready => 1, on_write_ready => 1 );
+         },
+      );
 
-   my $callcount = 0;
-   $loop->watch_io(
-      handle => $S1,
-      on_read_ready => sub {
-         $callcount++;
-         $loop->unwatch_io( handle => $S1, on_read_ready => 1, on_write_ready => 1 );
-      },
-      on_write_ready => sub {
-         $callcount++;
-         $loop->unwatch_io( handle => $S1, on_read_ready => 1, on_write_ready => 1 );
-      },
-   );
+      $S2->close;
 
-   $S2->close;
+      $loop->loop_once( 0.1 );
 
-   $loop->loop_once( 0.1 );
-
-   is( $callcount, 1, 'read/write_ready can cancel each other' );
+      is( $callcount, 1, 'read/write_ready can cancel each other' );
+   }
 
    # Check that error conditions that aren't true read/write-ability are still
    # invoked
+   {
+      my ( $S1, $S2 ) = $loop->socketpair( 'inet', 'dgram' ) or die "Cannot create AF_INET/SOCK_DGRAM connected pair - $!";
+      $_->blocking( 0 ) for $S1, $S2;
+      $S2->close;
 
-   ( $S1, $S2 ) = $loop->socketpair( AF_INET, SOCK_DGRAM ) or die "Cannot create AF_INET/SOCK_DGRAM connected pair - $!";
-   $S2->close;
+      my $readready = 0;
+      $loop->watch_io(
+         handle => $S1,
+         on_read_ready => sub { $readready = 1 },
+      );
 
-   $readready = 0;
-   $loop->watch_io(
-      handle => $S1,
-      on_read_ready => sub { $readready = 1 },
-   );
+      $S1->syswrite( "Boo!" );
 
-   $S1->syswrite( "Boo!" );
+      $loop->loop_once( 0.1 );
 
-   $loop->loop_once( 0.1 );
+      is( $readready, 1, 'exceptional socket invokes on_read_ready' );
 
-   is( $readready, 1, 'exceptional socket invokes on_read_ready' );
-
-   $loop->unwatch_io(
-      handle => $S1,
-      on_read_ready => 1,
-   );
+      $loop->unwatch_io(
+         handle => $S1,
+         on_read_ready => 1,
+      );
+   }
 }
 
 =head2 timer
