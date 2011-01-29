@@ -18,7 +18,6 @@ use IO::Async::MergePoint;
 use Carp;
 use Scalar::Util qw( weaken );
 
-use Fcntl qw( F_GETFL F_SETFL FD_CLOEXEC );
 use POSIX qw( _exit sysconf _SC_OPEN_MAX dup2 nice );
 
 use constant LENGTH_OF_I => length( pack( "I", 0 ) );
@@ -222,12 +221,15 @@ sub spawn_child
 
    my $loop = $self->{loop};
 
-   my ( $readpipe, $writepipe ) = $loop->pipepair() or croak "Cannot pipe() - $!";
+   my ( $readpipe, $writepipe );
 
-   my $flags = fcntl( $writepipe, F_GETFL, 0 ) or 
-      croak "Cannot fcntl(F_GETFL) - $!";
-   fcntl( $writepipe, F_SETFL, $flags | FD_CLOEXEC ) or
-      croak "Cannot fcntl(F_SETFL) - $!";
+   {
+      # Ensure it's FD_CLOEXEC - this is a bit more portable than manually
+      # fiddling with F_GETFL and F_SETFL (e.g. MSWin32)
+      local $^F = -1;
+
+      ( $readpipe, $writepipe ) = $loop->pipepair() or croak "Cannot pipe() - $!";
+   }
 
    if( defined $command ) {
       my @command = ref( $command ) ? @$command : ( $command );
