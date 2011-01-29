@@ -49,11 +49,9 @@ read-ready and write-ready tests.
 
 To integrate with an existing C<select()>-based event loop, a pair of methods
 C<pre_select()> and C<post_select()> can be called immediately before and
-after a C<select()> call. The relevant bit in the read-ready bitvector is
-always set by the C<pre_select()> method, but the corresponding bit in
-write-ready vector is set depending on the state of the C<'want_writeready'>
-property. The C<post_select()> method will invoke the C<on_read_ready()> or
-C<on_write_ready()> methods or callbacks as appropriate.
+after a C<select()> call. The relevant bits in the read-ready, write-ready and
+exceptional-state bitvectors are set by the C<pre_select()> method, and tested
+by the C<post_select()> method to pick which event callbacks to invoke.
 
 =cut
 
@@ -87,10 +85,9 @@ sub new
 =head2 $loop->pre_select( \$readvec, \$writevec, \$exceptvec, \$timeout )
 
 This method prepares the bitvectors for a C<select()> call, setting the bits
-that notifiers registered by this loop are interested in. It will always set
-the appropriate bits in the read vector, but will only set them in the write
-vector if the notifier's C<want_writeready()> property is true. Neither the
-exception vector nor the timeout are affected.
+that the Loop is interested in. It will also adjust the C<$timeout> value if
+appropriate, reducing it if the next event timeout the Loop requires is sooner
+than the current value.
 
 =over 8
 
@@ -127,7 +124,7 @@ sub pre_select
 =head2 $loop->post_select( $readvec, $writevec, $exceptvec )
 
 This method checks the returned bitvectors from a C<select()> call, and calls
-any of the notification methods or callbacks that are appropriate.
+any of the callbacks that are appropriate.
 
 =over 8
 
