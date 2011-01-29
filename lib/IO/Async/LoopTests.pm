@@ -150,7 +150,7 @@ Tests the Loop's ability to watch filehandles for IO readiness
 
 =cut
 
-use constant count_tests_io => 12;
+use constant count_tests_io => 15;
 sub run_tests_io
 {
    {
@@ -205,7 +205,7 @@ sub run_tests_io
 
       is( $readready, 0, '$readready before HUP' );
 
-      close( $S2 );
+      $S2->close;
 
       $readready = 0;
       $loop->loop_once( 0.1 );
@@ -220,12 +220,12 @@ sub run_tests_io
 
    # HUP of pipe - can be different to sockets on some architectures
    {
-      my ( $P1, $P2 ) = $loop->pipepair() or die "Cannot pipepair - $!";
-      $_->blocking( 0 ) for $P1, $P2;
+      my ( $Prd, $Pwr ) = $loop->pipepair() or die "Cannot pipepair - $!";
+      $_->blocking( 0 ) for $Prd, $Pwr;
 
       my $readready = 0;
       $loop->watch_io(
-         handle => $P1,
+         handle => $Prd,
          on_read_ready => sub { $readready = 1 },
       );
 
@@ -233,7 +233,7 @@ sub run_tests_io
 
       is( $readready, 0, '$readready before pipe HUP' );
 
-      close( $P2 );
+      $Pwr->close;
 
       $readready = 0;
       $loop->loop_once( 0.1 );
@@ -241,9 +241,58 @@ sub run_tests_io
       is( $readready, 1, '$readready after pipe HUP' );
 
       $loop->unwatch_io(
-         handle => $P1,
+         handle => $Prd,
          on_read_ready => 1,
       );
+   }
+
+   SKIP: {
+      $loop->can( "_CAN_ON_HANGUP" ) or skip "Loop cannot watch_io for on_hangup", 3;
+
+      my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot socketpair - $!";
+      $_->blocking( 0 ) for $S1, $S2;
+
+      my $hangup = 0;
+      $loop->watch_io(
+         handle => $S1,
+         on_hangup => sub { $hangup = 1 },
+      );
+
+      $S2->close;
+
+      $loop->loop_once( 0.1 );
+
+      is( $hangup, 1, '$hangup after socket close' );
+
+      my ( $Prd, $Pwr ) = $loop->pipepair() or die "Cannot pipepair - $!";
+      $_->blocking( 0 ) for $Prd, $Pwr;
+
+      $hangup = 0;
+      $loop->watch_io(
+         handle => $Prd,
+         on_hangup => sub { $hangup = 1 },
+      );
+
+      $Pwr->close;
+
+      $loop->loop_once( 0.1 );
+
+      is( $hangup, 1, '$hangup after pipe close for reading' );
+
+      ( $Prd, $Pwr ) = $loop->pipepair() or die "Cannot pipepair - $!";
+      $_->blocking( 0 ) for $Prd, $Pwr;
+
+      $hangup = 0;
+      $loop->watch_io(
+         handle => $Pwr,
+         on_hangup => sub { $hangup = 1 },
+      );
+
+      $Prd->close;
+
+      $loop->loop_once( 0.1 );
+
+      is( $hangup, 1, '$hangup after pipe close for writing' );
    }
 
    # Check that combined read/write handlers can cancel each other

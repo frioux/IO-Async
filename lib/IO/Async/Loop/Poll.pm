@@ -10,6 +10,7 @@ use warnings;
 
 our $VERSION = '0.37';
 use constant API_VERSION => '0.33';
+use constant _CAN_ON_HANGUP => 1;
 
 use base qw( IO::Async::Loop );
 
@@ -144,6 +145,10 @@ sub post_poll
       if( $events & (POLLOUT|POLLHUP|POLLERR) ) {
          $count++, $watch->[2]->() if defined $watch->[2];
       }
+
+      if( $events & POLLHUP ) {
+         $count++, $watch->[3]->() if defined $watch->[3];
+      }
    }
 
    # Since we have no way to know if the timeout occured, we'll have to
@@ -163,7 +168,6 @@ an error.
 
 =cut
 
-# override
 sub loop_once
 {
    my $self = shift;
@@ -221,6 +225,7 @@ sub watch_io
    my $mask = $curmask;
    $params{on_read_ready}  and $mask |= POLLIN;
    $params{on_write_ready} and $mask |= POLLOUT;
+   $params{on_hangup}      and $mask |= POLLHUP;
 
    $poll->mask( $handle, $mask ) if $mask != $curmask;
 }
@@ -242,6 +247,7 @@ sub unwatch_io
    my $mask = $curmask;
    $params{on_read_ready}  and $mask &= ~POLLIN;
    $params{on_write_ready} and $mask &= ~POLLOUT;
+   $params{on_hangup}      and $mask &= ~POLLHUP;
 
    $poll->mask( $handle, $mask ) if $mask != $curmask;
 }

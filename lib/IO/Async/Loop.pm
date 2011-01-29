@@ -119,7 +119,7 @@ sub __new
 
    my $self = bless {
       notifiers    => {}, # {nkey} = notifier
-      iowatches    => {}, # {fd} = [ onread, onwrite ] - TODO
+      iowatches    => {}, # {fd} = [ $on_read_ready, $on_write_ready, $on_hangup ]
       sigattaches  => {}, # {sig} => \@callbacks
       sigproxy     => undef,
       childmanager => undef,
@@ -1574,6 +1574,11 @@ sub __watch_io
    if( $params{on_write_ready} ) {
       $watch->[2] = $params{on_write_ready};
    }
+
+   if( $params{on_hangup} ) {
+      $self->_CAN_ON_HANGUP or croak "Cannot watch_io for 'on_hangup' in ".ref($self);
+      $watch->[3] = $params{on_hangup};
+   }
 }
 
 =head2 $loop->unwatch_io( %params )
@@ -1623,7 +1628,12 @@ sub __unwatch_io
       undef $watch->[2];
    }
 
-   if( not $watch->[1] and not $watch->[2] ) {
+   if( $params{on_hangup} ) {
+      $self->_CAN_ON_HANGUP or croak "Cannot watch_io for 'on_hangup' in ".ref($self);
+      undef $watch->[3];
+   }
+
+   if( not $watch->[1] and not $watch->[2] and not $watch->[3] ) {
       delete $self->{iowatches}->{$handle->fileno};
    }
 }
