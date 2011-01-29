@@ -68,7 +68,9 @@ references in parameters:
 
 =head2 on_finish $exitcode
 
-Invoked when the process exits by normal means.
+Invoked after the process has exited by normal means (i.e. an C<exit(2)>
+syscall from a process, or C<return>ing from the code block), and has closed
+all its file descriptors.
 
 =head2 on_exception $exception, $errno, $exitcode
 
