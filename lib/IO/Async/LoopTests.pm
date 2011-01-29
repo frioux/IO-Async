@@ -19,6 +19,8 @@ use Test::Refcount;
 
 use IO::Async::Test qw();
 
+use IO::File;
+use Fcntl qw( SEEK_SET );
 use POSIX qw( SIGTERM WIFEXITED WEXITSTATUS WIFSIGNALED WTERMSIG );
 use Time::HiRes qw( time );
 
@@ -150,7 +152,7 @@ Tests the Loop's ability to watch filehandles for IO readiness
 
 =cut
 
-use constant count_tests_io => 15;
+use constant count_tests_io => 17;
 sub run_tests_io
 {
    {
@@ -342,6 +344,33 @@ sub run_tests_io
       $loop->unwatch_io(
          handle => $S1,
          on_read_ready => 1,
+      );
+   }
+
+   # Check that regular files still report read/writereadiness
+   {
+      my $F = IO::File->new_tmpfile or die "Cannot create temporary file - $!";
+
+      $F->print( "Here's some content\n" );
+      $F->seek( 0, SEEK_SET );
+
+      my $readready  = 0;
+      my $writeready = 0;
+      $loop->watch_io(
+         handle => $F,
+         on_read_ready  => sub { $readready = 1 },
+         on_write_ready => sub { $writeready = 1 },
+      );
+
+      $loop->loop_once( 0.1 );
+
+      is( $readready,  1, 'regular file is readready' );
+      is( $writeready, 1, 'regular file is writeready' );
+
+      $loop->unwatch_io(
+         handle => $F,
+         on_read_ready  => 1,
+         on_write_ready => 1,
       );
    }
 }
