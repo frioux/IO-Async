@@ -14,7 +14,7 @@ our @EXPORT = qw(
 );
 
 use Test::More;
-use Test::Exception;
+use Test::Fatal;
 use Test::Refcount;
 
 use IO::Async::Test qw();
@@ -512,8 +512,8 @@ sub run_tests_signal
 
    $loop->detach_signal( 'TERM', $idB );
 
-   dies_ok( sub { $loop->attach_signal( 'this signal name does not exist', sub {} ) },
-            'Bad signal name fails' );
+   ok( exception { $loop->attach_signal( 'this signal name does not exist', sub {} ) },
+       'Bad signal name fails' );
 }
 
 =head2 idle

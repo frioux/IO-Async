@@ -3,7 +3,7 @@
 use strict;
 
 use Test::More tests => 22;
-use Test::Exception;
+use Test::Fatal;
 
 use IO::Async::DetachedCode;
 
@@ -69,14 +69,14 @@ isa_ok( $marshaller, "IO::Async::DetachedCode::FlatMarshaller", '$marshaller isa
 
 test_marshall_args( $marshaller, "flat" );
 
-dies_ok( sub { $marshaller->marshall_args( 2, [ \'a' ] ); },
-         "marshalling SCALAR ref dies using flat" );
+ok( exception { $marshaller->marshall_args( 2, [ \'a' ] ); },
+    "marshalling SCALAR ref dies using flat" );
 
-dies_ok( sub { $marshaller->marshall_args( 2, [ ['a'] ] ); },
-         "marshalling ARRAY ref dies using flat" );
+ok( exception { $marshaller->marshall_args( 2, [ ['a'] ] ); },
+    "marshalling ARRAY ref dies using flat" );
 
-dies_ok( sub { $marshaller->marshall_args( 2, [ { a => 'A' } ] ); },
-         "marshalling HASH ref dies using flat" );
+ok( exception { $marshaller->marshall_args( 2, [ { a => 'A' } ] ); },
+    "marshalling HASH ref dies using flat" );
 
 $marshaller = IO::Async::DetachedCode::StorableMarshaller->new();
 

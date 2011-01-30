@@ -3,7 +3,7 @@
 use strict;
 
 use Test::More tests => 35;
-use Test::Exception;
+use Test::Fatal;
 use Test::Refcount;
 
 use IO::Async::Loop;
@@ -37,7 +37,7 @@ is_deeply( [ $loop->notifiers ],
            [ $notifier ],
            '$loop->notifiers contains new Notifier' );
 
-dies_ok( sub { $loop->add( $notifier ) }, 'adding again produces error' );
+ok( exception { $loop->add( $notifier ) }, 'adding again produces error' );
 
 $loop->remove( $notifier );
 
@@ -47,11 +47,11 @@ is_deeply( [ $loop->notifiers ],
            [],
            '$loop->notifiers empty once more' );
 
-lives_ok( sub { $notifier->configure; },
-          '$notifier->configure no params succeeds' );
+ok( !exception { $notifier->configure; },
+    '$notifier->configure no params succeeds' );
 
-dies_ok( sub { $notifier->configure( oranges => 1 ) },
-         '$notifier->configure an unrecognised parameter fails' );
+ok( exception { $notifier->configure( oranges => 1 ) },
+    '$notifier->configure an unrecognised parameter fails' );
 
 my @args;
 my $mref = $notifier->_capture_weakself( sub { @args = @_ } );
@@ -103,8 +103,8 @@ is_deeply( \@subargs, [ $notifier, 456 ], '@subargs after invoking $mref on name
 
 undef @subargs;
 
-dies_ok( sub { $notifier->_capture_weakself( 'cannotdo' ) },
-         '$notifier->_capture_weakself on unknown method name fails' );
+ok( exception { $notifier->_capture_weakself( 'cannotdo' ) },
+    '$notifier->_capture_weakself on unknown method name fails' );
 
 $notifier->invoke_event( 'frobnicate', 78 );
 is_deeply( \@subargs, [ $notifier, 78 ], '@subargs after ->invoke_event' );

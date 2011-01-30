@@ -5,7 +5,6 @@ use strict;
 use IO::Async::Test;
 
 use Test::More tests => 26;
-use Test::Exception;
 use Test::Refcount;
 
 use Time::HiRes qw( time );

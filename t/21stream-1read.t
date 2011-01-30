@@ -5,7 +5,7 @@ use strict;
 use IO::Async::Test;
 
 use Test::More tests => 48;
-use Test::Exception;
+use Test::Fatal;
 use Test::Refcount;
 
 use POSIX qw( ECONNRESET );
@@ -155,10 +155,10 @@ sub mkhandles
    my ( $rd, $wr ) = mkhandles;
 
    my $no_on_read_stream;
-   lives_ok( sub { $no_on_read_stream = IO::Async::Stream->new( read_handle => $rd ) },
-            'Allowed to construct a Stream without an on_read handler' );
-   dies_ok( sub { $loop->add( $no_on_read_stream ) },
-            'Not allowed to add an on_read-less Stream to a Loop' );
+   ok( !exception { $no_on_read_stream = IO::Async::Stream->new( read_handle => $rd ) },
+       'Allowed to construct a Stream without an on_read handler' );
+   ok( exception { $loop->add( $no_on_read_stream ) },
+       'Not allowed to add an on_read-less Stream to a Loop' );
 }
 
 # Subclass

@@ -5,7 +5,7 @@ use strict;
 use IO::Async::Test;
 
 use Test::More tests => 40;
-use Test::Exception;
+use Test::Fatal;
 use Test::Refcount;
 
 use POSIX qw( EAGAIN ECONNRESET );
@@ -41,8 +41,7 @@ sub recv_data
    die "Cannot recv - $!";
 }
 
-lives_ok( sub { IO::Async::Socket->new( write_handle => \*STDOUT ) },
-          'Send-only Socket works' );
+ok( !exception { IO::Async::Socket->new( write_handle => \*STDOUT ) }, 'Send-only Socket works' );
 
 # Receiving
 
@@ -143,10 +142,10 @@ undef $socket;
 }
 
 my $no_on_recv_socket;
-lives_ok( sub { $no_on_recv_socket = IO::Async::Socket->new( handle => $S1 ) },
-          'Allowed to construct a Socket without an on_recv handler' );
-dies_ok( sub { $loop->add( $no_on_recv_socket ) },
-         'Not allowed to add an on_recv-less Socket to a Loop' );
+ok( !exception { $no_on_recv_socket = IO::Async::Socket->new( handle => $S1 ) },
+    'Allowed to construct a Socket without an on_recv handler' );
+ok( exception { $loop->add( $no_on_recv_socket ) },
+    'Not allowed to add an on_recv-less Socket to a Loop' );
 
 # Subclass
 

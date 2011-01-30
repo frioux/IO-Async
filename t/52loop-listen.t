@@ -5,7 +5,6 @@ use strict;
 use IO::Async::Test;
 
 use Test::More tests => 17;
-use Test::Exception;
 
 use IO::Socket::INET;
 

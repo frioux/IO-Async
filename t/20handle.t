@@ -5,7 +5,7 @@ use strict;
 use IO::Async::Test;
 
 use Test::More tests => 73;
-use Test::Exception;
+use Test::Fatal;
 use Test::Refcount;
 use Test::Warn;
 
@@ -28,8 +28,7 @@ sub mkhandles
    return ( $S1, $S2 );
 }
 
-dies_ok( sub { IO::Async::Handle->new( handle => "Hello" ) },
-         'Not a filehandle' );
+ok( exception { IO::Async::Handle->new( handle => "Hello" ) }, 'Not a filehandle' );
 
 # Read readiness
 {
@@ -91,8 +90,8 @@ dies_ok( sub { IO::Async::Handle->new( handle => "Hello" ) },
 
    $S1->getline(); # ignore return
 
-   dies_ok( sub { $handle->want_writeready( 1 ); },
-            'setting want_writeready with write_handle == undef dies' );
+   ok( exception { $handle->want_writeready( 1 ); },
+       'setting want_writeready with write_handle == undef dies' );
    ok( !$handle->want_writeready, 'wantwriteready write_handle == undef false' );
 
    undef @rrargs;

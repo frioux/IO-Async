@@ -5,7 +5,6 @@ use strict;
 use IO::Async::Test;
 
 use Test::More tests => 6;
-use Test::Exception;
 
 use POSIX qw( SIGINT WEXITSTATUS WIFSIGNALED WTERMSIG );
 

@@ -5,7 +5,6 @@ use strict;
 use IO::Async::Test;
 
 use Test::More tests => 9;
-use Test::Exception;
 use Test::Refcount;
 
 use POSIX qw( SIGTERM WIFEXITED WEXITSTATUS WIFSIGNALED WTERMSIG );

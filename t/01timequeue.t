@@ -3,7 +3,7 @@
 use strict;
 
 use Test::More tests => 29;
-use Test::Exception;
+use Test::Fatal;
 
 use IO::Async::Internals::TimeQueue;
 
@@ -14,14 +14,14 @@ isa_ok( $queue, "IO::Async::Internals::TimeQueue", '$queue isa IO::Async::Intern
 
 is( $queue->next_time, undef, '->next_time when empty is undef' );
 
-dies_ok( sub { $queue->enqueue( code => sub { "DUMMY" } ) },
-         'enqueue no time fails' );
+ok( exception { $queue->enqueue( code => sub { "DUMMY" } ) },
+    'enqueue no time fails' );
 
-dies_ok( sub { $queue->enqueue( time => 123 ) },
-         'enqueue no code fails' );
+ok( exception { $queue->enqueue( time => 123 ) },
+    'enqueue no code fails' );
 
-dies_ok( sub { $queue->enqueue( time => 123, code => 'HELLO' ) },
-         'enqueue code not CODE ref fails' );
+ok( exception { $queue->enqueue( time => 123, code => 'HELLO' ) },
+    'enqueue code not CODE ref fails' );
 
 $queue->enqueue( time => 1000, code => sub { "DUMMY" } );
 is( $queue->next_time, 1000, '->next_time after single enqueue' );

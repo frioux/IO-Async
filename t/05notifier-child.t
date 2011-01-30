@@ -3,7 +3,7 @@
 use strict;
 
 use Test::More tests => 31;
-use Test::Exception;
+use Test::Fatal;
 use Test::Refcount;
 
 use IO::Async::Notifier;
@@ -33,8 +33,7 @@ undef @children; # for refcount
 is_oneref( $parent, '$parent has refcount 1 after add_child()' );
 is_refcount( $child, 2, '$child has refcount 2 after add_child()' );
 
-dies_ok( sub { $parent->add_child( $child ) },
-         'Adding child again fails' );
+ok( exception { $parent->add_child( $child ) }, 'Adding child again fails' );
 
 $parent->remove_child( $child );
 
@@ -58,8 +57,7 @@ is( $child->get_loop,  $loop, '$child->get_loop is $loop' );
 ok( $parent_in_loop, '$parent now in loop' );
 ok( $child_in_loop,  '$child now in loop' );
 
-dies_ok( sub { $loop->remove( $child ) },
-         'Directly removing a child from the loop fails' );
+ok( exception { $loop->remove( $child ) }, 'Directly removing a child from the loop fails' );
 
 $loop->remove( $parent );
 
@@ -76,8 +74,7 @@ is( $child->get_loop,  undef, '$child->get_loop is undef' );
 ok( !$parent_in_loop, '$parent no longer in loop' );
 ok( !$child_in_loop,  '$child no longer in loop' );
 
-dies_ok( sub { $loop->add( $child ) },
-        'Directly adding a child to the loop fails' );
+ok( exception { $loop->add( $child ) }, 'Directly adding a child to the loop fails' );
 
 $loop->add( $parent );
 

@@ -5,7 +5,7 @@ use strict;
 use IO::Async::Test;
 
 use Test::More tests => 7;
-use Test::Exception;
+use Test::Fatal;
 
 use POSIX qw( WIFEXITED WEXITSTATUS );
 
@@ -39,20 +39,23 @@ wait_for { defined $exitcode };
 ok( WIFEXITED($exitcode),      'WIFEXITED($exitcode) after perl -e exit 5' );
 is( WEXITSTATUS($exitcode), 5, 'WEXITSTATUS($exitcode) after perl -e exit 5' );
 
-dies_ok( sub { $loop->open_child(
-                  command => [ $^X, "-e", 1 ]
-               ) },
-         'Missing on_finish fails' );
+ok( exception { $loop->open_child(
+         command => [ $^X, "-e", 1 ]
+      ) },
+   'Missing on_finish fails'
+);
 
-dies_ok( sub { $loop->open_child( 
-                  command => [ $^X, "-e", 1 ],
-                  on_finish => "hello"
-               ) },
-         'on_finish not CODE ref fails' );
+ok( exception { $loop->open_child( 
+         command => [ $^X, "-e", 1 ],
+         on_finish => "hello"
+      ) },
+   'on_finish not CODE ref fails'
+);
 
-dies_ok( sub { $loop->open_child(
-                  command => [ $^X, "-e", 1 ],
-                  on_finish => sub {},
-                  on_exit => sub {},
-               ) },
-          'on_exit parameter fails' );
+ok( exception { $loop->open_child(
+         command => [ $^X, "-e", 1 ],
+         on_finish => sub {},
+         on_exit => sub {},
+      ) },
+   'on_exit parameter fails'
+);

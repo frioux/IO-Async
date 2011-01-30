@@ -5,7 +5,7 @@ use strict;
 use IO::Async::Test;
 
 use Test::More tests => 112;
-use Test::Exception;
+use Test::Fatal;
 
 use File::Temp qw( tmpnam );
 use POSIX qw( WIFEXITED WEXITSTATUS ENOENT EBADF getcwd );
@@ -16,11 +16,11 @@ my $loop = IO::Async::Loop::Poll->new();
 
 testing_loop( $loop );
 
-dies_ok( sub { $loop->spawn_child( code => sub { 1 }, setup => "hello" ); },
-         'Bad setup type fails' );
+ok( exception { $loop->spawn_child( code => sub { 1 }, setup => "hello" ); },
+    'Bad setup type fails' );
 
-dies_ok( sub { $loop->spawn_child( code => sub { 1 }, setup => [ 'somerandomthing' => 1 ] ); },
-         'Setup with bad key fails' );
+ok( exception { $loop->spawn_child( code => sub { 1 }, setup => [ 'somerandomthing' => 1 ] ); },
+    'Setup with bad key fails' );
 
 # These tests are all very similar looking, with slightly different start and
 # code values. Easiest to wrap them up in a common testing wrapper.

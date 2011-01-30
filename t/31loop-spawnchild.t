@@ -5,7 +5,7 @@ use strict;
 use IO::Async::Test;
 
 use Test::More tests => 36;
-use Test::Exception;
+use Test::Fatal;
 
 use POSIX qw( WIFEXITED WEXITSTATUS ENOENT EBADF );
 
@@ -35,14 +35,12 @@ sub wait_for_exit
    return wait_for { defined $exitcode };
 }
 
-dies_ok( sub { $loop->spawn_child( badoption => 1 ); },
-         'Bad option to spawn fails' );
+ok( exception { $loop->spawn_child( badoption => 1 ); }, 'Bad option to spawn fails' );
 
-dies_ok( sub { $loop->spawn_child( code => sub { 1 }, command => "hello" ); },
-         'Both code and command options to spawn fails' );
+ok( exception { $loop->spawn_child( code => sub { 1 }, command => "hello" ); },
+    'Both code and command options to spawn fails' );
 
-dies_ok( sub { $loop->spawn_child( on_exit => sub { 1 } ); },
-         'Bad option to spawn fails' );
+ok( exception { $loop->spawn_child( on_exit => sub { 1 } ); }, 'Bad option to spawn fails' );
 
 my $spawned_pid;
 

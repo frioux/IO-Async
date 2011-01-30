@@ -5,7 +5,7 @@ use strict;
 use IO::Async::Test;
 
 use Test::More tests => 21;
-use Test::Exception;
+use Test::Fatal;
 use Test::Refcount;
 
 use POSIX qw( EAGAIN );
@@ -106,8 +106,8 @@ $loop->add( $stream );
 
 is_refcount( $stream, 2, 'latehandle $stream has refcount 2 after adding to Loop' );
 
-dies_ok( sub { $stream->write( "some text" ) },
-         '->write on stream with no IO handle fails' );
+ok( exception { $stream->write( "some text" ) },
+    '->write on stream with no IO handle fails' );
 
 $stream->set_handle( $S1 );
 
@@ -173,7 +173,7 @@ undef $stream; # Only ref is now in the Loop
 $S2->close;
 
 # $S1 should now be both read- and write-ready.
-lives_ok sub { $loop->loop_once }, 'read+write-ready closed Stream doesn\'t die';
+ok( !exception { $loop->loop_once }, 'read+write-ready closed Stream doesn\'t die' );
 
 undef $stream;
 

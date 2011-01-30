@@ -5,7 +5,6 @@ use strict;
 use IO::Async::Test;
 
 use Test::More tests => 17;
-use Test::Exception;
 
 use Socket qw( AF_INET SOCK_STREAM pack_sockaddr_in INADDR_LOOPBACK );
 use Socket::GetAddrInfo qw( :newapi getaddrinfo getnameinfo );

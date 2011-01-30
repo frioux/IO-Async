@@ -5,7 +5,7 @@ use strict;
 use IO::Async::Test;
 
 use Test::More tests => 42;
-use Test::Exception;
+use Test::Fatal;
 use Test::Refcount;
 
 use File::Temp qw( tempdir );
@@ -35,20 +35,20 @@ my @workers = $code->workers;
 is( scalar @workers, 1, '@workers has 1 value' );
 ok( kill( 0, $workers[0] ), '$workers[0] is a PID' );
 
-dies_ok( sub { $code->call( args => [], on_result => "hello" ) },
-         'call with on_result not CODE ref fails' );
+ok( exception { $code->call( args => [], on_result => "hello" ) },
+    'call with on_result not CODE ref fails' );
 
-dies_ok( sub { $code->call( args => [], on_return => sub {} ) },
-         'call missing on_error ref fails' );
+ok( exception { $code->call( args => [], on_return => sub {} ) },
+    'call missing on_error ref fails' );
 
-dies_ok( sub { $code->call( args => [], on_error => sub {} ) },
-         'call missing on_return ref fails' );
+ok( exception { $code->call( args => [], on_error => sub {} ) },
+    'call missing on_return ref fails' );
 
-dies_ok( sub { $code->call( args => [], on_return => "hello", on_error => sub {} ) },
-         'call with on_return not a CODE ref fails' );
+ok( exception { $code->call( args => [], on_return => "hello", on_error => sub {} ) },
+    'call with on_return not a CODE ref fails' );
 
-dies_ok( sub { $code->call( args => [], on_return => sub {}, on_error => "hello" ) },
-         'call with on_error not a CODE ref fails' );
+ok( exception { $code->call( args => [], on_return => sub {}, on_error => "hello" ) },
+    'call with on_error not a CODE ref fails' );
 
 my $result;
 
@@ -127,12 +127,13 @@ wait_for { defined $result };
 
 is( $result, 11, '$result of code over pipe' );
 
-dies_ok( sub { IO::Async::DetachedCode->new(
-                  loop => $loop,
-                  code => sub { return $_[0] },
-                  stream => "oranges",
-               ); },
-         'Unrecognised stream type fails' );
+ok( exception { IO::Async::DetachedCode->new(
+         loop => $loop,
+         code => sub { return $_[0] },
+         stream => "oranges",
+      ); },
+   'Unrecognised stream type fails'
+);
 
 $code = IO::Async::DetachedCode->new(
    loop => $loop,
@@ -151,20 +152,22 @@ wait_for { defined $result };
 
 is( $result, 15, '$result of code over flat' );
 
-dies_ok( sub { $code->call( 
-                  args => [ \'a' ], 
-                  on_return => sub {},
-                  on_error  => sub {},
-               );
-            },
-         'call with reference arguments using flat marshaller dies' );
+ok( exception { $code->call( 
+         args => [ \'a' ], 
+         on_return => sub {},
+         on_error  => sub {},
+      );
+   },
+   'call with reference arguments using flat marshaller dies'
+);
 
-dies_ok( sub { IO::Async::DetachedCode->new(
-                  loop => $loop,
-                  code => sub { return $_[0] },
-                  marshaller => "grapefruit",
-               ); },
-         'Unrecognised marshaller type fails' );
+ok( exception { IO::Async::DetachedCode->new(
+         loop => $loop,
+         code => sub { return $_[0] },
+         marshaller => "grapefruit",
+      ); },
+   'Unrecognised marshaller type fails'
+);
 
 $code = IO::Async::DetachedCode->new(
    loop => $loop,

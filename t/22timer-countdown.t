@@ -5,7 +5,7 @@ use strict;
 use IO::Async::Test;
 
 use Test::More tests => 42;
-use Test::Exception;
+use Test::Fatal;
 use Test::Refcount;
 
 use Time::HiRes qw( time );
@@ -160,8 +160,8 @@ $timer->start;
 time_about( sub { wait_for { $new_expired } }, 1, 'Reconfigured timer on_expire works' );
 
 $timer->start;
-dies_ok( sub { $timer->configure( delay => 5 ); },
-         'Configure a running timer fails' );
+ok( exception { $timer->configure( delay => 5 ); },
+    'Configure a running timer fails' );
 
 $loop->remove( $timer );
 
