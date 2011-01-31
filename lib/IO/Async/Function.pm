@@ -83,6 +83,13 @@ The lower and upper bounds of worker processes to try to keep running. The
 actual number running at any time will be kept somewhere between these bounds
 according to load.
 
+=item exit_on_die => BOOL
+
+Optional boolean, controls what happens after the C<code> throws an
+exception. If missing or false, the worker will continue running to process
+more requests. If true, the worker will be shut down. A new worker might be
+constructed by the C<call> method to replace it, if necessary.
+
 =back
 
 =cut
@@ -108,6 +115,10 @@ sub configure
 {
    my $self = shift;
    my %params = @_;
+
+   foreach (qw( exit_on_die )) {
+      $self->{$_} = delete $params{$_} if exists $params{$_};
+   }
 
    foreach (qw( min_workers max_workers )) {
       $self->{$_} = delete $params{$_} if exists $params{$_};
@@ -248,14 +259,7 @@ sub call
       croak "Expected either 'on_result' or 'on_return' and 'on_error' keys";
    }
 
-   my $worker;
-   foreach ( sort keys %{ $self->{workers} } ) {
-      $worker = $self->{workers}{$_} and last if !$self->{workers}{$_}{busy};
-   }
-
-   if( !$worker and $self->workers < $self->{max_workers} ) {
-      $worker = $self->_new_worker;
-   }
+   my $worker = $self->_get_worker;
 
    if( !$worker ) {
       push @{ $self->{pending_queue} }, [ $request, $on_result ];
@@ -353,7 +357,6 @@ sub _new_worker
             if( $eof ) {
                my $on_result = shift @on_result_queue;
                $on_result->( "eof" ) if $on_result;
-               $self->_worker_died( $worker );
                return;
             }
 
@@ -369,14 +372,36 @@ sub _new_worker
             return 1;
          } ),
       },
-      on_finish => sub {
-         print STDERR "Function worker died\n";
-      },
+      on_finish => $self->_capture_weakself( sub {
+         my $self = shift;
+         my ( $proc ) = @_;
+
+         delete $self->{workers}{$proc->pid};
+
+         $self->_new_worker if $self->workers < $self->{min_workers};
+
+         $self->_dispatch_pending;
+      } ),
    );
 
    $self->add_child( $proc );
 
    return $self->{workers}{$proc->pid} = $worker;
+}
+
+sub _get_worker
+{
+   my $self = shift;
+
+   foreach ( sort keys %{ $self->{workers} } ) {
+      return $self->{workers}{$_} if !$self->{workers}{$_}{busy};
+   }
+
+   if( $self->workers < $self->{max_workers} ) {
+      return $self->_new_worker;
+   }
+
+   return undef;
 }
 
 sub _stop_worker
@@ -410,26 +435,27 @@ sub _call_worker
       }
       elsif( $type eq "e" ) {
          $on_result->( error => @_ );
+         $self->_stop_worker( $worker ), return if $self->{exit_on_die};
       }
       else {
          die "Unrecognised type from worker - $type\n";
       }
 
-      $self->_unbusy_worker( $worker );
+      $self->_dispatch_pending;
    } );
 
    $worker->{process}->stdin->write( pack("I", length $request) . $request );
    $worker->{busy} = 1;
 }
 
-sub _unbusy_worker
+sub _dispatch_pending
 {
    my $self = shift;
-   my ( $worker ) = @_;
 
-   if( my $next = shift @{ $self->{pending_queue} } ) {
-      $self->_call_worker( $worker, @$next );
-   }
+   my $worker = $self->_get_worker or return;
+   my $next = shift @{ $self->{pending_queue} } or return;
+
+   $self->_call_worker( $worker, @$next );
 }
 
 # Keep perl happy; keep Britain tidy

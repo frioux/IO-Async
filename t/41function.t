@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 15;
+use Test::More tests => 17;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -132,6 +132,68 @@ testing_loop( $loop );
    wait_for { defined $err };
 
    like( $err, qr/^exception name at $0 line \d+\.$/, '$err after exception' );
+
+   $loop->remove( $function );
+}
+
+{
+   my $count = 0;
+
+   my $function = IO::Async::Function->new(
+      max_workers => 1,
+      code => sub { $count++; die "$count\n" },
+      exit_on_die => 0,
+   );
+
+   $loop->add( $function );
+
+   my @errs;
+   $function->call(
+      args => [],
+      on_return => sub { },
+      on_error  => sub { push @errs, shift },
+   );
+   $function->call(
+      args => [],
+      on_return => sub { },
+      on_error  => sub { push @errs, shift },
+   );
+
+   undef @errs;
+   wait_for { scalar @errs == 2 };
+
+   is_deeply( \@errs, [ "1\n", "2\n" ], 'Closed variables preserved when exit_on_die => 0' );
+
+   $loop->remove( $function );
+}
+
+{
+   my $count = 0;
+
+   my $function = IO::Async::Function->new(
+      max_workers => 1,
+      code => sub { $count++; die "$count\n" },
+      exit_on_die => 1,
+   );
+
+   $loop->add( $function );
+
+   my @errs;
+   $function->call(
+      args => [],
+      on_return => sub { },
+      on_error  => sub { push @errs, shift },
+   );
+   $function->call(
+      args => [],
+      on_return => sub { },
+      on_error  => sub { push @errs, shift },
+   );
+
+   undef @errs;
+   wait_for { scalar @errs == 2 };
+
+   is_deeply( \@errs, [ "1\n", "1\n" ], 'Closed variables preserved when exit_on_die => 1' );
 
    $loop->remove( $function );
 }
