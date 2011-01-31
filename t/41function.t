@@ -4,9 +4,12 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 21;
+use Test::More tests => 25;
 use Test::Fatal;
 use Test::Refcount;
+
+use File::Temp qw( tempdir );
+use Time::HiRes qw( sleep );
 
 use IO::Async::Function;
 
@@ -233,6 +236,58 @@ testing_loop( $loop );
    wait_for { defined $err };
 
    is( $err, "return", '$err is "return" after child nondeath' );
+
+   $loop->remove( $function );
+}
+
+## Now test that parallel runs really are parallel
+{
+   my $function = IO::Async::Function->new(
+      min_workers => 3,
+      code => sub {
+         my ( $file, $ret ) = @_;
+
+         open( my $fh, ">", $file ) or die "Cannot write $file - $!";
+         close( $file );
+
+         # Wait for synchronisation
+         sleep 0.1 while -e $file;
+
+         return $ret;
+      },
+   );
+
+   $loop->add( $function );
+
+   is( scalar $function->workers, 3, '$function->workers is 3' );
+
+   my $dir = tempdir( CLEANUP => 1 );
+
+   my %ret;
+
+   foreach my $id ( 1, 2, 3 ) {
+      $function->call(
+         args => [ "$dir/$id", $id ],
+         on_return => sub { $ret{$id} = shift },
+         on_error  => sub { die "Test failed early - @_" },
+      );
+   }
+
+   wait_for { -e "$dir/1" and -e "$dir/2" and -e "$dir/3" };
+
+   ok( 1, 'synchronise files created' );
+
+   # Synchronize deleting them;
+   for my $f ( "$dir/1", "$dir/2", "$dir/3" ) {
+      unlink $f or die "Cannot unlink $f - $!";
+   }
+
+   undef %ret;
+   wait_for { keys %ret == 3 };
+
+   is_deeply( \%ret, { 1 => 1, 2 => 2, 3 => 3 }, 'ret keys after parallel run' );
+
+   is( scalar $function->workers, 3, '$function->workers is still 3' );
 
    $loop->remove( $function );
 }
