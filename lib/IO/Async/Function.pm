@@ -376,6 +376,10 @@ sub _new_worker
          my $self = shift;
          my ( $proc ) = @_;
 
+         if( @on_result_queue ) {
+            print STDERR "TODO: on_result_queue to be flushed\n";
+         }
+
          delete $self->{workers}{$proc->pid};
 
          $self->_new_worker if $self->workers < $self->{min_workers};
@@ -428,6 +432,7 @@ sub _call_worker
       $worker->{busy} = 0;
 
       if( $type eq "eof" ) {
+         $on_result->( error => "closed" );
          $self->_stop_worker( $worker ), return;
       }
       elsif( $type eq "r" ) {

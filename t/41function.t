@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 17;
+use Test::More tests => 21;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -194,6 +194,45 @@ testing_loop( $loop );
    wait_for { scalar @errs == 2 };
 
    is_deeply( \@errs, [ "1\n", "1\n" ], 'Closed variables preserved when exit_on_die => 1' );
+
+   $loop->remove( $function );
+}
+
+{
+   my $function = IO::Async::Function->new(
+      max_workers => 1,
+      code => sub { $_[0] ? exit shift : return 0 },
+   );
+
+   $loop->add( $function );
+
+   my $err;
+
+   $function->call(
+      args => [ 16 ],
+      on_return => sub { $err = "" },
+      on_error  => sub { $err = [ @_ ] },
+   );
+
+   wait_for { defined $err };
+
+   # Not sure what reason we might get - need to check both
+   ok( $err->[0] eq "closed" || $err->[0] eq "exit", '$err->[0] after child death' );
+
+   is( scalar $function->workers, 0, '$function->workers is now 0' );
+
+   $function->call(
+      args => [ 0 ],
+      on_return => sub { $err = "return" },
+      on_error  => sub { $err = [ @_ ] },
+   );
+
+   is( scalar $function->workers, 1, '$function->workers is now 1 again' );
+
+   undef $err;
+   wait_for { defined $err };
+
+   is( $err, "return", '$err is "return" after child nondeath' );
 
    $loop->remove( $function );
 }
