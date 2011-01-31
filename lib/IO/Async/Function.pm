@@ -59,11 +59,45 @@ The object acts as a proxy to the function, allowing invocations to be made by
 passing in arguments, and invoking a continuation in the main process when the
 function returns.
 
-Because the function executes in a child process, the arguments and return
-values are passed to it over a file handle, using L<Storable>. This can cope
-with most kinds of Perl data, including plain numbers and strings, references
-to hashes or arrays, and self-referential or even cyclic data structures. Note
-however that passing C<CODE> references or IO handles is not supported.
+The object represents the function code itself, rather than one specific
+invocation of it. It can be called multiple times, by the C<call()> method.
+Multiple outstanding invocations can be called; they will be dispatched in
+the order they were queued. If only one worker process is used then results
+will be returned in the order they were called. If multiple are used, then
+each request will be sent in the order called, but timing differences between
+each worker may mean results are returned in a different order.
+
+Since the code block will be called multiple times within the same child
+process, it must take care not to modify any of its state that might affect
+subsequent calls. Since it executes in a child process, it cannot make any
+modifications to the state of the parent program. Therefore, all the data
+required to perform its task must be represented in the call arguments, and
+all of the result must be represented in the return values.
+
+The arguments and return values are passed to it over a file handle, using
+L<Storable>. This can cope with most kinds of Perl data, including plain
+numbers and strings, references to hashes or arrays, and self-referential or
+even cyclic data structures. Note however that passing C<CODE> references or
+IO handles is not supported.
+
+The C<IO::Async> framework generally provides mechanisms for multiplexing IO
+tasks between different handles, so there aren't many occasions when such
+detached code is necessary. Two cases where this does become useful are:
+
+=over 4
+
+=item 1.
+
+When a large amount of computationally-intensive work needs to be performed
+(for example, the C<is_prime()> test in the example in the C<SYNOPSIS>).
+
+=item 2.
+
+When a blocking OS syscall or library-level function needs to be called, and
+no nonblocking or asynchronous version is supplied. This is used by
+C<IO::Async::Resolver>.
+
+=back
 
 =cut
 
@@ -197,6 +231,10 @@ Schedules an invocation of the contained function to be executed on one of the
 worker processes. If a non-busy worker is available now, it will be called
 immediately. If not, it will be queued and sent to the next free worker that
 becomes available.
+
+The request will already have been serialised by the marshaller, so it will be
+safe to modify any referenced data structures in the arguments after this call
+returns.
 
 The C<%params> hash takes the following keys:
 
@@ -470,6 +508,11 @@ sub _dispatch_pending
 1;
 
 __END__
+
+=head1 NOTES
+
+For the record, 123454321 is 11111 * 11111, a square number, and therefore not
+prime.
 
 =head1 AUTHOR
 
