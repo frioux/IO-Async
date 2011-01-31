@@ -7,6 +7,7 @@ package IO::Async::Resolver;
 
 use strict;
 use warnings;
+use base qw( IO::Async::Function );
 
 our $VERSION = '0.37';
 
@@ -101,7 +102,7 @@ functions asynchronously. It provides a number of named resolvers, each one
 providing an asynchronous wrapper around a single resolver function.
 
 Because the system may not provide asynchronous versions of its resolver
-functions, this class is implemented using a C<IO::Async::DetachedCode> object
+functions, this class is implemented using a C<IO::Async::Function> object
 that wraps the normal (blocking) functions. In this case, name resolutions
 will be performed asynchronously from the rest of the program, but will likely
 be done by a single background worker process, so will be processed in the
@@ -111,47 +112,31 @@ used; see the C<workers> argument to the constructor.
 
 =cut
 
-# Internal constructor
-sub new
+sub _init
 {
-   my $class = shift;
-   my ( %params ) = @_;
+   my $self = shift;
+   my ( $params ) = @_;
+   $self->SUPER::_init( @_ );
 
-   my $loop = delete $params{loop} or croak "Expected a 'loop'";
+   $params->{code} = sub {
+      my ( $type, $timeout, @data ) = @_;
 
-   my $workers = delete $params{workers};
+      if( my $code = $METHODS{$type} ) {
+         local $SIG{ALRM} = sub { die "Timed out\n" };
 
-   my $code = $loop->detach_code(
-      code => sub {
-         my ( $type, $timeout, @data ) = @_;
+         alarm( $timeout );
+         my @ret = eval { $code->( @data ) };
+         alarm( 0 );
 
-         if( my $code = $METHODS{$type} ) {
-            local $SIG{ALRM} = sub { die "Timed out\n" };
-
-            alarm( $timeout );
-            my @ret = eval { $code->( @data ) };
-            alarm( 0 );
-
-            die $@ if $@;
-            return @ret;
-         }
-         else {
-            die "Unrecognised resolver request '$type'";
-         }
-      },
-
-      marshaller => 'storable',
-
-      workers => $workers,
-   );
+         die $@ if $@;
+         return @ret;
+      }
+      else {
+         die "Unrecognised resolver request '$type'";
+      }
+   };
 
    $started = 1;
-
-   my $self = bless {
-      code => $code,
-   }, $class;
-
-   return $self;
 }
 
 =head1 METHODS
@@ -216,8 +201,7 @@ sub resolve
 
    my $timeout = $args{timeout} || 10;
 
-   my $code = $self->{code};
-   $code->call(
+   $self->call(
       args      => [ $type, $timeout, @{$args{data}} ],
       on_return => $on_resolved,
       on_error  => $on_error,
@@ -457,13 +441,6 @@ be passed to the C<on_error> continuation. If it returns normally, the list of
 values it returns will be passed to C<on_resolved>.
 
 =back
-
-The C<IO::Async::DetachedCode> object underlying this class uses the
-C<storable> argument marshalling type, which means complex data structures
-can be passed by reference. Because the resolver will run in a separate
-process, the function should make sure to return all of the result in the
-returned list; i.e. modifications to call arguments will not be propagated
-back to the caller.
 
 =cut
 

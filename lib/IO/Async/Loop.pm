@@ -883,7 +883,13 @@ resolution operations by the C<resolve>, C<connect> and C<listen> methods.
 sub resolver
 {
    my $self = shift;
-   return $self->{resolver} ||= $self->__new_feature( "IO::Async::Resolver" );
+
+   return $self->{resolver} ||= do {
+      require IO::Async::Resolver;
+      my $resolver = IO::Async::Resolver->new;
+      $self->add( $resolver );
+      $resolver;
+   }
 }
 
 =head2 $loop->resolve( %params )
