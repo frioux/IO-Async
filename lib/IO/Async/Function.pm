@@ -14,6 +14,8 @@ use base qw( IO::Async::Notifier );
 
 use Carp;
 
+use Storable qw( freeze thaw );
+
 use IO::Async::Process;
 
 =head1 NAME
@@ -110,10 +112,6 @@ sub _init
    $self->{workers} = {};
 
    $self->{pending_queue} = [];
-
-   # For now, steal the DetachedCode one
-   require IO::Async::DetachedCode::StorableMarshaller;
-   $self->{marshaller} = IO::Async::DetachedCode::StorableMarshaller->new;
 }
 
 sub configure
@@ -241,7 +239,7 @@ sub call
    my $args = delete $params{args};
    ref $args eq "ARRAY" or croak "Expected 'args' to be an array";
 
-   my $request = $self->{marshaller}->marshall_args( 0, $args );
+   my $request = freeze( $args );
 
    my $on_result;
    if( defined $params{on_result} ) {
@@ -324,7 +322,6 @@ sub _new_worker
    };
 
    my $code = $self->{code};
-   my $marshaller = $self->{marshaller};
 
    my $proc = $worker->{process} = IO::Async::Process->new(
       code => sub {
@@ -337,7 +334,7 @@ sub _new_worker
             $n = _read_exactly( \*STDIN, my $record, $len );
             defined $n or die "Cannot read - $!";
 
-            my $args = $marshaller->unmarshall_args( 0, $record );
+            my $args = thaw( $record );
 
             my @ret;
             my $ok = eval { @ret = $code->( @$args ); 1 };
@@ -349,7 +346,7 @@ sub _new_worker
                @ret = ( "e", "$@" );
             }
 
-            my $result = $marshaller->marshall_ret( 0, \@ret );
+            my $result = freeze( \@ret );
             print STDOUT pack("I", length $result) . $result;
          }
       },
@@ -370,7 +367,7 @@ sub _new_worker
             my $len = unpack( "I", $$buffref );
             return 0 unless length( $$buffref ) >= 4 + $len;
 
-            my $record = $marshaller->unmarshall_ret( 0, substr( $$buffref, 4, $len ) );
+            my $record = thaw( substr( $$buffref, 4, $len ) );
             substr( $$buffref, 0, 4 + $len ) = "";
 
             (shift @on_result_queue)->( @$record );
