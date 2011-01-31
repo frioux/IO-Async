@@ -171,7 +171,7 @@ typical C<fork()>/C<exec()> style of starting child processes, and
 C<run_child> provide a method similar to perl's C<readpipe()> (which is used
 to implement backticks C<``>).
 
-=head2 Detached Code
+=head2 Asynchronous Functions
 
 The C<IO::Async> framework generally provides mechanisms for multiplexing IO
 tasks between different handles, so there aren't many occasions when it is
@@ -191,10 +191,10 @@ no asynchronous version is supplied.
 
 =back
 
-For these cases, an instance of L<IO::Async::DetachedCode> can be used around
-a code block, to execute it in a detached child process. The code in the
-sub-process runs isolated from the main program, communicating only by
-function call arguments and return values.
+For these cases, an instance of L<IO::Async::Function> can be used around
+a code block, to execute it in a worker child process or set of processes.
+The code in the sub-process runs isolated from the main program, communicating
+only by function call arguments and return values.
 
 =head2 Networking
 
@@ -231,9 +231,9 @@ be useful on Win32.
 A consideration on how to provide per-OS versions of the utility classes. For
 example, Win32 would probably need an extensively-different C<ChildManager>,
 or OSes may have specific ways to perform asynchronous name resolution
-operations better than the generic C<DetachedCode> approach. This should be
-easier to implement now that the L<IO::Async::Loop> magic constructor looks
-for OS-specific subclasses first.
+operations better than the generic C<IO::Async::Function> approach. This
+should be easier to implement now that the L<IO::Async::Loop> magic
+constructor looks for OS-specific subclasses first.
 
 =item *
 

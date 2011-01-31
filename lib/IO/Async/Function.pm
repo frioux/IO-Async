@@ -81,8 +81,9 @@ even cyclic data structures. Note however that passing C<CODE> references or
 IO handles is not supported.
 
 The C<IO::Async> framework generally provides mechanisms for multiplexing IO
-tasks between different handles, so there aren't many occasions when such
-detached code is necessary. Two cases where this does become useful are:
+tasks between different handles, so there aren't many occasions when such an
+asynchronous function is necessary. Two cases where this does become useful
+are:
 
 =over 4
 

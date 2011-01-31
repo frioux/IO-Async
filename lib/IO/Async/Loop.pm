@@ -630,6 +630,10 @@ This method creates a new detached code object. It is equivalent to calling
 the C<IO::Async::DetachedCode> constructor, passing in the given loop. See the
 documentation on this class for more information.
 
+Note that this behaviour is now deprecated, in favour of constructing a
+L<IO::Async::Function> object instead, and adding it to the loop. This object
+is more flexible and more powerful than the legacy C<DetachedCode>.
+
 =cut
 
 sub detach_code
