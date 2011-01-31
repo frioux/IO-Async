@@ -90,6 +90,11 @@ exception. If missing or false, the worker will continue running to process
 more requests. If true, the worker will be shut down. A new worker might be
 constructed by the C<call> method to replace it, if necessary.
 
+=item setup => ARRAY
+
+Optional array reference. Specifies the C<setup> key to pass to the underlying
+L<IO::Async::Process> when setting up new worker processes.
+
 =back
 
 =cut
@@ -127,7 +132,7 @@ sub configure
 
    my $need_restart;
 
-   foreach (qw( code )) {
+   foreach (qw( code setup )) {
       $need_restart++, $self->{$_} = delete $params{$_} if exists $params{$_};
    }
 
@@ -348,6 +353,7 @@ sub _new_worker
             print STDOUT pack("I", length $result) . $result;
          }
       },
+      setup => $self->{setup},
       stdin  => { via => "pipe_write" },
       stdout => {
          on_read => $self->_capture_weakself( sub {
