@@ -16,8 +16,6 @@ use Carp;
 
 use Storable qw( freeze thaw );
 
-use IO::Async::Process;
-
 =head1 NAME
 
 C<IO::Async::Function> - call a function asynchronously
@@ -154,8 +152,9 @@ sub configure
    my $self = shift;
    my %params = @_;
 
-   foreach (qw( exit_on_die )) {
-      $self->{$_} = delete $params{$_} if exists $params{$_};
+   if( exists $params{exit_on_die} ) {
+      $self->{exit_on_die} = delete $params{exit_on_die};
+      $_->configure( exit_on_die => $self->{exit_on_die} ) for $self->_worker_objects;
    }
 
    foreach (qw( min_workers max_workers )) {
@@ -221,8 +220,8 @@ sub stop
 {
    my $self = shift;
 
-   foreach my $worker ( values %{ $self->{workers} } ) {
-      $self->_stop_worker( $worker );
+   foreach my $worker ( $self->_worker_objects ) {
+      $self->_free_worker( $worker );
    }
 }
 
@@ -311,6 +310,12 @@ sub call
    $self->_call_worker( $worker, $request, $on_result );
 }
 
+sub _worker_objects
+{
+   my $self = shift;
+   return values %{ $self->{workers} };
+}
+
 =head2 $count = $function->workers
 
 Returns the total number of worker processes available
@@ -332,97 +337,25 @@ Returns the number of worker processes that are currently busy
 sub workers_busy
 {
    my $self = shift;
-   return scalar grep { $_->{busy} } values %{ $self->{workers} };
-}
-
-###
-# Worker Management
-###
-
-sub _read_exactly
-{
-   $_[1] = "";
-
-   while( length $_[1] < $_[2] ) {
-      my $n = read( $_[0], $_[1], $_[2]-length $_[1], length $_[1] );
-      defined $n or return undef;
-      $n or die "EXIT";
-   }
+   return scalar grep { $_->{busy} } $self->_worker_objects;
 }
 
 sub _new_worker
 {
    my $self = shift;
 
-   my @on_result_queue;
+   my $worker = IO::Async::Function::Worker->new(
+      code        => $self->{code},
+      setup       => $self->{setup},
+      exit_on_die => $self->{exit_on_die},
 
-   my $worker = {
-      on_result_queue => \@on_result_queue,
-   };
-
-   my $code = $self->{code};
-
-   my $proc = $worker->{process} = IO::Async::Process->new(
-      code => sub {
-         while(1) {
-            my $n = _read_exactly( \*STDIN, my $lenbuffer, 4 );
-            defined $n or die "Cannot read - $!";
-
-            my $len = unpack( "I", $lenbuffer );
-
-            $n = _read_exactly( \*STDIN, my $record, $len );
-            defined $n or die "Cannot read - $!";
-
-            my $args = thaw( $record );
-
-            my @ret;
-            my $ok = eval { @ret = $code->( @$args ); 1 };
-
-            if( $ok ) {
-               unshift @ret, "r";
-            }
-            else {
-               @ret = ( "e", "$@" );
-            }
-
-            my $result = freeze( \@ret );
-            print STDOUT pack("I", length $result) . $result;
-         }
-      },
-      setup => $self->{setup},
-      stdin  => { via => "pipe_write" },
-      stdout => {
-         on_read => $self->_capture_weakself( sub {
-            my $self = shift;
-            my ( $stream, $buffref, $eof ) = @_;
-
-            if( $eof ) {
-               my $on_result = shift @on_result_queue;
-               $on_result->( "eof" ) if $on_result;
-               return;
-            }
-
-            return 0 unless length( $$buffref ) >= 4;
-            my $len = unpack( "I", $$buffref );
-            return 0 unless length( $$buffref ) >= 4 + $len;
-
-            my $record = thaw( substr( $$buffref, 4, $len ) );
-            substr( $$buffref, 0, 4 + $len ) = "";
-
-            (shift @on_result_queue)->( @$record );
-
-            return 1;
-         } ),
-      },
       on_finish => $self->_capture_weakself( sub {
          my $self = shift;
-         my ( $proc ) = @_;
+         my ( $worker ) = @_;
 
-         if( @on_result_queue ) {
+         if( @{ $worker->{on_result_queue} } ) {
             print STDERR "TODO: on_result_queue to be flushed\n";
          }
-
-         delete $self->{workers}{$proc->pid};
 
          $self->_new_worker if $self->workers < $self->{min_workers};
 
@@ -430,9 +363,18 @@ sub _new_worker
       } ),
    );
 
-   $self->add_child( $proc );
+   $self->add_child( $worker );
 
-   return $self->{workers}{$proc->pid} = $worker;
+   return $self->{workers}{$worker->pid} = $worker;
+}
+
+sub _free_worker
+{
+   my $self = shift;
+   my ( $worker ) = @_;
+
+   delete $self->{workers}{$worker->pid};
+   $worker->stop;
 }
 
 sub _get_worker
@@ -450,59 +392,155 @@ sub _get_worker
    return undef;
 }
 
-sub _stop_worker
-{
-   my $self = shift;
-   my ( $worker ) = @_;
-
-   my $process = $worker->{process};
-
-   $process->stdin->close;
-
-   delete $self->{workers}{$process->pid};
-}
-
 sub _call_worker
 {
    my $self = shift;
    my ( $worker, $request, $on_result ) = @_;
 
-   push @{ $worker->{on_result_queue} }, $self->_capture_weakself( sub {
-      my $self = shift;
-      my $type = shift;
-
-      $worker->{busy} = 0;
-
-      if( $type eq "eof" ) {
-         $on_result->( error => "closed" );
-         $self->_stop_worker( $worker ), return;
-      }
-      elsif( $type eq "r" ) {
-         $on_result->( return => @_ );
-      }
-      elsif( $type eq "e" ) {
-         $on_result->( error => @_ );
-         $self->_stop_worker( $worker ), return if $self->{exit_on_die};
-      }
-      else {
-         die "Unrecognised type from worker - $type\n";
-      }
-
-      $self->_dispatch_pending;
-   } );
-
-   $worker->{process}->stdin->write( pack("I", length $request) . $request );
-   $worker->{busy} = 1;
+   $worker->call( $request, $on_result );
 }
 
 sub _dispatch_pending
 {
    my $self = shift;
 
-   my $worker = $self->_get_worker or return;
    my $next = shift @{ $self->{pending_queue} } or return;
+   my $worker = $self->_get_worker or return;
 
    $self->_call_worker( $worker, @$next );
+}
+
+package # hide from indexer
+   IO::Async::Function::Worker;
+
+use base qw( IO::Async::Process );
+
+use Storable qw( freeze thaw );
+
+sub _read_exactly
+{
+   $_[1] = "";
+
+   while( length $_[1] < $_[2] ) {
+      my $n = read( $_[0], $_[1], $_[2]-length $_[1], length $_[1] );
+      defined $n or return undef;
+      $n or die "EXIT";
+   }
+}
+
+sub _init
+{
+   my $worker = shift;
+   my ( $params ) = @_;
+
+   $worker->{on_result_queue} = \my @on_result_queue;
+
+   my $code = $params->{code};
+   $params->{code} = sub {
+      while(1) {
+         my $n = _read_exactly( \*STDIN, my $lenbuffer, 4 );
+         defined $n or die "Cannot read - $!";
+
+         my $len = unpack( "I", $lenbuffer );
+
+         $n = _read_exactly( \*STDIN, my $record, $len );
+         defined $n or die "Cannot read - $!";
+
+         my $args = thaw( $record );
+
+         my @ret;
+         my $ok = eval { @ret = $code->( @$args ); 1 };
+
+         if( $ok ) {
+            unshift @ret, "r";
+         }
+         else {
+            @ret = ( "e", "$@" );
+         }
+
+         my $result = freeze( \@ret );
+         print STDOUT pack("I", length $result) . $result;
+      }
+   };
+
+   $params->{stdin}  = { via => "pipe_write" };
+   $params->{stdout} = {
+      on_read => sub {
+         my ( $stream, $buffref, $eof ) = @_;
+
+         if( $eof ) {
+            my $on_result = shift @on_result_queue;
+            $on_result->( "eof" ) if $on_result;
+            return;
+         }
+
+         return 0 unless length( $$buffref ) >= 4;
+         my $len = unpack( "I", $$buffref );
+         return 0 unless length( $$buffref ) >= 4 + $len;
+
+         my $record = thaw( substr( $$buffref, 4, $len ) );
+         substr( $$buffref, 0, 4 + $len ) = "";
+
+         (shift @on_result_queue)->( @$record );
+
+         return 1;
+      },
+   };
+
+   $worker->SUPER::_init( $params );
+}
+
+sub configure
+{
+   my $worker = shift;
+   my %params = @_;
+
+   foreach (qw( exit_on_die )) {
+      $worker->{$_} = delete $params{$_} if exists $params{$_};
+   }
+
+   $worker->SUPER::configure( %params );
+}
+
+sub stop
+{
+   my $worker = shift;
+   $worker->stdin->close;
+}
+
+sub call
+{
+   my $worker = shift;
+   my ( $request, $on_result ) = @_;
+
+   push @{ $worker->{on_result_queue} }, $worker->_capture_weakself( sub {
+      my $worker = shift;
+      my $type = shift;
+
+      $worker->{busy} = 0;
+
+      my $function = $worker->parent;
+
+      if( $type eq "eof" ) {
+         $on_result->( error => "closed" );
+         $function->_free_worker( $worker ) if $function;
+      }
+      elsif( $type eq "r" ) {
+         $on_result->( return => @_ );
+      }
+      elsif( $type eq "e" ) {
+         $on_result->( error => @_ );
+         $function->_free_worker( $worker ) if $function and $worker->{exit_on_die};
+      }
+      else {
+         die "Unrecognised type from worker - $type\n";
+      }
+
+      $function->_dispatch_pending if $function;
+   } );
+
+   $worker->stdin->write( pack("I", length $request) . $request );
+   $worker->{busy} = 1;
 }
 
 # Keep perl happy; keep Britain tidy
