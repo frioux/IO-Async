@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 29;
+use Test::More tests => 32;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -14,6 +14,8 @@ use Time::HiRes qw( sleep );
 use IO::Async::Function;
 
 use IO::Async::Loop::Poll;
+
+use constant AUT => $ENV{TEST_QUICK_TIMERS} ? 0.1 : 1;
 
 my $loop = IO::Async::Loop::Poll->new();
 
@@ -321,6 +323,53 @@ testing_loop( $loop );
    wait_for { defined $result };
 
    is( $result, "Here is a random string", '$result after call with modified ENV' );
+
+   $loop->remove( $function );
+}
+
+# Test for idle timeout
+{
+   my $function = IO::Async::Function->new(
+      min_workers => 0,
+      max_workers => 1,
+      idle_timeout => 2 * AUT,
+      code => sub { return $_[0] },
+   );
+
+   $loop->add( $function );
+
+   my $result;
+
+   $function->call(
+      args => [ 1 ],
+      on_result => sub { $result = $_[0] },
+   );
+
+   wait_for { defined $result };
+
+   is( $function->workers, 1, '$function has 1 worker after call' );
+
+   my $waited;
+   $loop->enqueue_timer( delay => 1 * AUT, code => sub { $waited++ } );
+
+   wait_for { $waited };
+
+   is( $function->workers, 1, '$function still has 1 worker after short delay' );
+
+   undef $result;
+   $function->call(
+      args => [ 1 ],
+      on_result => sub { $result = $_[0] },
+   );
+
+   wait_for { defined $result };
+
+   undef $waited;
+   $loop->enqueue_timer( delay => 3 * AUT, code => sub { $waited++ } );
+
+   wait_for { $waited };
+
+   is( $function->workers, 0, '$function has 0 workers after longer delay' );
 
    $loop->remove( $function );
 }

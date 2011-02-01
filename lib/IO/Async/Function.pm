@@ -11,6 +11,7 @@ use warnings;
 our $VERSION = '0.37';
 
 use base qw( IO::Async::Notifier );
+use IO::Async::Timer::Countdown;
 
 use Carp;
 
@@ -118,6 +119,11 @@ The lower and upper bounds of worker processes to try to keep running. The
 actual number running at any time will be kept somewhere between these bounds
 according to load.
 
+=item idle_timeout => NUM
+
+Optional. If provided, idle worker processes will be shut down after this
+amount of time, if there are more than C<min_workers> of them.
+
 =item exit_on_die => BOOL
 
 Optional boolean, controls what happens after the C<code> throws an
@@ -160,6 +166,40 @@ sub configure
    if( keys %worker_params ) {
       foreach my $worker ( $self->_worker_objects ) {
          $worker->configure( %worker_params );
+      }
+   }
+
+   if( exists $params{idle_timeout} ) {
+      my $timeout = delete $params{idle_timeout};
+      if( !$timeout ) {
+         $self->remove_child( delete $self->{idle_timer} ) if $self->{idle_timer};
+      }
+      elsif( my $idle_timer = $self->{idle_timer} ) {
+         $idle_timer->configure( delay => $timeout );
+      }
+      else {
+         $self->{idle_timer} = IO::Async::Timer::Countdown->new(
+            delay => $timeout,
+            on_expire => $self->_capture_weakself( sub {
+               my $self = shift;
+               my $workers = $self->{workers};
+
+               # Shut down atmost one idle worker, starting from the highest
+               # PID. Since we search from lowest to assign work, this tries
+               # to ensure we'll shut down the least useful ones first,
+               # keeping more useful ones in memory (page/cache warmth, etc..)
+               foreach my $pid ( reverse sort keys %$workers ) {
+                  next if $workers->{$pid}{busy};
+
+                  $workers->{$pid}->stop;
+                  last;
+               }
+
+               # Still more?
+               $self->{idle_timer}->start if $self->workers_idle > $self->{min_workers};
+            } ),
+         );
+         $self->add_child( $self->{idle_timer} );
       }
    }
 
@@ -405,16 +445,23 @@ sub _call_worker
    my ( $worker, $request, $on_result ) = @_;
 
    $worker->call( $request, $on_result );
+
+   if( $self->workers_idle == 0 ) {
+      $self->{idle_timer}->stop if $self->{idle_timer};
+   }
 }
 
 sub _dispatch_pending
 {
    my $self = shift;
 
-   my $next = shift @{ $self->{pending_queue} } or return;
-   my $worker = $self->_get_worker or return;
-
-   $self->_call_worker( $worker, @$next );
+   if( my $next = shift @{ $self->{pending_queue} } ) {
+      my $worker = $self->_get_worker or return;
+      $self->_call_worker( $worker, @$next );
+   }
+   elsif( $self->workers_idle > $self->{min_workers} ) {
+      $self->{idle_timer}->start if $self->{idle_timer} and !$self->{idle_timer}->is_running;
+   }
 }
 
 package # hide from indexer
