@@ -221,7 +221,7 @@ sub stop
    my $self = shift;
 
    foreach my $worker ( $self->_worker_objects ) {
-      $self->_free_worker( $worker );
+      $worker->stop;
    }
 }
 
@@ -368,15 +368,6 @@ sub _new_worker
    return $self->{workers}{$worker->pid} = $worker;
 }
 
-sub _free_worker
-{
-   my $self = shift;
-   my ( $worker ) = @_;
-
-   delete $self->{workers}{$worker->pid};
-   $worker->stop;
-}
-
 sub _get_worker
 {
    my $self = shift;
@@ -506,6 +497,10 @@ sub stop
 {
    my $worker = shift;
    $worker->stdin->close;
+
+   if( my $function = $worker->parent ) {
+      delete $function->{workers}{$worker->pid};
+   }
 }
 
 sub call
@@ -523,14 +518,14 @@ sub call
 
       if( $type eq "eof" ) {
          $on_result->( error => "closed" );
-         $function->_free_worker( $worker ) if $function;
+         $worker->stop;
       }
       elsif( $type eq "r" ) {
          $on_result->( return => @_ );
       }
       elsif( $type eq "e" ) {
          $on_result->( error => @_ );
-         $function->_free_worker( $worker ) if $function and $worker->{exit_on_die};
+         $worker->stop if $worker->{exit_on_die};
       }
       else {
          die "Unrecognised type from worker - $type\n";
