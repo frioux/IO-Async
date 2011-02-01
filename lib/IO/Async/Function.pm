@@ -346,6 +346,18 @@ sub workers_busy
    return scalar grep { $_->{busy} } $self->_worker_objects;
 }
 
+=head2 $count = $function->workers_idle
+
+Returns the number of worker processes that are currently idle
+
+=cut
+
+sub workers_idle
+{
+   my $self = shift;
+   return scalar grep { !$_->{busy} } $self->_worker_objects;
+}
+
 sub _new_worker
 {
    my $self = shift;

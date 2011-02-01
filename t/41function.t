@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 26;
+use Test::More tests => 29;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -37,6 +37,7 @@ testing_loop( $loop );
 
    is( $function->workers, 1, '$function has 1 worker' );
    is( $function->workers_busy, 0, '$function has 0 workers busy' );
+   is( $function->workers_idle, 1, '$function has 1 workers idle' );
 
    my $result;
 
@@ -49,12 +50,14 @@ testing_loop( $loop );
    is_refcount( $function, 2, '$function has refcount 2 after ->call' );
 
    is( $function->workers_busy, 1, '$function has 1 worker busy after ->call' );
+   is( $function->workers_idle, 0, '$function has 0 worker idle after ->call' );
 
    wait_for { defined $result };
 
    is( $result, 30, '$result after call returns' );
 
    is( $function->workers_busy, 0, '$function has 0 workers busy after call returns' );
+   is( $function->workers_idle, 1, '$function has 1 workers idle after call returns' );
 
    $loop->remove( $function );
 }
