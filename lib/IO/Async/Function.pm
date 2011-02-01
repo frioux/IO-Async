@@ -152,9 +152,15 @@ sub configure
    my $self = shift;
    my %params = @_;
 
-   if( exists $params{exit_on_die} ) {
-      $self->{exit_on_die} = delete $params{exit_on_die};
-      $_->configure( exit_on_die => $self->{exit_on_die} ) for $self->_worker_objects;
+   my %worker_params;
+   foreach (qw( exit_on_die )) {
+      $self->{$_} = $worker_params{$_} = delete $params{$_} if exists $params{$_};
+   }
+
+   if( keys %worker_params ) {
+      foreach my $worker ( $self->_worker_objects ) {
+         $worker->configure( %worker_params );
+      }
    }
 
    foreach (qw( min_workers max_workers )) {
@@ -345,9 +351,7 @@ sub _new_worker
    my $self = shift;
 
    my $worker = IO::Async::Function::Worker->new(
-      code        => $self->{code},
-      setup       => $self->{setup},
-      exit_on_die => $self->{exit_on_die},
+      ( map { $_ => $self->{$_} } qw( code setup exit_on_die ) ),
 
       on_finish => $self->_capture_weakself( sub {
          my $self = shift;
