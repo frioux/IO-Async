@@ -1,5 +1,19 @@
 Revision history for IO-Async
 
+0.38    ADDITIONS:
+         * IO::Async::Function
+         * IO::Async::Loop->notifiers accessor
+
+        CHANGES:
+         * Symbolic flags in IO::Async::Resolver as convenience for commonly
+           used flag constants
+         * Distribution now uses Test::Fatal rather than Test::Exception
+         * Resolver is now a subclass of Function, not DetachedCode
+
+        BUGFIXES:
+         * More robust detection of Socket vs Socket::GetAddrInfo
+         * Portability fix for ChildManager's FD_CLOEXEC flag
+
 0.37    ADDITIONS:
          * Handle->close_read, ->close_write
          * Stream on_read_eof event

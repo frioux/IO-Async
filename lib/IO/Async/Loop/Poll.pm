@@ -8,7 +8,7 @@ package IO::Async::Loop::Poll;
 use strict;
 use warnings;
 
-our $VERSION = '0.37';
+our $VERSION = '0.38';
 use constant API_VERSION => '0.33';
 use constant _CAN_ON_HANGUP => 1;
 
