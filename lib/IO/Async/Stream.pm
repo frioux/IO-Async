@@ -539,10 +539,13 @@ sub on_read_ready
       $self->{readbuff} .= $data if !$eof;
 
       while(1) {
-         my $on_read = $self->{current_on_read}
-                        || $self->can_event( "on_read" );
-
-         my $ret = $on_read->( $self, \$self->{readbuff}, $eof );
+         my $ret;
+         if( my $on_read = $self->{current_on_read} ) {
+            $ret = $on_read->( $self, \$self->{readbuff}, $eof );
+         }
+         else {
+            $ret = $self->invoke_event( on_read => \$self->{readbuff}, $eof );
+         }
 
          my $again;
 

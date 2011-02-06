@@ -190,19 +190,19 @@ sub on_read_ready
    if( defined $handle ) {
       $handle->blocking( 0 );
 
-      if( my $on_stream = $self->can_event( "on_stream" ) ) {
+      if( $self->can_event( "on_stream" ) ) {
          # TODO: It doesn't make sense to put a SOCK_DGRAM in an
          # IO::Async::Stream but currently we don't detect this
          require IO::Async::Stream;
-         $on_stream->( $self, IO::Async::Stream->new( handle => $handle ) );
+         $self->invoke_event( on_stream => IO::Async::Stream->new( handle => $handle ) );
       }
-      elsif( my $on_socket = $self->can_event( "on_socket" ) ) {
+      elsif( $self->can_event( "on_socket" ) ) {
          require IO::Async::Socket;
-         $on_socket->( $self, IO::Async::Socket->new( handle => $handle ) );
+         $self->invoke_event( on_socket => IO::Async::Socket->new( handle => $handle ) );
       }
       # on_accept needs to be last in case of multiple layers of subclassing
-      elsif( my $on_accept = $self->can_event( "on_accept" ) ) {
-         $on_accept->( $self, $handle );
+      elsif( $self->can_event( "on_accept" ) ) {
+         $self->invoke_event( on_accept => $handle );
       }
       else {
          die "ARG! Missing on_accept,on_stream,on_socket!";
