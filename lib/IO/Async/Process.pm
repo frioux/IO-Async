@@ -436,7 +436,9 @@ sub _add_to_loop
 
    push @setup, $self->_prepare_fds( $loop );
 
-   my $mergepoint = $self->{mergepoint};
+   # Once we start the Process we'll close the MergePoint. Its on_finished
+   # coderef will strongly reference $self. So we need to break this cycle.
+   my $mergepoint = delete $self->{mergepoint};
    
    $mergepoint->needs( "exit" );
 
@@ -462,8 +464,7 @@ sub _add_to_loop
    my $is_code = defined $self->{code};
 
    $mergepoint->close(
-      on_finished => $self->_capture_weakself( sub {
-         my $self = shift;
+      on_finished => sub {
          my %items = @_;
 
          $self->{exitcode} = $exitcode;
@@ -482,7 +483,7 @@ sub _add_to_loop
          }
 
          $self->_remove_from_outer;
-      } ),
+      },
    );
 }
 
