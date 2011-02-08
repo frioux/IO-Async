@@ -406,7 +406,7 @@ sub _new_worker
       ( map { $_ => $self->{$_} } qw( code setup exit_on_die ) ),
 
       on_finish => $self->_capture_weakself( sub {
-         my $self = shift;
+         my $self = shift or return;
          my ( $worker ) = @_;
 
          if( @{ $worker->{on_result_queue} } ) {
