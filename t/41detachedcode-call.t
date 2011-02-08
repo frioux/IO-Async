@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 33;
+use Test::More tests => 32;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -171,8 +171,6 @@ wait_for { defined $err };
 
 # Not sure what reason we might get - need to check both
 ok( $err->[0] eq "closed" || $err->[0] eq "exit", '$err->[0] after child death' );
-
-is( scalar $code->workers, 0, '$code->workers is now 0' );
 
 $code->call(
    args => [ 0 ],
