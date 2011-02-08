@@ -426,6 +426,18 @@ the CODE ref internally for efficiency.
 The C<$code> argument may also be a plain string, which will be used as a
 method name; the returned CODE ref will then invoke that method on the object.
 
+If the C<$mref> CODE reference is being stored in some object other than the
+one it refers to, remember that since the Notifier is only weakly captured, it
+is possible that it has been destroyed by the time the code runs, and so the
+reference will be passed as C<undef>. This should be protected against by the
+code body.
+
+ $other_object->{on_event} = $notifier->_capture_weakself( sub {
+    my $notifier = shift or return;
+    my ( @event_args ) = @_;
+    ...
+ } );
+
 =cut
 
 sub _capture_weakself
@@ -476,6 +488,9 @@ function's arguments.
 
 The C<$code> argument may also be a plain string, which will be used as a
 method name; the returned CODE ref will then invoke that method on the object.
+
+As with C<_capture_weakself>, care should be taken against Notifier
+destruction if the C<$mref> CODE reference is stored in some other object.
 
 =cut
 
