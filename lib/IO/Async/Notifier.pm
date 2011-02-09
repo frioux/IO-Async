@@ -129,6 +129,17 @@ details on the parameters that exist, and their uses. Some parameters may only
 support being set once at construction time, or only support being changed if
 the object is in a particular state.
 
+The following parameters are supported by all Notifiers:
+
+=over 8
+
+=item notifier_name => STRING
+
+Optional string used to identify this particular Notifier. This value will be
+returned by the C<notifier_name> method.
+
+=back
+
 =cut
 
 =head1 CONSTRUCTOR
@@ -172,6 +183,10 @@ sub new
    return $self;
 }
 
+=head1 METHODS
+
+=cut
+
 =head2 $notifier->configure( %params )
 
 Adjust the named parameters of the C<Notifier> as given by the C<%params>
@@ -184,6 +199,10 @@ sub configure
 {
    my $self = shift;
    my %params = @_;
+
+   foreach (qw( notifier_name )) {
+      $self->{$_} = delete $params{$_} if exists $params{$_};
+   }
 
    # We don't recognise any configure keys at this level
    if( keys %params ) {
@@ -220,6 +239,19 @@ sub __set_loop
    weaken( $self->{loop} ); # To avoid a cycle
 
    $self->_add_to_loop( $self->{loop} ) if $self->{loop};
+}
+
+=head2 $name = $notifier->notifier_name
+
+Returns the name to identify this Notifier. If a has not been set, it will
+return the empty string.
+
+=cut
+
+sub notifier_name
+{
+   my $self = shift;
+   return $self->{notifier_name} || "";
 }
 
 =head1 CHILD NOTIFIERS

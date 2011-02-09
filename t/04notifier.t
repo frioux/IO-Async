@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 35;
+use Test::More tests => 36;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -17,12 +17,16 @@ is_deeply( [ $loop->notifiers ],
            [],
            '$loop->notifiers empty' );
 
-my $notifier = IO::Async::Notifier->new( );
+my $notifier = IO::Async::Notifier->new(
+   notifier_name => "test1",
+);
 
 ok( defined $notifier, '$notifier defined' );
 isa_ok( $notifier, "IO::Async::Notifier", '$notifier isa IO::Async::Notifier' );
 
 is_oneref( $notifier, '$notifier has refcount 1 initially' );
+
+is( $notifier->notifier_name, "test1", '$notifier->notifier_name' );
 
 is( $notifier->get_loop, undef, 'get_loop undef' );
 
