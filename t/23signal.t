@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 22;
+use Test::More tests => 23;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -31,6 +31,8 @@ ok( defined $signal, '$signal defined' );
 isa_ok( $signal, "IO::Async::Signal", '$signal isa IO::Async::Signal' );
 
 is_oneref( $signal, '$signal has refcount 1 initially' );
+
+is( $signal->notifier_name, "TERM", '$signal->notifier_name' );
 
 $loop->add( $signal );
 

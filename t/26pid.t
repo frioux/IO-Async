@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 9;
+use Test::More tests => 10;
 use Test::Refcount;
 
 use POSIX qw( SIGTERM WIFEXITED WEXITSTATUS WIFSIGNALED WTERMSIG );
@@ -38,6 +38,8 @@ isa_ok( $pid, "IO::Async::PID", '$pid isa IO::Async::PID' );
 is_oneref( $pid, '$pid has refcount 1 initially' );
 
 is( $pid->pid, $kid, '$pid->pid' );
+
+is( $pid->notifier_name, "$kid", '$pid->notifier_name' );
 
 $loop->add( $pid );
 

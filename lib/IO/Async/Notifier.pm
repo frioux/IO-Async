@@ -244,7 +244,8 @@ sub __set_loop
 =head2 $name = $notifier->notifier_name
 
 Returns the name to identify this Notifier. If a has not been set, it will
-return the empty string.
+return the empty string. Subclasses may wish to override this behaviour to
+return some more useful information, perhaps from configured parameters.
 
 =cut
 

@@ -280,6 +280,22 @@ sub _remove_from_loop
    $self->_watch_write(0);
 }
 
+sub notifier_name
+{
+   my $self = shift;
+   if( length( my $name = $self->SUPER::notifier_name ) ) {
+      return $name;
+   }
+
+   my $r = $self->read_fileno;
+   my $w = $self->write_fileno;
+   return "rw=$r"     if defined $r and defined $w and $r == $w;
+   return "r=$r,w=$w" if defined $r and defined $w;
+   return "r=$r"      if defined $r;
+   return "w=$w"      if defined $w;
+   return "no";
+}
+
 =head1 METHODS
 
 =cut

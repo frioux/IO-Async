@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 73;
+use Test::More tests => 78;
 use Test::Fatal;
 use Test::Refcount;
 use Test::Warn;
@@ -33,6 +33,7 @@ ok( exception { IO::Async::Handle->new( handle => "Hello" ) }, 'Not a filehandle
 # Read readiness
 {
    my ( $S1, $S2 ) = mkhandles;
+   my $fd1 = $S1->fileno;
 
    my $readready = 0;
    my @rrargs;
@@ -44,6 +45,8 @@ ok( exception { IO::Async::Handle->new( handle => "Hello" ) }, 'Not a filehandle
 
    ok( defined $handle, '$handle defined' );
    isa_ok( $handle, "IO::Async::Handle", '$handle isa IO::Async::Handle' );
+
+   is( $handle->notifier_name, "r=$fd1", '$handle->notifier_name for read_handle' );
 
    is_oneref( $handle, '$handle has refcount 1 initially' );
 
@@ -106,6 +109,7 @@ ok( exception { IO::Async::Handle->new( handle => "Hello" ) }, 'Not a filehandle
 # Write readiness
 {
    my ( $S1, $S2 ) = mkhandles;
+   my $fd1 = $S1->fileno;
 
    my $writeready = 0;
    my @wrargs;
@@ -117,6 +121,8 @@ ok( exception { IO::Async::Handle->new( handle => "Hello" ) }, 'Not a filehandle
 
    ok( defined $handle, '$handle defined' );
    isa_ok( $handle, "IO::Async::Handle", '$handle isa IO::Async::Handle' );
+
+   is( $handle->notifier_name, "w=$fd1", '$handle->notifier_name for write_handle' );
 
    is_oneref( $handle, '$handle has refcount 1 initially' );
 
@@ -164,6 +170,7 @@ ok( exception { IO::Async::Handle->new( handle => "Hello" ) }, 'Not a filehandle
 # Combined handle
 {
    my ( $S1, $S2 ) = mkhandles;
+   my $fd1 = $S1->fileno;
 
    my $handle = IO::Async::Handle->new(
       handle => $S1,
@@ -173,6 +180,8 @@ ok( exception { IO::Async::Handle->new( handle => "Hello" ) }, 'Not a filehandle
 
    is( $handle->read_handle,  $S1, '->read_handle returns S1' );
    is( $handle->write_handle, $S1, '->write_handle returns S1' );
+
+   is( $handle->notifier_name, "rw=$fd1", '$handle->notifier_name for handle' );
 }
 
 # Subclass
@@ -316,7 +325,10 @@ my $sub_writeready = 0;
 
    is_oneref( $handle, '$handle latebount has refcount 1 initially' );
 
+   is( $handle->notifier_name, "no", '$handle->notifier_name for late bind before handles' );
+
    my ( $S1, $S2 ) = mkhandles;
+   my $fd1 = $S1->fileno;
 
    $handle->set_handle( $S1 );
 
@@ -324,6 +336,8 @@ my $sub_writeready = 0;
    is( $handle->write_handle, $S1, '->write_handle now S1' );
 
    is_oneref( $handle, '$handle latebount has refcount 1 after set_handle' );
+
+   is( $handle->notifier_name, "rw=$fd1", '$handle->notifier_name for late bind after handles' );
 }
 
 # Legacy upgrade from IO::Async::Notifier

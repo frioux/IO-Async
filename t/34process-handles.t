@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 46;
+use Test::More tests => 50;
 
 use IO::Async::Process;
 
@@ -22,6 +22,8 @@ testing_loop( $loop );
    );
 
    isa_ok( $process->stdout, "IO::Async::Stream", '$process->stdout' );
+
+   is( $process->stdout->notifier_name, "stdout", '$process->stdout->notifier_name' );
    
    my @stdout_lines;
 
@@ -129,6 +131,8 @@ testing_loop( $loop );
 
    isa_ok( $process->stderr, "IO::Async::Stream", '$process->stderr' );
 
+   is( $process->stderr->notifier_name, "stderr", '$process->stderr->notifier_name' );
+
    $loop->add( $process );
 
    ok( defined $process->stderr->read_handle, '$process->stderr has read_handle' );
@@ -153,6 +157,8 @@ testing_loop( $loop );
    );
 
    isa_ok( $process->stdin, "IO::Async::Stream", '$process->stdin' );
+
+   is( $process->stdin->notifier_name, "stdin", '$process->stdin->notifier_name' );
 
    $process->stdin->write( "some data\n", on_flush => sub { $_[0]->close } );
 
@@ -222,6 +228,8 @@ testing_loop( $loop );
    );
 
    isa_ok( $process->stdio, "IO::Async::Stream", '$process->stdio' );
+
+   is( $process->stdio->notifier_name, "stdio", '$process->stdio->notifier_name' );
 
    my @output_lines;
 

@@ -292,7 +292,12 @@ sub configure_fd
 
    require IO::Async::Stream;
 
-   my $handle = $self->{fd_handle}{$fd} ||= IO::Async::Stream->new;
+   my $handle = $self->{fd_handle}{$fd} ||= IO::Async::Stream->new(
+      notifier_name => $fd eq "0"  ? "stdin" :
+                       $fd eq "1"  ? "stdout" :
+                       $fd eq "2"  ? "stderr" :
+                       $fd eq "io" ? "stdio" : "fd$fd",
+   );
    my $via = $self->{fd_via}{$fd};
 
    my ( $wants_read, $wants_write );
@@ -485,6 +490,18 @@ sub _add_to_loop
          $self->_remove_from_outer;
       },
    );
+}
+
+sub notifier_name
+{
+   my $self = shift;
+   if( length( my $name = $self->SUPER::notifier_name ) ) {
+      return $name;
+   }
+
+   return "nopid" unless my $pid = $self->pid;
+   return "[$pid]" unless $self->is_running;
+   return "$pid";
 }
 
 =head1 METHODS

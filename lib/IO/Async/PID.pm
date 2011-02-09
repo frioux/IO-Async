@@ -150,6 +150,16 @@ sub _remove_from_loop
    $loop->unwatch_child( $self->pid );
 }
 
+sub notifier_name
+{
+   my $self = shift;
+   if( length( my $name = $self->SUPER::notifier_name ) ) {
+      return $name;
+   }
+
+   return $self->{pid};
+}
+
 =head1 METHODS
 
 =cut

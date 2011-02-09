@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 45;
+use Test::More tests => 48;
 use Test::Refcount;
 
 use POSIX qw( WIFEXITED WEXITSTATUS ENOENT );
@@ -28,6 +28,8 @@ testing_loop( $loop );
 
    is_oneref( $process, '$process has refcount 1 before $loop->add' );
 
+   is( $process->notifier_name, "nopid", '$process->notifier_name before $loop->add' );
+
    ok( !$process->is_running, '$process is not yet running' );
    ok( !defined $process->pid, '$process has no PID yet' );
 
@@ -36,8 +38,12 @@ testing_loop( $loop );
    # One extra ref exists in the Process's MergePoint
    is_refcount( $process, 3, '$process has refcount 3 after $loop->add' );
 
+   my $pid = $process->pid;
+
    ok( $process->is_running, '$process is running' );
-   ok( defined $process->pid, '$process now has a PID' );
+   ok( defined $pid, '$process now has a PID' );
+
+   is( $process->notifier_name, "$pid", '$process->notifier_name after $loop->add' );
 
    wait_for { defined $exitcode };
 
@@ -49,6 +55,8 @@ testing_loop( $loop );
 
    ok( !$process->is_running, '$process no longer running' );
    ok( defined $process->pid, '$process still has PID after exit' );
+
+   is( $process->notifier_name, "[$pid]", '$process->notifier_name after exit' );
 
    ok( $process->is_exited,     '$process->is_exited after sub { 0 }' );
    is( $process->exitstatus, 0, '$process->exitstatus after sub { 0 }' );
