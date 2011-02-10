@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 36;
+use Test::More tests => 39;
 use Test::Refcount;
 
 use POSIX qw( EAGAIN ECONNRESET );
@@ -160,6 +160,33 @@ sub read_data
    is( read_data( $rd ), "partial", 'data after writing buffer with write_len=2 with write_all');
 
    $loop->remove( $stream );
+}
+
+# EOF
+{
+   my ( $rd, $wr ) = mkhandles;
+
+   local $SIG{PIPE} = "IGNORE";
+
+   my $eof = 0;
+
+   my $stream = IO::Async::Stream->new( write_handle => $wr,
+      on_write_eof => sub { $eof++ },
+   );
+
+   $stream->write( "Junk" );
+
+   $loop->add( $stream );
+
+   $rd->close;
+
+   is( $eof, 0, 'EOF indication before wait' );
+
+   wait_for { $eof };
+
+   is( $eof, 1, 'EOF indication after wait' );
+
+   ok( !defined $stream->get_loop, 'EOF stream no longer member of Loop' );
 }
 
 # Close
