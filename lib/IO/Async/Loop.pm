@@ -1574,24 +1574,26 @@ sub __watch_io
    my $self = shift;
    my %params = @_;
 
-   my $handle = $params{handle} or croak "Expected 'handle'";
+   my $handle = delete $params{handle} or croak "Expected 'handle'";
 
    my $watch = ( $self->{iowatches}->{$handle->fileno} ||= [] );
 
    $watch->[0] = $handle;
 
-   if( $params{on_read_ready} ) {
-      $watch->[1] = $params{on_read_ready};
+   if( exists $params{on_read_ready} ) {
+      $watch->[1] = delete $params{on_read_ready};
    }
 
-   if( $params{on_write_ready} ) {
-      $watch->[2] = $params{on_write_ready};
+   if( exists $params{on_write_ready} ) {
+      $watch->[2] = delete $params{on_write_ready};
    }
 
-   if( $params{on_hangup} ) {
+   if( exists $params{on_hangup} ) {
       $self->_CAN_ON_HANGUP or croak "Cannot watch_io for 'on_hangup' in ".ref($self);
-      $watch->[3] = $params{on_hangup};
+      $watch->[3] = delete $params{on_hangup};
    }
+
+   keys %params and croak "Unrecognised keys for ->watch_io - " . join( ", ", keys %params );
 }
 
 =head2 $loop->unwatch_io( %params )
@@ -1629,19 +1631,19 @@ sub __unwatch_io
    my $self = shift;
    my %params = @_;
 
-   my $handle = $params{handle} or croak "Expected 'handle'";
+   my $handle = delete $params{handle} or croak "Expected 'handle'";
 
    my $watch = $self->{iowatches}->{$handle->fileno} or return;
 
-   if( $params{on_read_ready} ) {
+   if( delete $params{on_read_ready} ) {
       undef $watch->[1];
    }
 
-   if( $params{on_write_ready} ) {
+   if( delete $params{on_write_ready} ) {
       undef $watch->[2];
    }
 
-   if( $params{on_hangup} ) {
+   if( delete $params{on_hangup} ) {
       $self->_CAN_ON_HANGUP or croak "Cannot watch_io for 'on_hangup' in ".ref($self);
       undef $watch->[3];
    }
@@ -1649,6 +1651,8 @@ sub __unwatch_io
    if( not $watch->[1] and not $watch->[2] and not $watch->[3] ) {
       delete $self->{iowatches}->{$handle->fileno};
    }
+
+   keys %params and croak "Unrecognised keys for ->unwatch_io - " . join( ", ", keys %params );
 }
 
 =head2 $loop->watch_signal( $signal, $code )
