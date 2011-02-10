@@ -1,5 +1,18 @@
 Revision history for IO-Async
 
+0.39    CHANGES:
+         * Added IO::Async::Notifier 'notifier_name' parameter, which may be
+           used in debugging code in a later version
+         * Added IO::Async::Stream on_write_eof event
+         * Complain about unrecognised keys in IO::Async::Loop->watch_io and
+           IO::Async::Stream->write
+
+        BUGFIXES:
+         * Don't claim on_hangup supported except on those places we know it
+           will be (Linux, FreeBSD >= 8.0)
+         * Fixed race condition in t/41detached-code.t
+         * Fixed race condition in IO::Async::Function
+
 0.38    ADDITIONS:
          * IO::Async::Function
          * IO::Async::Loop->notifiers accessor
