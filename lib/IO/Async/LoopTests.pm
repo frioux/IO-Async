@@ -249,7 +249,7 @@ sub run_tests_io
    }
 
    SKIP: {
-      $loop->can( "_CAN_ON_HANGUP" ) or skip "Loop cannot watch_io for on_hangup", 3;
+      $loop->_CAN_ON_HANGUP or skip "Loop cannot watch_io for on_hangup", 3;
 
       my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot socketpair - $!";
       $_->blocking( 0 ) for $S1, $S2;

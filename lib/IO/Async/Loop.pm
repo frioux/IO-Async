@@ -13,6 +13,9 @@ our $VERSION = '0.38';
 # When editing this value don't forget to update the docs below
 use constant NEED_API_VERSION => '0.33';
 
+# Base value but some classes might override
+use constant _CAN_ON_HANGUP => 0;
+
 use Carp;
 
 use Socket qw( AF_INET AF_UNIX SOCK_STREAM SOCK_DGRAM SOCK_RAW );
