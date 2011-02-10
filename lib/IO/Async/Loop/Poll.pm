@@ -10,7 +10,10 @@ use warnings;
 
 our $VERSION = '0.38';
 use constant API_VERSION => '0.33';
-use constant _CAN_ON_HANGUP => 1;
+
+# Only Linux is known always to be able to report EOF conditions on
+# filehandles using POLLHUP
+use constant _CAN_ON_HANGUP => ( $^O eq "linux" );
 
 use base qw( IO::Async::Loop );
 
