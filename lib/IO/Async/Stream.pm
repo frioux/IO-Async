@@ -500,8 +500,10 @@ sub write
          $elem->[WQ_DATA] = $data;
       }
 
-      $elem->[WQ_ON_FLUSH] = $params{on_flush};
+      $elem->[WQ_ON_FLUSH] = delete $params{on_flush};
    }
+
+   keys %params and croak "Unrecognised keys for ->write - " . join( ", ", keys %params );
 
    return unless $handle;
 
