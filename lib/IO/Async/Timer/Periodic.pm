@@ -116,11 +116,16 @@ sub start
 {
    my $self = shift;
 
-   if( !defined $self->{next_time} ) {
-      $self->{next_time} = $self->get_loop->time + $self->{interval};
-   }
-   else {
-      $self->{next_time} += $self->{interval};
+   # Only actually define a time if we've got a loop; otherwise it'll just
+   # become start-pending. We'll calculate it properly when it gets added to
+   # the Loop
+   if( my $loop = $self->get_loop ) {
+      if( !defined $self->{next_time} ) {
+         $self->{next_time} = $loop->time + $self->{interval};
+      }
+      else {
+         $self->{next_time} += $self->{interval};
+      }
    }
 
    $self->SUPER::start;
