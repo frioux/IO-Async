@@ -12,7 +12,6 @@ use base qw( IO::Async::Timer );
 our $VERSION = '0.39';
 
 use Carp;
-use Time::HiRes qw( time );
 
 =head1 NAME
 
@@ -117,9 +116,8 @@ sub start
 {
    my $self = shift;
 
-   my $now = time;
    if( !defined $self->{next_time} ) {
-      $self->{next_time} = time + $self->{interval};
+      $self->{next_time} = $self->get_loop->time + $self->{interval};
    }
    else {
       $self->{next_time} += $self->{interval};
