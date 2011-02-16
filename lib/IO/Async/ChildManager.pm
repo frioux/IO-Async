@@ -342,7 +342,8 @@ C<IO::Async> will B<NOT> check before detaching the child process whether
 this is the case.
 
 If setting both the primary GID and the supplementary groups list, it is
-suggested to set the primary GID first.
+suggested to set the primary GID first. Moreover, some operating systems may
+require that the supplementary groups list contains the primary GID.
 
 =back
 
@@ -613,8 +614,13 @@ sub _spawn_in_child
             }
             elsif( $key eq "setgroups" ) {
                my $gid = $)+0;
-               my $groups = join( " ", @$value );
-               $) = "$gid $groups" or die "Cannot setgroups('$groups') - $!";
+               # Put the primary GID as the first group in the supplementary
+               # list, because some operating systems ignore this position,
+               # expecting it to indeed be the primary GID.
+               # See
+               #   https://rt.cpan.org/Ticket/Display.html?id=65127
+               my $groups = join( " ", grep { $_ != $gid } @$value );
+               $) = "$gid $gid $groups" or die "Cannot setgroups('$groups') - $!";
             }
          }
       }
