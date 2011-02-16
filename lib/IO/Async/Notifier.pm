@@ -458,6 +458,10 @@ the CODE ref internally for efficiency.
 
 The C<$code> argument may also be a plain string, which will be used as a
 method name; the returned CODE ref will then invoke that method on the object.
+In this case the method name is stored symbolically in the returned CODE
+reference, and dynamically dispatched each time the reference is invoked. This
+allows it to follow code reloading, dynamic replacement of class methods, or
+other similar techniques.
 
 If the C<$mref> CODE reference is being stored in some object other than the
 one it refers to, remember that since the Notifier is only weakly captured, it
@@ -480,21 +484,24 @@ sub _capture_weakself
 
    if( !ref $code ) {
       my $class = ref $self;
-      my $coderef = $self->can( $code ) or
+      # Don't save this coderef, or it will break dynamic method dispatch,
+      # which means code reloading, dynamic replacement, or other funky
+      # techniques stop working
+      $self->can( $code ) or
          croak qq(Can't locate object method "$code" via package "$class");
-
-      $code = $coderef;
    }
 
    weaken $self;
 
    return sub {
+      my $cv = ref( $code ) ? $code : $self->can( $code );
+
       if( HAS_BROKEN_TRAMPOLINES ) {
-         return $code->( $self, @_ );
+         return $cv->( $self, @_ );
       }
       else {
          unshift @_, $self;
-         goto &$code;
+         goto &$cv;
       }
    };
 }
@@ -521,6 +528,7 @@ function's arguments.
 
 The C<$code> argument may also be a plain string, which will be used as a
 method name; the returned CODE ref will then invoke that method on the object.
+As with C<_capture_weakself> this is stored symbolically.
 
 As with C<_capture_weakself>, care should be taken against Notifier
 destruction if the C<$mref> CODE reference is stored in some other object.
@@ -533,24 +541,25 @@ sub _replace_weakself
    my ( $code ) = @_;   # actually bare method names work too
 
    if( !ref $code ) {
+      # Don't save this coderef, see _capture_weakself for why
       my $class = ref $self;
-      my $coderef = $self->can( $code ) or
+      $self->can( $code ) or
          croak qq(Can't locate object method "$code" via package "$class");
-
-      $code = $coderef;
    }
 
    weaken $self;
 
    return sub {
+      my $cv = ref( $code ) ? $code : $self->can( $code );
+
       if( HAS_BROKEN_TRAMPOLINES ) {
-         return $code->( $self, @_[1..$#_] );
+         return $cv->( $self, @_[1..$#_] );
       }
       else {
          # Don't assign to $_[0] directly or we will change caller's first argument
          shift @_;
          unshift @_, $self;
-         goto &$code;
+         goto &$cv;
       }
    };
 }

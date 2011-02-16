@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 36;
+use Test::More tests => 38;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -104,6 +104,19 @@ is_oneref( $notifier, '$notifier has refcount 1 after _capture_weakself on named
 
 $mref->( 456 );
 is_deeply( \@subargs, [ $notifier, 456 ], '@subargs after invoking $mref on named method' );
+
+{
+   undef @subargs;
+   my @newargs;
+
+   no warnings 'redefine';
+   local *TestNotifier::frobnicate = sub { @newargs = @_; };
+
+   $mref->( 321 );
+
+   is_deeply( \@subargs, [], '@subargs empty after TestNotifier::frobnicate replacement' );
+   is_deeply( \@newargs, [ $notifier, 321 ], '@newargs after TestNotifier::frobnicate replacement' );
+}
 
 undef @subargs;
 
