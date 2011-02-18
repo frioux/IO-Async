@@ -156,11 +156,6 @@ sub reset
    );
 }
 
-# Keep perl happy; keep Britain tidy
-1;
-
-__END__
-
 =head1 EXAMPLES
 
 =head2 Watchdog Timer
@@ -210,3 +205,7 @@ For example, to expire an accepted connection after 30 seconds of inactivity:
 =head1 AUTHOR
 
 Paul Evans <leonerd@leonerd.org.uk>
+
+=cut
+
+0x55AA;

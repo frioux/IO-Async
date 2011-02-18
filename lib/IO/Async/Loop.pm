@@ -2104,11 +2104,6 @@ sub _manage_queues
    return $count;
 }
 
-# Keep perl happy; keep Britain tidy
-1;
-
-__END__
-
 =head1 EXTENSIONS
 
 An Extension is a Perl module that provides extra methods in the
@@ -2149,3 +2144,7 @@ The following methods take an C<extensions> parameter:
 =head1 AUTHOR
 
 Paul Evans <leonerd@leonerd.org.uk>
+
+=cut
+
+0x55AA;

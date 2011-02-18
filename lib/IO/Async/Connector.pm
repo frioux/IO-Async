@@ -471,11 +471,6 @@ sub connect
    );
 }
 
-# Keep perl happy; keep Britain tidy
-1;
-
-__END__
-
 =head1 EXAMPLES
 
 =head2 Passing Plain Socket Addresses
@@ -511,3 +506,7 @@ This example shows another way to connect to a UNIX socket at F<echo.sock>.
 =head1 AUTHOR
 
 Paul Evans <leonerd@leonerd.org.uk>
+
+=cut
+
+0x55AA;

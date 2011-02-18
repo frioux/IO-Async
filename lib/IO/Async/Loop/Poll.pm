@@ -257,11 +257,10 @@ sub unwatch_io
    $poll->mask( $handle, $mask ) if $mask != $curmask;
 }
 
-# Keep perl happy; keep Britain tidy
-1;
-
-__END__
-
 =head1 AUTHOR
 
 Paul Evans <leonerd@leonerd.org.uk>
+
+=cut
+
+0x55AA;

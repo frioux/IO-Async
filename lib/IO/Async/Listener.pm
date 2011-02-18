@@ -504,11 +504,6 @@ sub listen
    }
 }
 
-# Keep perl happy; keep Britain tidy
-1;
-
-__END__
-
 =head1 EXAMPLES
 
 =head2 Listening on UNIX Sockets
@@ -587,3 +582,7 @@ earlier example:
 =head1 AUTHOR
 
 Paul Evans <leonerd@leonerd.org.uk>
+
+=cut
+
+0x55AA;

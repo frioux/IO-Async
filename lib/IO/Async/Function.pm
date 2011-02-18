@@ -601,11 +601,6 @@ sub call
    $worker->{busy} = 1;
 }
 
-# Keep perl happy; keep Britain tidy
-1;
-
-__END__
-
 =head1 NOTES
 
 For the record, 123454321 is 11111 * 11111, a square number, and therefore not
@@ -614,3 +609,7 @@ prime.
 =head1 AUTHOR
 
 Paul Evans <leonerd@leonerd.org.uk>
+
+=cut
+
+0x55AA;

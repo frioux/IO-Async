@@ -579,11 +579,6 @@ register_resolver getnameinfo => sub {
    return [ $host, $service ];
 };
 
-# Keep perl happy; keep Britain tidy
-1;
-
-__END__
-
 =head1 EXAMPLES
 
 The following somewhat contrieved example shows how to implement a new
@@ -624,3 +619,7 @@ Look into (system-specific) ways of accessing asynchronous resolvers directly
 =head1 AUTHOR
 
 Paul Evans <leonerd@leonerd.org.uk>
+
+=cut
+
+0x55AA;

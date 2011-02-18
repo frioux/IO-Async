@@ -658,11 +658,10 @@ sub run_tests_control
    ok( 1, '$loop->loop_forever interruptable by ->loop_stop' );
 }
 
-# Keep perl happy; keep Britain tidy
-1;
-
-__END__
-
 =head1 AUTHOR
 
 Paul Evans <leonerd@leonerd.org.uk>
+
+=cut
+
+0x55AA;

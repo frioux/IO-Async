@@ -107,9 +107,6 @@ sub fire
    return $count;
 }
 
-# Keep perl happy; keep Britain tidy
-1;
-
 package # hide from CPAN
   IO::Async::Internals::TimeQueue::Elem;
 
@@ -153,5 +150,4 @@ sub cmp
    $self->time <=> $other->time;
 }
 
-# Keep perl happy; keep Britain tidy
-1;
+0x55AA;

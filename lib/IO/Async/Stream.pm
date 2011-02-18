@@ -616,11 +616,6 @@ sub new_for_stdout { shift->new( write_handle => \*STDOUT, @_ ) }
 
 sub new_for_stdio { shift->new( read_handle => \*STDIN, write_handle => \*STDOUT, @_ ) }
 
-# Keep perl happy; keep Britain tidy
-1;
-
-__END__
-
 =head1 EXAMPLES
 
 =head2 A line-based C<on_read()> method
@@ -714,3 +709,7 @@ L<IO::Handle> - Supply object methods for I/O handles
 =head1 AUTHOR
 
 Paul Evans <leonerd@leonerd.org.uk>
+
+=cut
+
+0x55AA;

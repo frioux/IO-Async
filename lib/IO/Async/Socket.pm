@@ -328,11 +328,6 @@ sub on_write_ready
    }
 }
 
-# Keep perl happy; keep Britain tidy
-1;
-
-__END__
-
 =head1 SEE ALSO
 
 =over 4
@@ -346,3 +341,7 @@ L<IO::Handle> - Supply object methods for I/O handles
 =head1 AUTHOR
 
 Paul Evans <leonerd@leonerd.org.uk>
+
+=cut
+
+0x55AA;

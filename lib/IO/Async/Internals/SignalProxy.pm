@@ -180,8 +180,7 @@ sub signals
    return keys %{ $self->{callbacks} };
 }
 
-# Keep perl happy; keep Britain tidy
-1;
+0x55AA;
 
 __END__
 

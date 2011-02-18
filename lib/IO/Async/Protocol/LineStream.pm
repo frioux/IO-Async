@@ -132,11 +132,10 @@ sub write_line
    $self->write( "$line$self->{eol}", @args );
 }
 
-# Keep perl happy; keep Britain tidy
-1;
-
-__END__
-
 =head1 AUTHOR
 
 Paul Evans <leonerd@leonerd.org.uk>
+
+=cut
+
+0x55AA;
