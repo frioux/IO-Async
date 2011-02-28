@@ -333,9 +333,12 @@ method.
 
 =back
 
-It is sometimes necessary to pass the C<socktype> hint to the resolver when
-resolving the host/service names into an address, as some OS's C<getaddrinfo>
-functions require this hint.
+It is necessary to pass the C<socktype> hint to the resolver when resolving
+the host/service names into an address, as some OS's C<getaddrinfo> functions
+require this hint. A warning is emitted if neither C<socktype> nor C<protocol>
+hint is defined when performing a C<getaddrinfo> lookup. To avoid this warning
+while still specifying no particular C<socktype> hint (perhaps to invoke some
+OS-specific behaviour), pass C<0> as the C<socktype> value.
 
 =cut
 
@@ -377,6 +380,12 @@ sub connect
 
    my %gai_hints;
    exists $params{$_} and $gai_hints{$_} = $params{$_} for qw( family socktype protocol flags );
+
+   if( exists $params{host} or exists $params{local_host} or exists $params{local_port} ) {
+      # We'll be making a ->getaddrinfo call
+      defined $gai_hints{socktype} or defined $gai_hints{protocol} or
+         carp "Attempting to ->connect without either 'socktype' or 'protocol' hint is not portable";
+   }
 
    my @localaddrs;
    my @peeraddrs;
