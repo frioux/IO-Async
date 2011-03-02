@@ -124,7 +124,12 @@ is_deeply( [ unpack_sockaddr_in $newclient->peername ],
 my $badport;
 my $failure;
 foreach my $port ( 22, 80 ) {
-   IO::Socket::INET->new( Type => SOCK_STREAM, LocalPort => $port, Listen => 1, ReuseAddr => 1 ) and next;
+   IO::Socket::INET->new(
+      Type      => SOCK_STREAM,
+      LocalHost => "localhost",
+      LocalPort => $port,
+      Listen    => 1,
+   ) and next;
       
    $badport = $port;
    $failure = $!;
@@ -142,6 +147,7 @@ SKIP: {
    $loop->listen(
       family   => "inet",
       socktype => "stream",
+      host     => "localhost",
       service  => $badport,
 
       on_resolve_error => sub { die "Test died early - resolve error $_[0]\n"; },
