@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 17;
+use Test::More tests => 19;
 
 use IO::Socket::INET;
 
@@ -137,14 +137,15 @@ foreach my $port ( 22, 80 ) {
 }
 
 SKIP: {
-   skip "No bind()-failing ports found", 4 unless defined $badport;
+   skip "No bind()-failing ports found", 6 unless defined $badport;
 
    my $failop;
    my $failerr;
 
    my @error;
 
-   $loop->listen(
+   # Undocumented API, returning the Listener object
+   my $listener = $loop->listen(
       family   => "inet",
       socktype => "stream",
       host     => "localhost",
@@ -167,4 +168,7 @@ SKIP: {
 
    is( $error[0], "bind", '$error[0] is bind' );
    is( "$error[1]", $failure, "\$error[1] is '$failure'" );
+
+   ok( defined $listener, '$listener defined after bind failure' );
+   ok( !$listener->get_loop, '$listener not in loop after bind failure' );
 }

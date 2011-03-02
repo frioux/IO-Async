@@ -1048,8 +1048,19 @@ sub listen
             $on_listen->( $listener->read_handle ) if $on_listen;
             $on_notifier->( $listener ) if $on_notifier;
          },
+         on_listen_error => sub {
+            $self->remove( $listener );
+            $params{on_listen_error}->( @_ ) if $params{on_listen_error};
+         },
+         on_resolve_error => sub {
+            $self->remove( $listener );
+            $params{on_resolve_error}->( @_ ) if $params{on_resolve_error};
+         },
       );
    }
+
+   # Unit testing needs this
+   return $listener;
 }
 
 =head1 OS ABSTRACTIONS
