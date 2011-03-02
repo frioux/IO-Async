@@ -7,7 +7,15 @@ use IO::Async::Test;
 use Test::More tests => 17;
 
 use Socket qw( AF_INET SOCK_STREAM pack_sockaddr_in INADDR_LOOPBACK );
-use Socket::GetAddrInfo qw( :newapi getaddrinfo getnameinfo );
+BEGIN {
+   if( eval { defined &Socket::getaddrinfo } ) {
+      Socket->import(qw( getaddrinfo getnameinfo ));
+   }
+   else {
+      require Socket::GetAddrInfo;
+      Socket::GetAddrInfo->import(qw( :newapi getaddrinfo getnameinfo ));
+   }
+}
 
 use IO::Async::Loop::Poll;
 
