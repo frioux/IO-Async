@@ -17,8 +17,12 @@ my $loop = IO::Async::Loop::Poll->new();
 testing_loop( $loop );
 
 # Try connect()ing to a socket we've just created
-my $listensock = IO::Socket::INET->new( LocalAddr => 'localhost', Listen => 1 ) or
-   die "Cannot create listensock - $!";
+my $listensock = IO::Socket::INET->new(
+   Type      => SOCK_STREAM,
+   LocalAddr => 'localhost',
+   LocalPort => 0,
+   Listen => 1
+) or die "Cannot create listensock - $!";
 
 my $addr = $listensock->sockname;
 

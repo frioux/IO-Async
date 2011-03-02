@@ -170,6 +170,7 @@ is( $streamproto->transport->read_handle, $S1, 'Stream object has correct handle
 my $serversock = IO::Socket::INET->new(
    Type      => SOCK_STREAM,
    LocalHost => "localhost",
+   LocalPort => 0,
    Listen    => 1,
 ) or die "Cannot create server socket - $!";
 
