@@ -132,7 +132,7 @@ foreach my $port ( 22, 80 ) {
 }
 
 SKIP: {
-   skip "No bind()-failing ports found", 1 unless defined $badport;
+   skip "No bind()-failing ports found", 4 unless defined $badport;
 
    my $failop;
    my $failerr;
