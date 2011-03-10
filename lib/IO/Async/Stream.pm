@@ -176,6 +176,8 @@ sub _init
 
    $self->{read_len}  = $READLEN;
    $self->{write_len} = $WRITELEN;
+
+   $self->{close_on_read_eof} = 1;
 }
 
 =head1 PARAMETERS
@@ -244,6 +246,13 @@ Optional. Analogous to the C<read_all> option, but for writing. When
 C<autoflush> is enabled, this option only affects deferred writing if the
 initial attempt failed due to buffer space.
 
+=item close_on_read_eof => BOOL
+
+Optional. Usually true, but if set to a false value then the stream will not
+be C<close>d when an EOF condition occurs on read. This is normally not useful
+as at that point the underlying stream filehandle is no longer useable, but it
+may be useful for reading regular files, or interacting with TTY devices.
+
 =back
 
 If a read handle is given, it is required that either an C<on_read> callback
@@ -269,7 +278,8 @@ sub configure
    my %params = @_;
 
    for (qw( on_read on_outgoing_empty on_read_eof on_write_eof on_read_error
-            on_write_error autoflush read_len read_all write_len write_all )) {
+            on_write_error autoflush read_len read_all write_len write_all
+            close_on_read_eof )) {
       $self->{$_} = delete $params{$_} if exists $params{$_};
    }
 
@@ -572,7 +582,7 @@ sub on_read_ready
 
       if( $eof ) {
          $self->maybe_invoke_event( on_read_eof => );
-         $self->close_now;
+         $self->close_now if $self->{close_on_read_eof};
          return;
       }
 

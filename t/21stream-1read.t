@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 48;
+use Test::More tests => 54;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -283,6 +283,41 @@ my @sub_lines;
    is( $partial, "Incomplete", 'EOF stream retains partial input' );
 
    ok( !defined $stream->get_loop, 'EOF stream no longer member of Loop' );
+   ok( !defined $stream->read_handle, 'Stream no longer has a read_handle' );
+}
+
+# Disabled close_on_read_eof
+{
+   my ( $rd, $wr ) = mkhandles;
+
+   my $eof = 0;
+   my $partial;
+
+   my $stream = IO::Async::Stream->new( read_handle => $rd,
+      on_read => sub {
+         my ( undef, $buffref, $eof ) = @_;
+         $partial = $$buffref if $eof;
+         return 0;
+      },
+      on_read_eof => sub { $eof++ },
+      close_on_read_eof => 0,
+   );
+
+   $loop->add( $stream );
+
+   $wr->syswrite( "Incomplete" );
+
+   $wr->close;
+
+   is( $eof, 0, 'EOF indication before wait' );
+
+   wait_for { $eof };
+
+   is( $eof, 1, 'EOF indication after wait' );
+   is( $partial, "Incomplete", 'EOF stream retains partial input' );
+
+   ok( defined $stream->get_loop, 'EOF stream still member of Loop' );
+   ok( defined $stream->read_handle, 'Stream still has a read_handle' );
 }
 
 # Close
