@@ -38,7 +38,7 @@ sub mkhandles
    my $initial_size;
 
    my $filestream = IO::Async::FileStream->new(
-      interval => 1 * AUT,
+      interval => 0.1 * AUT,
       read_handle => $rd,
       on_read => sub {
          my $self = shift;
@@ -83,7 +83,7 @@ sub mkhandles
    my $initial_size;
 
    my $filestream = IO::Async::FileStream->new(
-      interval => 1 * AUT,
+      interval => 0.1 * AUT,
       read_handle => $rd,
       on_read => sub {
          my $self = shift;
@@ -120,7 +120,7 @@ sub mkhandles
    my $truncated;
 
    my $filestream = IO::Async::FileStream->new(
-      interval => 1 * AUT,
+      interval => 0.1 * AUT,
       read_handle => $rd,
       on_read => sub {
          my $self = shift;
@@ -161,6 +161,7 @@ my @sub_lines;
    my ( $rd, $wr ) = mkhandles;
 
    my $filestream = TestStream->new(
+      interval => 0.1 * AUT,
       read_handle => $rd,
    );
 
