@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 14;
+use Test::More tests => 18;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -35,6 +35,7 @@ sub mkhandles
    my ( $rd, $wr ) = mkhandles;
 
    my @lines;
+   my $initial_size;
 
    my $filestream = IO::Async::FileStream->new(
       interval => 1 * AUT,
@@ -48,6 +49,7 @@ sub mkhandles
          push @lines, $1;
          return 1;
       },
+      on_initial => sub { ( undef, $initial_size ) = @_ },
    );
 
    ok( defined $filestream, '$filestream defined' );
@@ -59,6 +61,8 @@ sub mkhandles
 
    is_refcount( $filestream, 2, '$filestream has refcount 2 after adding to Loop' );
 
+   is( $initial_size, 0, '$initial_size is 0' );
+
    $wr->syswrite( "message\n" );
 
    is_deeply( \@lines, [], '@lines before wait' );
@@ -66,6 +70,44 @@ sub mkhandles
    wait_for { scalar @lines };
 
    is_deeply( \@lines, [ "message\n" ], '@lines after wait' );
+
+   $loop->remove( $filestream );
+}
+
+{
+   my ( $rd, $wr ) = mkhandles;
+
+   $wr->syswrite( "Some initial content\n" );
+
+   my @lines;
+   my $initial_size;
+
+   my $filestream = IO::Async::FileStream->new(
+      interval => 1 * AUT,
+      read_handle => $rd,
+      on_read => sub {
+         my $self = shift;
+         my ( $buffref, $eof ) = @_;
+
+         return 0 unless( $$buffref =~ s/^(.*\n)// );
+
+         push @lines, $1;
+         return 1;
+      },
+      on_initial => sub { ( undef, $initial_size ) = @_ },
+   );
+
+   $loop->add( $filestream );
+
+   is( $initial_size, 21, '$initial_size is 21' );
+
+   $wr->syswrite( "More content\n" );
+
+   is_deeply( \@lines, [], '@lines before wait' );
+
+   wait_for { scalar @lines };
+
+   is_deeply( \@lines, [ "Some initial content\n", "More content\n" ], '@lines after wait' );
 
    $loop->remove( $filestream );
 }

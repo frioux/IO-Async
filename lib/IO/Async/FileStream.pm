@@ -88,6 +88,11 @@ Invoked when the file size shrinks. If this happens, it is presumed that the
 file content has been replaced. Reading will then commence from the start of
 the file.
 
+=head2 on_initial $size
+
+Invoked the first time the file is looked at. It is passed the initial size of
+the file.
+
 =cut
 
 sub _init
@@ -105,7 +110,7 @@ sub _init
    $params->{close_on_read_eof} = 0;
 
    $self->{last_pos} = 0;
-   $self->{last_size} = 0;
+   $self->{last_size} = undef;
 }
 
 =head1 PARAMETERS
@@ -131,7 +136,7 @@ sub configure
    my $self = shift;
    my %params = @_;
 
-   foreach (qw( on_truncated )) {
+   foreach (qw( on_truncated on_initial )) {
       $self->{$_} = delete $params{$_} if exists $params{$_};
    }
 
@@ -142,7 +147,15 @@ sub configure
    croak "Cannot have a write_handle in a ".ref($self) if defined $params{write_handle};
 
    $self->SUPER::configure( %params );
+
+   if( $self->read_handle and !defined $self->{last_size} ) {
+      $self->_do_initial;
+   }
 }
+
+=head1 METHODS
+
+=cut
 
 # Replace IO::Async::Handle's implementation
 sub _watch_read
@@ -166,17 +179,29 @@ sub _watch_write
    croak "Cannot _watch_write in " . ref($self) if $want;
 }
 
+sub _do_initial
+{
+   my $self = shift;
+
+   my $size = (stat $self->read_handle)[7];
+
+   $self->maybe_invoke_event( on_initial => $size );
+
+   $self->{last_size} = $size;
+}
+
 sub on_tick
 {
    my $self = shift;
 
    my $size = (stat $self->read_handle)[7];
 
-   return if $size == $self->{last_size};
-
    if( $size < $self->{last_size} ) {
       $self->maybe_invoke_event( on_truncated => );
       $self->{last_pos} = 0;
+   }
+   elsif( $size == $self->{last_size} ) {
+      return;
    }
 
    $self->{last_size} = $size;
