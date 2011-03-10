@@ -103,6 +103,9 @@ sub _init
    ) );
 
    $params->{close_on_read_eof} = 0;
+
+   $self->{last_pos} = 0;
+   $self->{last_size} = 0;
 }
 
 =head1 PARAMETERS
@@ -139,25 +142,28 @@ sub configure
    croak "Cannot have a write_handle in a ".ref($self) if defined $params{write_handle};
 
    $self->SUPER::configure( %params );
+}
 
-   if( defined $self->read_handle ) {
+# Replace IO::Async::Handle's implementation
+sub _watch_read
+{
+   my $self = shift;
+   my ( $want ) = @_;
+
+   if( $want ) {
       $self->{timer}->start if !$self->{timer}->is_running;
-      $self->on_file_acquire;
+   }
+   else {
+      $self->{timer}->stop;
    }
 }
 
-# Don't register myself with the Loop for IO purposes; Timer will handle this
-sub _add_to_loop      { }
-sub _remove_from_loop { }
-
-sub on_file_acquire
+sub _watch_write
 {
    my $self = shift;
+   my ( $want ) = @_;
 
-   $self->{last_pos} = 0;
-   $self->{last_size} = 0;
-
-   $self->read_more;
+   croak "Cannot _watch_write in " . ref($self) if $want;
 }
 
 sub on_tick
@@ -175,8 +181,6 @@ sub on_tick
 
    $self->{last_size} = $size;
 
-   $self->{timer}->stop;
-
    $self->read_more;
 }
 
@@ -192,9 +196,6 @@ sub read_more
 
    if( $self->{last_pos} < $self->{last_size} ) {
       $self->get_loop->later( sub { $self->read_more } );
-   }
-   else {
-      $self->{timer}->start;
    }
 }
 
