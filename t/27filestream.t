@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 18;
+use Test::More tests => 19;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -107,6 +107,41 @@ sub mkhandles
    wait_for { scalar @lines };
 
    is_deeply( \@lines, [ "Some initial content\n", "More content\n" ], 'All content is visible' );
+
+   $loop->remove( $filestream );
+}
+
+# seek_to_last
+{
+   my ( $rd, $wr ) = mkhandles;
+
+   $wr->syswrite( "Some skipped content\nWith a partial line" );
+
+   my @lines;
+
+   my $filestream = IO::Async::FileStream->new(
+      interval => 0.1 * AUT,
+      read_handle => $rd,
+      on_read => sub {
+         my $self = shift;
+         my ( $buffref, $eof ) = @_;
+
+         return 0 unless( $$buffref =~ s/^(.*\n)// );
+
+         push @lines, $1;
+         return 1;
+      },
+      # Give it a tiny block size, forcing it to have to seek harder to find the \n
+      on_initial => sub { my $self = shift; $self->seek_to_last( "\n", blocksize => 4 ); },
+   );
+
+   $loop->add( $filestream );
+
+   $wr->syswrite( " finished here\n" );
+
+   wait_for { scalar @lines };
+
+   is_deeply( \@lines, [ "With a partial line finished here\n" ], 'Partial line completely returned' );
 
    $loop->remove( $filestream );
 }

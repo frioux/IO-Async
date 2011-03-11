@@ -184,10 +184,10 @@ sub _do_initial
 
    my $size = (stat $self->read_handle)[7];
 
+   $self->{last_size} = $size;
+
    local $self->{running_initial} = 1;
    $self->maybe_invoke_event( on_initial => $size );
-
-   $self->{last_size} = $size;
 }
 
 sub on_tick
@@ -255,6 +255,86 @@ sub seek
    defined $whence or $whence = SEEK_SET;
 
    sysseek( $self->read_handle, $offset, $whence );
+}
+
+=head2 $success = $filestream->seek_to_last( $str_pattern, %opts )
+
+Callable only during the C<on_initial> event. Attempts to move the read
+position in the filehandle to just after the last occurance of a given match.
+C<$str_pattern> may be a literal string or regexp pattern. 
+
+Returns a true value if the seek was successful, or false if not. Takes the
+following named arguments:
+
+=over 8
+
+=item blocksize => INT
+
+Optional. Read the file in blocks of this size. Will take a default of 8KiB if
+not defined.
+
+=item horizon => INT
+
+Optional. Give up looking for a match after this number of bytes. Will take a
+default value of 4 times the blocksize if not defined.
+
+To force it to always search through the entire file contents, set this
+explicitly to C<0>.
+
+=back
+
+Because regular file reading happens synchronously, this entire method
+operates entirely synchronously. If the file is very large, it may take a
+while to read back through the entire contents. While this is happening no
+other events can be invoked in the process.
+
+This is most likely useful for seeking after the last complete line in a
+line-based log file, to commence reading from the end, while still managing to
+capture any partial content that isn't yet a complete line.
+
+ on_initial => sub {
+    my $self = shift;
+    $self->seek_to_last( "\n" );
+ }
+
+=cut
+
+sub seek_to_last
+{
+   my $self = shift;
+   my ( $str_pattern, %opts ) = @_;
+
+   $self->{running_initial} or croak "Cannot ->seek_to_last except during on_initial";
+
+   my $offset = $self->{last_size};
+
+   my $blocksize = $opts{blocksize} || 8192;
+
+   defined $opts{horizon} or $opts{horizon} = $blocksize * 4;
+   my $horizon = $opts{horizon} ? $offset - $opts{horizon} : 0;
+
+   my $re = ref $str_pattern ? $str_pattern : qr/\Q$str_pattern\E/;
+
+   my $prev = "";
+   while( $offset > $horizon ) {
+      my $len = $blocksize;
+      $len = $offset if $len > $offset;
+      $offset -= $len;
+
+      sysseek( $self->read_handle, $offset, SEEK_SET );
+      sysread( $self->read_handle, my $buffer, $blocksize );
+
+      if( ( $buffer . $prev ) =~ m/($re).*?$/ ) {
+         my $pos = $offset + $+[1];
+         $self->seek( $pos );
+         return 1;
+      }
+
+      $prev = $buffer;
+   }
+
+   $self->seek( $horizon );
+   return 0;
 }
 
 =head1 AUTHOR
