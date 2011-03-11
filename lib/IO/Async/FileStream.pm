@@ -28,10 +28,16 @@ C<IO::Async::FileStream> - read the tail of a file
  use IO::Async::Loop;
  my $loop = IO::Async::Loop->new();
 
- open my $logh, "<", "var/logs/daemon.log" or die "Cannot open logfile - $!";
+ open my $logh, "<", "var/logs/daemon.log" or
+    die "Cannot open logfile - $!";
 
  my $filestream = IO::Async::FileStream->new(
     read_handle => $logh,
+
+    on_initial => sub {
+       my ( $self ) = @_;
+       $self->seek_to_last( "\n" );
+    },
 
     on_read => sub {
        my ( $self, $buffref ) = @_;
@@ -91,7 +97,9 @@ the file.
 =head2 on_initial $size
 
 Invoked the first time the file is looked at. It is passed the initial size of
-the file.
+the file. The code implementing this method can use the C<seek> or
+C<seek_to_last> methods to set the initial read position in the file to skip
+over some initial content.
 
 =cut
 
@@ -287,6 +295,11 @@ Because regular file reading happens synchronously, this entire method
 operates entirely synchronously. If the file is very large, it may take a
 while to read back through the entire contents. While this is happening no
 other events can be invoked in the process.
+
+When looking for a string or regexp match, this method appends the
+previously-read buffer to each block read from the file, in case a match
+becomes split across two reads. If C<blocksize> is reduced to a very small
+value, take care to ensure it isn't so small that a match may not be noticed.
 
 This is most likely useful for seeking after the last complete line in a
 line-based log file, to commence reading from the end, while still managing to
