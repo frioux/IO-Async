@@ -8,7 +8,7 @@ use Test::More tests => 18;
 use Test::Fatal;
 use Test::Refcount;
 
-use Fcntl qw( SEEK_SET );
+use Fcntl qw( SEEK_SET SEEK_END );
 use File::Temp qw( tempfile );
 
 use IO::Async::Loop;
@@ -74,6 +74,7 @@ sub mkhandles
    $loop->remove( $filestream );
 }
 
+# on_initial
 {
    my ( $rd, $wr ) = mkhandles;
 
@@ -103,11 +104,43 @@ sub mkhandles
 
    $wr->syswrite( "More content\n" );
 
-   is_deeply( \@lines, [], '@lines before wait' );
+   wait_for { scalar @lines };
+
+   is_deeply( \@lines, [ "Some initial content\n", "More content\n" ], 'All content is visible' );
+
+   $loop->remove( $filestream );
+}
+
+# on_initial can skip content
+{
+   my ( $rd, $wr ) = mkhandles;
+
+   $wr->syswrite( "Some skipped content\n" );
+
+   my @lines;
+
+   my $filestream = IO::Async::FileStream->new(
+      interval => 0.1 * AUT,
+      read_handle => $rd,
+      on_read => sub {
+         my $self = shift;
+         my ( $buffref, $eof ) = @_;
+
+         return 0 unless( $$buffref =~ s/^(.*\n)// );
+
+         push @lines, $1;
+         return 1;
+      },
+      on_initial => sub { my $self = shift; sysseek $self->read_handle, 0, SEEK_END; },
+   );
+
+   $loop->add( $filestream );
+
+   $wr->syswrite( "Additional content\n" );
 
    wait_for { scalar @lines };
 
-   is_deeply( \@lines, [ "Some initial content\n", "More content\n" ], '@lines after wait' );
+   is_deeply( \@lines, [ "Additional content\n" ], 'Initial content is skipped' );
 
    $loop->remove( $filestream );
 }

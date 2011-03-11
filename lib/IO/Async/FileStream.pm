@@ -109,7 +109,6 @@ sub _init
 
    $params->{close_on_read_eof} = 0;
 
-   $self->{last_pos} = 0;
    $self->{last_size} = undef;
 }
 
@@ -213,7 +212,7 @@ sub read_more
 {
    my $self = shift;
 
-   sysseek( $self->read_handle, $self->{last_pos}, SEEK_SET );
+   sysseek( $self->read_handle, $self->{last_pos}, SEEK_SET ) if defined $self->{last_pos};
 
    $self->on_read_ready;
 
