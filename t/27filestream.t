@@ -131,7 +131,7 @@ sub mkhandles
          push @lines, $1;
          return 1;
       },
-      on_initial => sub { my $self = shift; sysseek $self->read_handle, 0, SEEK_END; },
+      on_initial => sub { my $self = shift; $self->seek( 0, SEEK_END ); },
    );
 
    $loop->add( $filestream );

@@ -184,6 +184,7 @@ sub _do_initial
 
    my $size = (stat $self->read_handle)[7];
 
+   local $self->{running_initial} = 1;
    $self->maybe_invoke_event( on_initial => $size );
 
    $self->{last_size} = $size;
@@ -226,6 +227,34 @@ sub read_more
 sub write
 {
    carp "Cannot ->write from a ".ref($_[0]);
+}
+
+=head2 $filestream->seek( $offset, $whence )
+
+Callable only during the C<on_initial> event. Moves the read position in the
+filehandle to the given offset. C<$whence> is interpreted as for C<sysseek>,
+should be either C<SEEK_SET>, C<SEEK_CUR> or C<SEEK_END>. Will be set to
+C<SEEK_SET> if not provided.
+
+Normally this would be used to seek to the end of the file, for example
+
+ on_initial => sub {
+    my ( $self, $filesize ) = @_;
+    $self->seek( $filesize );
+ }
+
+=cut
+
+sub seek
+{
+   my $self = shift;
+   my ( $offset, $whence ) = @_;
+
+   $self->{running_initial} or croak "Cannot ->seek except during on_initial";
+
+   defined $whence or $whence = SEEK_SET;
+
+   sysseek( $self->read_handle, $offset, $whence );
 }
 
 =head1 AUTHOR
