@@ -101,6 +101,9 @@ the file. The code implementing this method can use the C<seek> or
 C<seek_to_last> methods to set the initial read position in the file to skip
 over some initial content.
 
+This method may be useful to skip initial content in the file, if the object
+should only respond to new content added after it was created.
+
 =cut
 
 sub _init

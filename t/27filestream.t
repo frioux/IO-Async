@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 19;
+use Test::More tests => 20;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -131,8 +131,11 @@ sub mkhandles
          push @lines, $1;
          return 1;
       },
-      # Give it a tiny block size, forcing it to have to seek harder to find the \n
-      on_initial => sub { my $self = shift; $self->seek_to_last( "\n", blocksize => 4 ); },
+      on_initial => sub {
+         my $self = shift;
+         # Give it a tiny block size, forcing it to have to seek harder to find the \n
+         ok( $self->seek_to_last( "\n", blocksize => 8 ), 'FileStream successfully seeks to last \n' );
+      },
    );
 
    $loop->add( $filestream );
