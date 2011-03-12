@@ -353,6 +353,30 @@ sub seek_to_last
    return 0;
 }
 
+=head1 TODO
+
+=over 4
+
+=item *
+
+Support opening a file by name instead of taking an already-open filehandle.
+With that comes the option to track it for renames too.
+
+=item *
+
+Move the actual file update watching code into C<IO::Async::Loop>, possibly as
+a new watch/unwatch method pair C<watch_file>.
+
+=item *
+
+Consider if a construction-time parameter of C<seek_to_end> or C<seek_to_last>
+might be neater than a small code block in C<on_initial>, if that turns out to
+be the only or most common form of use.
+
+=back
+
+=cut
+
 =head1 AUTHOR
 
 Paul Evans <leonerd@leonerd.org.uk>
