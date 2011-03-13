@@ -328,6 +328,7 @@ sub seek_to_last
 
    defined $opts{horizon} or $opts{horizon} = $blocksize * 4;
    my $horizon = $opts{horizon} ? $offset - $opts{horizon} : 0;
+   $horizon = 0 if $horizon < 0;
 
    my $re = ref $str_pattern ? $str_pattern : qr/\Q$str_pattern\E/;
 
@@ -340,8 +341,11 @@ sub seek_to_last
       sysseek( $self->read_handle, $offset, SEEK_SET );
       sysread( $self->read_handle, my $buffer, $blocksize );
 
-      if( ( $buffer . $prev ) =~ m/($re).*?$/ ) {
-         my $pos = $offset + $+[1];
+      # TODO: If $str_pattern is a plain string this could be more efficient
+      # using rindex
+      if( () = ( $buffer . $prev ) =~ m/$re/sg ) {
+         # $+[0] will be end of last match
+         my $pos = $offset + $+[0];
          $self->seek( $pos );
          return 1;
       }
