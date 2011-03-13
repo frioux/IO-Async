@@ -112,6 +112,11 @@ that a Stream object is required as the transport for a Protocol object.
 Similar to C<on_stream>, but constructs an instance of L<IO::Async::Socket>.
 This is most useful for C<SOCK_DGRAM> or C<SOCK_RAW> sockets.
 
+=head2 on_accept_error $socket, $errno
+
+Optional. Invoked if the C<accept> syscall indicates an error (other than
+C<EAGAIN>). If not provided, failures of C<accept> will simply be ignored.
+
 =cut
 
 =head1 PARAMETERS
@@ -185,7 +190,8 @@ sub on_read_ready
 {
    my $self = shift;
 
-   my $handle = $self->read_handle->accept;
+   my $socket = $self->read_handle;
+   my $handle = $socket->accept;
 
    if( defined $handle ) {
       $handle->blocking( 0 );
@@ -208,13 +214,8 @@ sub on_read_ready
          die "ARG! Missing on_accept,on_stream,on_socket!";
       }
    }
-   elsif( $! == EAGAIN ) {
-      # No client ready after all. Perhaps we're sharing the listen
-      # socket with other processes? Anyway; not fatal, just ignore it
-   }
-   else {
-      # TODO: make a callback
-      die "Cannot accept - $!";
+   elsif( $! != EAGAIN ) {
+      $self->maybe_invoke_event( on_accept_error => $socket, $! );
    }
 }
 
