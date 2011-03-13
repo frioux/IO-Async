@@ -45,10 +45,8 @@ filehandle
     on_read => sub {
        my ( $self, $buffref, $eof ) = @_;
 
-       if( $$buffref =~ s/^(.*\n)// ) {
+       while( $$buffref =~ s/^(.*\n)// ) {
           print "Received a line $1";
-
-          return 1;
        }
 
        if( $eof ) {
@@ -638,9 +636,8 @@ prints them to the program's C<STDOUT> stream.
     my $self = shift;
     my ( $buffref, $eof ) = @_;
 
-    if( $$buffref =~ s/^(.*\n)// ) {
+    while( $$buffref =~ s/^(.*\n)// ) {
        print "Received a line: $1";
-       return 1;
     }
 
     return 0;

@@ -57,9 +57,8 @@ This object is used indirectly via an C<IO::Async::Loop>:
     stdout => {
        on_read => sub {
           my ( $stream, $buffref, $eof ) = @_;
-          if( $$buffref =~ s/^(.*)\n// ) {
+          while( $$buffref =~ s/^(.*)\n// ) {
              print "PING wrote: $1\n";
-             return 1;
           }
           return 0;
        },

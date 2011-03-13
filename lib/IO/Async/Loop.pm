@@ -72,9 +72,8 @@ C<IO::Async::Loop> - core loop of the C<IO::Async> framework
     on_read => sub {
        my ( $self, $buffref, $eof ) = @_;
 
-       if( $$buffref =~ s/^(.*)\n// ) {
+       while( $$buffref =~ s/^(.*)\n// ) {
           print "You typed a line $1\n";
-          return 1;
        }
 
        return 0;

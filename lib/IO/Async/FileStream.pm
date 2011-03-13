@@ -42,11 +42,11 @@ C<IO::Async::FileStream> - read the tail of a file
     on_read => sub {
        my ( $self, $buffref ) = @_;
 
-       if( $$buffref =~ s/^(.*\n)// ) {
+       while( $$buffref =~ s/^(.*\n)// ) {
           print "Received a line $1";
-
-          return 1;
        }
+
+       return 0;
     },
  );
 

@@ -108,6 +108,7 @@ sub on_read
    my $self = shift;
    my ( $buffref, $eof ) = @_;
 
+   # Easiest to run each event individually, in case it returns a CODE ref
    $$buffref =~ s/^(.*?)$self->{eol_pattern}// or return 0;
 
    return $self->invoke_event( on_read_line => $1 ) || 1;

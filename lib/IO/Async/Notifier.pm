@@ -39,9 +39,12 @@ Usually not directly used by a program, but one valid use case may be:
        on_read => sub {
           my $self = shift;
           my ( $buffref, $eof ) = @_;
-          $$buffref =~ s/^(.*)\n// or return 0;
-          print "You said $1\n";
-          return 1;
+
+          while( $$buffref =~ s/^(.*)\n// ) {
+             print "You said $1\n";
+          }
+
+          return 0;
        },
     )
  );

@@ -24,12 +24,9 @@ my $listener = IO::Async::Listener->new(
          on_read => sub {
             my ( $self, $buffref, $eof ) = @_;
 
-            if( $$buffref =~ s/^(.*\n)// ) {
+            while( $$buffref =~ s/^(.*\n)// ) {
                # eat a line from the stream input
-               my $line = $1;
-               $self->write( $line );
-
-               return 1;
+               $self->write( $1 );
             }
 
             return 0;

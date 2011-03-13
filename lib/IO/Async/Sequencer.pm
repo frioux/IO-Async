@@ -485,8 +485,9 @@ with CRLF-delimited lines.
  sub on_read {
     my ( $self, $buffref, $eof ) = @_;
 
-    $buffref =~ s/^(.*)$CRLF// and
-       $self->incoming_request( $1 ), return 1;
+    while( $buffref =~ s/^(.*)$CRLF// ) {
+       $self->incoming_request( $1 );
+    }
 
     return 0;
  }

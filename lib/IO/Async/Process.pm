@@ -38,9 +38,11 @@ C<IO::Async::Process> - start and manage a child process
     stdout => {
        on_read => sub {
           my ( $stream, $buffref ) = @_;
-          $$buffref =~ s/^(.*)\n// or return 0;
-
-          print "Rot13 of 'hello world' is '$1'\n";
+          while( $$buffref =~ s/^(.*)\n// ) {
+             print "Rot13 of 'hello world' is '$1'\n";
+          }
+          
+          return 0;
        },
     },
     

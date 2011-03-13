@@ -45,13 +45,11 @@ sub on_stream
       on_read => sub {
          my ( $self, $buffref, $eof ) = @_;
 
-         if( $$buffref =~ s/^(.*\n)// ) {
+         while( $$buffref =~ s/^(.*\n)// ) {
             # eat a line from the stream input
 
             # Reflect it to all but the stream who wrote it
             $_ == $self or $_->write( "$peeraddr: $1" ) for @clients;
-
-            return 1;
          }
 
          return 0;

@@ -49,9 +49,8 @@ $socketstream = IO::Async::Stream->new(
    on_read => sub {
       my ( undef, $buffref, $eof ) = @_;
 
-      if( $$buffref =~ s/^(.*)$CRLF// ) {
+      while( $$buffref =~ s/^(.*)$CRLF// ) {
          $stdiostream->write( $1 . "\n" );
-         return 1;
       }
 
       return 0;
@@ -69,9 +68,8 @@ $stdiostream = IO::Async::Stream->new_for_stdio(
    on_read => sub {
       my ( undef, $buffref, $eof ) = @_;
 
-      if( $$buffref =~ s/^(.*)\n// ) {
+      while( $$buffref =~ s/^(.*)\n// ) {
          $socketstream->write( $1 . $CRLF );
-         return 1;
       }
 
       return 0;

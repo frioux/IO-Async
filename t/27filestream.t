@@ -44,10 +44,8 @@ sub mkhandles
          my $self = shift;
          my ( $buffref, $eof ) = @_;
 
-         return 0 unless( $$buffref =~ s/^(.*\n)// );
-
-         push @lines, $1;
-         return 1;
+         push @lines, $1 while $$buffref =~ s/^(.*\n)//;
+         return 0;
       },
       on_initial => sub { ( undef, $initial_size ) = @_ },
    );
@@ -90,10 +88,8 @@ sub mkhandles
          my $self = shift;
          my ( $buffref, $eof ) = @_;
 
-         return 0 unless( $$buffref =~ s/^(.*\n)// );
-
-         push @lines, $1;
-         return 1;
+         push @lines, $1 while $$buffref =~ s/^(.*\n)//;
+         return 0;
       },
       on_initial => sub { ( undef, $initial_size ) = @_ },
    );
