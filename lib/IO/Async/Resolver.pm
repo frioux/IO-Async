@@ -110,6 +110,11 @@ order they were requested; a single slow lookup will hold up the queue of
 other requests behind it. To mitigate this, multiple worker processes can be
 used; see the C<workers> argument to the constructor.
 
+The C<idle_timeout> parameter for the underlying C<IO::Async::Function> object
+is set to a default of 30 seconds, and C<min_workers> is set to 0. This
+ensures that there are no spare processes sitting idle during the common case
+of no outstanding requests.
+
 =cut
 
 sub _init
@@ -135,6 +140,9 @@ sub _init
          die "Unrecognised resolver request '$type'";
       }
    };
+
+   $params->{idle_timeout} = 30;
+   $params->{min_workers}  = 0;
 
    $started = 1;
 }
