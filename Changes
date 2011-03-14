@@ -1,5 +1,30 @@
 Revision history for IO-Async
 
+0.40    ADDITIONS:
+         * Added IO::Async::FileStream - RT66520
+         * Added IO::Async::Stream 'close_on_read_eof' parameter
+         * Added IO::Async::Listener 'on_accept_failure' event
+
+        CHANGES:
+         * Allow Loop->listen to be extended via extensions, similar to
+           ->connect
+         * Autoflush streams used in Function::Worker objects by default
+         * Default Resolver to idle_timeout=30, min_workers=0
+
+        BUGFIXES:
+         * Don't convert method names to CODErefs during _capture_weakself as
+           it breaks dynamic dispatch and code reload - RT65785
+         * Only calculate Timer::Periodic's next tick time if it actually has
+           a Loop
+         * Put primary GID first in a 'setgroups' list, otherwise some BSDs
+           get upset - RT65127
+         * Load getaddrinfo() from Socket or Socket::GetAddrInfo in
+           t/50resolver.t
+         * Remove the anonymous Listener from the Loop if Loop->listen fails
+           - RT66168
+         * Supply LocalPort => 0 to IO::Socket::INET constructor explicitly
+           during testing
+
 0.39    CHANGES:
          * Added IO::Async::Notifier 'notifier_name' parameter, which may be
            used in debugging code in a later version
