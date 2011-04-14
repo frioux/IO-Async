@@ -16,6 +16,8 @@ use POSIX qw( EAGAIN EWOULDBLOCK EINTR EPIPE );
 
 use Carp;
 
+use Encode 2.11 qw( find_encoding STOP_AT_PARTIAL );
+
 # Tuneable from outside
 # Not yet documented
 our $READLEN  = 8192;
@@ -251,6 +253,27 @@ be C<close>d when an EOF condition occurs on read. This is normally not useful
 as at that point the underlying stream filehandle is no longer useable, but it
 may be useful for reading regular files, or interacting with TTY devices.
 
+=item encoding => STRING
+
+If supplied, sets the name of encoding of the underlying stream. If an
+encoding is set, then the C<print> method will expect to receive Unicode
+strings and encodes them into bytes, and incoming bytes will be decoded into
+Unicode strings for the C<on_read> event.
+
+If an encoding is not supplied then C<print> and C<on_read> will work in byte
+strings.
+
+I<IMPORTANT NOTE:> in order to handle reads of UTF-8 content or other
+multibyte encodings, the code implementing the C<on_read> event uses a feature
+of L<Encode>; the C<STOP_AT_PARTIAL> flag. While this flag has existed for a
+while and is used by the C<:encoding> PerlIO layer itself for similar
+purposes, the flag is not officially documented by the C<Encode> module. In
+principle this undocumented feature could be subject to change, in practice I
+believe it to be reasonably stable.
+
+This note applies only to the C<on_read> event; data written using the
+C<write> method does not rely on any undocumented features of C<Encode>.
+
 =back
 
 If a read handle is given, it is required that either an C<on_read> callback
@@ -279,6 +302,13 @@ sub configure
             on_write_error autoflush read_len read_all write_len write_all
             close_on_read_eof )) {
       $self->{$_} = delete $params{$_} if exists $params{$_};
+   }
+
+   if( exists $params{encoding} ) {
+      my $encoding = delete $params{encoding};
+      my $obj = find_encoding( $encoding );
+      defined $obj or croak "Cannot handle an encoding of '$encoding'";
+      $self->{encoding} = $obj;
    }
 
    $self->SUPER::configure( %params );
@@ -486,6 +516,10 @@ sub write
 
    croak "Cannot write data to a Stream with no write_handle" if !$handle and $self->get_loop;
 
+   if( my $encoding = $self->{encoding} ) {
+      $data = $encoding->encode( $data );
+   }
+
    # Combine short writes we can
    my $tail = @{ $self->{writequeue} } ? $self->{writequeue}[-1] : undef;
 
@@ -549,6 +583,12 @@ sub on_read_ready
       }
 
       my $eof = ( $len == 0 );
+
+      if( my $encoding = $self->{encoding} ) {
+         my $bytes = defined $self->{bytes_remaining} ? $self->{bytes_remaining} . $data : $data;
+         $data = $encoding->decode( $bytes, STOP_AT_PARTIAL );
+         $self->{bytes_remaining} = $bytes;
+      }
 
       $self->{readbuff} .= $data if !$eof;
 
