@@ -20,6 +20,7 @@ my $build = Module::Build->new(
    requires => {
       'Async::MergePoint' => 0,
       'CPS' => 0,
+      'Exporter' => '5.57',
       'Heap' => '0.80',
       'IO::Poll' => 0,
       'Storable' => 0,
