@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 39;
+use Test::More tests => 40;
 use Test::Refcount;
 
 use POSIX qw( EAGAIN ECONNRESET );
@@ -82,6 +82,12 @@ sub read_data
    wait_for { $flushed };
 
    is( read_data( $rd ), "hello again\n", 'flushed data does get flushed' );
+
+   $flushed = 0;
+   $stream->write( "", on_flush => sub { $flushed++ } );
+   wait_for { $flushed };
+
+   ok( 1, "write empty data with on_flush" );
 
    my $done;
 

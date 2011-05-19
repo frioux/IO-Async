@@ -361,7 +361,7 @@ sub _flush_one
 
    my $head = $self->{writequeue}[WQ_DATA];
 
-   if( !length $head->[WQ_DATA] ) {
+   if( !defined $head->[WQ_DATA] ) {
       my $gensub = $head->[WQ_GENSUB] or die "Internal consistency problem - empty writequeue item without a gensub\n";
       $head->[WQ_DATA] = $gensub->( $self );
 
@@ -390,9 +390,14 @@ sub _flush_one
 
    substr( $head->[WQ_DATA], 0, $len ) = "";
 
-   if( !length $head->[WQ_DATA] and !$head->[WQ_GENSUB] ) {
-      $head->[WQ_ON_FLUSH]->( $self ) if $head->[WQ_ON_FLUSH];
-      shift @{ $self->{writequeue} };
+   if( !length $head->[WQ_DATA] ) {
+      if( $head->[WQ_GENSUB] ) {
+         undef $head->[WQ_DATA]; # We'll get some more next time around
+      }
+      else {
+         $head->[WQ_ON_FLUSH]->( $self ) if $head->[WQ_ON_FLUSH];
+         shift @{ $self->{writequeue} };
+      }
    }
 
    return 1;
@@ -535,7 +540,6 @@ sub write
       push @{ $self->{writequeue} }, my $elem = [];
 
       if( ref $data eq "CODE" ) {
-         $elem->[WQ_DATA] = "";
          $elem->[WQ_GENSUB] = $data;
       }
       else {
