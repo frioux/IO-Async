@@ -506,6 +506,11 @@ If the object is not yet a member of a loop and doesn't yet have a
 C<write_handle>, then calls to the C<write> method will simply queue the data
 and return. It will be flushed when the object is added to the loop.
 
+If C<$data> is a defined but empty string, the write is still queued, and the
+C<on_flush> continuation will be invoked, if supplied. This can be used to
+obtain a marker, to invoke some code once the output queue has been flushed up
+to this point.
+
 =cut
 
 sub write
