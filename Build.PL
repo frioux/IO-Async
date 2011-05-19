@@ -26,6 +26,11 @@ my $build = Module::Build->new(
       'Storable' => 0,
       'Time::HiRes' => 0,
       %also_requires,
+
+      # Fails on perl 5.8.3 for unknown reasons
+      #   https://rt.cpan.org/Ticket/Display.html?id=64493
+      # Now 5.14 is stable, I see even less reason to worry about such an old Perl
+      'perl' => '5.008005',
    },
    build_requires => {
       'File::Temp' => 0,
