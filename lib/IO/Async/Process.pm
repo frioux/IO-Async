@@ -17,7 +17,7 @@ use POSIX qw(
    WIFEXITED WEXITSTATUS
 );
 
-use IO::Async::MergePoint;
+use Async::MergePoint 0.03;
 
 =head1 NAME
 
@@ -107,7 +107,7 @@ sub _init
    $self->SUPER::_init( @_ );
 
    $self->{to_close}   = {};
-   $self->{mergepoint} = IO::Async::MergePoint->new;
+   $self->{mergepoint} = Async::MergePoint->new;
 }
 
 =head1 PARAMETERS

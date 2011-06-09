@@ -13,7 +13,6 @@ our $VERSION = '0.40';
 # Not a notifier
 
 use IO::Async::Stream;
-use IO::Async::MergePoint;
 
 use Carp;
 use Scalar::Util qw( weaken );

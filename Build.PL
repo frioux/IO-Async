@@ -18,7 +18,7 @@ else {
 my $build = Module::Build->new(
    module_name => 'IO::Async',
    requires => {
-      'Async::MergePoint' => 0,
+      'Async::MergePoint' => '0.03',
       'CPS' => 0,
       'Exporter' => '5.57',
       'Heap' => '0.80',

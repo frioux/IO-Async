@@ -5,6 +5,7 @@ use warnings;
 
 use IO::Async::Loop;
 use IO::Async::Stream;
+use Async::MergePoint;
 
 my $CRLF = "\x0d\x0a"; # because \r\n is not portable
 
@@ -37,7 +38,7 @@ print STDERR "Connected to $peeraddr\n";
 # easily without a temporary variable
 my ( $socketstream, $stdiostream );
 
-my $quit_mergepoint = IO::Async::MergePoint->new(
+my $quit_mergepoint = Async::MergePoint->new(
    needs => [qw[ socket stdio ]],
 
    on_finished => sub { $loop->loop_stop },
