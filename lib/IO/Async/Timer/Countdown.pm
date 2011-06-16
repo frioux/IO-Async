@@ -173,16 +173,18 @@ For example, to expire an accepted connection after 30 seconds of inactivity:
  on_accept => sub {
     my ( $newclient ) = @_;
 
-    my $stream;
-
     my $watchdog = IO::Async::Timer::Countdown->new(
        delay => 30,
 
-       on_expire => sub { $stream->close },
-    );
-    $stream->add_child( $watchdog );
+       on_expire => sub {
+          my $self = shift;
 
-    $stream = IO::Async::Stream->new(
+          my $stream = $self->parent;
+          $stream->close;
+       },
+    );
+
+    my $stream = IO::Async::Stream->new(
        handle => $newclient,
 
        on_read => sub {
@@ -197,10 +199,19 @@ For example, to expire an accepted connection after 30 seconds of inactivity:
        },
     ) );
 
+    $stream->add_child( $watchdog );
     $watchdog->start;
 
     $loop->add( $watchdog );
  }
+
+Rather than setting up a lexical variable to store the Stream so that the
+Timer's C<on_expire> closure can call C<close> on it, the parent/child
+relationship between the two Notifier objects is used. At the time the Timer
+C<on_expire> closure is invoked, it will have been added as a child notifier
+of the Stream; this means the Timer's C<parent> method will return the Stream
+Notifier. This enables it to call C<close> without needing to capture a
+lexical variable, which would create a cyclic reference.
 
 =head1 AUTHOR
 
