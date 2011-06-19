@@ -40,6 +40,9 @@ my $build = Module::Build->new(
       'Test::Refcount' => 0,
       'Test::Warn' => 0,
    },
+   configure_requires => {
+      'Module::Build' => 0,
+   },
    license => 'perl',
    create_makefile_pl => 'small',
    create_license => 1,
