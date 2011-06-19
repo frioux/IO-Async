@@ -13,6 +13,8 @@ our $VERSION = '0.40';
 
 use Carp;
 
+use IO::Handle; # give methods to bare IO handles
+
 =head1 NAME
 
 C<IO::Async::Handle> - event callbacks for a non-blocking file descriptor
