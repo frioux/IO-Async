@@ -1,5 +1,15 @@
 Revision history for IO-Async
 
+0.41    CHANGES:
+         * Support 'encoding' parameter in IO::Async::Stream
+         * Allow IO::Async::Stream->write with an empty string, for the
+           side-effect of setting an on_flush handler
+         * Support 'first_interval' parameter to IO::Async::Timer::Periodic
+         * Expanded documentation of timers
+        
+        BUGFIXES:
+         * Explicitly 'use IO::Handle;'
+
 0.40    ADDITIONS:
          * Added IO::Async::FileStream - RT66520
          * Added IO::Async::Stream 'close_on_read_eof' parameter
