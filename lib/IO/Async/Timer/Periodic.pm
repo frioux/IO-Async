@@ -79,6 +79,17 @@ CODE reference for the C<on_tick> event.
 The interval in seconds between invocations of the callback or method. Cannot
 be changed if the timer is running.
 
+=item first_interval => NUM
+
+Optional. If defined, the interval in seconds after calling the C<start>
+method before the first invocation of the callback or method. Thereafter, the
+regular C<interval> will be used. If not supplied, the first interval will be
+the same as the others.
+
+Even if this value is zero, the first invocation will be made asynchronously,
+by the containing C<Loop> object, and not synchronously by the C<start> method
+itself.
+
 =back
 
 Once constructed, the timer object will need to be added to the C<Loop> before
@@ -108,11 +119,27 @@ sub configure
       $self->{interval} = $interval;
    }
 
+   if( exists $params{first_interval} ) {
+      $self->is_running and croak "Cannot configure 'first_interval' of a running timer\n";
+
+      my $first_interval = delete $params{first_interval};
+      $first_interval >= 0 or croak "Expected a 'first_interval' as a non-negative number";
+
+      $self->{first_interval} = $first_interval;
+   }
+
    unless( $self->can_event( 'on_tick' ) ) {
       croak 'Expected either a on_tick callback or an ->on_tick method';
    }
 
    $self->SUPER::configure( %params );
+}
+
+sub _next_interval
+{
+   my $self = shift;
+   return $self->{first_interval} if defined $self->{first_interval};
+   return $self->{interval};
 }
 
 sub start
@@ -124,10 +151,10 @@ sub start
    # the Loop
    if( my $loop = $self->get_loop ) {
       if( !defined $self->{next_time} ) {
-         $self->{next_time} = $loop->time + $self->{interval};
+         $self->{next_time} = $loop->time + $self->_next_interval;
       }
       else {
-         $self->{next_time} += $self->{interval};
+         $self->{next_time} += $self->_next_interval;
       }
    }
 
@@ -148,6 +175,8 @@ sub _make_cb
 
    return $self->_capture_weakself( sub {
       my $self = shift;
+
+      undef $self->{first_interval};
 
       undef $self->{id};
       $self->start;

@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 31;
+use Test::More tests => 36;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -97,6 +97,16 @@ $timer->configure( interval => 1 * AUT );
 $timer->start;
 
 time_about( sub { wait_for { $tick == 3 } }, 1, 'Reconfigured timer interval works' );
+
+$timer->stop;
+
+$timer->configure( interval => 2 * AUT, first_interval => 0 );
+
+$timer->start;
+is( $tick, 3, 'Zero first_interval start not invoked yet' );
+time_about( sub { wait_for { $tick == 4 } }, 0, 'Zero first_interval invokes callback async' );
+
+time_about( sub { wait_for { $tick == 5 } }, 2, 'Normal interval used after first invocation' );
 
 ok( exception { $timer->configure( interval => 5 ); },
     'Configure a running timer fails' );
