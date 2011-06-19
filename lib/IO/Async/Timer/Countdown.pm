@@ -213,6 +213,34 @@ of the Stream; this means the Timer's C<parent> method will return the Stream
 Notifier. This enables it to call C<close> without needing to capture a
 lexical variable, which would create a cyclic reference.
 
+=head2 Fixed-Delay Repeating Timer
+
+The C<on_expire> event fires a fixed delay after the C<start> method has begun
+the countdown. The C<start> method can be invoked again at some point during
+the C<on_expire> handling code, to create a timer that invokes its code
+regularly a fixed delay after the previous invocation has finished. This
+creates an arrangement similar to an L<IO::Async::Timer::Periodic>, except
+that it will wait until the previous invocation has indicated it is finished,
+before starting the countdown for the next call.
+
+ my $timer = IO::Async::Timer::Countdown->new(
+    delay => 60,
+
+    on_expire => sub {
+       my $self = shift;
+
+       start_some_operation(
+          on_complete => sub { $self->start },
+       );
+    },
+ );
+
+ $timer->start;
+ $loop->add( $timer );
+
+This example invokes the C<start_some_operation> function 60 seconds after the
+previous iteration has indicated it has finished.
+
 =head1 AUTHOR
 
 Paul Evans <leonerd@leonerd.org.uk>

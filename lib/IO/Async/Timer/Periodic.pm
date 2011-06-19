@@ -46,7 +46,10 @@ to execute, but runs at regular intervals beginning at the time the timer was
 started, then adding each interval thereafter.
 
 For a C<Timer> object that only runs a callback once, after a given delay, see
-instead L<IO::Async::Timer::Countdown>.
+instead L<IO::Async::Timer::Countdown>. A Countdown timer can also be used to
+create repeating events that fire at a fixed delay after the previous event
+has finished processing. See als the examples in
+C<IO::Async::Timer::Countdown>.
 
 =cut
 
