@@ -86,13 +86,13 @@ sub read_data
 
    is( $read, "\x{10b}", 'Partial UTF-8 character visible after completion' );
 
-   # 0xfe is never a valid UTF-8 byte
-   $wr->syswrite( "\xfe" );
+   # An invalid sequence
+   $wr->syswrite( "\xc4!" );
 
    $read = "";
    wait_for { length $read };
 
-   is( $read, "\x{fffd}", 'Invalid UTF-8 byte yields U+FFFD' );
+   is( $read, "\x{fffd}!", 'Invalid UTF-8 byte yields U+FFFD' );
 
    $loop->remove( $stream );
 }
