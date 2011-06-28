@@ -1,5 +1,9 @@
 Revision history for IO-Async
 
+0.42    BUGFIXES:
+         * Test Stream encoding errors on a sequence which still returns
+           U+FFFD immediately on 5.14.0 (RT69020)
+
 0.41    CHANGES:
          * Support 'encoding' parameter in IO::Async::Stream
          * Allow IO::Async::Stream->write with an empty string, for the
