@@ -174,10 +174,7 @@ sub new
       return IO::Async::Handle->new( %params );
    }
 
-   my $self = bless {
-      children => [],
-      parent   => undef,
-   }, $class;
+   my $self = bless {}, $class;
 
    $self->_init( \%params );
 
@@ -289,6 +286,7 @@ Returns a list of the child notifiers contained within this one.
 sub children
 {
    my $self = shift;
+   return unless $self->{children};
    return @{ $self->{children} };
 }
 
