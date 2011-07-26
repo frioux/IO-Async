@@ -28,14 +28,14 @@ is_oneref( $notifier, '$notifier has refcount 1 initially' );
 
 is( $notifier->notifier_name, "test1", '$notifier->notifier_name' );
 
-is( $notifier->get_loop, undef, 'get_loop undef' );
+is( $notifier->loop, undef, 'loop undef' );
 
 $loop->add( $notifier );
 
 is_refcount( $loop, 2, '$loop has refcount 2 adding Notifier' );
 is_refcount( $notifier, 2, '$notifier has refcount 2 after adding to Loop' );
 
-is( $notifier->get_loop, $loop, 'get_loop $loop' );
+is( $notifier->loop, $loop, 'loop $loop' );
 
 is_deeply( [ $loop->notifiers ],
            [ $notifier ],
@@ -45,7 +45,7 @@ ok( exception { $loop->add( $notifier ) }, 'adding again produces error' );
 
 $loop->remove( $notifier );
 
-is( $notifier->get_loop, undef, '$notifier->get_loop is undef' );
+is( $notifier->loop, undef, '$notifier->loop is undef' );
 
 is_deeply( [ $loop->notifiers ],
            [],

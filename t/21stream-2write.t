@@ -192,7 +192,7 @@ sub read_data
 
    is( $eof, 1, 'EOF indication after wait' );
 
-   ok( !defined $stream->get_loop, 'EOF stream no longer member of Loop' );
+   ok( !defined $stream->loop, 'EOF stream no longer member of Loop' );
 }
 
 # Close
@@ -206,7 +206,7 @@ sub read_data
       on_closed => sub {
          my ( $self ) = @_;
          $closed = 1;
-         $loop_during_closed = $self->get_loop;
+         $loop_during_closed = $self->loop;
       },
    );
 
@@ -229,7 +229,7 @@ sub read_data
    is( $closed, 1, 'closed after wait' );
    is( $loop_during_closed, $loop, 'loop during closed' );
 
-   ok( !defined $stream->get_loop, 'Stream no longer member of Loop' );
+   ok( !defined $stream->loop, 'Stream no longer member of Loop' );
 
    is_oneref( $stream, 'closing $stream refcount 1 finally' );
 }

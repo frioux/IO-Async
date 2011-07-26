@@ -130,7 +130,7 @@ $stream->close_when_empty;
 
 is( $closed, 1, 'closed after close' );
 
-ok( !defined $stream->get_loop, 'Stream no longer member of Loop' );
+ok( !defined $stream->loop, 'Stream no longer member of Loop' );
 
 is_oneref( $stream, 'latehandle $stream refcount 1 finally' );
 

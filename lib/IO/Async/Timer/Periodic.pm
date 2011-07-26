@@ -149,7 +149,7 @@ sub start
    # Only actually define a time if we've got a loop; otherwise it'll just
    # become start-pending. We'll calculate it properly when it gets added to
    # the Loop
-   if( my $loop = $self->get_loop ) {
+   if( my $loop = $self->loop ) {
       if( !defined $self->{next_time} ) {
          $self->{next_time} = $loop->time + $self->_next_interval;
       }

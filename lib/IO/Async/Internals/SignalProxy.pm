@@ -151,7 +151,7 @@ sub watch
       push @$signal_queue, $signal;
    };
 
-   my $signum = $self->get_loop->signame2num( $signal );
+   my $signum = $self->loop->signame2num( $signal );
 
    my $sigset_block = $self->{sigset_block};
    $sigset_block->addset( $signum );

@@ -280,7 +280,7 @@ my $sub_writeready = 0;
 
    is( $closed, 0, 'not $closed after ->close_read' );
 
-   is( $handle->get_loop, $loop, 'Handle still member of Loop after ->close_read' );
+   is( $handle->loop, $loop, 'Handle still member of Loop after ->close_read' );
 
    ( $Srd1, $Srd2 ) = mkhandles;
 
@@ -296,7 +296,7 @@ my $sub_writeready = 0;
    is( $handle->read_handle->getline, "Also works\n", 'read handle still works' );
    is( $Swr2->getline, undef, 'sysread from EOF write handle' );
 
-   is( $handle->get_loop, $loop, 'Handle still member of Loop after ->close_write' );
+   is( $handle->loop, $loop, 'Handle still member of Loop after ->close_write' );
 
    is( $closed, 0, 'not $closed after ->close_read' );
 
@@ -304,7 +304,7 @@ my $sub_writeready = 0;
 
    is( $closed, 1, '$closed after ->close_read + ->close_write' );
 
-   is( $handle->get_loop, undef, '$handle no longer member of Loop' );
+   is( $handle->loop, undef, '$handle no longer member of Loop' );
 }
 
 # Late-binding of handle

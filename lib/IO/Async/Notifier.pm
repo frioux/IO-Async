@@ -211,17 +211,23 @@ sub configure
    }
 }
 
-=head2 $notifier->get_loop
+=head2 $loop = $notifier->loop
 
 Returns the C<IO::Async::Loop> that this Notifier is a member of.
 
+=head2 $loop = $notifier->get_loop
+
+Synonym for C<loop>.
+
 =cut
 
-sub get_loop
+sub loop
 {
    my $self = shift;
    return $self->{IO_Async_Notifier__loop}
 }
+
+*get_loop = \&loop;
 
 # Only called by IO::Async::Loop, not external interface
 sub __set_loop
@@ -230,15 +236,15 @@ sub __set_loop
    my ( $loop ) = @_;
 
    # early exit if no change
-   return if !$loop and !$self->get_loop or
-             $loop and $self->get_loop and $loop == $self->get_loop;
+   return if !$loop and !$self->loop or
+             $loop and $self->loop and $loop == $self->loop;
 
-   $self->_remove_from_loop( $self->get_loop ) if $self->get_loop;
+   $self->_remove_from_loop( $self->loop ) if $self->loop;
 
    $self->{IO_Async_Notifier__loop} = $loop;
    weaken( $self->{IO_Async_Notifier__loop} ); # To avoid a cycle
 
-   $self->_add_to_loop( $self->get_loop ) if $self->get_loop;
+   $self->_add_to_loop( $self->loop ) if $self->loop;
 }
 
 =head2 $name = $notifier->notifier_name
@@ -307,9 +313,9 @@ sub add_child
 
    croak "Cannot add a child that already has a parent" if defined $child->{IO_Async_Notifier__parent};
 
-   croak "Cannot add a child that is already a member of a loop" if defined $child->get_loop;
+   croak "Cannot add a child that is already a member of a loop" if defined $child->loop;
 
-   if( defined( my $loop = $self->get_loop ) ) {
+   if( defined( my $loop = $self->loop ) ) {
       $loop->add( $child );
    }
 
@@ -346,7 +352,7 @@ sub remove_child
 
    undef $child->{IO_Async_Notifier__parent};
 
-   if( defined( my $loop = $self->get_loop ) ) {
+   if( defined( my $loop = $self->loop ) ) {
       $loop->remove( $child );
    }
 }
@@ -358,7 +364,7 @@ sub _remove_from_outer
    if( my $parent = $self->parent ) {
       $parent->remove_child( $self );
    }
-   elsif( my $loop = $self->get_loop ) {
+   elsif( my $loop = $self->loop ) {
       $loop->remove( $self );
    }
 }

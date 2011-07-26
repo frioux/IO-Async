@@ -278,7 +278,7 @@ my @sub_lines;
    is( $eof, 1, 'EOF indication after wait' );
    is( $partial, "Incomplete", 'EOF stream retains partial input' );
 
-   ok( !defined $stream->get_loop, 'EOF stream no longer member of Loop' );
+   ok( !defined $stream->loop, 'EOF stream no longer member of Loop' );
    ok( !defined $stream->read_handle, 'Stream no longer has a read_handle' );
 }
 
@@ -312,7 +312,7 @@ my @sub_lines;
    is( $eof, 1, 'EOF indication after wait' );
    is( $partial, "Incomplete", 'EOF stream retains partial input' );
 
-   ok( defined $stream->get_loop, 'EOF stream still member of Loop' );
+   ok( defined $stream->loop, 'EOF stream still member of Loop' );
    ok( defined $stream->read_handle, 'Stream still has a read_handle' );
 }
 
@@ -328,7 +328,7 @@ my @sub_lines;
       on_closed => sub {
          my ( $self ) = @_;
          $closed = 1;
-         $loop_during_closed = $self->get_loop;
+         $loop_during_closed = $self->loop;
       },
    );
 
@@ -345,7 +345,7 @@ my @sub_lines;
    is( $closed, 1, 'closed after close' );
    is( $loop_during_closed, $loop, 'loop during closed' );
 
-   ok( !defined $stream->get_loop, 'Stream no longer member of Loop' );
+   ok( !defined $stream->loop, 'Stream no longer member of Loop' );
 
    is_oneref( $stream, 'closing $stream refcount 1 finally' );
 }

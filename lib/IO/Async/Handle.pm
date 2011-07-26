@@ -74,8 +74,8 @@ Invoked when the write handle becomes ready for writing.
 Optional. Invoked when the handle becomes closed.
 
 This handler is invoked before the filehandles are closed and the Handle
-removed from its containing Loop. The C<get_loop> will still return the
-containing Loop object.
+removed from its containing Loop. The C<loop> will still return the containing
+Loop object.
 
 =cut
 
@@ -228,7 +228,7 @@ sub _watch_read
    my $self = shift;
    my ( $want ) = @_;
 
-   my $loop = $self->get_loop or return;
+   my $loop = $self->loop or return;
    my $fh = $self->read_handle or return;
 
    if( $want ) {
@@ -252,7 +252,7 @@ sub _watch_write
    my $self = shift;
    my ( $want ) = @_;
 
-   my $loop = $self->get_loop or return;
+   my $loop = $self->loop or return;
    my $fh = $self->write_handle or return;
 
    if( $want ) {

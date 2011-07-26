@@ -231,7 +231,7 @@ sub read_more
    $self->{last_pos} = sysseek( $self->read_handle, 0, SEEK_CUR ); # == systell
 
    if( $self->{last_pos} < $self->{last_size} ) {
-      $self->get_loop->later( sub { $self->read_more } );
+      $self->loop->later( sub { $self->read_more } );
    }
 }
 

@@ -313,7 +313,7 @@ sub configure
 
    $self->SUPER::configure( %params );
 
-   if( $self->get_loop and $self->read_handle ) {
+   if( $self->loop and $self->read_handle ) {
       $self->can_event( "on_read" ) or
          croak 'Expected either an on_read callback or to be able to ->on_read';
    }
@@ -524,7 +524,7 @@ sub write
    # try to flush them
    my $handle = $self->write_handle;
 
-   croak "Cannot write data to a Stream with no write_handle" if !$handle and $self->get_loop;
+   croak "Cannot write data to a Stream with no write_handle" if !$handle and $self->loop;
 
    if( my $encoding = $self->{encoding} ) {
       $data = $encoding->encode( $data );

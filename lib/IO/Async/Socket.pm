@@ -195,7 +195,7 @@ sub configure
 
    $self->SUPER::configure( %params );
 
-   if( $self->get_loop and defined $self->read_handle ) {
+   if( $self->loop and defined $self->read_handle ) {
       $self->can_event( "on_recv" ) or
          croak 'Expected either an on_recv callback or to be able to ->on_recv';
    }

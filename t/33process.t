@@ -61,7 +61,7 @@ testing_loop( $loop );
    ok( $process->is_exited,     '$process->is_exited after sub { 0 }' );
    is( $process->exitstatus, 0, '$process->exitstatus after sub { 0 }' );
 
-   ok( !defined $process->get_loop, '$process no longer in Loop' );
+   ok( !defined $process->loop, '$process no longer in Loop' );
 
    is_oneref( $process, '$process has refcount 1 before EOS' );
 }

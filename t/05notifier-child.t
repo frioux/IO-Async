@@ -51,8 +51,8 @@ $parent->add_child( $child );
 
 is_refcount( $child, 3, '$child has refcount 3 after add_child within loop' );
 
-is( $parent->get_loop, $loop, '$parent->get_loop is $loop' );
-is( $child->get_loop,  $loop, '$child->get_loop is $loop' );
+is( $parent->loop, $loop, '$parent->loop is $loop' );
+is( $child->loop,  $loop, '$child->loop is $loop' );
 
 ok( $parent_in_loop, '$parent now in loop' );
 ok( $child_in_loop,  '$child now in loop' );
@@ -68,8 +68,8 @@ undef @children; # for refcount
 is_oneref( $parent, '$parent has refcount 1 after removal from loop' );
 is_refcount( $child, 2, '$child has refcount 2 after removal of parent from loop' );
 
-is( $parent->get_loop, undef, '$parent->get_loop is undef' );
-is( $child->get_loop,  undef, '$child->get_loop is undef' );
+is( $parent->loop, undef, '$parent->loop is undef' );
+is( $child->loop,  undef, '$child->loop is undef' );
 
 ok( !$parent_in_loop, '$parent no longer in loop' );
 ok( !$child_in_loop,  '$child no longer in loop' );
@@ -78,7 +78,7 @@ ok( exception { $loop->add( $child ) }, 'Directly adding a child to the loop fai
 
 $loop->add( $parent );
 
-is( $child->get_loop, $loop, '$child->get_loop is $loop after remove/add parent' );
+is( $child->loop, $loop, '$child->loop is $loop after remove/add parent' );
 
 ok( $parent_in_loop, '$parent now in loop' );
 ok( $child_in_loop,  '$child now in loop' );

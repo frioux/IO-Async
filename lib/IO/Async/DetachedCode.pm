@@ -123,7 +123,7 @@ sub DESTROY
    my $self = shift;
 
    my $function = $self->{function};
-   $function->get_loop->remove( $function );
+   $function->loop->remove( $function );
 }
 
 =head1 METHODS

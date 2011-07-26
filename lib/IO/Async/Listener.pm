@@ -401,7 +401,7 @@ sub listen
    my $self = shift;
    my ( %params ) = @_;
 
-   my $loop = $self->get_loop;
+   my $loop = $self->loop;
    defined $loop or croak "Cannot listen when not a member of a Loop"; # TODO: defer?
 
    if( exists $params{handle} ) {

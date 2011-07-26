@@ -146,7 +146,7 @@ sub reset
 {
    my $self = shift;
 
-   my $loop = $self->get_loop or croak "Cannot reset a Timer that is not in a Loop";
+   my $loop = $self->loop or croak "Cannot reset a Timer that is not in a Loop";
 
    return if !$self->is_running;
 

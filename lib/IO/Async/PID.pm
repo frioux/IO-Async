@@ -100,7 +100,7 @@ sub configure
    my %params = @_;
 
    if( exists $params{pid} ) {
-      $self->get_loop and croak "Cannot configure 'pid' after adding to Loop";
+      $self->loop and croak "Cannot configure 'pid' after adding to Loop";
       $self->{pid} = delete $params{pid};
    }
 
@@ -109,7 +109,7 @@ sub configure
 
       undef $self->{cb};
 
-      if( my $loop = $self->get_loop ) {
+      if( my $loop = $self->loop ) {
          $self->_remove_from_loop( $loop );
          $self->_add_to_loop( $loop );
       }

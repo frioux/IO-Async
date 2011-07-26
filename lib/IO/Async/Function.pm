@@ -216,7 +216,7 @@ sub configure
 
    $self->SUPER::configure( %params );
 
-   if( $need_restart and $self->get_loop ) {
+   if( $need_restart and $self->loop ) {
       $self->stop;
       $self->start;
    }
@@ -318,7 +318,7 @@ sub call
    my %params = @_;
 
    # TODO: possibly just queue this?
-   $self->get_loop or croak "Cannot ->call on a Function not yet in a Loop";
+   $self->loop or croak "Cannot ->call on a Function not yet in a Loop";
 
    my $args = delete $params{args};
    ref $args eq "ARRAY" or croak "Expected 'args' to be an array";

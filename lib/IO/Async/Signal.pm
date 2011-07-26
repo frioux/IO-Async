@@ -103,7 +103,7 @@ sub configure
 
       undef $self->{cb}; # Will be lazily constructed when needed
 
-      if( my $loop = $self->get_loop ) {
+      if( my $loop = $self->loop ) {
          $self->_remove_from_loop( $loop );
          $self->_add_to_loop( $loop );
       }

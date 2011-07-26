@@ -310,7 +310,7 @@ sub add
       croak "Cannot add a child notifier directly - add its parent";
    }
 
-   if( defined $notifier->get_loop ) {
+   if( defined $notifier->loop ) {
       croak "Cannot add a notifier that is already a member of a loop";
    }
 
