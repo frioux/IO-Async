@@ -14,7 +14,7 @@ use IO::Socket::INET;
 
 use IO::Async::Listener;
 
-my $loop = IO::Async::Loop::Poll->new();
+my $loop = IO::Async::Loop::Poll->new;
 
 testing_loop( $loop );
 

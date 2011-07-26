@@ -26,7 +26,7 @@ C<IO::Async::FileStream> - read the tail of a file
  use IO::Async::FileStream;
 
  use IO::Async::Loop;
- my $loop = IO::Async::Loop->new();
+ my $loop = IO::Async::Loop->new;
 
  open my $logh, "<", "var/logs/daemon.log" or
     die "Cannot open logfile - $!";

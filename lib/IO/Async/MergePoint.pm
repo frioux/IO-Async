@@ -60,7 +60,7 @@ the next stage.
 
 A merge point maintains a set of outstanding operations it is waiting on;
 these are arbitrary string values provided at the object's construction. Each
-time the C<done()> method is called, the named item is marked as being
+time the C<done> method is called, the named item is marked as being
 complete. When all of the required items are so marked, the C<on_finished>
 continuation is invoked.
 

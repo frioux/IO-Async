@@ -64,7 +64,7 @@ C<IO::Async::Resolver> - performing name resolutions asynchronously
 This object is used indirectly via an C<IO::Async::Loop>:
 
  use IO::Async::Loop;
- my $loop = IO::Async::Loop->new();
+ my $loop = IO::Async::Loop->new;
 
  $loop->resolver->getaddrinfo(
     host    => "www.example.com",
@@ -437,13 +437,13 @@ constructed.
 =item $name
 
 The name of the resolver function; must be a plain string. This name will be
-used by the C<type> argument to the C<resolve()> method, to identify it.
+used by the C<type> argument to the C<resolve> method, to identify it.
 
 =item $code
 
 A CODE reference to the resolver function body. It will be called in list
 context, being passed the list of arguments given in the C<data> argument to
-the C<resolve()> method. The returned list will be passed to the
+the C<resolve> method. The returned list will be passed to the
 C<on_resolved> callback. If the code throws an exception at call time, it will
 be passed to the C<on_error> continuation. If it returns normally, the list of
 values it returns will be passed to C<on_resolved>.

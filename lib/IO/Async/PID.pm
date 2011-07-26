@@ -23,7 +23,7 @@ C<IO::Async::PID> - event callback on exit of a child process
  use POSIX qw( WEXITSTATUS );
 
  use IO::Async::Loop;
- my $loop = IO::Async::Loop->new();
+ my $loop = IO::Async::Loop->new;
 
  my $kid = $loop->fork(
     code => sub {

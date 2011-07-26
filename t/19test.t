@@ -8,7 +8,7 @@ use IO::Async::Test;
 
 use IO::Async::Loop;
 
-my $loop = IO::Async::Loop->new();
+my $loop = IO::Async::Loop->new;
 
 is_refcount( $loop, 2, '$loop has refcount 2 initially' );
 
@@ -16,7 +16,7 @@ testing_loop( $loop );
 
 is_refcount( $loop, 3, '$loop has refcount 3 after adding to IO::Async::Test' );
 
-my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
+my ( $S1, $S2 ) = $loop->socketpair or die "Cannot create socket pair - $!";
 
 my $readbuffer = "";
 
@@ -29,9 +29,9 @@ $loop->watch_io(
 
 # This is just a token "does it run once?" test. A test of a test script. 
 # Mmmmmm. Meta-testing.
-# Coming up with a proper test that would guarantee multiple loop_once()
+# Coming up with a proper test that would guarantee multiple loop_once
 # cycles, etc.. is difficult. TODO for later I feel.
-# In any case, the wait_for() function is effectively tested to death in later
+# In any case, the wait_for function is effectively tested to death in later
 # test scripts which use it. If it fails to work, they'd notice it.
 
 $S2->syswrite( "A line\n" );

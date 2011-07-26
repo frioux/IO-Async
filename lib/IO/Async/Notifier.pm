@@ -30,9 +30,9 @@ Usually not directly used by a program, but one valid use case may be:
  use IO::Async::Signal;
 
  use IO::Async::Loop;
- my $loop = IO::Async::Loop->new();
+ my $loop = IO::Async::Loop->new;
 
- my $notifier = IO::Async::Notifier->new();
+ my $notifier = IO::Async::Notifier->new;
 
  $notifier->add_child(
     IO::Async::Stream->new_for_stdin(
@@ -265,7 +265,7 @@ from the C<IO::Async::Loop> that manages their parent.
 
 =cut
 
-=head2 $parent = $notifier->parent()
+=head2 $parent = $notifier->parent
 
 Returns the parent of the notifier, or C<undef> if does not have one.
 
@@ -277,7 +277,7 @@ sub parent
    return $self->{parent};
 }
 
-=head2 @children = $notifier->children()
+=head2 @children = $notifier->children
 
 Returns a list of the child notifiers contained within this one.
 
@@ -376,7 +376,7 @@ at some point within the code.
 
 =head2 $notifier->_init( $paramsref )
 
-This method is called by the constructor just before calling C<configure()>.
+This method is called by the constructor just before calling C<configure>.
 It is passed a reference to the HASH storing the constructor arguments.
 
 This method may initialise internal details of the Notifier as required,
@@ -396,7 +396,7 @@ This method is called by the constructor to set the initial values of named
 parameters, and by users of the object to adjust the values once constructed.
 
 This method should C<delete> from the C<%params> hash any keys it has dealt
-with, then pass the remaining ones to the C<SUPER::configure()>. The base
+with, then pass the remaining ones to the C<SUPER::configure>. The base
 class implementation will throw an exception if there are any unrecognised
 keys remaining.
 

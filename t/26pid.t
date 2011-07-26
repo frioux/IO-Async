@@ -13,11 +13,11 @@ use IO::Async::PID;
 
 use IO::Async::Loop;
 
-my $loop = IO::Async::Loop->new();
+my $loop = IO::Async::Loop->new;
 
 testing_loop( $loop );
 
-my $kid = fork();
+my $kid = fork;
 defined $kid or die "Cannot fork() - $!";
 
 if( $kid == 0 ) {
@@ -56,7 +56,7 @@ is( WEXITSTATUS($exitcode), 3, 'WEXITSTATUS($exitcode) after process exit' );
 # ignored or handled elsewhere.
 local $SIG{TERM} = "DEFAULT";
 
-$kid = fork();
+$kid = fork;
 defined $kid or die "Cannot fork() - $!";
 
 if( $kid == 0 ) {

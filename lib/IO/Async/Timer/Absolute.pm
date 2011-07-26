@@ -24,7 +24,7 @@ C<IO::Async::Timer::Absolute> - event callback at a fixed future time
  use POSIX qw( mktime );
 
  use IO::Async::Loop;
- my $loop = IO::Async::Loop->new();
+ my $loop = IO::Async::Loop->new;
 
  my @time = gmtime;
 

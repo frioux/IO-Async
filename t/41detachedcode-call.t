@@ -15,7 +15,7 @@ use IO::Async::DetachedCode;
 
 use IO::Async::Loop::Poll;
 
-my $loop = IO::Async::Loop::Poll->new();
+my $loop = IO::Async::Loop::Poll->new;
 
 testing_loop( $loop );
 is_refcount( $loop, 3, '$loop has refcount 3 after adding to IO::Async::Test' );
@@ -231,7 +231,7 @@ foreach my $id ( 1, 2, 3 ) {
    );
 }
 
-my $start = time();
+my $start = time;
 
 wait_for { -e "$dir/1" and -e "$dir/2" and -e "$dir/3" };
 

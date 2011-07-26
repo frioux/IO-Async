@@ -35,7 +35,7 @@ sub time_about
    }
 }
 
-my $loop = IO::Async::Loop::Poll->new();
+my $loop = IO::Async::Loop::Poll->new;
 
 testing_loop( $loop );
 

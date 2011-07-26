@@ -14,12 +14,12 @@ use IO::Async::Loop;
 
 use IO::Async::Stream;
 
-my $loop = IO::Async::Loop->new();
+my $loop = IO::Async::Loop->new;
 
 testing_loop( $loop );
 
-my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
-my ( $S3, $S4 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
+my ( $S1, $S2 ) = $loop->socketpair or die "Cannot create socket pair - $!";
+my ( $S3, $S4 ) = $loop->socketpair or die "Cannot create socket pair - $!";
 
 # Need sockets in nonblocking mode
 $_->blocking( 0 ) for $S1, $S2, $S3, $S4;
@@ -154,7 +154,7 @@ $loop->remove( $stream );
 
 undef $stream;
 
-( $S1, $S2 ) = $loop->socketpair() or die "Cannot socketpair - $!";
+( $S1, $S2 ) = $loop->socketpair or die "Cannot socketpair - $!";
 
 $stream = IO::Async::Stream->new(
    handle => $S1,

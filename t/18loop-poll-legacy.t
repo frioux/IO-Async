@@ -8,10 +8,10 @@ use IO::Poll;
 
 use IO::Async::Loop::Poll;
 
-my $poll = IO::Poll->new();
+my $poll = IO::Poll->new;
 my $loop = IO::Async::Loop::Poll->new( poll => $poll );
 
-my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
+my ( $S1, $S2 ) = $loop->socketpair or die "Cannot create socket pair - $!";
 
 # Need sockets in nonblocking mode
 $S1->blocking( 0 );
@@ -40,11 +40,11 @@ $S2->syswrite( "data\n" );
 $poll->poll( 0.1 );
 
 is( $readready, 0, '$readready before post_poll' );
-$loop->post_poll();
+$loop->post_poll;
 is( $readready, 1, '$readready after post_poll' );
 
 # Ready $S1 to clear the data
-$S1->getline(); # ignore return
+$S1->getline; # ignore return
 
 $loop->unwatch_io(
    handle => $S1,
@@ -64,7 +64,7 @@ is_deeply( [ $poll->handles ], [ $S1 ], '$poll->handles after watch_io write_rea
 $poll->poll( 0.1 );
 
 is( $writeready, 0, '$writeready before post_poll' );
-$loop->post_poll();
+$loop->post_poll;
 is( $writeready, 1, '$writeready after post_poll' );
 
 $loop->unwatch_io(
@@ -76,7 +76,7 @@ is_deeply( [ $poll->handles ], [], '$poll->handles empty after unwatch_io write_
 
 # Removal is clean (tests for workaround to bug in IO::Poll version 0.05)
 
-my ( $P1, $P2 ) = $loop->pipepair() or die "Cannot pipepair - $!";
+my ( $P1, $P2 ) = $loop->pipepair or die "Cannot pipepair - $!";
 
 # Just to make the loop non-empty
 $loop->watch_io( handle => $P2, on_read_ready => sub {} );

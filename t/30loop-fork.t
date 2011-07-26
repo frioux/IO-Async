@@ -10,7 +10,7 @@ use POSIX qw( SIGINT WEXITSTATUS WIFSIGNALED WTERMSIG );
 
 use IO::Async::Loop::Poll;
 
-my $loop = IO::Async::Loop::Poll->new();
+my $loop = IO::Async::Loop::Poll->new;
 
 testing_loop( $loop );
 

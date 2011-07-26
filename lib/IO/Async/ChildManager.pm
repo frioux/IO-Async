@@ -36,7 +36,7 @@ This object is used indirectly via an C<IO::Async::Loop>:
  use IO::Async::Loop;
  use POSIX qw( WEXITSTATUS );
 
- my $loop = IO::Async::Loop->new();
+ my $loop = IO::Async::Loop->new;
 
  ...
 
@@ -90,7 +90,7 @@ This object is used indirectly via an C<IO::Async::Loop>:
 
  $loop->spawn_child(
     code => sub {
-       do_something(); # executes in a child process
+       do_something; # executes in a child process
        return 1;
     },
 
@@ -148,7 +148,7 @@ The C<%params> hash takes the following keys:
 
 Either a reference to an array containing the command and its arguments, or a
 plain string containing the command. This value is passed into perl's
-C<exec()> function.
+C<exec> function.
 
 =item code => CODE
 
@@ -168,25 +168,25 @@ in the following way:
  $on_exit->( $pid, $exitcode, $dollarbang, $dollarat )
 
 The second argument is passed the plain perl C<$?> value. To use that
-usefully, see C<WEXITSTATUS()> and others from C<POSIX>.
+usefully, see C<WEXITSTATUS> and others from C<POSIX>.
 
 =back
 
 Exactly one of the C<command> or C<code> keys must be specified.
 
 If the C<command> key is used, the given array or string is executed using the
-C<exec()> function. 
+C<exec> function. 
 
-If the C<code> key is used, the return value will be used as the C<exit()>
+If the C<code> key is used, the return value will be used as the C<exit(2)>
 code from the child if it returns (or 255 if it returned C<undef> or thows an
 exception).
 
- Case            | WEXITSTATUS($exitcode) | $dollarbang | $dollarat
- ----------------+------------------------+-------------+----------
- exec() succeeds | exit code from program |     0       |    ""
- exec() fails    |         255            |     $!      |    ""
- $code returns   |     return value       |     $!      |    ""
- $code dies      |         255            |     $!      |    $@
+ Case          | WEXITSTATUS($exitcode) | $dollarbang | $dollarat
+ --------------+------------------------+-------------+----------
+ exec succeeds | exit code from program |     0       |    ""
+ exec fails    |         255            |     $!      |    ""
+ $code returns |     return value       |     $!      |    ""
+ $code dies    |         255            |     $!      |    $@
 
 It is usually more convenient to use the C<open_child> method in simple cases
 where an external program is being started in order to interact with it via
@@ -226,7 +226,7 @@ sub spawn_child
       # fiddling with F_GETFL and F_SETFL (e.g. MSWin32)
       local $^F = -1;
 
-      ( $readpipe, $writepipe ) = $loop->pipepair() or croak "Cannot pipe() - $!";
+      ( $readpipe, $writepipe ) = $loop->pipepair or croak "Cannot pipe() - $!";
    }
 
    if( defined $command ) {
@@ -255,7 +255,7 @@ sub spawn_child
 =head2 C<setup> array
 
 This array gives a list of file descriptor operations to perform in the child
-process after it has been C<fork()>ed from the parent, before running the code
+process after it has been C<fork(2)>ed from the parent, before running the code
 or command. It consists of name/value pairs which are ordered; the operations
 are performed in the order given.
 
@@ -274,12 +274,12 @@ The file descriptor will be closed.
 
 =item [ 'dup', $io ]
 
-The file descriptor will be C<dup2()>ed from the given IO handle.
+The file descriptor will be C<dup2(2)>ed from the given IO handle.
 
 =item [ 'open', $mode, $file ]
 
 The file descriptor will be opened from the named file in the given mode. The
-C<$mode> string should be in the form usually given to the C<open()> function;
+C<$mode> string should be in the form usually given to the C<open> function;
 such as '<' or '>>'.
 
 =item [ 'keep' ]
@@ -318,11 +318,11 @@ A reference to a hash to set as the child process's environment.
 
 =item nice => INT
 
-Change the child process's scheduling priority using C<POSIX::nice()>.
+Change the child process's scheduling priority using C<POSIX::nice>.
 
 =item chdir => STRING
 
-Change the child process's working directory using C<chdir()>.
+Change the child process's working directory using C<chdir>.
 
 =item setuid => INT
 
@@ -441,7 +441,7 @@ sub _spawn_in_parent
 
    my $loop = $self->{loop};
 
-   # We need to wait for both the errno pipe to close, and for waitpid()
+   # We need to wait for both the errno pipe to close, and for waitpid
    # to give us an exit code. We'll form two closures over these two
    # variables so we can cope with those happening in either order
 
@@ -518,7 +518,7 @@ sub _spawn_in_child
 
       if( @$setup ) {
          # The writepipe might be in the way of a setup filedescriptor. If it
-         # is we'll have to dup2() it out of the way then close the original.
+         # is we'll have to dup2 it out of the way then close the original.
          foreach my $i ( 0 .. $#$setup/2 ) {
             my ( $key, $value ) = @$setup[$i*2, $i*2 + 1];
             $key =~ m/^fd(\d+)$/ or next;
@@ -538,7 +538,7 @@ sub _spawn_in_child
                $fd_in_use{$fd} = 1;
 
                my $fileno = fileno $params[0];
-               # Keep a count of how many times it will be dup()ed from so we
+               # Keep a count of how many times it will be dup'ed from so we
                # can close it once we've finished
                $fds_refcount{$fileno}++;
             };

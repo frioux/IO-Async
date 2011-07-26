@@ -30,7 +30,7 @@ our $VERSION = '0.42';
 use constant AUT => $ENV{TEST_QUICK_TIMERS} ? 0.1 : 1;
 
 # The loop under test. We keep it in a single lexical here, so we can use
-# is_oneref() tests in the individual test suite functions
+# is_oneref tests in the individual test suite functions
 my $loop;
 
 =head1 NAME
@@ -96,7 +96,7 @@ sub run_tests
    }
 
    foreach my $test ( @tests ) {
-      $loop = $testclass->new();
+      $loop = $testclass->new;
 
       is( IO::Async::Loop->new, $loop, 'magic constructor yields $loop' );
 
@@ -156,7 +156,7 @@ use constant count_tests_io => 17;
 sub run_tests_io
 {
    {
-      my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
+      my ( $S1, $S2 ) = $loop->socketpair or die "Cannot create socket pair - $!";
       $_->blocking( 0 ) for $S1, $S2;
 
       my $readready  = 0;
@@ -184,7 +184,7 @@ sub run_tests_io
       is( $readready, 1, '$readready after loop_once' );
 
       # Ready $S1 to clear the data
-      $S1->getline(); # ignore return
+      $S1->getline; # ignore return
 
       $loop->watch_io(
          handle => $S1,
@@ -222,7 +222,7 @@ sub run_tests_io
 
    # HUP of pipe - can be different to sockets on some architectures
    {
-      my ( $Prd, $Pwr ) = $loop->pipepair() or die "Cannot pipepair - $!";
+      my ( $Prd, $Pwr ) = $loop->pipepair or die "Cannot pipepair - $!";
       $_->blocking( 0 ) for $Prd, $Pwr;
 
       my $readready = 0;
@@ -251,7 +251,7 @@ sub run_tests_io
    SKIP: {
       $loop->_CAN_ON_HANGUP or skip "Loop cannot watch_io for on_hangup", 3;
 
-      my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot socketpair - $!";
+      my ( $S1, $S2 ) = $loop->socketpair or die "Cannot socketpair - $!";
       $_->blocking( 0 ) for $S1, $S2;
 
       my $hangup = 0;
@@ -266,7 +266,7 @@ sub run_tests_io
 
       is( $hangup, 1, '$hangup after socket close' );
 
-      my ( $Prd, $Pwr ) = $loop->pipepair() or die "Cannot pipepair - $!";
+      my ( $Prd, $Pwr ) = $loop->pipepair or die "Cannot pipepair - $!";
       $_->blocking( 0 ) for $Prd, $Pwr;
 
       $hangup = 0;
@@ -281,7 +281,7 @@ sub run_tests_io
 
       is( $hangup, 1, '$hangup after pipe close for reading' );
 
-      ( $Prd, $Pwr ) = $loop->pipepair() or die "Cannot pipepair - $!";
+      ( $Prd, $Pwr ) = $loop->pipepair or die "Cannot pipepair - $!";
       $_->blocking( 0 ) for $Prd, $Pwr;
 
       $hangup = 0;
@@ -299,7 +299,7 @@ sub run_tests_io
 
    # Check that combined read/write handlers can cancel each other
    {
-      my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot socketpair - $!";
+      my ( $S1, $S2 ) = $loop->socketpair or die "Cannot socketpair - $!";
       $_->blocking( 0 ) for $S1, $S2;
 
       my $callcount = 0;
@@ -394,7 +394,7 @@ sub run_tests_timer
       my $now = time;
       $loop->loop_once( 5 * AUT );
 
-      # poll() might have returned just a little early, such that the TimerQueue
+      # poll might have returned just a little early, such that the TimerQueue
       # doesn't think anything is ready yet. We need to handle that case.
       while( !$done ) {
          die "It should have been ready by now" if( time - $now > 5 * AUT );
@@ -424,7 +424,7 @@ sub run_tests_timer
       my $now = time;
       $loop->loop_once( 5 * AUT );
 
-      # poll() might have returned just a little early, such that the TimerQueue
+      # poll might have returned just a little early, such that the TimerQueue
       # doesn't think anything is ready yet. We need to handle that case.
       while( !$done ) {
          die "It should have been ready by now" if( time - $now > 5 * AUT );
@@ -439,8 +439,8 @@ sub run_tests_timer
    $done = 0;
 
    time_between {
-      $loop->loop_once() while !$done;
-   } 0, 0.1, 'loop_once() while waiting for negative interval timer';
+      $loop->loop_once while !$done;
+   } 0, 0.1, 'loop_once while waiting for negative interval timer';
 }
 
 =head2 signal
@@ -456,7 +456,7 @@ sub run_tests_signal
 
    $loop->watch_signal( TERM => sub { $caught++ } );
 
-   is_oneref( $loop, '$loop has refcount 1 after watch_signal()' );
+   is_oneref( $loop, '$loop has refcount 1 after watch_signal' );
 
    $loop->loop_once( 0.1 );
 
@@ -478,18 +478,18 @@ sub run_tests_signal
 
    is( $caught, 2, '$caught after second ->loop_once' );
 
-   is_oneref( $loop, '$loop has refcount 1 before unwatch_signal()' );
+   is_oneref( $loop, '$loop has refcount 1 before unwatch_signal' );
 
    $loop->unwatch_signal( 'TERM' );
 
-   is_oneref( $loop, '$loop has refcount 1 after unwatch_signal()' );
+   is_oneref( $loop, '$loop has refcount 1 after unwatch_signal' );
 
    my ( $cA, $cB );
 
    my $idA = $loop->attach_signal( TERM => sub { $cA = 1 } );
    my $idB = $loop->attach_signal( TERM => sub { $cB = 1 } );
 
-   is_oneref( $loop, '$loop has refcount 1 after 2 * attach_signal()' );
+   is_oneref( $loop, '$loop has refcount 1 after 2 * attach_signal' );
 
    kill SIGTERM, $$;
 
@@ -561,7 +561,7 @@ sub run_tests_idle
 
    $loop->loop_once( 1 );
 
-   is( $called, 3, '$loop->later() shortcut works' );
+   is( $called, 3, '$loop->later shortcut works' );
 }
 
 =head2 child
@@ -572,8 +572,8 @@ Tests the Loop's support for watching child processes by PID
 
 sub run_in_child(&)
 {
-   my $kid = fork();
-   defined $kid or die "Cannot fork() $!";
+   my $kid = fork;
+   defined $kid or die "Cannot fork() - $!";
    return $kid if $kid;
 
    shift->();

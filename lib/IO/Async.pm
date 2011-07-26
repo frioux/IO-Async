@@ -23,7 +23,7 @@ C<IO::Async> - Asynchronous event-driven programming
  use IO::Async::Stream;
  use IO::Async::Loop;
 
- my $loop = IO::Async::Loop->new();
+ my $loop = IO::Async::Loop->new;
 
  $loop->connect(
     host     => "some.other.host",
@@ -54,7 +54,7 @@ C<IO::Async> - Asynchronous event-driven programming
     on_connect_error => sub { die "Cannot connect - $_[0] failed $_[-1]\n"; },
  );
 
- $loop->loop_forever();
+ $loop->loop_forever;
 
 =head1 DESCRIPTION
 
@@ -100,8 +100,8 @@ maintains an outgoing packet queue, and informs of packet receipt using a
 callback or method.
 
 The L<IO::Async::Listener> class is another subclass of L<IO::Async::Handle>
-which facilitates the use of C<listen()>-mode sockets. When a new connection
-is available on the socket it will C<accept()> it and pass the new client
+which facilitates the use of C<listen(2)>-mode sockets. When a new connection
+is available on the socket it will C<accept(2)> it and pass the new client
 socket to its callback function.
 
 =head2 Timers
@@ -145,7 +145,7 @@ interactions to a particular subclass for the purpose.
 
 L<IO::Async::Loop::Poll> uses an L<IO::Poll> object for this test.
 
-L<IO::Async::Loop::Select> uses the C<select()> syscall.
+L<IO::Async::Loop::Select> uses the C<select(2)> syscall.
 
 Other subclasses of loop may appear on CPAN under their own dists; such
 as L<IO::Async::Loop::Glib> which acts as a proxy for the C<Glib::MainLoop> of
@@ -160,8 +160,8 @@ implementation exists for the specific OS it runs on.
 
 The L<IO::Async::Loop> object provides a number of methods to facilitate the
 running of child processes. C<spawn_child> is primarily a wrapper around the
-typical C<fork()>/C<exec()> style of starting child processes, and
-C<run_child> provide a method similar to perl's C<readpipe()> (which is used
+typical C<fork(2)>/C<exec(2)> style of starting child processes, and
+C<run_child> provide a method similar to perl's C<readpipe> (which is used
 to implement backticks C<``>).
 
 =head2 Asynchronous Functions

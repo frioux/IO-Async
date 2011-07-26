@@ -13,7 +13,7 @@ my $CONNECT_PORT = 80;
 
 my $loop = IO::Async::Loop->new;
 
-my $listener = ProxyListener->new();
+my $listener = ProxyListener->new;
 
 $loop->add( $listener );
 

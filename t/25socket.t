@@ -16,7 +16,7 @@ use IO::Async::Loop;
 
 use IO::Async::Socket;
 
-my $loop = IO::Async::Loop->new();
+my $loop = IO::Async::Loop->new;
 
 testing_loop( $loop );
 
@@ -233,7 +233,7 @@ is_oneref( $socket, 'sending $socket has refcount 1 finally' );
 
 # Socket errors
 
-my ( $ES1, $ES2 ) = $loop->socketpair() or die "Cannot socketpair - $!";
+my ( $ES1, $ES2 ) = $loop->socketpair or die "Cannot socketpair - $!";
 $ES2->syswrite( "X" ); # ensuring $ES1 is read- and write-ready
 # cheating and hackery
 bless $ES1, "ErrorSocket";

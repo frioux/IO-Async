@@ -24,13 +24,13 @@ C<IO::Async::Handle> - event callbacks for a non-blocking file descriptor
 This class is likely not to be used directly, because subclasses of it exist
 to handle more specific cases. Here is an example of how it would be used to
 watch a listening socket for new connections. In real code, it is likely that
-the C<< Loop->listen() >> method would be used instead.
+the C<< Loop->listen >> method would be used instead.
 
  use IO::Socket::INET;
  use IO::Async::Handle;
 
  use IO::Async::Loop;
- my $loop = IO::Async::Loop->new();
+ my $loop = IO::Async::Loop->new;
 
  my $socket = IO::Socket::INET->new( LocalPort => 1234, Listen => 1 );
 
@@ -38,7 +38,7 @@ the C<< Loop->listen() >> method would be used instead.
     handle => $socket,
 
     on_read_ready  => sub {
-       my $new_client = $socket->accept(); 
+       my $new_client = $socket->accept; 
        ...
     },
  );
@@ -125,7 +125,7 @@ If no IO handles are provided at construction time, the object is still
 created but will not yet be fully-functional as a Handle. IO handles can be
 assigned later using the C<set_handle> or C<set_handles> methods, or by
 C<configure>. This may be useful when constructing an object to represent a
-network connection, before the C<connect()> has actually been performed yet.
+network connection, before the C<connect(2)> has actually been performed yet.
 
 =cut
 
@@ -164,7 +164,7 @@ sub configure
 
       if( defined $read_handle ) {
          if( !defined eval { $read_handle->fileno } ) {
-            croak 'Expected that read_handle can fileno()';
+            croak 'Expected that read_handle can ->fileno';
          }
 
          unless( $self->can_event( 'on_read_ready' ) ) {
@@ -192,7 +192,7 @@ sub configure
 
       if( defined $write_handle ) {
          if( !defined eval { $write_handle->fileno } ) {
-            croak 'Expected that write_handle can fileno()';
+            croak 'Expected that write_handle can ->fileno';
          }
 
          unless( $self->can_event( 'on_write_ready' ) ) {

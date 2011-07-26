@@ -13,13 +13,13 @@ use IO::Async::Loop;
 
 use IO::Async::Handle;
 
-my $loop = IO::Async::Loop->new();
+my $loop = IO::Async::Loop->new;
 
 testing_loop( $loop );
 
 sub mkhandles
 {
-   my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
+   my ( $S1, $S2 ) = $loop->socketpair or die "Cannot create socket pair - $!";
 
    # Need sockets in nonblocking mode
    $S1->blocking( 0 );
@@ -72,7 +72,7 @@ ok( exception { IO::Async::Handle->new( handle => "Hello" ) }, 'Not a filehandle
    is( $readready,  1, '$readready while readable' );
    is_deeply( \@rrargs, [ $handle ], 'on_read_ready args while readable' );
 
-   $S1->getline(); # ignore return
+   $S1->getline; # ignore return
 
    $readready = 0;
    my $new_readready = 0;
@@ -91,7 +91,7 @@ ok( exception { IO::Async::Handle->new( handle => "Hello" ) }, 'Not a filehandle
    is( $readready,     0, '$readready while readable after on_read_ready replace' );
    is( $new_readready, 1, '$new_readready while readable after on_read_ready replace' );
 
-   $S1->getline(); # ignore return
+   $S1->getline; # ignore return
 
    ok( exception { $handle->want_writeready( 1 ); },
        'setting want_writeready with write_handle == undef dies' );
@@ -214,7 +214,7 @@ my $sub_writeready = 0;
    is( $sub_readready,  1, '$sub_readready while readable' );
    is( $sub_writeready, 0, '$sub_writeready while readable' );
 
-   $S1->getline(); # ignore return
+   $S1->getline; # ignore return
    $sub_readready = 0;
 
    $handle->want_writeready( 1 );

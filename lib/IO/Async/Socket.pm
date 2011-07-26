@@ -26,7 +26,7 @@ filehandle
  use IO::Async::Socket;
 
  use IO::Async::Loop;
- my $loop = IO::Async::Loop->new();
+ my $loop = IO::Async::Loop->new;
 
  $loop->connect(
     host     => "some.host.here",
@@ -66,7 +66,7 @@ filehandle
 This subclass of L<IO::Async::Handle> contains a socket filehandle. It
 provides a queue of outgoing data. It invokes the C<on_recv> handler when new
 data is received from the filehandle. Data may be sent to the filehandle by
-calling the C<send()> method.
+calling the C<send> method.
 
 It is primarily intended for C<SOCK_data> or C<SOCK_RAW> sockets; for
 C<SOCK_STREAM> sockets an instance of L<IO::Async::Stream> is probably more
@@ -87,11 +87,11 @@ address.
 
 =head2 on_recv_error $errno
 
-Optional. Invoked when the C<recv()> method on the receiving handle fails.
+Optional. Invoked when the C<recv> method on the receiving handle fails.
 
 =head2 on_send_error $errno
 
-Optional. Invoked when the C<send()> method on the sending handle fails.
+Optional. Invoked when the C<send> method on the sending handle fails.
 
 The C<on_recv_error> and C<on_send_error> handlers are passed the value of
 C<$!> at the time the error occured. (The C<$!> variable itself, by its
@@ -99,7 +99,7 @@ nature, may have changed from the original error by the time this handler
 runs so it should always use the value passed in).
 
 If an error occurs when the corresponding error callback is not supplied, and
-there is not a subclass method for it, then the C<close()> method is
+there is not a subclass method for it, then the C<close> method is
 called instead.
 
 =head2 on_outgoing_empty
@@ -151,7 +151,7 @@ filehandle is write-ready.
 
 =item recv_len => INT
 
-Optional. Sets the buffer size for C<recv()> calls. Defaults to 64 KiB.
+Optional. Sets the buffer size for C<recv> calls. Defaults to 64 KiB.
 
 =item recv_all => BOOL
 

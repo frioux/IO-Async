@@ -12,7 +12,7 @@ use POSIX qw( WIFEXITED WEXITSTATUS ENOENT EBADF getcwd );
 
 use IO::Async::Loop::Poll;
 
-my $loop = IO::Async::Loop::Poll->new();
+my $loop = IO::Async::Loop::Poll->new;
 
 testing_loop( $loop );
 
@@ -33,7 +33,7 @@ sub TEST
    my $dollarbang;
    my $dollarat;
 
-   my ( undef, $callerfile, $callerline ) = caller();
+   my ( undef, $callerfile, $callerline ) = caller;
 
    $loop->spawn_child(
       code => $attr{code},
@@ -57,7 +57,7 @@ sub TEST
    }
 }
 
-# A useful utility function like blocking read() with a timeout
+# A useful utility function like blocking read with a timeout
 sub read_timeout
 {
    my ( $fh, undef, $len, $timeout ) = @_;
@@ -76,7 +76,7 @@ my $buffer;
 my $ret;
 
 {
-   my( $pipe_r, $pipe_w ) = $loop->pipepair() or die "Cannot pipepair - $!";
+   my( $pipe_r, $pipe_w ) = $loop->pipepair or die "Cannot pipepair - $!";
 
    TEST "pipe dup to fd1",
       setup => [ fd1 => [ 'dup', $pipe_w ] ],
@@ -88,7 +88,7 @@ my $ret;
    undef $buffer;
    $ret = read_timeout( $pipe_r, $buffer, 4, 0.1 );
 
-   is( $ret, 4,         '$pipe_r->read() after pipe dup to fd1' );
+   is( $ret, 4,         '$pipe_r->read after pipe dup to fd1' );
    is( $buffer, 'test', '$buffer after pipe dup to fd1' );
 
    my $pipe_w_fileno = fileno $pipe_w;
@@ -115,7 +115,7 @@ my $ret;
    undef $buffer;
    $ret = read_timeout( $pipe_r, $buffer, 4, 0.1 );
 
-   is( $ret, 4,         '$pipe_r->read() after pipe dup to stdout shortcut' );
+   is( $ret, 4,         '$pipe_r->read after pipe dup to stdout shortcut' );
    is( $buffer, 'test', '$buffer after pipe dup to stdout shortcut' );
 
    TEST "pipe dup to \\*STDOUT IO reference",
@@ -128,7 +128,7 @@ my $ret;
    undef $buffer;
    $ret = read_timeout( $pipe_r, $buffer, 5, 0.1 );
 
-   is( $ret, 5,          '$pipe_r->read() after pipe dup to \\*STDOUT IO reference' );
+   is( $ret, 5,          '$pipe_r->read after pipe dup to \\*STDOUT IO reference' );
    is( $buffer, 'test2', '$buffer after pipe dup to \\*STDOUT IO reference' );
 
    TEST "pipe keep open",
@@ -141,7 +141,7 @@ my $ret;
    undef $buffer;
    $ret = read_timeout( $pipe_r, $buffer, 4, 0.1 );
 
-   is( $ret, 4,         '$pipe_r->read() after keep pipe open' );
+   is( $ret, 4,         '$pipe_r->read after keep pipe open' );
    is( $buffer, 'test', '$buffer after keep pipe open' );
 
    TEST "pipe keep shortcut",
@@ -154,7 +154,7 @@ my $ret;
    undef $buffer;
    $ret = read_timeout( $pipe_r, $buffer, 4, 0.1 );
 
-   is( $ret, 4,         '$pipe_r->read() after keep pipe open' );
+   is( $ret, 4,         '$pipe_r->read after keep pipe open' );
    is( $buffer, 'test', '$buffer after keep pipe open' );
 
 
@@ -168,7 +168,7 @@ my $ret;
    undef $buffer;
    $ret = read_timeout( $pipe_r, $buffer, 4, 0.1 );
 
-   is( $ret, 4,         '$pipe_r->read() after pipe dup to stdout' );
+   is( $ret, 4,         '$pipe_r->read after pipe dup to stdout' );
    is( $buffer, 'test', '$buffer after pipe dup to stdout' );
 
    TEST "pipe dup to fd2",
@@ -181,7 +181,7 @@ my $ret;
    undef $buffer;
    $ret = read_timeout( $pipe_r, $buffer, 4, 0.1 );
 
-   is( $ret, 4,         '$pipe_r->read() after pipe dup to fd2' );
+   is( $ret, 4,         '$pipe_r->read after pipe dup to fd2' );
    is( $buffer, 'test', '$buffer after pipe dup to fd2' );
 
    TEST "pipe dup to stderr",
@@ -194,7 +194,7 @@ my $ret;
    undef $buffer;
    $ret = read_timeout( $pipe_r, $buffer, 4, 0.1 );
 
-   is( $ret, 4,         '$pipe_r->read() after pipe dup to stderr' );
+   is( $ret, 4,         '$pipe_r->read after pipe dup to stderr' );
    is( $buffer, 'test', '$buffer after pipe dup to stderr' );
 
    TEST "pipe dup to other FD",
@@ -211,7 +211,7 @@ my $ret;
    undef $buffer;
    $ret = read_timeout( $pipe_r, $buffer, 4, 0.1 );
 
-   is( $ret, 4,         '$pipe_r->read() after pipe dup to other FD' );
+   is( $ret, 4,         '$pipe_r->read after pipe dup to other FD' );
    is( $buffer, 'test', '$buffer after pipe dup to other FD' );
 
    TEST "pipe dup to its own FD",
@@ -228,7 +228,7 @@ my $ret;
    undef $buffer;
    $ret = read_timeout( $pipe_r, $buffer, 4, 0.1 );
 
-   is( $ret, 4,         '$pipe_r->read() after pipe dup to its own FD' );
+   is( $ret, 4,         '$pipe_r->read after pipe dup to its own FD' );
    is( $buffer, 'test', '$buffer after pipe dup to its own FD' );
 
    TEST "other FD close",
@@ -249,10 +249,10 @@ my $ret;
    undef $buffer;
    $ret = read_timeout( $pipe_r, $buffer, 4, 0.1 );
 
-   is( $ret, 4,         '$pipe_r->read() after writepipe clash' );
+   is( $ret, 4,         '$pipe_r->read after writepipe clash' );
    is( $buffer, 'test', '$buffer after writepipe clash' );
 
-   my( $pipe2_r, $pipe2_w ) = $loop->pipepair() or die "Cannot pipepair - $!";
+   my( $pipe2_r, $pipe2_w ) = $loop->pipepair or die "Cannot pipepair - $!";
    $pipe2_r->blocking( 0 );
 
    TEST "pipe dup to stdout and stderr",
@@ -265,13 +265,13 @@ my $ret;
    undef $buffer;
    $ret = read_timeout( $pipe_r, $buffer, 6, 0.1 );
 
-   is( $ret, 6,           '$pipe_r->read() after pipe dup to stdout and stderr' );
+   is( $ret, 6,           '$pipe_r->read after pipe dup to stdout and stderr' );
    is( $buffer, 'output', '$buffer after pipe dup to stdout and stderr' );
 
    undef $buffer;
    $ret = read_timeout( $pipe2_r, $buffer, 5, 0.1 );
 
-   is( $ret, 5,          '$pipe2_r->read() after pipe dup to stdout and stderr' );
+   is( $ret, 5,          '$pipe2_r->read after pipe dup to stdout and stderr' );
    is( $buffer, 'error', '$buffer after pipe dup to stdout and stderr' );
 
    TEST "pipe dup to stdout and stderr same pipe",
@@ -284,12 +284,12 @@ my $ret;
    undef $buffer;
    $ret = read_timeout( $pipe_r, $buffer, 11, 0.1 );
 
-   is( $ret, 11,               '$pipe_r->read() after pipe dup to stdout and stderr same pipe' );
+   is( $ret, 11,               '$pipe_r->read after pipe dup to stdout and stderr same pipe' );
    is( $buffer, 'outputerror', '$buffer after pipe dup to stdout and stderr same pipe' );
 }
 
 {
-   my ( $child_r, $my_w, $my_r, $child_w ) = $loop->pipequad() or die "Cannot pipequad - $!";
+   my ( $child_r, $my_w, $my_r, $child_w ) = $loop->pipequad or die "Cannot pipequad - $!";
 
    $my_w->syswrite( "hello\n" );
 
@@ -304,7 +304,7 @@ my $ret;
    my $buffer;
    $ret = read_timeout( $my_r, $buffer, 6, 0.1 );
 
-   is( $ret, 6,            '$my_r->read() after pipe quad to fd0/fd1' );
+   is( $ret, 6,            '$my_r->read after pipe quad to fd0/fd1' );
    is( $buffer, "HELLO\n", '$buffer after pipe quad to fd0/fd1' );
 }
 
@@ -325,7 +325,7 @@ TEST "stdout close shortcut",
    dollarat   => '';
 
 {
-   my $name = tmpnam();
+   my $name = tmpnam;
    END { unlink $name if defined $name and -f $name }
 
    TEST "stdout open",
@@ -342,7 +342,7 @@ TEST "stdout close shortcut",
    undef $buffer;
    $ret = read_timeout( $tmpfh, $buffer, 4, 0.1 );
 
-   is( $ret, 4,         '$tmpfh->read() after stdout open' );
+   is( $ret, 4,         '$tmpfh->read after stdout open' );
    is( $buffer, 'test', '$buffer after stdout open' );
 
    TEST "stdout open append",
@@ -357,7 +357,7 @@ TEST "stdout close shortcut",
    undef $buffer;
    $ret = read_timeout( $tmpfh, $buffer, 9, 0.1 );
 
-   is( $ret, 9,              '$tmpfh->read() after stdout open append' );
+   is( $ret, 9,              '$tmpfh->read after stdout open append' );
    is( $buffer, 'testvalue', '$buffer after stdout open append' );
 }
 
@@ -385,7 +385,7 @@ SKIP: {
 
    # If it's already quite high, we don't want to hit the limit and be
    # clamped. Just skip the tests if it's too high before we start.
-   skip "getpriority() is already above 15, so I won't try renicing upwards", 3 if $prio_now > 15;
+   skip "getpriority is already above 15, so I won't try renicing upwards", 3 if $prio_now > 15;
 
    TEST "nice works",
       setup => [ nice => 3 ],
@@ -397,7 +397,7 @@ SKIP: {
 
 TEST "chdir works",
    setup => [ chdir => "/" ],
-   code  => sub { return getcwd() eq "/" ? 0 : 1 },
+   code  => sub { return getcwd eq "/" ? 0 : 1 },
 
    exitstatus => 0,
    dollarat   => '';

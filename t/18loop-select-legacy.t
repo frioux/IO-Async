@@ -10,9 +10,9 @@ use IO::Async::Loop::Select;
 
 use constant AUT => $ENV{TEST_QUICK_TIMERS} ? 0.1 : 1;
 
-my $loop = IO::Async::Loop::Select->new();
+my $loop = IO::Async::Loop::Select->new;
 
-my ( $S1, $S2 ) = $loop->socketpair() or die "Cannot create socket pair - $!";
+my ( $S1, $S2 ) = $loop->socketpair or die "Cannot create socket pair - $!";
 
 # Need sockets in nonblocking mode
 $S1->blocking( 0 );
@@ -114,13 +114,13 @@ $took = (time - $now) / AUT;
 cmp_ok( $took, '>', 1.7, 'loop_once(5) while waiting for timer takes at least 1.7 seconds' );
 cmp_ok( $took, '<', 10, 'loop_once(5) while waiting for timer no more than 10 seconds' );
 if( $took > 2.5 ) {
-   diag( "took more than 2.5 seconds to select().\n" .
+   diag( "took more than 2.5 seconds to select(2).\n" .
          "This is not itself a bug, and may just be an indication of a busy testing machine" );
 }
 
 $loop->post_select( $rvec, $evec, $wvec );
 
-# select() might have returned just a little early, such that the TimerQueue
+# select might have returned just a little early, such that the TimerQueue
 # doesn't think anything is ready yet. We need to handle that case.
 while( !$done ) {
    die "It should have been ready by now" if( time - $now > 5 * AUT );

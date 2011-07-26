@@ -28,7 +28,7 @@ C<IO::Async::Listener> - listen on network sockets for incoming connections
  use IO::Async::Listener;
 
  use IO::Async::Loop;
- my $loop = IO::Async::Loop->new();
+ my $loop = IO::Async::Loop->new;
 
  my $listener = IO::Async::Listener->new(
     on_stream => sub {
@@ -64,7 +64,7 @@ This object can also be used indirectly via an C<IO::Async::Loop>:
  use IO::Async::Stream;
 
  use IO::Async::Loop;
- my $loop = IO::Async::Loop->new();
+ my $loop = IO::Async::Loop->new;
 
  $loop->listen(
     service  => "echo",
@@ -323,7 +323,7 @@ supplied.
 =item flags => INT
 
 Optional. Other arguments to pass along with C<host> and C<service> to the
-C<getaddrinfo()> call.
+C<getaddrinfo> call.
 
 =item socktype => STRING
 
@@ -362,8 +362,8 @@ Optional. A callback that is invoked when the listening socket is ready.
 A continuation this is invoked after all of the addresses have been tried, and
 none of them succeeded. It will be passed the most significant error that
 occurred, and the name of the operation it occurred in. Errors from the
-C<listen()> syscall are considered most significant, then C<bind()>, then
-C<sockopt()>, then finally C<socket()>.
+C<listen(2)> syscall are considered most significant, then C<bind(2)>, then
+C<sockopt(2)>, then finally C<socket(2)>.
 
 =item on_fail => CODE
 
@@ -381,7 +381,7 @@ the arguments that were passed to it, and the error generated. I.e.
 
 =item queuesize => INT
 
-Optional. The queue size to pass to the C<listen()> calls. If not supplied,
+Optional. The queue size to pass to the C<listen(2)> calls. If not supplied,
 then 3 will be given instead.
 
 =item reuseaddr => BOOL
@@ -527,7 +527,7 @@ sockets.
  use IO::Socket::UNIX;
 
  use IO::Async::Loop;
- my $loop = IO::Async::Loop->new();
+ my $loop = IO::Async::Loop->new;
 
  my $listener = IO::Async::Listener->new(
     on_stream => sub {

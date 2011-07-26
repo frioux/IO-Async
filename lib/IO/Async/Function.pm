@@ -26,7 +26,7 @@ C<IO::Async::Function> - call a function asynchronously
  use IO::Async::Function;
 
  use IO::Async::Loop;
- my $loop = IO::Async::Loop->new();
+ my $loop = IO::Async::Loop->new;
 
  my $function = IO::Async::Function->new(
     code => sub {
@@ -59,7 +59,7 @@ passing in arguments, and invoking a continuation in the main process when the
 function returns.
 
 The object represents the function code itself, rather than one specific
-invocation of it. It can be called multiple times, by the C<call()> method.
+invocation of it. It can be called multiple times, by the C<call> method.
 Multiple outstanding invocations can be called; they will be dispatched in
 the order they were queued. If only one worker process is used then results
 will be returned in the order they were called. If multiple are used, then
@@ -89,7 +89,7 @@ are:
 =item 1.
 
 When a large amount of computationally-intensive work needs to be performed
-(for example, the C<is_prime()> test in the example in the C<SYNOPSIS>).
+(for example, the C<is_prime> test in the example in the C<SYNOPSIS>).
 
 =item 2.
 

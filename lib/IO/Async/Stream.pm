@@ -38,7 +38,7 @@ filehandle
  use IO::Async::Stream;
 
  use IO::Async::Loop;
- my $loop = IO::Async::Loop->new();
+ my $loop = IO::Async::Loop->new;
 
  my $stream = IO::Async::Stream->new(
     read_handle  => \*STDIN,
@@ -89,7 +89,7 @@ Or
 This subclass of L<IO::Async::Handle> contains a filehandle that represents
 a byte-stream. It provides buffering for both incoming and outgoing data. It
 invokes the C<on_read> handler when new data is read from the filehandle. Data
-may be written to the filehandle by calling the C<write()> method.
+may be written to the filehandle by calling the C<write> method.
 
 For implementing real network protocols that are based on messages sent over a
 byte-stream (such as a TCP socket), it may be more appropriate to use a
@@ -125,7 +125,7 @@ handler in the usual way, so it may inspect data contained in it. Once the
 handler returns a false value, it will not be called again, as the handle is
 now at EOF and no more data can arrive.
 
-The C<on_read()> code may also dynamically replace itself with a new callback
+The C<on_read> code may also dynamically replace itself with a new callback
 by returning a CODE reference instead of C<0> or C<1>. The original callback
 or method that the object first started with may be restored by returning
 C<undef>. Whenever the callback is changed in this way, the new code is called
@@ -147,11 +147,11 @@ then it will not be detected yet.
 
 =head2 on_read_error $errno
 
-Optional. Invoked when the C<sysread()> method on the read handle fails.
+Optional. Invoked when the C<sysread> method on the read handle fails.
 
 =head2 on_write_error $errno
 
-Optional. Invoked when the C<syswrite()> method on the write handle fails.
+Optional. Invoked when the C<syswrite> method on the write handle fails.
 
 The C<on_read_error> and C<on_write_error> handlers are passed the value of
 C<$!> at the time the error occured. (The C<$!> variable itself, by its
@@ -159,7 +159,7 @@ nature, may have changed from the original error by the time this handler
 runs so it should always use the value passed in).
 
 If an error occurs when the corresponding error callback is not supplied, and
-there is not a handler for it, then the C<close()> method is called instead.
+there is not a handler for it, then the C<close> method is called instead.
 
 =head2 on_outgoing_empty
 
@@ -220,7 +220,7 @@ C<IO::Async> may enable this by default on STDOUT and STDERR.
 
 =item read_len => INT
 
-Optional. Sets the buffer size for C<read()> calls. Defaults to 8 KiBytes.
+Optional. Sets the buffer size for C<read> calls. Defaults to 8 KiBytes.
 
 =item read_all => BOOL
 
@@ -238,7 +238,7 @@ filehandles.
 
 =item write_len => INT
 
-Optional. Sets the buffer size for C<write()> calls. Defaults to 8 KiBytes.
+Optional. Sets the buffer size for C<write> calls. Defaults to 8 KiBytes.
 
 =item write_all => BOOL
 
@@ -675,9 +675,9 @@ sub new_for_stdio { shift->new( read_handle => \*STDIN, write_handle => \*STDOUT
 
 =head1 EXAMPLES
 
-=head2 A line-based C<on_read()> method
+=head2 A line-based C<on_read> method
 
-The following C<on_read()> method accepts incoming C<\n>-terminated lines and
+The following C<on_read> method accepts incoming C<\n>-terminated lines and
 prints them to the program's C<STDOUT> stream.
 
  sub on_read
@@ -702,7 +702,7 @@ should try again in case more lines exist in the buffer.
 For implementing real network protocols that are based on lines of text it may
 be more appropriate to use a subclass of L<IO::Async::Protocol::LineStream>.
 
-=head2 Dynamic replacement of C<on_read()>
+=head2 Dynamic replacement of C<on_read>
 
 Consider the following protocol (inspired by IMAP), which consists of
 C<\n>-terminated lines that may have an optional data block attached. The
@@ -745,7 +745,7 @@ prefix.
     }
  }
 
-In the case where trailing data is supplied, a new temporary C<on_read()>
+In the case where trailing data is supplied, a new temporary C<on_read>
 callback is provided in a closure. This closure captures the C<$length>
 variable so it knows how much data to expect. It also captures the C<$line>
 variable so it can use it in the event report. When this method has finished

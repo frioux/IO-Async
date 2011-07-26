@@ -25,7 +25,7 @@ sub new
 
    my $loop = delete $params{loop} or croak "Expected a 'loop'";
 
-   my ( $reader, $writer ) = $loop->pipepair() or croak "Cannot pipe() - $!";
+   my ( $reader, $writer ) = $loop->pipepair or croak "Cannot pipe() - $!";
 
    $reader->blocking( 0 );
    $writer->blocking( 0 );
@@ -44,7 +44,7 @@ sub new
    # before attempting to modify this code.
    $self->{signal_queue} = [];
 
-   $self->{sigset_block} = POSIX::SigSet->new();
+   $self->{sigset_block} = POSIX::SigSet->new;
 
    $loop->add( $self );
 
@@ -68,7 +68,7 @@ sub on_read_ready
 
    my @caught_signals;
 
-   my $sigset_old = POSIX::SigSet->new();
+   my $sigset_old = POSIX::SigSet->new;
    sigprocmask( SIG_BLOCK, $self->{sigset_block}, $sigset_old ) or croak "Cannot sigprocmask() - $!";
 
    my $success = eval {
@@ -142,7 +142,7 @@ sub watch
       # __END__ section before attempting to modify this code.
 
       # Protect the interrupted code against unexpected modifications of $!,
-      # such as the line just after the poll() call in IO::Async::Loop::Poll
+      # such as the line just after the poll call in IO::Async::Loop::Poll
       local $!;
 
       if( !@$signal_queue ) {
@@ -195,15 +195,15 @@ the signal name to this array, and the on_read_ready method then replays them
 out again.
 
 In order to safely interact with any sort of file-based asynchronous IO (such
-as a select() or poll() system call), the object keeps both ends of a pipe.
+as a select or poll system call), the object keeps both ends of a pipe.
 When a signal arrives that causes the signal queue array to become nonempty, a
 zero byte is pushed onto that pipe. This makes the reading end read-ready, and
-so will correctly behave in such a select() or poll() syscall. Thus, the
+so will correctly behave in such a select or poll syscall. Thus, the
 emptyness of the signal queue array is maintained identically to the emptyness
 of the pipe. The value of the bytes in the pipe does not matter; only their
 presence is important.
 
-The on_read_ready method uses POSIX::sigprocmask() to mask off all the signals
+The on_read_ready method uses POSIX::sigprocmask to mask off all the signals
 that the object is handling, so that it can atomically read the pipe and empty
 the signal queue array, without a danger of a race condition if another signal
 arrives while it is doing this. The only race condition that remains is the
@@ -217,7 +217,7 @@ the critical stage:
 
 In this case, no bad effects will happen. There will simply be two bytes
 written into the pipe, rather than the usual one. The on_read_ready handler
-will attempt a sysread() of up to 8192 bytes, and there are usually no more
+will attempt a sysread of up to 8192 bytes, and there are usually no more
 than a handful of different signal handlers registered, so this will usually
 not be a problem. In the exceedingly-unlikely event that more than 8192
 different user-defined signal handlers have in fact been registered, and every

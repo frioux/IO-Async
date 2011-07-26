@@ -22,7 +22,7 @@ C<IO::Async::Timer::Periodic> - event callback at regular intervals
  use IO::Async::Timer::Periodic;
 
  use IO::Async::Loop;
- my $loop = IO::Async::Loop->new();
+ my $loop = IO::Async::Loop->new;
 
  my $timer = IO::Async::Timer::Periodic->new(
     interval => 60,

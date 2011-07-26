@@ -23,7 +23,7 @@ C<IO::Async::Sequencer> - handle a serial pipeline of requests / responses (EXPE
 When used as a client:
 
  use IO::Async::Loop;
- my $loop = IO::Async::Loop->new();
+ my $loop = IO::Async::Loop->new;
 
  my $sock = ...
 
@@ -152,31 +152,31 @@ The following named parameters may be passed to C<new> or C<configure>:
 =item on_read => CODE
 
 As for L<IO::Async::Stream>. The code here should invoke the
-C<incoming_request()> or C<incoming_response()> methods when appropriate,
+C<incoming_request> or C<incoming_response> methods when appropriate,
 after having parsed the incoming stream. See the SYNOPSIS or EXAMPLES sections
 for more detail.
 
 Each request can optionally provide its own handler for reading its response,
-using the C<on_read> key to the C<request()> method. The handler provided to
+using the C<on_read> key to the C<request> method. The handler provided to
 the constructor is only used if this is not provided.
 
 =item on_request => CODE
 
-A callback that is invoked when the C<incoming_request()> method is called
+A callback that is invoked when the C<incoming_request> method is called
 (i.e. when operating in server mode). It is passed the request, and a token to
 identify it when sending a response.
 
  $on_request->( $self, $token, $request );
 
 The token should be considered as an opaque value - passed into the
-C<respond()> method when a response is ready, but not otherwise used or
+C<respond> method when a response is ready, but not otherwise used or
 modified.
 
 =item marshall_request => CODE
 
 =item marshall_response => CODE
 
-Callbacks that the C<request()> or C<respond()> methods will use,
+Callbacks that the C<request> or C<respond> methods will use,
 respectively, to stream a request or response object into a string of bytes to
 write to the underlying file handle.
 
@@ -215,7 +215,7 @@ sub _init
 
    my $on_read = delete $params->{on_read} || $self->can( "on_read" );
 
-   # Since our ->configure() has banned 'on_read', we need to call SUPER one from here
+   # Since our ->configure has banned 'on_read', we need to call SUPER one from here
    $self->SUPER::configure(
       on_read => sub {
          my ( $self, $buffref, $eof ) = @_;
@@ -355,7 +355,7 @@ Called in client mode, this method sends a request upstream, and awaits a
 response to it. Can be called in one of two ways; either giving a specific
 C<on_read> handler to be used when the response to this request is expected,
 or by providing an C<on_response> handler for when the default handler invokes
-C<incoming_response()>.
+C<incoming_response>.
 
 The C<%params> hash takes the following arguments:
 
@@ -382,7 +382,7 @@ C<IO::Async::Stream>; i.e.
 
 This handler should return C<undef> when it has finished handling the
 response, so that the next one queued can be invoked (or the default if none
-exists). It MUST NOT call C<incoming_response()>. Instead, the code should
+exists). It MUST NOT call C<incoming_response>. Instead, the code should
 directly implement the behaviour for receipt of a response.
 
 =back
@@ -513,16 +513,16 @@ C<on_request> like the following.
  );
 
 It is likely, however, that any real use of the server in a non-trivial way
-would perform much more work than this, and only call C<< $self->respond() >>
+would perform much more work than this, and only call C<< $self->respond >>
 in an eventual continuation at the end of performing its work. The C<$token>
 is used to identify the request that the response responds to, so that it can
 be sent in the correct order.
 
 =head2 Per-request C<on_read> handler
 
-If an C<on_read> handler is provided to the C<request()> method in client
+If an C<on_read> handler is provided to the C<request> method in client
 mode, then that handler will be used when the response to that request is
-expected to arrive. This will be used instead of the C<incoming_response()>
+expected to arrive. This will be used instead of the C<incoming_response>
 method and the C<on_response> handler. If every request provides its own
 handler, then the one in the constructor would only be used for unrequested
 input from the server - perhaps to generate an error condition of some kind.

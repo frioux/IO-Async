@@ -19,7 +19,7 @@ use IO::Poll qw( POLLIN POLLOUT POLLHUP POLLERR );
 
 use POSIX qw( EINTR );
 
-# IO::Poll version 0.05 contain a bug whereby the ->remove() method doesn't
+# IO::Poll version 0.05 contain a bug whereby the ->remove method doesn't
 # properly clean up all the references to the handles. If the version we're
 # using is in this range, we have to clean it up ourselves.
 use constant IO_POLL_REMOVE_BUG => ( $IO::Poll::VERSION == '0.05' );
@@ -43,7 +43,7 @@ program already using an C<IO::Poll> object.
  use IO::Poll;
  use IO::Async::Loop::Poll;
 
- my $poll = IO::Poll->new();
+ my $poll = IO::Poll->new;
  my $loop = IO::Async::Loop::Poll->new( poll => $poll );
 
  $loop->add( ... );
@@ -51,7 +51,7 @@ program already using an C<IO::Poll> object.
  while(1) {
     my $timeout = ...
     my $ret = $poll->poll( $timeout );
-    $loop->post_poll();
+    $loop->post_poll;
  }
 
 =head1 DESCRIPTION
@@ -59,12 +59,12 @@ program already using an C<IO::Poll> object.
 This subclass of C<IO::Async::Loop> uses an C<IO::Poll> object to perform
 read-ready and write-ready tests.
 
-To integrate with existing code that uses an C<IO::Poll>, a C<post_poll()> can
-be called immediately after the C<poll()> method on the contained C<IO::Poll>
+To integrate with existing code that uses an C<IO::Poll>, a C<post_poll> can
+be called immediately after the C<poll> method on the contained C<IO::Poll>
 object. The appropriate mask bits are maintained on the C<IO::Poll> object
 when notifiers are added or removed from the set, or when they change their
-C<want_writeready> status. The C<post_poll()> method inspects the result bits
-and invokes the C<on_read_ready()> or C<on_write_ready()> methods on the
+C<want_writeready> status. The C<post_poll> method inspects the result bits
+and invokes the C<on_read_ready> or C<on_write_ready> methods on the
 notifiers.
 
 =cut
@@ -96,7 +96,7 @@ sub new
 
    my $poll = delete $args{poll};
 
-   $poll ||= IO::Poll->new();
+   $poll ||= IO::Poll->new;
 
    my $self = $class->__new( %args );
 
@@ -111,7 +111,7 @@ sub new
 
 =head2 $count = $loop->post_poll( $poll )
 
-This method checks the returned event list from a C<IO::Poll::poll()> call,
+This method checks the returned event list from a C<IO::Poll::poll> call,
 and calls any of the notification methods or callbacks that are appropriate.
 It returns the total number of callbacks that were invoked; that is, the
 total number of C<on_read_ready> and C<on_write_ready> callbacks for 
@@ -165,10 +165,10 @@ sub post_poll
 
 =head2 $count = $loop->loop_once( $timeout )
 
-This method calls the C<poll()> method on the stored C<IO::Poll> object,
-passing in the value of C<$timeout>, and then runs the C<post_poll()> method
+This method calls the C<poll> method on the stored C<IO::Poll> object,
+passing in the value of C<$timeout>, and then runs the C<post_poll> method
 on itself. It returns the total number of callbacks invoked by the 
-C<post_poll()> method, or C<undef> if the underlying C<poll()> method returned
+C<post_poll> method, or C<undef> if the underlying C<poll> method returned
 an error.
 
 =cut
@@ -184,7 +184,7 @@ sub loop_once
 
    my $pollret;
 
-   # There is a bug in IO::Poll at least version 0.07, where poll() with no
+   # There is a bug in IO::Poll at least version 0.07, where poll with no
    # registered masks returns immediately, rather than waiting for a timeout
    # This has been reported: 
    #   http://rt.cpan.org/Ticket/Display.html?id=25049
@@ -205,13 +205,13 @@ sub loop_once
       }
    }
    else {
-      # Workaround - we'll use select() to fake a millisecond-accurate sleep
+      # Workaround - we'll use select to fake a millisecond-accurate sleep
       $pollret = select( undef, undef, undef, $timeout );
    }
 
    return undef unless defined $pollret;
 
-   return $self->post_poll();
+   return $self->post_poll;
 }
 
 sub watch_io

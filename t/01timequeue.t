@@ -7,7 +7,7 @@ use Test::Fatal;
 
 use IO::Async::Internals::TimeQueue;
 
-my $queue = IO::Async::Internals::TimeQueue->new();
+my $queue = IO::Async::Internals::TimeQueue->new;
 
 ok( defined $queue, '$queue defined' );
 isa_ok( $queue, "IO::Async::Internals::TimeQueue", '$queue isa IO::Async::Internals::TimeQueue' );
@@ -59,11 +59,11 @@ is( $queue->next_time, undef, '->next_time after fire at time 1400' );
 my $id = $queue->enqueue( time => 1500, code => sub { $fired++ } );
 $queue->enqueue( time => 1505, code => sub { $fired++ } );
 
-is( $queue->next_time, 1500, '->next_time before cancel()' );
+is( $queue->next_time, 1500, '->next_time before cancel' );
 
 $queue->cancel( $id );
 
-is( $queue->next_time, 1505, '->next_time after cancel()' );
+is( $queue->next_time, 1505, '->next_time after cancel' );
 
 $fired = 0;
 $count = $queue->fire( now => 1501 );
@@ -77,7 +77,7 @@ is( $fired, 1, '$fired after fire at time 1510' );
 is( $count, 1, '$count after fire at time 1510' );
 
 $id = $queue->enqueue( time => 1600, code => sub { $fired++ } );
-is( $queue->next_time, 1600, '->next_time before requeue()' );
+is( $queue->next_time, 1600, '->next_time before requeue' );
 
 $queue->requeue( $id, time => 1650 );
 

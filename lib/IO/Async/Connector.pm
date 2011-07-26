@@ -26,7 +26,7 @@ C<IO::Async::Connector> - perform non-blocking socket connections
 This object is used indirectly via an C<IO::Async::Loop>:
 
  use IO::Async::Loop;
- my $loop = IO::Async::Loop->new();
+ my $loop = IO::Async::Loop->new;
 
  $loop->connect(
     host     => "www.example.com",
@@ -51,20 +51,20 @@ socket connections in a non-blocking manner.
 There are two modes of operation. Firstly, a list of addresses can be provided
 which will be tried in turn. Alternatively as a convenience, if a host and
 service name are provided instead of a list of addresses, these will be
-resolved using the underlying loop's C<resolve()> method into the list of
+resolved using the underlying loop's C<resolve> method into the list of
 addresses.
 
 When attempting to connect to any among a list of addresses, there may be
 failures among the first attempts, before a valid connection is made. For
 example, the resolver may have returned some IPv6 addresses, but only IPv4
-routes are valid on the system. In this case, the first C<connect()> syscall
+routes are valid on the system. In this case, the first C<connect(2)> syscall
 will fail. This isn't yet a fatal error, if there are more addresses to try,
 perhaps some IPv4 ones.
 
 For this reason, it is possible that the operation eventually succeeds even
 though some system calls initially fail. To be aware of individual failures,
 the optional C<on_fail> callback can be used. This will be invoked on each
-individual C<socket()> or C<connect()> failure, which may be useful for
+individual C<socket(2)> or C<connect(2)> failure, which may be useful for
 debugging or logging.
 
 Because this module simply uses the C<getaddrinfo> resolver, it will be fully
@@ -117,9 +117,9 @@ sub _get_sock_err
 
    # Not connected so we know this ought to fail
    if( read( $sock, my $buff, 1 ) ) {
-      # That was most unexpected. getpeername() fails because we're not
-      # connected, yet read() succeeds.
-      warn "getpeername() fails with $peername_errno ($peername_errstr) but read() is successful\n";
+      # That was most unexpected. getpeername fails because we're not
+      # connected, yet read succeeds.
+      warn "getpeername fails with $peername_errno ($peername_errstr) but read is successful\n";
       warn "Please see http://rt.cpan.org/Ticket/Display.html?id=38382\n";
 
       $! = $peername_errno;
@@ -234,12 +234,12 @@ the C<EXAMPLES> section.
 =item local_addr => HASH or ARRAY
 
 Optional. Similar to the C<addrs> or C<addr> parameters, these specify a local
-address or set of addresses to C<bind()> the socket to before C<connect()>ing
-it.
+address or set of addresses to C<bind(2)> the socket to before
+C<connect(2)>ing it.
 
 =item on_connected => CODE
 
-A continuation that is invoked on a successful C<connect()> call to a valid
+A continuation that is invoked on a successful C<connect(22)> call to a valid
 socket. It will be passed the connected socket handle, as an C<IO::Socket>
 object.
 
@@ -266,14 +266,14 @@ This is most useful for C<SOCK_DGRAM> or C<SOCK_RAW> sockets.
 A continuation that is invoked after all of the addresses have been tried, and
 none of them succeeded. It will be passed the most significant error that
 occurred, and the name of the operation it occurred in. Errors from the
-C<connect()> syscall are considered most significant, then C<bind()>, then
-finally C<socket()>.
+C<connect(2)> syscall are considered most significant, then C<bind(2)>, then
+finally C<socket(2)>.
 
  $on_connect_error->( $syscall, $! )
 
 =item on_fail => CODE
 
-Optional. After an individual C<socket()> or C<connect()> syscall has failed,
+Optional. After an individual C<socket(2)> or C<connect(2)> syscall has failed,
 this callback is invoked to inform of the error. It is passed the name of the
 syscall that failed, the arguments that were passed to it, and the error it
 generated. I.e.
@@ -304,7 +304,7 @@ The hostname and service name to connect to.
 
 =item local_service => STRING
 
-Optional. The hostname and/or service name to C<bind()> the socket to locally
+Optional. The hostname and/or service name to C<bind(2)> the socket to locally
 before connecting to the peer.
 
 =item family => INT
@@ -316,7 +316,7 @@ before connecting to the peer.
 =item flags => INT
 
 Optional. Other arguments to pass along with C<host> and C<service> to the
-C<getaddrinfo()> call.
+C<getaddrinfo> call.
 
 =item socktype => STRING
 

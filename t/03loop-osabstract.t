@@ -12,7 +12,7 @@ use POSIX qw( SIGTERM );
 
 use Time::HiRes qw( time );
 
-my $loop = IO::Async::Loop::Poll->new();
+my $loop = IO::Async::Loop::Poll->new;
 
 foreach my $family ( undef, "inet" ) {
    my ( $S1, $S2 ) = $loop->socketpair( $family, "stream" )
@@ -52,7 +52,7 @@ foreach my $family ( undef, "inet" ) {
 }
 
 {
-   my ( $Prd, $Pwr ) = $loop->pipepair() or die "Could not pipepair - $!";
+   my ( $Prd, $Pwr ) = $loop->pipepair or die "Could not pipepair - $!";
 
    $Pwr->syswrite( "Hello" );
    is( do { my $b; $Prd->sysread( $b, 8192 ); $b }, "Hello", '$Pwr --writes-> $Prd' );
@@ -62,7 +62,7 @@ foreach my $family ( undef, "inet" ) {
 }
 
 {
-   my ( $rdA, $wrA, $rdB, $wrB ) = $loop->pipequad() or die "Could not pipequad - $!";
+   my ( $rdA, $wrA, $rdB, $wrB ) = $loop->pipequad or die "Could not pipequad - $!";
 
    $wrA->syswrite( "Hello" );
    is( do { my $b; $rdA->sysread( $b, 8192 ); $b }, "Hello", '$wrA --writes-> $rdA' );

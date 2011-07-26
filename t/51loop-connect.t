@@ -12,11 +12,11 @@ use Socket qw( AF_UNIX );
 
 use IO::Async::Loop::Poll;
 
-my $loop = IO::Async::Loop::Poll->new();
+my $loop = IO::Async::Loop::Poll->new;
 
 testing_loop( $loop );
 
-# Try connect()ing to a socket we've just created
+# Try connect(2)ing to a socket we've just created
 my $listensock = IO::Socket::INET->new(
    Type      => SOCK_STREAM,
    LocalAddr => 'localhost',
@@ -66,7 +66,7 @@ $listensock->accept; # Throw it away
 undef $sock; # This too
 
 SKIP: {
-   # Some OSes can't bind() locally to other addresses on 127./8
+   # Some OSes can't bind(2) locally to other addresses on 127./8
    skip "Cannot bind to 127.0.0.2", 1 unless eval { IO::Socket::INET->new( LocalHost => "127.0.0.2", LocalPort => 0 ) };
 
    $loop->connect(
@@ -152,9 +152,9 @@ SKIP: {
    is( $failerr+0, ENOENT, '$failerr is ENOENT' );
 }
 
-# UNIX sockets always connect() synchronously, meaning if they fail, the error
+# UNIX sockets always connect(2) synchronously, meaning if they fail, the error
 # is available immediately. The above has therefore not properly tested
-# asynchronous connect() failures. INET sockets should do this.
+# asynchronous connect(2) failures. INET sockets should do this.
 
 # First off we need a local socket that isn't listening - at lease one of the
 # first 100 is likely not to be
@@ -172,7 +172,7 @@ foreach ( 1 .. 100 ) {
 }
 
 SKIP: {
-   skip "Cannot find an un-connect()able socket on 127.0.0.1", 2 unless defined $port;
+   skip "Cannot find an un-connect(2)able socket on 127.0.0.1", 2 unless defined $port;
 
    my $failop;
    my $failerr;

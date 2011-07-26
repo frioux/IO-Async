@@ -26,30 +26,30 @@ ok( !$child_in_loop,  '$child not yet in loop' );
 my @children;
 
 @children = $parent->children;
-is( scalar @children, 1, '@children after add_child()' );
-is( $children[0], $child, '$children[0] after add_child()' );
+is( scalar @children, 1, '@children after add_child' );
+is( $children[0], $child, '$children[0] after add_child' );
 undef @children; # for refcount
 
-is_oneref( $parent, '$parent has refcount 1 after add_child()' );
-is_refcount( $child, 2, '$child has refcount 2 after add_child()' );
+is_oneref( $parent, '$parent has refcount 1 after add_child' );
+is_refcount( $child, 2, '$child has refcount 2 after add_child' );
 
 ok( exception { $parent->add_child( $child ) }, 'Adding child again fails' );
 
 $parent->remove_child( $child );
 
-is_oneref( $child, '$child has refcount 1 after remove_child()' );
+is_oneref( $child, '$child has refcount 1 after remove_child' );
 
 @children = $parent->children;
-is( scalar @children, 0, '@children after remove_child()' );
+is( scalar @children, 0, '@children after remove_child' );
 undef @children; # for refcount
 
-my $loop = IO::Async::Loop->new();
+my $loop = IO::Async::Loop->new;
 
 $loop->add( $parent );
 
 $parent->add_child( $child );
 
-is_refcount( $child, 3, '$child has refcount 3 after add_child() within loop' );
+is_refcount( $child, 3, '$child has refcount 3 after add_child within loop' );
 
 is( $parent->get_loop, $loop, '$parent->get_loop is $loop' );
 is( $child->get_loop,  $loop, '$child->get_loop is $loop' );

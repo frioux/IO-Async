@@ -12,7 +12,7 @@ use Socket qw( unpack_sockaddr_in );
 
 use IO::Async::Loop::Poll;
 
-my $loop = IO::Async::Loop::Poll->new();
+my $loop = IO::Async::Loop::Poll->new;
 
 testing_loop( $loop );
 

@@ -28,7 +28,7 @@ C<IO::Async::Process> - start and manage a child process
  use IO::Async::Process;
 
  use IO::Async::Loop;
- my $loop = IO::Async::Loop->new();
+ my $loop = IO::Async::Loop->new;
 
  my $process = IO::Async::Process->new(
     command => [ "tr", "a-z", "n-za-m" ],
@@ -59,7 +59,7 @@ C<IO::Async::Process> - start and manage a child process
 
 This subclass of L<IO::Async::Notifier> starts a child process, and invokes a
 callback when it exits. The child process can either execute a given block of
-code (via C<fork()>), or a command.
+code (via C<fork(2)>), or a command.
 
 =cut
 
@@ -77,7 +77,7 @@ all its file descriptors.
 =head2 on_exception $exception, $errno, $exitcode
 
 Invoked when the process exits by an exception from C<code>, or by failing to
-C<exec()> the given command. C<$errno> will be a dualvar, containing both
+C<exec(2)> the given command. C<$errno> will be a dualvar, containing both
 number and string values.
 
 Note that this has a different name and a different argument order from
@@ -137,7 +137,7 @@ Once the process is running these cannot be changed.
 
 Either a reference to an array containing the command and its arguments, or a
 plain string containing the command. This value is passed into perl's
-C<exec()> function.
+C<exec(2)> function.
 
 =item code => CODE
 
@@ -385,7 +385,7 @@ sub _prepare_fds
       my $key = $fd eq "io" ? "stdio" : "fd$fd";
 
       if( $via == FD_VIA_PIPEREAD ) {
-         my ( $myfd, $childfd ) = $loop->pipepair() or croak "Unable to pipe() - $!";
+         my ( $myfd, $childfd ) = $loop->pipepair or croak "Unable to pipe() - $!";
 
          $handle->configure( read_handle => $myfd );
 
@@ -393,7 +393,7 @@ sub _prepare_fds
          $self->{to_close}{$childfd->fileno} = $childfd;
       }
       elsif( $via == FD_VIA_PIPEWRITE ) {
-         my ( $childfd, $myfd ) = $loop->pipepair() or croak "Unable to pipe() - $!";
+         my ( $childfd, $myfd ) = $loop->pipepair or croak "Unable to pipe() - $!";
 
          $handle->configure( write_handle => $myfd );
 
@@ -404,8 +404,8 @@ sub _prepare_fds
          $key eq "stdio" or croak "Oops - should only be FD_VIA_PIPERDWR on stdio";
          # Can't use pipequad here for now because we need separate FDs so we
          # can ->close them properly
-         my ( $myread, $childwrite ) = $loop->pipepair() or croak "Unable to pipe() - $!";
-         my ( $childread, $mywrite ) = $loop->pipepair() or croak "Unable to pipe() - $!";
+         my ( $myread, $childwrite ) = $loop->pipepair or croak "Unable to pipe() - $!";
+         my ( $childread, $mywrite ) = $loop->pipepair or croak "Unable to pipe() - $!";
 
          $handle->configure( read_handle => $myread, write_handle => $mywrite );
 
@@ -539,7 +539,7 @@ sub is_running
 =head2 $exited = $process->is_exited
 
 Returns true if the Process has finished running, and finished due to normal
-C<exit()>.
+C<exit(2)>.
 
 =cut
 
@@ -551,8 +551,8 @@ sub is_exited
 
 =head2 $status = $process->exitstatus
 
-If the process exited due to normal C<exit()>, returns the value that was
-passed to C<exit()>. Otherwise, returns C<undef>.
+If the process exited due to normal C<exit(2)>, returns the value that was
+passed to C<exit(2)>. Otherwise, returns C<undef>.
 
 =cut
 

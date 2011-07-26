@@ -15,7 +15,7 @@ use IO::Async::Loop::Poll;
 # This might cause locale issues
 use constant ENOENT_MESSAGE => do { local $! = ENOENT; "$!" };
 
-my $loop = IO::Async::Loop::Poll->new();
+my $loop = IO::Async::Loop::Poll->new;
 
 testing_loop( $loop );
 
@@ -143,7 +143,7 @@ is( $dollarbang+0,           0, '$dollarbang after spawn ARRAY' );
 is( $dollarat,              '', '$dollarat after spawn ARRAY' );
 
 {
-   my( $pipe_r, $pipe_w ) = $loop->pipepair() or die "Cannot pipepair - $!";
+   my( $pipe_r, $pipe_w ) = $loop->pipepair or die "Cannot pipepair - $!";
 
    $spawned_pid = $loop->spawn_child(
       code => sub { return $pipe_w->syswrite( "test" ); },

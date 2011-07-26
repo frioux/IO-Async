@@ -10,7 +10,7 @@ my $PORT = 12345;
 
 my $loop = IO::Async::Loop->new;
 
-my $listener = ChatListener->new();
+my $listener = ChatListener->new;
 
 $loop->add( $listener );
 

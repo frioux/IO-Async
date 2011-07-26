@@ -22,7 +22,7 @@ C<IO::Async::Signal> - event callback on receipt of a POSIX signal
  use IO::Async::Signal;
 
  use IO::Async::Loop;
- my $loop = IO::Async::Loop->new();
+ my $loop = IO::Async::Loop->new;
 
  my $signal = IO::Async::Signal->new(
     name => "HUP",

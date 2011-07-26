@@ -89,7 +89,7 @@ sub fire
    my $self = shift;
    my ( %params ) = @_;
 
-   my $now = exists $params{now} ? $params{now} : time();
+   my $now = exists $params{now} ? $params{now} : time;
 
    my $heap = $self->{heap};
 

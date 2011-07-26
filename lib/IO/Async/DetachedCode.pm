@@ -24,7 +24,7 @@ This object is used indirectly via the C<IO::Async::Loop>'s C<detach_code>
 method.
 
  use IO::Async::Loop;
- my $loop = IO::Async::Loop->new();
+ my $loop = IO::Async::Loop->new;
 
  my $code = $loop->detach_code(
     code => sub {
