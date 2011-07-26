@@ -27,6 +27,7 @@ BEGIN {
 use IO::Socket;
 use Time::HiRes qw(); # empty import
 use POSIX qw( _exit WNOHANG );
+use Scalar::Util qw( refaddr );
 
 # Try to load IO::Socket::INET6 but don't worry if we don't have it
 eval { require IO::Socket::INET6 };
@@ -279,17 +280,6 @@ The following methods manage the collection of C<IO::Async::Notifier> objects.
 
 =cut
 
-# Internal method
-sub _nkey
-{
-   my $self = shift;
-   my ( $notifier ) = @_;
-
-   # References in integer context yield their address. We'll use that as the
-   # notifier key
-   return $notifier + 0;
-}
-
 =head2 $loop->add( $notifier )
 
 This method adds another notifier object to the stored collection. The object
@@ -322,7 +312,7 @@ sub _add_noparentcheck
    my $self = shift;
    my ( $notifier ) = @_;
 
-   my $nkey = $self->_nkey( $notifier );
+   my $nkey = refaddr $notifier;
 
    $self->{notifiers}->{$nkey} = $notifier;
 
@@ -357,7 +347,7 @@ sub _remove_noparentcheck
    my $self = shift;
    my ( $notifier ) = @_;
 
-   my $nkey = $self->_nkey( $notifier );
+   my $nkey = refaddr $notifier;
 
    exists $self->{notifiers}->{$nkey} or croak "Notifier does not exist in collection";
 
