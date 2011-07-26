@@ -201,7 +201,7 @@ sub configure
    my %params = @_;
 
    foreach (qw( notifier_name )) {
-      $self->{$_} = delete $params{$_} if exists $params{$_};
+      $self->{"IO_Async_Notifier__$_"} = delete $params{$_} if exists $params{$_};
    }
 
    # We don't recognise any configure keys at this level
@@ -220,7 +220,7 @@ Returns the C<IO::Async::Loop> that this Notifier is a member of.
 sub get_loop
 {
    my $self = shift;
-   return $self->{loop}
+   return $self->{IO_Async_Notifier__loop}
 }
 
 # Only called by IO::Async::Loop, not external interface
@@ -230,15 +230,15 @@ sub __set_loop
    my ( $loop ) = @_;
 
    # early exit if no change
-   return if !$loop and !$self->{loop} or
-             $loop and $self->{loop} and $loop == $self->{loop};
+   return if !$loop and !$self->get_loop or
+             $loop and $self->get_loop and $loop == $self->get_loop;
 
-   $self->_remove_from_loop( $self->{loop} ) if $self->{loop};
+   $self->_remove_from_loop( $self->get_loop ) if $self->get_loop;
 
-   $self->{loop} = $loop;
-   weaken( $self->{loop} ); # To avoid a cycle
+   $self->{IO_Async_Notifier__loop} = $loop;
+   weaken( $self->{IO_Async_Notifier__loop} ); # To avoid a cycle
 
-   $self->_add_to_loop( $self->{loop} ) if $self->{loop};
+   $self->_add_to_loop( $self->get_loop ) if $self->get_loop;
 }
 
 =head2 $name = $notifier->notifier_name
@@ -252,7 +252,7 @@ return some more useful information, perhaps from configured parameters.
 sub notifier_name
 {
    my $self = shift;
-   return $self->{notifier_name} || "";
+   return $self->{IO_Async_Notifier__notifier_name} || "";
 }
 
 =head1 CHILD NOTIFIERS
@@ -274,7 +274,7 @@ Returns the parent of the notifier, or C<undef> if does not have one.
 sub parent
 {
    my $self = shift;
-   return $self->{parent};
+   return $self->{IO_Async_Notifier__parent};
 }
 
 =head2 @children = $notifier->children
@@ -286,8 +286,8 @@ Returns a list of the child notifiers contained within this one.
 sub children
 {
    my $self = shift;
-   return unless $self->{children};
-   return @{ $self->{children} };
+   return unless $self->{IO_Async_Notifier__children};
+   return @{ $self->{IO_Async_Notifier__children} };
 }
 
 =head2 $notifier->add_child( $child )
@@ -305,17 +305,17 @@ sub add_child
    my $self = shift;
    my ( $child ) = @_;
 
-   croak "Cannot add a child that already has a parent" if defined $child->{parent};
+   croak "Cannot add a child that already has a parent" if defined $child->{IO_Async_Notifier__parent};
 
-   croak "Cannot add a child that is already a member of a loop" if defined $child->{loop};
+   croak "Cannot add a child that is already a member of a loop" if defined $child->get_loop;
 
-   if( defined( my $loop = $self->{loop} ) ) {
+   if( defined( my $loop = $self->get_loop ) ) {
       $loop->add( $child );
    }
 
-   push @{ $self->{children} }, $child;
-   $child->{parent} = $self;
-   weaken( $child->{parent} );
+   push @{ $self->{IO_Async_Notifier__children} }, $child;
+   $child->{IO_Async_Notifier__parent} = $self;
+   weaken( $child->{IO_Async_Notifier__parent} );
 
    return;
 }
@@ -334,7 +334,7 @@ sub remove_child
    my ( $child ) = @_;
 
    LOOP: {
-      my $childrenref = $self->{children};
+      my $childrenref = $self->{IO_Async_Notifier__children};
       for my $i ( 0 .. $#$childrenref ) {
          next unless $childrenref->[$i] == $child;
          splice @$childrenref, $i, 1, ();
@@ -344,9 +344,9 @@ sub remove_child
       croak "Cannot remove child from a parent that doesn't contain it";
    }
 
-   undef $child->{parent};
+   undef $child->{IO_Async_Notifier__parent};
 
-   if( defined( my $loop = $self->{loop} ) ) {
+   if( defined( my $loop = $self->get_loop ) ) {
       $loop->remove( $child );
    }
 }
