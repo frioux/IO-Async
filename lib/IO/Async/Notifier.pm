@@ -123,6 +123,46 @@ it.
 
 =cut
 
+=head1 AS A MIXIN
+
+Rather than being used as a subclass this package also supports being used as
+a non-principle superclass for an object, as a mix-in. It still provides
+methods and satisfies an C<isa> test, even though the constructor is not
+directly called. This simply requires that the object be based on a normal
+blessed hash reference and include C<IO::Async::Notifier> somewhere in its
+C<@ISA> list.
+
+The methods in this class all use only keys in the hash prefixed by
+C<"IO_Async_Notifier__"> for namespace purposes.
+
+This is intended mainly for defining a subclass of some other object that is
+also an C<IO::Async::Notifier>, suitable to be added to an C<IO::Async::Loop>.
+
+ package SomeEventSource::Async;
+ use base qw( SomeEventSource IO::Async::Notifier );
+
+ sub _add_to_loop
+ {
+    my $self = shift;
+    my ( $loop ) = @_;
+
+    # Code here to set up event handling on $loop that may be required
+ }
+
+ sub _remove_from_loop
+ {
+    my $self = shift;
+    my ( $loop ) = @_;
+
+    # Code here to undo the event handling set up above
+ }
+
+Since all the methods documented here will be available, the implementation
+may wish to use the C<configure> and C<make_event_cb> or C<invoke_event>
+methods to implement its own event callbacks.
+
+=cut
+
 =head1 PARAMETERS
 
 A specific subclass of C<IO::Async::Notifier> defines named parameters that
