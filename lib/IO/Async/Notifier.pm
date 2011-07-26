@@ -16,6 +16,8 @@ use Scalar::Util qw( weaken );
 # Perl 5.8.4 cannot do trampolines by modiying @_ then goto &$code
 use constant HAS_BROKEN_TRAMPOLINES => ( $] == "5.008004" );
 
+our $DEBUG = $ENV{IO_ASYNC_DEBUG} || 0;
+
 =head1 NAME
 
 C<IO::Async::Notifier> - base class for C<IO::Async> event objects
@@ -641,7 +643,15 @@ sub make_event_cb
    my $code = $self->can_event( $event_name )
       or croak "$self cannot handle $event_name event";
 
-   return $self->_capture_weakself( $code );
+   my $caller = caller;
+
+   return $self->_capture_weakself( 
+      !$DEBUG ? $code : sub {
+         my $self = $_[0];
+         $self->debug_printf_event( $caller, $event_name );
+         goto &$code;
+      }
+   );
 }
 
 =head2 $callback = $notifier->maybe_make_event_cb( $event_name )
@@ -659,7 +669,15 @@ sub maybe_make_event_cb
    my $code = $self->can_event( $event_name )
       or return undef;
 
-   return $self->_capture_weakself( $code );
+   my $caller = caller;
+
+   return $self->_capture_weakself(
+      !$DEBUG ? $code : sub {
+         my $self = $_[0];
+         $self->debug_printf_event( $caller, $event_name );
+         goto &$code;
+      }
+   );
 }
 
 =head2 @ret = $notifier->invoke_event( $event_name, @args )
@@ -679,6 +697,7 @@ sub invoke_event
    my $code = $self->can_event( $event_name )
       or croak "$self cannot handle $event_name event";
 
+   $self->debug_printf_event( scalar caller, $event_name ) if $DEBUG;
    return $code->( $self, @args );
 }
 
@@ -700,7 +719,95 @@ sub maybe_invoke_event
    my $code = $self->can_event( $event_name )
       or return undef;
 
+   $self->debug_printf_event( scalar caller, $event_name ) if $DEBUG;
    return [ $code->( $self, @args ) ];
+}
+
+=head1 DEBUGGING SUPPORT
+
+The following methods and behaviours are still experimental and may change or
+even be removed in future.
+
+Debugging support is enabled by an environment variable called
+C<IO_ASYNC_DEBUG> having a true value.
+
+When debugging is enabled, the C<make_event_cb> and C<invoke_event> methods
+(and their C<maybe_> variants) are altered such that when the event is fired,
+a debugging line is printed, using the C<debug_printf> method. This identifes
+the name of the event.
+
+=cut
+
+=head2 $notifier->debug_printf( $format, @args )
+
+Conditionally print a debugging message to C<STDERR> if debugging is enabled.
+If such a message is printed, it will be printed using C<printf> using the
+given format and arguments. The message will be prefixed with an string, in
+square brackets, to help identify the C<$notifier> instance. This string will
+be the class name of the notifier, and any parent notifiers it is contained
+by, joined by an arrow C<< <- >>. To ensure this string does not grow too
+long, certain prefixes are abbreviated:
+
+ IO::Async::Protocol::  =>  IaP:
+ IO::Async::            =>  Ia:
+ Net::Async::           =>  Na:
+
+Finally, each notifier that has a name defined using the C<notifier_name>
+parameter has that name appended in braces.
+
+For example, invoking
+
+ $stream->debug_printf( "EVENT on_read" )
+
+On an C<IO::Async::Stream> instance reading and writing a file descriptor
+whose C<fileno> is 4, which is a child of an C<IO::Async::Protocol::Stream>,
+will produce a line of output:
+
+ [Ia:Stream{rw=4}<-IaP:Stream] EVENT on_read
+
+=cut
+
+sub debug_printf
+{
+   $DEBUG or return;
+
+   my $self = shift;
+   my ( $format, @args ) = @_;
+
+   my @id;
+   while( $self ) {
+      push @id, ref $self;
+
+      my $name = $self->notifier_name;
+      $id[-1] .= "{$name}" if defined $name and length $name;
+
+      $self = $self->parent;
+   }
+
+   s/^IO::Async::Protocol::/IaP:/,
+   s/^IO::Async::/Ia:/,
+   s/^Net::Async::/Na:/ for @id;
+
+   printf STDERR "[%s] $format\n",
+      join("<-", @id), @args;
+}
+
+sub debug_printf_event
+{
+   my $self = shift;
+   my ( $caller, $event_name ) = @_;
+
+   my $class = ref $self;
+
+   if( $DEBUG > 1 or $class eq $caller ) {
+      s/^IO::Async::Protocol::/IaP:/,
+      s/^IO::Async::/Ia:/,
+      s/^Net::Async::/Na:/ for my $str_caller = $caller;
+
+      $self->debug_printf( "EVENT %s",
+         ( $class eq $caller ? $event_name : "${str_caller}::$event_name" )
+      );
+   }
 }
 
 =head1 AUTHOR
