@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 78;
+use Test::More tests => 72;
 use Test::Fatal;
 use Test::Refcount;
 use Test::Warn;
@@ -338,32 +338,6 @@ my $sub_writeready = 0;
    is_oneref( $handle, '$handle latebount has refcount 1 after set_handle' );
 
    is( $handle->notifier_name, "rw=$fd1", '$handle->notifier_name for late bind after handles' );
-}
-
-# Legacy upgrade from IO::Async::Notifier
-{
-   my ( $S1, $S2 ) = mkhandles;
-
-   my $notifier;
-
-   warning_is {
-         $notifier = IO::Async::Notifier->new(
-            read_handle => $S1,
-            on_read_ready => sub {},
-         );
-      }
-      { carped => "IO::Async::Notifier no longer wraps a filehandle; see instead IO::Async::Handle" },
-      'Legacy IO::Async::Notifier to ::Handle upgrade produces warning';
-
-
-   ok( defined $notifier, '$notifier defined' );
-   isa_ok( $notifier, "IO::Async::Handle", '$notifier isa IO::Async::Handle' );
-
-   is( $notifier->read_handle, $S1, '->read_handle returns S1' );
-
-   is( $notifier->read_fileno, $S1->fileno, '->read_fileno returns fileno(S1)' );
-
-   is_oneref( $notifier, '$notifier has refcount 1' );
 }
 
 package TestHandle;

@@ -166,14 +166,6 @@ sub new
    my $class = shift;
    my %params = @_;
 
-   if( $class eq __PACKAGE__ and 
-      grep { exists $params{$_} } qw( handle read_handle write_handle on_read_ready on_write_ready ) ) {
-      carp "IO::Async::Notifier no longer wraps a filehandle; see instead IO::Async::Handle";
-
-      require IO::Async::Handle;
-      return IO::Async::Handle->new( %params );
-   }
-
    my $self = bless {}, $class;
 
    $self->_init( \%params );
