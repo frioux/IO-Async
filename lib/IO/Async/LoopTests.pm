@@ -527,7 +527,7 @@ sub run_tests_idle
 {
    my $called = 0;
 
-   my $id = $loop->watch_idle( when => 'later', code => sub { $called++ } );
+   my $id = $loop->watch_idle( when => 'later', code => sub { $called = 1 } );
 
    ok( defined $id, 'idle watcher id is defined' );
 
@@ -538,7 +538,7 @@ sub run_tests_idle
    is( $called, 1, 'deferred sub called after loop_once' );
 
    $loop->watch_idle( when => 'later', code => sub {
-      $loop->watch_idle( when => 'later', code => sub { $called++ } )
+      $loop->watch_idle( when => 'later', code => sub { $called = 2 } )
    } );
 
    $loop->loop_once( 1 );
@@ -549,6 +549,8 @@ sub run_tests_idle
 
    is( $called, 2, 'inner deferral now invoked' );
 
+   $called = 2; # set it anyway in case previous test fails
+
    $id = $loop->watch_idle( when => 'later', code => sub { $called = 20 } );
 
    $loop->unwatch_idle( $id );
@@ -557,7 +559,7 @@ sub run_tests_idle
 
    is( $called, 2, 'unwatched deferral not called' );
 
-   $loop->later( sub { $called++ } );
+   $loop->later( sub { $called = 3 } );
 
    $loop->loop_once( 1 );
 
