@@ -327,8 +327,13 @@ sub call
 
    my $on_result;
    if( defined $params{on_result} ) {
-      $on_result = delete $params{on_result};
-      ref $on_result or croak "Expected 'on_result' to be a reference";
+      my $inner_on_result = delete $params{on_result};
+      ref $inner_on_result or croak "Expected 'on_result' to be a reference";
+      $on_result = $self->_capture_weakself( sub {
+         my $self = shift;
+         $self->debug_printf( "CONT on_$_[0]" );
+         goto &$inner_on_result;
+      } );
    }
    elsif( defined $params{on_return} and defined $params{on_error} ) {
       my $on_return = delete $params{on_return};
@@ -336,11 +341,13 @@ sub call
       my $on_error  = delete $params{on_error};
       ref $on_error or croak "Expected 'on_error' to be a reference";
 
-      $on_result = sub {
+      $on_result = $self->_capture_weakself( sub {
+         my $self = shift;
          my $result = shift;
+         $self->debug_printf( "CONT on_$result" );
          $on_return->( @_ ) if $result eq "return";
          $on_error->( @_ )  if $result eq "error";
-      };
+      } );
    }
    else {
       croak "Expected either 'on_result' or 'on_return' and 'on_error' keys";

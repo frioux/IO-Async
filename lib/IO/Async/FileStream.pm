@@ -217,6 +217,7 @@ sub on_tick
 
    $self->{last_size} = $size;
 
+   $self->debug_printf( "read_more" );
    $self->read_more;
 }
 

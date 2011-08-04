@@ -451,6 +451,8 @@ sub _spawn_in_parent
    my $pipeclosed = 0;
 
    $loop->add( IO::Async::Stream->new(
+      notifier_name => "statuspipe,kid=$kid",
+
       read_handle => $readpipe,
 
       on_read => sub {
