@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 32;
+use Test::More tests => 31;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -156,7 +156,7 @@ wait_for { scalar @errs == 2 };
 is_deeply( \@errs, [ "1\n", "1\n" ], 'Closed variables no preserved when exit_on_die => 1' );
 
 $code = IO::Async::DetachedCode->new(
-   loop=> $loop,
+   loop => $loop,
    code => sub { $_[0] ? exit shift : return 0 },
 );
 
@@ -185,24 +185,10 @@ wait_for { defined $err };
 
 is( $err, "return", '$err is "return" after child nondeath' );
 
-$code = $loop->detach_code(
-   code => sub { return join( "+", @_ ) },
-);
-
-$code->call(
-   args => [ qw( a b c ) ],
-   on_return => sub { $result = shift },
-   on_error  => sub { die "Test failed early - @_" },
-);
-
-undef $result;
-wait_for { defined $result };
-
-is( $result, "a+b+c", '$result of Set-constructed code' );
-
 ## Now test that parallel runs really are parallel
 
-$code = $loop->detach_code(
+$code = IO::Async::DetachedCode->new(
+   loop => $loop,
    code => sub {
       my ( $file, $ret ) = @_;
 
@@ -250,7 +236,8 @@ is_deeply( \%ret, { 1 => 1, 2 => 2, 3 => 3 }, 'ret keys after parallel run' );
 
 is( scalar $code->workers, 3, '$code->workers is still 3' );
 
-$code = $loop->detach_code(
+$code = IO::Async::DetachedCode->new(
+   loop => $loop,
    code => sub {
       return $ENV{$_[0]};
    },
