@@ -1,5 +1,15 @@
 Revision history for IO-Async
 
+0.43    CHANGES:
+         * Allow IO::Async::Notifier to be used as a non-principle mixin class
+         * Provide Notifier->loop accessor
+         * Added (still-experimental) Notifier debug features
+         * Deleted various deprecated features:
+            + Notifier to Handle upgrade
+            + Loop->enable_childmanager, Loop->disable_childmanager
+         * Print deprecation warnings on Loop->detach_code, Loop->detach_child
+         * Minor improvements to LoopTests
+
 0.42    BUGFIXES:
          * Test Stream encoding errors on a sequence which still returns
            U+FFFD immediately on 5.14.0 (RT69020)
