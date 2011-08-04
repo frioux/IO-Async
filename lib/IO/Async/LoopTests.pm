@@ -648,7 +648,7 @@ sub run_tests_control
 
    time_between { $loop->loop_once( 2 * AUT ) } 1.5, 2.5, 'loop_once(2) when idle';
 
-   $loop->later( sub { $loop->loop_stop } );
+   $loop->enqueue_timer( delay => 0.1, code => sub { $loop->loop_stop } );
 
    local $SIG{ALRM} = sub { die "Test timed out before ->loop_stop" };
    alarm( 1 );
