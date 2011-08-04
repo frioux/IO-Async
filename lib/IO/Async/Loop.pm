@@ -602,6 +602,7 @@ legacy wrapper around the C<fork> method.
 sub detach_child
 {
    my $self = shift;
+   warnings::warnif( deprecated => "Loop->detach_child is deprecated; use ->fork instead" );
    $self->fork( @_ );
 }
 
@@ -621,6 +622,8 @@ sub detach_code
 {
    my $self = shift;
    my %params = @_;
+
+   warnings::warnif( deprecated => "Loop->detach_code is deprecated; use IO::Async::Function instead" );
 
    require IO::Async::DetachedCode;
 
