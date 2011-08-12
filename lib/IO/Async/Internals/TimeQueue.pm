@@ -8,31 +8,18 @@ package # hide from CPAN
 
 use strict;
 use warnings;
+use base qw( Heap::Fibonacci );
 
 use Carp;
 
 use Heap::Fibonacci;
 use Time::HiRes qw( time );
 
-sub new
-{
-   my $class = shift;
-   my ( %params ) = @_;
-
-   my $self = bless {
-      heap => Heap::Fibonacci->new,
-   }, $class;
-
-   return $self;
-}
-
 sub next_time
 {
    my $self = shift;
 
-   my $heap = $self->{heap};
-
-   my $top = $heap->top;
+   my $top = $self->top;
 
    return defined $top ? $top->time : undef;
 }
@@ -48,10 +35,8 @@ sub enqueue
    defined $params{time} or croak "Expected 'time'";
    my $time = $params{time};
 
-   my $heap = $self->{heap};
-
    my $elem = IO::Async::Internals::TimeQueue::Elem->new( $time, $code );
-   $heap->add( $elem );
+   $self->add( $elem );
 
    return $elem;
 }
@@ -61,8 +46,7 @@ sub cancel
    my $self = shift;
    my ( $id ) = @_;
 
-   my $heap = $self->{heap};
-   $heap->delete( $id );
+   $self->delete( $id );
 }
 
 sub requeue
@@ -73,13 +57,12 @@ sub requeue
    defined $params{time} or croak "Expected 'time'";
    my $time = $params{time};
 
-   my $heap = $self->{heap};
-   my $elem = $heap->delete( $id );
+   my $elem = $self->delete( $id );
    defined $elem or croak "No such enqueued timer";
 
    $elem->time( $time );
 
-   $heap->add( $elem );
+   $self->add( $elem );
 
    return $elem;
 }
@@ -91,14 +74,12 @@ sub fire
 
    my $now = exists $params{now} ? $params{now} : time;
 
-   my $heap = $self->{heap};
-
    my $count = 0;
 
-   while( defined( my $top = $heap->top ) ) {
+   while( defined( my $top = $self->top ) ) {
       last if( $top->time > $now );
 
-      $heap->extract_top;
+      $self->extract_top;
 
       $top->code->();
       $count++;
