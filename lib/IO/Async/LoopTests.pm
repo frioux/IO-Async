@@ -381,7 +381,7 @@ Tests the Loop's ability to handle timer events
 
 =cut
 
-use constant count_tests_timer => 10;
+use constant count_tests_timer => 12;
 sub run_tests_timer
 {
    my $done = 0;
@@ -441,6 +441,21 @@ sub run_tests_timer
    time_between {
       $loop->loop_once while !$done;
    } 0, 0.1, 'loop_once while waiting for negative interval timer';
+
+   my $doneA;
+   my $doneB;
+
+   $id = $loop->enqueue_timer( delay => 1 * AUT, code => sub {
+      $loop->cancel_timer( $id ); undef $id;
+      $doneA++;
+   });
+
+   $loop->enqueue_timer( delay => 1.1 * AUT, code => sub { $doneB++ } );
+
+   $loop->loop_once( 1 * AUT ) for 1 .. 3;
+
+   is( $doneA, 1, 'Self-cancelling timer still fires' );
+   is( $doneB, 1, 'Other timers still fire after self-cancelling one' );
 }
 
 =head2 signal

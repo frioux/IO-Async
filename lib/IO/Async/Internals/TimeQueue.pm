@@ -98,10 +98,10 @@ sub fire
    while( defined( my $top = $heap->top ) ) {
       last if( $top->time > $now );
 
+      $heap->extract_top;
+
       $top->code->();
       $count++;
-
-      $heap->extract_top;
    }
 
    return $count;
