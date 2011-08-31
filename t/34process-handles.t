@@ -4,13 +4,13 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 56;
+use Test::More tests => 59;
 
 use IO::Async::Process;
 
 use IO::Async::Loop::Poll;
 
-use Socket qw( PF_UNIX sockaddr_family );
+use Socket qw( PF_UNIX PF_INET sockaddr_family );
 
 my $loop = IO::Async::Loop::Poll->new;
 
@@ -315,4 +315,23 @@ testing_loop( $loop );
    is( $process->exitstatus, 0, '$process->exitstatus after perl STDIO via socketpair' );
 
    is_deeply( $output_packet, "A packet to be echoed", '$output_packet after perl STDIO via socketpair' );
+}
+
+{
+   my $process = IO::Async::Process->new(
+      code => sub { return 0 },
+      stdio => { via => "socketpair", family => "inet" },
+      on_finish => sub { },
+   );
+
+   isa_ok( $process->stdio, "IO::Async::Stream", '$process->stdio isa Stream' );
+
+   $process->stdio->configure( on_read => sub { } );
+
+   $loop->add( $process );
+
+   isa_ok( $process->stdio->read_handle, "IO::Socket", '$process->stdio handle isa IO::Socket' );
+   is( sockaddr_family( $process->stdio->read_handle->sockname ), PF_INET, '$process->stdio handle sockdomain is PF_INET' );
+
+   wait_for { !$process->is_running };
 }

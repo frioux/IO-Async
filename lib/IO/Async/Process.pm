@@ -182,7 +182,8 @@ Stream object will be created in the parent configured for both filehandles.
 =item socketpair
 
 The child will be given one end of a C<socketpair(2)>; the parent will be
-given the other. The family of this socket will be C<unix>.
+given the other. The family of this socket may be given by the extra key
+called C<family>; defaulting to C<unix>.
 
 =back
 
@@ -307,7 +308,9 @@ sub configure_fd
                        $fd eq "2"  ? "stderr" :
                        $fd eq "io" ? "stdio" : "fd$fd",
    );
-   my $via = $self->{fd_via}{$fd};
+
+   my $opts = $self->{fd_opts}{$fd} ||= {};
+   my $via = $opts->{via};
 
    my ( $wants_read, $wants_write );
 
@@ -347,6 +350,10 @@ sub configure_fd
       $wants_write++;
    }
 
+   if( defined $via and $via == FD_VIA_SOCKETPAIR ) {
+      $self->{fd_opts}{$fd}{family} = delete $args{family};
+   }
+
    keys %args and croak "Unexpected extra keys for fd $fd - " . join ", ", keys %args;
 
    if( !defined $via ) {
@@ -370,7 +377,7 @@ sub configure_fd
    $via == FD_VIA_PIPERDWR and $fd ne "io" and
       croak "Cannot both read and write simultaneously on fd$fd";
 
-   defined $via and $self->{fd_via}{$fd} = $via;
+   defined $via and $opts->{via} = $via;
 }
 
 sub _prepare_fds
@@ -379,15 +386,16 @@ sub _prepare_fds
    my ( $loop ) = @_;
 
    my $fd_handle = $self->{fd_handle};
-   my $fd_via    = $self->{fd_via};
+   my $fd_opts   = $self->{fd_opts};
 
    my $mergepoint = $self->{mergepoint};
 
    my @setup;
 
-   foreach my $fd ( keys %$fd_via ) {
+   foreach my $fd ( keys %$fd_opts ) {
       my $handle = $fd_handle->{$fd};
-      my $via    = $fd_via->{$fd};
+      my $opts   = $fd_opts->{$fd};
+      my $via    = $opts->{via};
 
       my $key = $fd eq "io" ? "stdio" : "fd$fd";
 
@@ -421,7 +429,7 @@ sub _prepare_fds
          $self->{to_close}{$childwrite->fileno} = $childwrite;
       }
       elsif( $via == FD_VIA_SOCKETPAIR ) {
-         my ( $myfd, $childfd ) = $loop->socketpair or croak "Unable to socketpair() - $!";
+         my ( $myfd, $childfd ) = $loop->socketpair( $opts->{family} ) or croak "Unable to socketpair() - $!";
 
          $handle->configure( handle => $myfd );
 
