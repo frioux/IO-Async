@@ -179,6 +179,11 @@ Only valid on the C<stdio> filehandle. The child will be given the reading end
 of one C<pipe(2)> on STDIN and the writing end of another on STDOUT. A single
 Stream object will be created in the parent configured for both filehandles.
 
+=item socketpair
+
+The child will be given one end of a C<socketpair(2)>; the parent will be
+given the other. The family of this socket will be C<unix>.
+
 =back
 
 Once the filehandle is set up, the C<fd> method (or its shortcuts of C<stdin>,
@@ -271,11 +276,13 @@ sub configure
 use constant FD_VIA_PIPEREAD  => 1;
 use constant FD_VIA_PIPEWRITE => 2;
 use constant FD_VIA_PIPERDWR  => 3; # Only valid for stdio pseudo-fd
+use constant FD_VIA_SOCKETPAIR => 4;
 
 my %via_names = (
    pipe_read  => FD_VIA_PIPEREAD,
    pipe_write => FD_VIA_PIPEWRITE,
    pipe_rdwr  => FD_VIA_PIPERDWR,
+   socketpair => FD_VIA_SOCKETPAIR,
 );
 
 sub configure_fd
@@ -353,7 +360,7 @@ sub configure_fd
    elsif( $via == FD_VIA_PIPEWRITE ) {
       $wants_read and $via = FD_VIA_PIPERDWR;
    }
-   elsif( $via == FD_VIA_PIPERDWR ) {
+   elsif( $via == FD_VIA_PIPERDWR or $via == FD_VIA_SOCKETPAIR ) {
       # Fine
    }
    else {
@@ -412,6 +419,19 @@ sub _prepare_fds
          push @setup, stdin => [ dup => $childread ], stdout => [ dup => $childwrite ];
          $self->{to_close}{$childread->fileno}  = $childread;
          $self->{to_close}{$childwrite->fileno} = $childwrite;
+      }
+      elsif( $via == FD_VIA_SOCKETPAIR ) {
+         my ( $myfd, $childfd ) = $loop->socketpair or croak "Unable to socketpair() - $!";
+
+         $handle->configure( handle => $myfd );
+
+         if( $key eq "stdio" ) {
+            push @setup, stdin => [ dup => $childfd ], stdout => [ dup => $childfd ];
+         }
+         else {
+            push @setup, $key => [ dup => $childfd ];
+         }
+         $self->{to_close}{$childfd->fileno} = $childfd;
       }
       else {
          croak "Unsure what to do with fd_via==$via";
