@@ -294,20 +294,11 @@ sub configure_fd
    $self->is_running and croak "Cannot configure fd $fd in a running Process";
 
    if( $fd eq "io" ) {
-      exists $self->{fd_handle}{$_} and croak "Cannot configure stdio since fd$_ is already defined" for 0 .. 1;
+      exists $self->{fd_opts}{$_} and croak "Cannot configure stdio since fd$_ is already defined" for 0 .. 1;
    }
    elsif( $fd == 0 or $fd == 1 ) {
-      exists $self->{fd_handle}{io} and croak "Cannot configure fd$fd since stdio is already defined";
+      exists $self->{fd_opts}{io} and croak "Cannot configure fd$fd since stdio is already defined";
    }
-
-   require IO::Async::Stream;
-
-   my $handle = $self->{fd_handle}{$fd} ||= IO::Async::Stream->new(
-      notifier_name => $fd eq "0"  ? "stdin" :
-                       $fd eq "1"  ? "stdout" :
-                       $fd eq "2"  ? "stderr" :
-                       $fd eq "io" ? "stdio" : "fd$fd",
-   );
 
    my $opts = $self->{fd_opts}{$fd} ||= {};
    my $via = $opts->{via};
@@ -323,29 +314,22 @@ sub configure_fd
    }
 
    if( my $on_read = delete $args{on_read} ) {
-      $handle->configure( on_read => $on_read );
+      $opts->{handle}{on_read} = $on_read;
 
       $wants_read++;
    }
    elsif( my $into = delete $args{into} ) {
-      $handle->configure(
-         on_read => sub {
-            my ( undef, $buffref, $eof ) = @_;
-            $$into .= $$buffref if $eof;
-            return 0;
-         },
-      );
+      $opts->{handle}{on_read} = sub {
+         my ( undef, $buffref, $eof ) = @_;
+         $$into .= $$buffref if $eof;
+         return 0;
+      };
 
       $wants_read++;
    }
 
    if( my $from = delete $args{from} ) {
-      $handle->write( $from,
-         on_flush => sub {
-            my ( $handle ) = @_;
-            $handle->close_write;
-         },
-      );
+      $opts->{from} = $from;
 
       $wants_write++;
    }
@@ -393,9 +377,10 @@ sub _prepare_fds
    my @setup;
 
    foreach my $fd ( keys %$fd_opts ) {
-      my $handle = $fd_handle->{$fd};
       my $opts   = $fd_opts->{$fd};
       my $via    = $opts->{via};
+
+      my $handle = $self->fd( $fd );
 
       my $key = $fd eq "io" ? "stdio" : "fd$fd";
 
@@ -651,8 +636,30 @@ sub fd
    my $self = shift;
    my ( $fd ) = @_;
 
-   return $self->{fd_handle}{$fd} or
-      croak "$self does not have an fd Stream for $fd";
+   return $self->{fd_handle}{$fd} ||= do {
+      my $opts = $self->{fd_opts}{$fd} or
+         croak "$self does not have an fd Stream for $fd";
+
+      require IO::Async::Stream;
+      my $handle = IO::Async::Stream->new(
+         notifier_name => $fd eq "0"  ? "stdin" :
+                          $fd eq "1"  ? "stdout" :
+                          $fd eq "2"  ? "stderr" :
+                          $fd eq "io" ? "stdio" : "fd$fd",
+         %{ $opts->{handle} },
+      );
+
+      if( defined $opts->{from} ) {
+         $handle->write( $opts->{from},
+            on_flush => sub {
+               my ( $handle ) = @_;
+               $handle->close_write;
+            },
+         );
+      }
+
+      $handle
+   };
 }
 
 =head2 $stream = $process->stdin
