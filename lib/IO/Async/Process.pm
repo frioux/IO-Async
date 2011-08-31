@@ -17,6 +17,8 @@ use POSIX qw(
    WIFEXITED WEXITSTATUS
 );
 
+use Socket qw( SOCK_STREAM );
+
 use Async::MergePoint 0.03;
 
 =head1 NAME
@@ -183,13 +185,17 @@ Stream object will be created in the parent configured for both filehandles.
 
 The child will be given one end of a C<socketpair(2)>; the parent will be
 given the other. The family of this socket may be given by the extra key
-called C<family>; defaulting to C<unix>.
+called C<family>; defaulting to C<unix>. The socktype of this socket may be
+given by the extra key called C<socktype>; defaulting to C<stream>. If the
+type is not C<SOCK_STREAM> then a L<IO::Async::Socket> object will be
+constructed for the parent side of the handle, rather than
+C<IO::Async::Stream>.
 
 =back
 
 Once the filehandle is set up, the C<fd> method (or its shortcuts of C<stdin>,
-C<stdout> or C<stderr>) may be used to access the C<IO::Async::Stream> object
-wrapped around it.
+C<stdout> or C<stderr>) may be used to access the
+C<IO::Async::Handle>-subclassed object wrapped around it.
 
 The value of this argument is implied by any of the following alternatives.
 
@@ -335,7 +341,7 @@ sub configure_fd
    }
 
    if( defined $via and $via == FD_VIA_SOCKETPAIR ) {
-      $self->{fd_opts}{$fd}{family} = delete $args{family};
+      $self->{fd_opts}{$fd}{$_} = delete $args{$_} for qw( family socktype );
    }
 
    keys %args and croak "Unexpected extra keys for fd $fd - " . join ", ", keys %args;
@@ -414,7 +420,7 @@ sub _prepare_fds
          $self->{to_close}{$childwrite->fileno} = $childwrite;
       }
       elsif( $via == FD_VIA_SOCKETPAIR ) {
-         my ( $myfd, $childfd ) = $loop->socketpair( $opts->{family} ) or croak "Unable to socketpair() - $!";
+         my ( $myfd, $childfd ) = $loop->socketpair( $opts->{family}, $opts->{socktype} ) or croak "Unable to socketpair() - $!";
 
          $handle->configure( handle => $myfd );
 
@@ -616,12 +622,12 @@ sub errstr
 
 =head2 $stream = $process->fd( $fd )
 
-Returns the L<IO::Async::Stream> associated with the given FD number. This
-must have been set up by a C<configure> argument prior to adding the
-C<Process> object to the C<Loop>.
+Returns the L<IO::Async::Stream> or L<IO::Async::Socket> associated with the
+given FD number. This must have been set up by a C<configure> argument prior
+to adding the C<Process> object to the C<Loop>.
 
-The returned C<Stream> object have its read or write handle set to the other
-end of a pipe connected to that FD number in the child process. Typically,
+The returned object have its read or write handle set to the other end of a
+pipe or socket connected to that FD number in the child process. Typically,
 this will be used to call the C<write> method on, to write more data into the
 child, or to set an C<on_read> handler to read data out of the child.
 
@@ -640,8 +646,18 @@ sub fd
       my $opts = $self->{fd_opts}{$fd} or
          croak "$self does not have an fd Stream for $fd";
 
-      require IO::Async::Stream;
-      my $handle = IO::Async::Stream->new(
+      my $handle_class;
+      # CHEATING
+      if( defined $opts->{socktype} && IO::Async::Loop::_getsocktypebyname( $opts->{socktype} ) != SOCK_STREAM ) {
+         require IO::Async::Socket;
+         $handle_class = "IO::Async::Socket";
+      }
+      else {
+         require IO::Async::Stream;
+         $handle_class = "IO::Async::Stream";
+      }
+
+      my $handle = $handle_class->new(
          notifier_name => $fd eq "0"  ? "stdin" :
                           $fd eq "1"  ? "stdout" :
                           $fd eq "2"  ? "stderr" :
