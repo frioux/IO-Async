@@ -8,6 +8,7 @@ use Test::More tests => 54;
 use Test::Fatal;
 use Test::Refcount;
 
+use IO::File;
 use POSIX qw( ECONNRESET );
 
 use IO::Async::Loop;
