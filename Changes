@@ -1,5 +1,16 @@
 Revision history for IO-Async
 
+0.44    CHANGES:
+         * Allow Process to have sockets as handles; including datagram
+           sockets
+
+        BUGFIXES:
+         * Extract TimeQueue entiries before firing them, in case they do
+           something weird like cancelling themselves (RT70231)
+         * Test dollarbang for EWOULDBLOCK which might help MSWin32
+         * Cope correctly with Function handles in the presence of -CS or
+           PERL_UNICODE=S
+
 0.43    CHANGES:
          * Allow IO::Async::Notifier to be used as a non-principle mixin class
          * Provide Notifier->loop accessor
