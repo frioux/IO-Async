@@ -503,8 +503,8 @@ sub _init
       # If -CS is in effect STDIN and STDOUT will be set to UTF-8 mode. Since
       # we're communicating binary structures and not Unicode text we need to
       # enable binmode
-      STDIN->binmode;
-      STDOUT->binmode;
+      binmode STDIN;
+      binmode STDOUT;
 
       while(1) {
          my $n = _read_exactly( \*STDIN, my $lenbuffer, 4 );
