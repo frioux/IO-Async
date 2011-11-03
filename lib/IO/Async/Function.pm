@@ -505,6 +505,7 @@ sub _init
       # enable binmode
       binmode STDIN;
       binmode STDOUT;
+      STDOUT->autoflush(1);
 
       while(1) {
          my $n = _read_exactly( \*STDIN, my $lenbuffer, 4 );
