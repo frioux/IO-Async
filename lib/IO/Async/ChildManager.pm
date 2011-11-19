@@ -113,6 +113,54 @@ to capture the child process's STDOUT and STDERR streams.
 
 =cut
 
+# Writing to variables of $> and $) have tricky ways to obtain error results
+sub setuid
+{
+   my ( $uid ) = @_;
+
+   $> = $uid; my $saved_errno = $!;
+   $> == $uid and return 1;
+
+   $! = $saved_errno;
+   return undef;
+}
+
+sub setgid
+{
+   my ( $gid ) = @_;
+
+   $) = $gid; my $saved_errno = $!;
+   $) == $gid and return 1;
+
+   $! = $saved_errno;
+   return undef;
+}
+
+sub setgroups
+{
+   my @groups = @_;
+
+   my $gid = $)+0;
+   # Put the primary GID as the first group in the supplementary list, because
+   # some operating systems ignore this position, expecting it to indeed be
+   # the primary GID.
+   # See
+   #   https://rt.cpan.org/Ticket/Display.html?id=65127
+   @groups = grep { $_ != $gid } @groups;
+
+   $) = "$gid $gid " . join " ", @groups; my $saved_errno = $!;
+
+   # No easy way to detect success or failure. Just check that we have all and
+   # only the right groups
+   my %gotgroups = map { $_ => 1 } split ' ', "$)";
+
+   $! = $saved_errno;
+   $gotgroups{$_}-- or return undef for @groups;
+   keys %gotgroups or return undef;
+
+   return 1;
+}
+
 # Internal constructor
 sub new
 {
@@ -607,20 +655,13 @@ sub _spawn_in_child
                chdir( $value ) or die "Cannot chdir('$value') - $!";
             }
             elsif( $key eq "setuid" ) {
-               $> = $value or die "Cannot setuid('$value') - $!";
+               setuid( $value ) or die "Cannot setuid('$value') - $!";
             }
             elsif( $key eq "setgid" ) {
-               $) = $value or die "Cannot setgid('$value') - $!";
+               setgid( $value ) or die "Cannot setgid('$value') - $!";
             }
             elsif( $key eq "setgroups" ) {
-               my $gid = $)+0;
-               # Put the primary GID as the first group in the supplementary
-               # list, because some operating systems ignore this position,
-               # expecting it to indeed be the primary GID.
-               # See
-               #   https://rt.cpan.org/Ticket/Display.html?id=65127
-               my $groups = join( " ", grep { $_ != $gid } @$value );
-               $) = "$gid $gid $groups" or die "Cannot setgroups('$groups') - $!";
+               setgroups( @$value ) or die "Cannot setgroups() - $!";
             }
          }
       }
