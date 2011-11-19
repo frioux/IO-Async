@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 32;
+use Test::More tests => 34;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -372,4 +372,45 @@ testing_loop( $loop );
    is( $function->workers, 0, '$function has 0 workers after longer delay' );
 
    $loop->remove( $function );
+}
+
+# Test that STDOUT/STDERR are unaffected
+{
+   my ( $pipe_rd, $pipe_wr ) = $loop->pipepair;
+
+   my $function;
+   {
+      open my $stderrsave, ">&", \*STDERR;
+      POSIX::dup2( $pipe_wr->fileno, STDERR->fileno );
+
+      $function = IO::Async::Function->new(
+         min_workers => 1,
+         max_workers => 1,
+         code => sub {
+            print STDERR "A line to STDERR\n";
+            return 0;
+         }
+      );
+
+      $loop->add( $function );
+
+      POSIX::dup2( $stderrsave->fileno, STDERR->fileno );
+   }
+
+   my $buffer = "";
+   $loop->watch_io(
+      handle => $pipe_rd,
+      on_read_ready => sub { sysread $pipe_rd, $buffer, 8192, length $buffer or die "Cannot read - $!" },
+   );
+
+   my $result;
+   $function->call(
+      args => [],
+      on_result => sub { $result = shift; },
+   );
+
+   wait_for { defined $result and $buffer =~ m/\n/ };
+
+   is( $result, "return", 'Write-to-STDERR function returned' );
+   is( $buffer, "A line to STDERR\n", 'Write-to-STDERR wrote to STDERR' );
 }
