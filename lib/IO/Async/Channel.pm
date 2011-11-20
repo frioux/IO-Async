@@ -67,12 +67,20 @@ sub send
    my $self = shift;
    my ( $data ) = @_;
 
+   my $record = freeze $data;
+   $self->send_frozen( $record );
+}
+
+sub send_frozen
+{
+   my $self = shift;
+   my ( $record ) = @_;
+
    $self->{mode} eq "sync" or die "Needs to be in synchronous mode";
 
-   my $record = freeze $data;
+   my $bytes = pack( "I", length $record ) . $record;
 
-   $self->{fh}->print( pack( "I", length $record ) );
-   $self->{fh}->print( $record );
+   $self->{fh}->print( $bytes );
 }
 
 0x55AA;
