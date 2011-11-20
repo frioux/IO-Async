@@ -4,7 +4,8 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 3;
+use Test::More tests => 5;
+use Test::Identity;
 
 use IO::Async::Channel;
 
@@ -16,6 +17,7 @@ my $loop = IO::Async::Loop::Poll->new;
 
 testing_loop( $loop );
 
+# sync->sync - mostly doesn't involve IO::Async
 {
    my ( $pipe_rd, $pipe_wr ) = $loop->pipepair;
 
@@ -34,6 +36,7 @@ testing_loop( $loop );
    is_deeply( $channel_rd->recv, [ prefrozen => "data" ], 'Sync mode channels can send_frozen' );
 }
 
+# async->sync
 {
    my ( $pipe_rd, $pipe_wr ) = $loop->pipepair;
 
@@ -57,4 +60,33 @@ testing_loop( $loop );
    is_deeply( $channel_rd->recv, [ data => "by async" ], 'Async mode channel can send' );
 
    $loop->remove( $stream_wr );
+}
+
+# sync->async
+{
+   my ( $pipe_rd, $pipe_wr ) = $loop->pipepair;
+
+   my @recv_queue;
+
+   my $channel_rd = IO::Async::Channel->new;
+   $channel_rd->setup_async_mode(
+      stream => my $stream_rd = IO::Async::Stream->new( read_handle => $pipe_rd ),
+      on_recv => sub {
+         identical( $_[0], $channel_rd, 'Channel passed to on_recv' );
+         push @recv_queue, $_[1];
+      },
+   );
+
+   $loop->add( $stream_rd );
+
+   my $channel_wr = IO::Async::Channel->new;
+   $channel_wr->setup_sync_mode( $pipe_wr );
+
+   $channel_wr->send( [ data => "by sync" ] );
+
+   wait_for { @recv_queue };
+
+   is_deeply( shift @recv_queue, [ data => "by sync" ], 'Async mode channel can on_recv' );
+
+   $loop->remove( $stream_rd );
 }

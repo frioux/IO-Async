@@ -7,6 +7,7 @@ package IO::Async::Channel;
 
 use strict;
 use warnings;
+use base qw( IO::Async::Notifier ); # just to get _capture_weakself
 
 our $VERSION = '0.44';
 
@@ -97,10 +98,19 @@ sub setup_async_mode
    my $self = shift;
    my %args = @_;
 
-   $self->{stream} = delete $args{stream} or croak "Expected 'stream'";
+   my $stream = delete $args{stream} or croak "Expected 'stream'";
+
+   if( defined $stream->read_handle ) {
+      my $on_recv = delete $args{on_recv} or croak "Expected 'on_recv' with readable Stream";
+
+      $stream->configure( on_read => $self->_capture_weakself( '_on_stream_read' ) );
+
+      $self->{on_recv} = $on_recv;
+   }
 
    keys %args and croak "Unrecognised keys for setup_sync_mode: " . join( ", ", keys %args );
 
+   $self->{stream} = $stream;
    $self->{mode} = "async";
 }
 
@@ -109,6 +119,25 @@ sub _send_async
    my $self = shift;
    my ( $bytes ) = @_;
    $self->{stream}->write( $bytes );
+}
+
+sub _on_stream_read
+{
+   my $self = shift;
+   my ( $stream, $buffref, $eof ) = @_;
+
+   die "TODO: EOF" if $eof;
+
+   return 0 unless length( $$buffref ) >= 4;
+   my $len = unpack( "I", $$buffref );
+   return 0 unless length( $$buffref ) >= 4 + $len;
+
+   my $record = thaw( substr( $$buffref, 4, $len ) );
+   substr( $$buffref, 0, 4 + $len ) = "";
+
+   $self->{on_recv}->( $self, $record );
+
+   return 1;
 }
 
 0x55AA;
