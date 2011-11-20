@@ -110,6 +110,8 @@ sub setup_async_mode
 
    $self->{stream} = $stream;
    $self->{mode} = "async";
+
+   $stream->configure( autoflush => 1 );
 }
 
 sub _send_async

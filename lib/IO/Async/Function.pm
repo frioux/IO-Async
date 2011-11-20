@@ -427,8 +427,6 @@ sub _new_worker
 
    $self->add_child( $worker );
 
-   $worker->stdin->configure( autoflush => 1 );
-
    return $self->{workers}{$worker->pid} = $worker;
 }
 
