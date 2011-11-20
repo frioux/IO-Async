@@ -100,15 +100,13 @@ sub setup_async_mode
 
    my $stream = delete $args{stream} or croak "Expected 'stream'";
 
-   if( defined $stream->read_handle ) {
-      my $on_recv = delete $args{on_recv} or croak "Expected 'on_recv' with readable Stream";
-
+   if( my $on_recv = delete $args{on_recv} ) {
       $stream->configure( on_read => $self->_capture_weakself( '_on_stream_read' ) );
-
       $self->{on_recv} = $on_recv;
+      $self->{on_eof} = delete $args{on_eof};
    }
 
-   keys %args and croak "Unrecognised keys for setup_sync_mode: " . join( ", ", keys %args );
+   keys %args and croak "Unrecognised keys for setup_async_mode: " . join( ", ", keys %args );
 
    $self->{stream} = $stream;
    $self->{mode} = "async";
@@ -126,7 +124,10 @@ sub _on_stream_read
    my $self = shift;
    my ( $stream, $buffref, $eof ) = @_;
 
-   die "TODO: EOF" if $eof;
+   if( $eof ) {
+      $self->{on_eof}->( $self );
+      return;
+   }
 
    return 0 unless length( $$buffref ) >= 4;
    my $len = unpack( "I", $$buffref );

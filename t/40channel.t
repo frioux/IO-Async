@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 5;
+use Test::More tests => 6;
 use Test::Identity;
 
 use IO::Async::Channel;
@@ -67,6 +67,7 @@ testing_loop( $loop );
    my ( $pipe_rd, $pipe_wr ) = $loop->pipepair;
 
    my @recv_queue;
+   my $recv_eof;
 
    my $channel_rd = IO::Async::Channel->new;
    $channel_rd->setup_async_mode(
@@ -74,6 +75,9 @@ testing_loop( $loop );
       on_recv => sub {
          identical( $_[0], $channel_rd, 'Channel passed to on_recv' );
          push @recv_queue, $_[1];
+      },
+      on_eof => sub {
+         $recv_eof++;
       },
    );
 
@@ -88,5 +92,8 @@ testing_loop( $loop );
 
    is_deeply( shift @recv_queue, [ data => "by sync" ], 'Async mode channel can on_recv' );
 
-   $loop->remove( $stream_rd );
+   $pipe_wr->close;
+
+   wait_for { $recv_eof };
+   is( $recv_eof, 1, 'Async mode channel can on_eof' );
 }
