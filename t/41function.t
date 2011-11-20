@@ -380,6 +380,9 @@ testing_loop( $loop );
 
    my $function;
    {
+      open my $stdoutsave, ">&", \*STDOUT;
+      POSIX::dup2( $pipe_wr->fileno, STDOUT->fileno );
+
       open my $stderrsave, ">&", \*STDERR;
       POSIX::dup2( $pipe_wr->fileno, STDERR->fileno );
 
@@ -387,6 +390,8 @@ testing_loop( $loop );
          min_workers => 1,
          max_workers => 1,
          code => sub {
+            STDOUT->autoflush(1);
+            print STDOUT "A line to STDOUT\n";
             print STDERR "A line to STDERR\n";
             return 0;
          }
@@ -394,6 +399,7 @@ testing_loop( $loop );
 
       $loop->add( $function );
 
+      POSIX::dup2( $stdoutsave->fileno, STDOUT->fileno );
       POSIX::dup2( $stderrsave->fileno, STDERR->fileno );
    }
 
@@ -409,8 +415,8 @@ testing_loop( $loop );
       on_result => sub { $result = shift; },
    );
 
-   wait_for { defined $result and $buffer =~ m/\n/ };
+   wait_for { defined $result and $buffer =~ m/\n.*\n/ };
 
-   is( $result, "return", 'Write-to-STDERR function returned' );
-   is( $buffer, "A line to STDERR\n", 'Write-to-STDERR wrote to STDERR' );
+   is( $result, "return", 'Write-to-STD{OUT+ERR} function returned' );
+   is( $buffer, "A line to STDOUT\nA line to STDERR\n", 'Write-to-STD{OUT+ERR} wrote to pipe' );
 }

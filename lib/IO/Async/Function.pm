@@ -482,13 +482,15 @@ sub new
    my $class = shift;
    my %params = @_;
 
+   # Use fd3/fd4 for channels, so as to leave STDIN/STDOUT untouched
+
    my $arg_channel = IO::Async::Channel->new;
    my $ret_channel = IO::Async::Channel->new;
 
    my $code = delete $params{code};
    $params{code} = sub {
-      $arg_channel->setup_sync_mode( \*STDIN );
-      $ret_channel->setup_sync_mode( \*STDOUT );
+      $arg_channel->setup_sync_mode( IO::Handle->new_from_fd( 3, "<" ) );
+      $ret_channel->setup_sync_mode( IO::Handle->new_from_fd( 4, ">" ) );
 
       while( my $args = $arg_channel->recv ) {
          my @ret;
@@ -505,8 +507,8 @@ sub new
 
    my $worker = $class->SUPER::new(
       %params,
-      stdin  => { via => "pipe_write" },
-      stdout => { via => "pipe_read" },
+      fd3 => { via => "pipe_write" },
+      fd4 => { via => "pipe_read" },
    );
 
    $worker->{on_result_queue} = \my @on_result_queue;
@@ -514,11 +516,11 @@ sub new
    $worker->{ret_channel} = $ret_channel;
 
    $arg_channel->setup_async_mode(
-      stream => $worker->stdin,
+      stream => $worker->fd(3),
    );
 
    $ret_channel->setup_async_mode(
-      stream => $worker->stdout,
+      stream => $worker->fd(4),
       on_recv => sub {
          my ( undef, $result ) = @_;
 
