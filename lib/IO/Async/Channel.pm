@@ -10,6 +10,7 @@ use warnings;
 
 our $VERSION = '0.44';
 
+use Carp;
 use Storable qw( freeze thaw );
 
 sub new
@@ -18,6 +19,28 @@ sub new
    return bless {
       mode => undef,
    }, $class;
+}
+
+sub send
+{
+   my $self = shift;
+   my ( $data ) = @_;
+
+   my $record = freeze $data;
+   $self->send_frozen( $record );
+}
+
+sub send_frozen
+{
+   my $self = shift;
+   my ( $record ) = @_;
+
+   my $bytes = pack( "I", length $record ) . $record;
+
+   defined $self->{mode} or die "Cannot ->send without being set up";
+
+   return $self->_send_sync( $bytes )  if $self->{mode} eq "sync";
+   return $self->_send_async( $bytes ) if $self->{mode} eq "async";
 }
 
 sub setup_sync_mode
@@ -62,25 +85,30 @@ sub recv
    return thaw $record;
 }
 
-sub send
+sub _send_sync
 {
    my $self = shift;
-   my ( $data ) = @_;
-
-   my $record = freeze $data;
-   $self->send_frozen( $record );
+   my ( $bytes ) = @_;
+   $self->{fh}->print( $bytes );
 }
 
-sub send_frozen
+sub setup_async_mode
 {
    my $self = shift;
-   my ( $record ) = @_;
+   my %args = @_;
 
-   $self->{mode} eq "sync" or die "Needs to be in synchronous mode";
+   $self->{stream} = delete $args{stream} or croak "Expected 'stream'";
 
-   my $bytes = pack( "I", length $record ) . $record;
+   keys %args and croak "Unrecognised keys for setup_sync_mode: " . join( ", ", keys %args );
 
-   $self->{fh}->print( $bytes );
+   $self->{mode} = "async";
+}
+
+sub _send_async
+{
+   my $self = shift;
+   my ( $bytes ) = @_;
+   $self->{stream}->write( $bytes );
 }
 
 0x55AA;
