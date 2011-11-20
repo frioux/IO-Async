@@ -15,7 +15,7 @@ use IO::Async::Timer::Countdown;
 
 use Carp;
 
-use Storable qw( freeze thaw );
+use Storable qw( freeze );
 
 =head1 NAME
 
@@ -478,18 +478,9 @@ package # hide from indexer
 
 use base qw( IO::Async::Process );
 
-use Storable qw( freeze thaw );
+use IO::Async::Channel;
 
-sub _read_exactly
-{
-   $_[1] = "";
-
-   while( length $_[1] < $_[2] ) {
-      my $n = read( $_[0], $_[1], $_[2]-length $_[1], length $_[1] );
-      defined $n or return undef;
-      $n or die "EXIT";
-   }
-}
+use Storable qw( thaw );
 
 sub _init
 {
@@ -498,38 +489,24 @@ sub _init
 
    $worker->{on_result_queue} = \my @on_result_queue;
 
+   my $arg_channel = IO::Async::Channel->new;
+   my $ret_channel = IO::Async::Channel->new;
+
    my $code = $params->{code};
    $params->{code} = sub {
-      # If -CS is in effect STDIN and STDOUT will be set to UTF-8 mode. Since
-      # we're communicating binary structures and not Unicode text we need to
-      # enable binmode
-      binmode STDIN;
-      binmode STDOUT;
-      STDOUT->autoflush(1);
+      $arg_channel->setup_sync_mode( \*STDIN );
+      $ret_channel->setup_sync_mode( \*STDOUT );
 
-      while(1) {
-         my $n = _read_exactly( \*STDIN, my $lenbuffer, 4 );
-         defined $n or die "Cannot read - $!";
-
-         my $len = unpack( "I", $lenbuffer );
-
-         $n = _read_exactly( \*STDIN, my $record, $len );
-         defined $n or die "Cannot read - $!";
-
-         my $args = thaw( $record );
-
+      while( my $args = $arg_channel->recv ) {
          my @ret;
          my $ok = eval { @ret = $code->( @$args ); 1 };
 
          if( $ok ) {
-            unshift @ret, "r";
+            $ret_channel->send( [ r => @ret ] );
          }
          else {
-            @ret = ( "e", "$@" );
+            $ret_channel->send( [ e => "$@" ] );
          }
-
-         my $result = freeze( \@ret );
-         print STDOUT pack("I", length $result) . $result;
       }
    };
 
