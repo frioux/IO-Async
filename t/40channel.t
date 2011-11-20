@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 6;
+use Test::More tests => 8;
 use Test::Identity;
 
 use IO::Async::Channel;
@@ -34,6 +34,10 @@ testing_loop( $loop );
    $channel_wr->send_frozen( freeze [ prefrozen => "data" ] );
 
    is_deeply( $channel_rd->recv, [ prefrozen => "data" ], 'Sync mode channels can send_frozen' );
+
+   $channel_wr->close;
+
+   is( $channel_rd->recv, undef, 'Sync mode can be closed' );
 }
 
 # async->sync
@@ -59,7 +63,9 @@ testing_loop( $loop );
 
    is_deeply( $channel_rd->recv, [ data => "by async" ], 'Async mode channel can send' );
 
-   $loop->remove( $stream_wr );
+   $channel_wr->close;
+
+   is( $channel_rd->recv, undef, 'Sync mode can be closed' );
 }
 
 # sync->async
@@ -92,7 +98,7 @@ testing_loop( $loop );
 
    is_deeply( shift @recv_queue, [ data => "by sync" ], 'Async mode channel can on_recv' );
 
-   $pipe_wr->close;
+   $channel_wr->close;
 
    wait_for { $recv_eof };
    is( $recv_eof, 1, 'Async mode channel can on_eof' );

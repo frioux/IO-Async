@@ -44,6 +44,14 @@ sub send_frozen
    return $self->_send_async( $bytes ) if $self->{mode} eq "async";
 }
 
+sub close
+{
+   my $self = shift;
+
+   return $self->_close_sync  if $self->{mode} eq "sync";
+   return $self->_close_async if $self->{mode} eq "async";
+}
+
 sub setup_sync_mode
 {
    my $self = shift;
@@ -65,8 +73,10 @@ sub _read_exactly
    while( length $_[1] < $_[2] ) {
       my $n = read( $_[0], $_[1], $_[2]-length $_[1], length $_[1] );
       defined $n or return undef;
-      $n or die "EXIT";
+      $n or return "";
    }
+
+   return $_[2];
 }
 
 sub recv
@@ -77,11 +87,13 @@ sub recv
 
    my $n = _read_exactly( $self->{fh}, my $lenbuffer, 4 );
    defined $n or die "Cannot read - $!";
+   length $n or return undef;
 
    my $len = unpack( "I", $lenbuffer );
 
    $n = _read_exactly( $self->{fh}, my $record, $len );
    defined $n or die "Cannot read - $!";
+   length $n or return undef;
 
    return thaw $record;
 }
@@ -91,6 +103,12 @@ sub _send_sync
    my $self = shift;
    my ( $bytes ) = @_;
    $self->{fh}->print( $bytes );
+}
+
+sub _close_sync
+{
+   my $self = shift;
+   $self->{fh}->close;
 }
 
 sub setup_async_mode
@@ -119,6 +137,12 @@ sub _send_async
    my $self = shift;
    my ( $bytes ) = @_;
    $self->{stream}->write( $bytes );
+}
+
+sub _close_async
+{
+   my $self = shift;
+   $self->{stream}->close_when_empty;
 }
 
 sub _on_stream_read

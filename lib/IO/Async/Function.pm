@@ -548,7 +548,7 @@ sub configure
 sub stop
 {
    my $worker = shift;
-   $worker->stdin->close;
+   $worker->{arg_channel}->close;
 
    if( my $function = $worker->parent ) {
       delete $function->{workers}{$worker->pid};
