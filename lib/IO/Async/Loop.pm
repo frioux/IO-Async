@@ -30,7 +30,7 @@ use POSIX qw( _exit WNOHANG );
 use Scalar::Util qw( refaddr );
 
 # Try to load IO::Socket::INET6 but don't worry if we don't have it
-eval { require IO::Socket::INET6 };
+# eval { require IO::Socket::INET6 };
 
 # Never sleep for more than 1 second if a signal proxy is registered, to avoid
 # a borderline race condition.
@@ -1018,7 +1018,7 @@ sub listen
    $self->add( $listener );
 
    if( $listener->is_listening ) {
-      $on_notifier->( $listener );
+      $on_notifier->( $listener ) if $on_notifier;
    }
    else {
       my $on_listen = delete $params{on_listen};
