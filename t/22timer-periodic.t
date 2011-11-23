@@ -40,117 +40,116 @@ my $loop = IO::Async::Loop::Poll->new;
 
 testing_loop( $loop );
 
-my $tick = 0;
+{
+   my $tick = 0;
+   my @targs;
 
-my @targs;
+   my $timer = IO::Async::Timer::Periodic->new(
+      interval => 2 * AUT,
 
-my $timer = IO::Async::Timer::Periodic->new(
-   interval => 2 * AUT,
+      on_tick => sub { @targs = @_; $tick++ },
+   );
 
-   on_tick => sub { @targs = @_; $tick++ },
-);
+   ok( defined $timer, '$timer defined' );
+   isa_ok( $timer, "IO::Async::Timer", '$timer isa IO::Async::Timer' );
 
-ok( defined $timer, '$timer defined' );
-isa_ok( $timer, "IO::Async::Timer", '$timer isa IO::Async::Timer' );
+   is_oneref( $timer, '$timer has refcount 1 initially' );
 
-is_oneref( $timer, '$timer has refcount 1 initially' );
+   $loop->add( $timer );
 
-$loop->add( $timer );
+   is_refcount( $timer, 2, '$timer has refcount 2 after adding to Loop' );
 
-is_refcount( $timer, 2, '$timer has refcount 2 after adding to Loop' );
+   is( $timer->start, $timer, '$timer->start returns $timer' );
 
-is( $timer->start, $timer, '$timer->start returns $timer' );
+   is_refcount( $timer, 2, '$timer has refcount 2 after starting' );
 
-is_refcount( $timer, 2, '$timer has refcount 2 after starting' );
+   ok( $timer->is_running, 'Started Timer is running' );
 
-ok( $timer->is_running, 'Started Timer is running' );
+   time_about( sub { wait_for { $tick == 1 } }, 2, 'Timer works' );
+   is_deeply( \@targs, [ $timer ], 'on_tick args' );
 
-time_about( sub { wait_for { $tick == 1 } }, 2, 'Timer works' );
-is_deeply( \@targs, [ $timer ], 'on_tick args' );
+   ok( $timer->is_running, 'Timer is still running' );
 
-ok( $timer->is_running, 'Timer is still running' );
+   time_about( sub { wait_for { $tick == 2 } }, 2, 'Timer works a second time' );
 
-time_about( sub { wait_for { $tick == 2 } }, 2, 'Timer works a second time' );
+   $loop->loop_once( 1 * AUT );
 
-$loop->loop_once( 1 * AUT );
+   $timer->stop;
 
-$timer->stop;
+   $loop->loop_once( 2 * AUT );
 
-$loop->loop_once( 2 * AUT );
+   ok( $tick == 2, "Stopped timer doesn't tick" );
 
-ok( $tick == 2, "Stopped timer doesn't tick" );
+   undef @targs;
 
-undef @targs;
+   is_refcount( $timer, 2, '$timer has refcount 2 before removing from Loop' );
 
-is_refcount( $timer, 2, '$timer has refcount 2 before removing from Loop' );
+   $loop->remove( $timer );
 
-$loop->remove( $timer );
+   is_oneref( $timer, '$timer has refcount 1 after removing from Loop' );
 
-is_oneref( $timer, '$timer has refcount 1 after removing from Loop' );
+   ok( !$timer->is_running, 'Removed timer not running' );
 
-ok( !$timer->is_running, 'Removed timer not running' );
+   $loop->add( $timer );
 
-$loop->add( $timer );
+   $timer->configure( interval => 1 * AUT );
 
-$timer->configure( interval => 1 * AUT );
+   $timer->start;
 
-$timer->start;
+   time_about( sub { wait_for { $tick == 3 } }, 1, 'Reconfigured timer interval works' );
 
-time_about( sub { wait_for { $tick == 3 } }, 1, 'Reconfigured timer interval works' );
+   $timer->stop;
 
-$timer->stop;
+   $timer->configure( interval => 2 * AUT, first_interval => 0 );
 
-$timer->configure( interval => 2 * AUT, first_interval => 0 );
+   $timer->start;
+   is( $tick, 3, 'Zero first_interval start not invoked yet' );
+   time_about( sub { wait_for { $tick == 4 } }, 0, 'Zero first_interval invokes callback async' );
 
-$timer->start;
-is( $tick, 3, 'Zero first_interval start not invoked yet' );
-time_about( sub { wait_for { $tick == 4 } }, 0, 'Zero first_interval invokes callback async' );
+   time_about( sub { wait_for { $tick == 5 } }, 2, 'Normal interval used after first invocation' );
 
-time_about( sub { wait_for { $tick == 5 } }, 2, 'Normal interval used after first invocation' );
+   ok( exception { $timer->configure( interval => 5 ); },
+       'Configure a running timer fails' );
 
-ok( exception { $timer->configure( interval => 5 ); },
-    'Configure a running timer fails' );
+   $loop->remove( $timer );
 
-$loop->remove( $timer );
+   undef @targs;
 
-undef @targs;
-
-is_oneref( $timer, 'Timer has refcount 1 finally' );
-
-undef $timer;
+   is_oneref( $timer, 'Timer has refcount 1 finally' );
+}
 
 ## Subclass
 
 my $sub_tick = 0;
 
-$timer = TestTimer->new(
-   interval => 2 * AUT,
-);
+{
+   my $timer = TestTimer->new(
+      interval => 2 * AUT,
+   );
 
-ok( defined $timer, 'subclass $timer defined' );
-isa_ok( $timer, "IO::Async::Timer", 'subclass $timer isa IO::Async::Timer' );
+   ok( defined $timer, 'subclass $timer defined' );
+   isa_ok( $timer, "IO::Async::Timer", 'subclass $timer isa IO::Async::Timer' );
 
-is_oneref( $timer, 'subclass $timer has refcount 1 initially' );
+   is_oneref( $timer, 'subclass $timer has refcount 1 initially' );
 
-$loop->add( $timer );
+   $loop->add( $timer );
 
-is_refcount( $timer, 2, 'subclass $timer has refcount 2 after adding to Loop' );
+   is_refcount( $timer, 2, 'subclass $timer has refcount 2 after adding to Loop' );
 
-$timer->start;
+   $timer->start;
 
-is_refcount( $timer, 2, 'subclass $timer has refcount 2 after starting' );
+   is_refcount( $timer, 2, 'subclass $timer has refcount 2 after starting' );
 
-ok( $timer->is_running, 'Started subclass Timer is running' );
+   ok( $timer->is_running, 'Started subclass Timer is running' );
 
-time_about( sub { wait_for { $sub_tick == 1 } }, 2, 'subclass Timer works' );
+   time_about( sub { wait_for { $sub_tick == 1 } }, 2, 'subclass Timer works' );
 
-is_refcount( $timer, 2, 'subclass $timer has refcount 2 before removing from Loop' );
+   is_refcount( $timer, 2, 'subclass $timer has refcount 2 before removing from Loop' );
 
-$loop->remove( $timer );
+   $loop->remove( $timer );
 
-is_oneref( $timer, 'subclass $timer has refcount 1 after removing from Loop' );
-
-undef $timer;
+   is_oneref( $timer, 'subclass $timer has refcount 1 after removing from Loop' );
+}
 
 package TestTimer;
 use base qw( IO::Async::Timer::Periodic );

@@ -39,113 +39,119 @@ my $loop = IO::Async::Loop::Poll->new;
 
 testing_loop( $loop );
 
-my $expired;
+{
+   my $expired;
+   my @eargs;
 
-my @eargs;
+   my $timer = IO::Async::Timer::Absolute->new(
+      time => time + 2 * AUT,
 
-my $timer = IO::Async::Timer::Absolute->new(
-   time => time + 2 * AUT,
+      on_expire => sub { @eargs = @_; $expired = 1 },
+   );
 
-   on_expire => sub { @eargs = @_; $expired = 1 },
-);
+   ok( defined $timer, '$timer defined' );
+   isa_ok( $timer, "IO::Async::Timer", '$timer isa IO::Async::Timer' );
 
-ok( defined $timer, '$timer defined' );
-isa_ok( $timer, "IO::Async::Timer", '$timer isa IO::Async::Timer' );
+   is_oneref( $timer, '$timer has refcount 1 initially' );
 
-is_oneref( $timer, '$timer has refcount 1 initially' );
+   $loop->add( $timer );
 
-$loop->add( $timer );
+   is_refcount( $timer, 2, '$timer has refcount 2 after adding to Loop' );
 
-is_refcount( $timer, 2, '$timer has refcount 2 after adding to Loop' );
+   ok( $timer->is_running, 'Started Timer is running' );
 
-ok( $timer->is_running, 'Started Timer is running' );
+   time_about( sub { wait_for { $expired } }, 2, 'Timer works' );
+   is_deeply( \@eargs, [ $timer ], 'on_expire args' );
 
-time_about( sub { wait_for { $expired } }, 2, 'Timer works' );
-is_deeply( \@eargs, [ $timer ], 'on_expire args' );
+   ok( !$timer->is_running, 'Expired Timer is no longer running' );
 
-ok( !$timer->is_running, 'Expired Timer is no longer running' );
+   undef @eargs;
 
-undef @eargs;
+   is_refcount( $timer, 2, '$timer has refcount 2 before removing from Loop' );
 
-is_refcount( $timer, 2, '$timer has refcount 2 before removing from Loop' );
+   $loop->remove( $timer );
 
-$loop->remove( $timer );
+   is_oneref( $timer, '$timer has refcount 1 after removing from Loop' );
+}
 
-is_oneref( $timer, '$timer has refcount 1 after removing from Loop' );
+{
+   my $expired;
 
-undef $expired;
+   my $timer = IO::Async::Timer::Absolute->new(
+      time => time + 2 * AUT,
+      on_expire => sub { $expired++ },
+   );
 
-$timer = IO::Async::Timer::Absolute->new(
-   time => time + 2 * AUT,
-   on_expire => sub { $expired++ },
-);
+   $loop->add( $timer );
+   $loop->remove( $timer );
 
-$loop->add( $timer );
-$loop->remove( $timer );
+   $loop->loop_once( 3 * AUT );
 
-$loop->loop_once( 3 * AUT );
+   ok( !$expired, "Removed Timer does not expire" );
+}
 
-ok( !$expired, "Removed Timer does not expire" );
+{
+   my $expired;
 
-undef $expired;
+   my $timer = IO::Async::Timer::Absolute->new(
+      time => time + 5 * AUT,
+      on_expire => sub { $expired++ },
+   );
 
-$timer = IO::Async::Timer::Absolute->new(
-   time => time + 5 * AUT,
-   on_expire => sub { $expired++ },
-);
+   $loop->add( $timer );
 
-$loop->add( $timer );
+   $timer->configure( time => time + 1 * AUT );
 
-$timer->configure( time => time + 1 * AUT );
+   time_about( sub { wait_for { $expired } }, 1, 'Reconfigured timer works' );
 
-time_about( sub { wait_for { $expired } }, 1, 'Reconfigured timer works' );
+   $loop->remove( $timer );
+}
 
-$loop->remove( $timer );
+{
+   my $timer = IO::Async::Timer::Absolute->new(
+      time => time + 1 * AUT,
+      on_expire => sub { die "Test failed to replace expiry handler" },
+   );
 
-$timer = IO::Async::Timer::Absolute->new(
-   time => time + 1 * AUT,
-   on_expire => sub { die "Test failed to replace expiry handler" },
-);
+   $loop->add( $timer );
 
-$loop->add( $timer );
+   my $new_expired;
+   $timer->configure( on_expire => sub { $new_expired = 1 } );
 
-my $new_expired;
-$timer->configure( on_expire => sub { $new_expired = 1 } );
+   time_about( sub { wait_for { $new_expired } }, 1, 'Reconfigured timer on_expire works' );
 
-time_about( sub { wait_for { $new_expired } }, 1, 'Reconfigured timer on_expire works' );
-
-$loop->remove( $timer );
+   $loop->remove( $timer );
+}
 
 ## Subclass
 
 my $sub_expired;
+{
+   my $timer = TestTimer->new(
+      time => time + 2 * AUT,
+   );
 
-$timer = TestTimer->new(
-   time => time + 2 * AUT,
-);
+   ok( defined $timer, 'subclass $timer defined' );
+   isa_ok( $timer, "IO::Async::Timer", 'subclass $timer isa IO::Async::Timer' );
 
-ok( defined $timer, 'subclass $timer defined' );
-isa_ok( $timer, "IO::Async::Timer", 'subclass $timer isa IO::Async::Timer' );
+   is_oneref( $timer, 'subclass $timer has refcount 1 initially' );
 
-is_oneref( $timer, 'subclass $timer has refcount 1 initially' );
+   $loop->add( $timer );
 
-$loop->add( $timer );
+   is_refcount( $timer, 2, 'subclass $timer has refcount 2 after adding to Loop' );
 
-is_refcount( $timer, 2, 'subclass $timer has refcount 2 after adding to Loop' );
+   ok( $timer->is_running, 'Started subclass Timer is running' );
 
-ok( $timer->is_running, 'Started subclass Timer is running' );
+   time_about( sub { wait_for { $sub_expired } }, 2, 'subclass Timer works' );
 
-time_about( sub { wait_for { $sub_expired } }, 2, 'subclass Timer works' );
+   ok( !$timer->is_running, 'Expired subclass Timer is no longer running' );
 
-ok( !$timer->is_running, 'Expired subclass Timer is no longer running' );
+   is_refcount( $timer, 2, 'subclass $timer has refcount 2 before removing from Loop' );
 
-is_refcount( $timer, 2, 'subclass $timer has refcount 2 before removing from Loop' );
+   $loop->remove( $timer );
 
-$loop->remove( $timer );
-
-is_oneref( $timer, 'subclass $timer has refcount 1 after removing from Loop' );
-
-undef $timer;
+   is_oneref( $timer, 'subclass $timer has refcount 1 after removing from Loop' );
+}
 
 package TestTimer;
 use base qw( IO::Async::Timer::Absolute );
