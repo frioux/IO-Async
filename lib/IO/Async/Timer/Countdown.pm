@@ -79,6 +79,11 @@ CODE reference for the C<on_expire> event.
 The delay in seconds after starting the timer until it expires. Cannot be
 changed if the timer is running.
 
+=item remove_on_expire => BOOL
+
+Optional. If true, remove this timer object from its parent notifier or
+containing loop when it expires. Defaults to false.
+
 =back
 
 Once constructed, the timer object will need to be added to the C<Loop> before
@@ -90,6 +95,10 @@ sub configure
 {
    my $self = shift;
    my %params = @_;
+
+   foreach (qw( remove_on_expire )) {
+      $self->{$_} = delete $params{$_} if exists $params{$_};
+   }
 
    if( exists $params{on_expire} ) {
       my $on_expire = delete $params{on_expire};
@@ -140,6 +149,8 @@ sub _make_cb
 
       undef $self->{id};
       $self->{expired} = 1;
+
+      $self->remove_from_parent if $self->{remove_on_expire};
 
       $self->invoke_event( "on_expire" );
    } );

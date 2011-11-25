@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 50;
+use Test::More tests => 53;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -211,6 +211,22 @@ testing_loop( $loop );
        'Configure a running timer fails' );
 
    $loop->remove( $timer );
+}
+
+{
+   my $timer = IO::Async::Timer::Countdown->new(
+      delay => 1 * AUT,
+      remove_on_expire => 1,
+
+      on_expire => sub { },
+   );
+
+   $loop->add( $timer );
+   $timer->start;
+
+   time_about( sub { wait_for { $timer->is_expired } }, 1, 'remove_on_expire Timer' );
+
+   is( $timer->get_loop, undef, 'remove_on_expire Timer removed from Loop after expire' );
 }
 
 ## Subclass
