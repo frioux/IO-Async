@@ -9,7 +9,7 @@ use strict;
 use warnings;
 use base qw( IO::Async::Function );
 
-our $VERSION = '0.44';
+our $VERSION = '0.45';
 
 BEGIN {
    # We're going to implement methods called getaddrinfo and getnameinfo. We

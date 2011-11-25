@@ -1,5 +1,18 @@
 Revision history for IO-Async
 
+0.45    CHANGES:
+         * Added Timer->is_expired predicate, remove_on_expire parameter
+           (RT71767)
+
+        BUGFIXES:
+         * Use fd3/4 in ::Function rather than STDIN/STDOUT, to avoid
+           corrupting the return channel if the body function prints (RT72448)
+         * Better error detection around setuid/setgid/setgroups (RT72407)
+         * IO::Handle->binmode is not available as a method before perl 5.12;
+           use CORE::binmode() instead
+         * Don't attempt to invoke a missing on_notifier callback in
+           Loop->listen (RT71768)
+
 0.44    CHANGES:
          * Allow Process to have sockets as handles; including datagram
            sockets
