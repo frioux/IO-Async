@@ -128,11 +128,9 @@ testing_loop( $loop );
 }
 
 {
-   my $expired;
    my $timer = IO::Async::Timer::Countdown->new(
       delay => 2 * AUT,
-
-      on_expire => sub { $expired = 1 },
+      on_expire => sub { },
    );
 
    $loop->add( $timer );
@@ -143,15 +141,13 @@ testing_loop( $loop );
 
    $loop->loop_once( 3 * AUT );
 
-   ok( !$expired, "Removed Timer does not expire" );
+   ok( !$timer->is_expired, "Removed Timer does not expire" );
 }
 
 {
-   my $expired;
    my $timer = IO::Async::Timer::Countdown->new(
       delay => 2 * AUT,
-
-      on_expire => sub { $expired = 1 },
+      on_expire => sub { },
    );
 
    $timer->start;
@@ -160,17 +156,15 @@ testing_loop( $loop );
 
    ok( $timer->is_running, 'Pre-started Timer is running after adding' );
 
-   time_about( sub { wait_for { $expired } }, 2, 'Pre-started Timer works' );
+   time_about( sub { wait_for { $timer->is_expired } }, 2, 'Pre-started Timer works' );
 
    $loop->remove( $timer );
 }
 
 {
-   my $expired;
    my $timer = IO::Async::Timer::Countdown->new(
       delay => 2 * AUT,
-
-      on_expire => sub { $expired = 1 },
+      on_expire => sub { },
    );
 
    $timer->start;
@@ -180,17 +174,15 @@ testing_loop( $loop );
 
    $loop->loop_once( 3 * AUT );
 
-   is( $expired, undef, "start/stopped Timer doesn't expire" );
+   ok( !$timer->is_expired, "start/stopped Timer doesn't expire" );
 
    $loop->remove( $timer );
 }
 
 {
-   my $expired;
    my $timer = IO::Async::Timer::Countdown->new(
       delay => 2 * AUT,
-
-      on_expire => sub { $expired = 1 },
+      on_expire => sub { },
    );
 
    $loop->add( $timer );
@@ -199,14 +191,14 @@ testing_loop( $loop );
 
    $timer->start;
 
-   time_about( sub { wait_for { $expired } }, 1, 'Reconfigured timer delay works' );
+   time_about( sub { wait_for { $timer->is_expired } }, 1, 'Reconfigured timer delay works' );
 
-   my $new_expired;
-   $timer->configure( on_expire => sub { $new_expired = 1 } );
+   my $expired;
+   $timer->configure( on_expire => sub { $expired = 1 } );
 
    $timer->start;
 
-   time_about( sub { wait_for { $new_expired } }, 1, 'Reconfigured timer on_expire works' );
+   time_about( sub { wait_for { $expired } }, 1, 'Reconfigured timer on_expire works' );
 
    $timer->start;
    ok( exception { $timer->configure( delay => 5 ); },
