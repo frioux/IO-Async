@@ -391,7 +391,15 @@ sub remove_child
    }
 }
 
-sub _remove_from_outer
+=head2 $notifier->remove_from_parent
+
+Removes this notifier object from its parent (either another notifier object
+or the containing loop) if it has one. If the notifier is not a child of
+another notifier nor a member of a loop, this method does nothing.
+
+=cut
+
+sub remove_from_parent
 {
    my $self = shift;
 

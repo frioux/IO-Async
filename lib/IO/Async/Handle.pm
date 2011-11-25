@@ -368,7 +368,7 @@ sub close
    $write_handle->close if defined $write_handle;
 
    $self->maybe_invoke_event( on_closed => );
-   $self->_remove_from_outer;
+   $self->remove_from_parent;
 }
 
 =head2 $handle->close_read
@@ -394,7 +394,7 @@ sub close_read
 
    if( !$self->{write_handle} ) {
       $self->maybe_invoke_event( on_closed => );
-      $self->_remove_from_outer;
+      $self->remove_from_parent;
    }
 }
 
@@ -409,7 +409,7 @@ sub close_write
 
    if( !$self->{read_handle} ) {
       $self->maybe_invoke_event( on_closed => );
-      $self->_remove_from_outer;
+      $self->remove_from_parent;
    }
 }
 

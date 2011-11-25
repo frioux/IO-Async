@@ -508,7 +508,7 @@ sub _add_to_loop
                $self->invoke_event( on_finish => $exitcode );
          }
 
-         $self->_remove_from_outer;
+         $self->remove_from_parent;
       },
    );
 }
