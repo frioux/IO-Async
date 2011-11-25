@@ -230,18 +230,25 @@ constructor looks for OS-specific subclasses first.
 
 =item *
 
-A consideration of whether it is useful and possible to provide integration
-with L<AnyEvent>.
-
-=back
-
-=head1 SEE ALSO
-
-=over 4
+Finish splitting the C<IO::Async::Function> logic into C<IO::Async::Channel>
+and C<IO::Async::Routine>. Re-implement the former atop the latter. Also
+consider some form of persistent object wrapper in the form of an
+C<IO::Async::Object>.
 
 =item *
 
-L<Event> - Event loop processing
+Build some sort of future-like system, possibly called C<IO::Async::Task> to
+represent one-shot events like name resolver lookups, socket connects, etc..
+Replace uses of C<Async::MergePoint> with it, removing a dependency.
+
+=item *
+
+C<IO::Async::Protocol::Datagram>
+
+=item *
+
+Support for watching filesystem entries for change. Extract logic from
+C<IO::Async::FileStream>. Define Loop watch/unwatch method pair.
 
 =back
 
