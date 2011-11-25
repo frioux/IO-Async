@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 46;
+use Test::More tests => 50;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -89,7 +89,13 @@ testing_loop( $loop );
 
    $loop->add( $timer );
 
+   ok(  $timer->is_running, 'Re-started Timer is running' );
+   ok( !$timer->is_expired, 'Re-started Timer not yet expired' );
+
    time_about( sub { wait_for { $expired } }, 2, 'Timer works a second time' );
+
+   ok( !$timer->is_running, '2nd-time expired Timer is no longer running' );
+   ok(  $timer->is_expired, '2nd-time expired Timer now expired' );
 
    undef $expired;
    $timer->start;

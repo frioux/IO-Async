@@ -149,6 +149,7 @@ sub _make_enqueueargs
 {
    my $self = shift;
 
+   undef $self->{expired};
    return delay => $self->{delay};
 }
 
@@ -167,7 +168,6 @@ sub reset
 
    return if !$self->is_running;
 
-   undef $self->{expired};
    $self->{id} = $loop->requeue_timer(
       $self->{id},
       delay => $self->{delay},
