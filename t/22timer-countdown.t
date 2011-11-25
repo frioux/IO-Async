@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 42;
+use Test::More tests => 46;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -59,16 +59,21 @@ testing_loop( $loop );
 
    is_refcount( $timer, 2, '$timer has refcount 2 after adding to Loop' );
 
+   ok( !$timer->is_running, 'New Timer is no yet running' );
+   ok( !$timer->is_expired, 'New Timer is no yet expired' );
+
    is( $timer->start, $timer, '$timer->start returns $timer' );
 
    is_refcount( $timer, 2, '$timer has refcount 2 after starting' );
 
-   ok( $timer->is_running, 'Started Timer is running' );
+   ok(  $timer->is_running, 'Started Timer is running' );
+   ok( !$timer->is_expired, 'Started Timer not yet expired' );
 
    time_about( sub { wait_for { $expired } }, 2, 'Timer works' );
    is_deeply( \@eargs, [ $timer ], 'on_expire args' );
 
    ok( !$timer->is_running, 'Expired Timer is no longer running' );
+   ok(  $timer->is_expired, 'Expired Timer now expired' );
 
    undef @eargs;
 

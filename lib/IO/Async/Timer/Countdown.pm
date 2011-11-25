@@ -115,6 +115,22 @@ sub configure
    $self->SUPER::configure( %params );
 }
 
+=head1 METHODS
+
+=cut
+
+=head2 $expired = $timer->is_expired
+
+Returns true if the Timer has already expired.
+
+=cut
+
+sub is_expired
+{
+   my $self = shift;
+   return $self->{expired};
+}
+
 sub _make_cb
 {
    my $self = shift;
@@ -123,6 +139,7 @@ sub _make_cb
       my ( $self ) = @_;
 
       undef $self->{id};
+      $self->{expired} = 1;
 
       $self->invoke_event( "on_expire" );
    } );
@@ -150,6 +167,7 @@ sub reset
 
    return if !$self->is_running;
 
+   undef $self->{expired};
    $self->{id} = $loop->requeue_timer(
       $self->{id},
       delay => $self->{delay},
