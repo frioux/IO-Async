@@ -115,7 +115,23 @@ testing_loop( $loop );
    cmp_ok( $took, '>', 1.5, "Timer has now expired took at least 1.5" );
    cmp_ok( $took, '<', 2.5, "Timer has now expired took no more than 2.5" );
 
-   undef $expired;
+   $loop->remove( $timer );
+
+   undef @eargs;
+
+   is_oneref( $timer, 'Timer has refcount 1 finally' );
+}
+
+{
+   my $expired;
+   my $timer = IO::Async::Timer::Countdown->new(
+      delay => 2 * AUT,
+
+      on_expire => sub { $expired = 1 },
+   );
+
+   $loop->add( $timer );
+
    $timer->start;
 
    $loop->remove( $timer );
@@ -123,6 +139,15 @@ testing_loop( $loop );
    $loop->loop_once( 3 * AUT );
 
    ok( !$expired, "Removed Timer does not expire" );
+}
+
+{
+   my $expired;
+   my $timer = IO::Async::Timer::Countdown->new(
+      delay => 2 * AUT,
+
+      on_expire => sub { $expired = 1 },
+   );
 
    $timer->start;
 
@@ -133,8 +158,15 @@ testing_loop( $loop );
    time_about( sub { wait_for { $expired } }, 2, 'Pre-started Timer works' );
 
    $loop->remove( $timer );
+}
 
-   undef $expired;
+{
+   my $expired;
+   my $timer = IO::Async::Timer::Countdown->new(
+      delay => 2 * AUT,
+
+      on_expire => sub { $expired = 1 },
+   );
 
    $timer->start;
    $timer->stop;
@@ -145,9 +177,21 @@ testing_loop( $loop );
 
    is( $expired, undef, "start/stopped Timer doesn't expire" );
 
+   $loop->remove( $timer );
+}
+
+{
+   my $expired;
+   my $timer = IO::Async::Timer::Countdown->new(
+      delay => 2 * AUT,
+
+      on_expire => sub { $expired = 1 },
+   );
+
+   $loop->add( $timer );
+
    $timer->configure( delay => 1 * AUT );
 
-   undef $expired;
    $timer->start;
 
    time_about( sub { wait_for { $expired } }, 1, 'Reconfigured timer delay works' );
@@ -164,10 +208,6 @@ testing_loop( $loop );
        'Configure a running timer fails' );
 
    $loop->remove( $timer );
-
-   undef @eargs;
-
-   is_oneref( $timer, 'Timer has refcount 1 finally' );
 }
 
 ## Subclass
