@@ -104,7 +104,7 @@ This object is used indirectly via an C<IO::Async::Loop>:
 
 =head1 DESCRIPTION
 
-This module extends the functionallity of the containing C<IO::Async::Loop> to
+This module extends the functionality of the containing C<IO::Async::Loop> to
 manage the execution of child processes. It acts as a central point to store
 PID values of currently-running children, and to call the appropriate
 continuation handler code when the process terminates. It provides useful

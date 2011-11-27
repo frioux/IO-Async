@@ -90,7 +90,7 @@ C<IO::Async> framework. Its primary purpose is to store a set of
 L<IO::Async::Notifier> objects or subclasses of them. It handles all of the
 lower-level set manipulation actions, and leaves the actual IO readiness 
 testing/notification to the concrete class that implements it. It also
-provides other functionallity such as signal handling, child process managing,
+provides other functionality such as signal handling, child process managing,
 and timers.
 
 See also the two bundled Loop subclasses:
@@ -444,7 +444,7 @@ sub loop_stop
 =head1 FEATURES
 
 Most of the following methods are higher-level wrappers around base
-functionallity provided by the low-level API documented below. They may be
+functionality provided by the low-level API documented below. They may be
 used by C<IO::Async::Notifier> subclasses or called directly by the program.
 
 =cut
@@ -1521,7 +1521,7 @@ sub fork
 
 As C<IO::Async::Loop> is an abstract base class, specific subclasses of it are
 required to implement certain methods that form the base level of
-functionallity. They are not recommended for applications to use; see instead
+functionality. They are not recommended for applications to use; see instead
 the various event objects or higher level methods listed above.
 
 These methods should be considered as part of the interface contract required
@@ -1792,7 +1792,7 @@ CODE reference to the continuation to run at the allotted time.
 
 Either one of C<time> or C<delay> is required.
 
-For more powerful timer functionallity as a C<IO::Async::Notifier> (so it can
+For more powerful timer functionality as a C<IO::Async::Notifier> (so it can
 be used as a child within another Notifier), see instead the
 L<IO::Async::Timer> object and its subclasses.
 
@@ -2045,7 +2045,7 @@ sub unwatch_child
 =head1 METHODS FOR SUBCLASSES
 
 The following methods are provided to access internal features which are
-required by specific subclasses to implement the loop functionallity. The use
+required by specific subclasses to implement the loop functionality. The use
 cases of each will be documented in the above section.
 
 =cut
@@ -2119,7 +2119,7 @@ sub _manage_queues
 
 An Extension is a Perl module that provides extra methods in the
 C<IO::Async::Loop> or other packages. They are intended to provide extra
-functionallity that easily integrates with the rest of the code.
+functionality that easily integrates with the rest of the code.
 
 Certain base methods take an C<extensions> parameter; an ARRAY reference
 containing a list of extension names. If such a list is passed to a method, it
@@ -2145,7 +2145,7 @@ will become
 This is provided so that extension modules, such as L<IO::Async::SSL> can
 easily be invoked indirectly, by passing extra arguments to C<connect> methods
 or similar, without needing every module to be aware of the C<SSL> extension.
-This functionallity is generic and not limited to C<SSL>; other extensions may
+This functionality is generic and not limited to C<SSL>; other extensions may
 also use it.
 
 The following methods take an C<extensions> parameter:

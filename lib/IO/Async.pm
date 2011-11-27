@@ -63,7 +63,7 @@ asynchronous filehandle IO operations. A typical program using them would
 consist of a single subclass of L<IO::Async::Loop> to act as a container of
 other objects, which perform the actual IO work required by the program. As
 well as IO handles, the loop also supports timers and signal handlers, and
-includes more higher-level functionallity built on top of these basic parts.
+includes more higher-level functionality built on top of these basic parts.
 
 Because there are a lot of classes in this collection, the following overview
 gives a brief description of each.
@@ -72,7 +72,7 @@ gives a brief description of each.
 
 The base class of all the event handling subclasses is L<IO::Async::Notifier>.
 It does not perform any IO operations itself, but instead acts as a base class
-to build the specific IO functionallity upon. It can also coordinate a
+to build the specific IO functionality upon. It can also coordinate a
 collection of other Notifiers contained within it, forming a tree structure.
 
 The following sections describe particular types of Notifier.
@@ -139,7 +139,7 @@ the child process exits.
 
 The L<IO::Async::Loop> object class represents an abstract collection of
 L<IO::Async::Notifier> objects, and manages the actual filehandle IO
-watchers, timers, signal handlers, and other functionallity. It performs all
+watchers, timers, signal handlers, and other functionality. It performs all
 of the abstract collection management tasks, and leaves the actual OS
 interactions to a particular subclass for the purpose.
 
