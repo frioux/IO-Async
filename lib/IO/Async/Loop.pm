@@ -29,9 +29,6 @@ use Time::HiRes qw(); # empty import
 use POSIX qw( _exit WNOHANG );
 use Scalar::Util qw( refaddr );
 
-# Try to load IO::Socket::INET6 but don't worry if we don't have it
-# eval { require IO::Socket::INET6 };
-
 # Never sleep for more than 1 second if a signal proxy is registered, to avoid
 # a borderline race condition.
 # There is a race condition in perl involving signals interacting with XS code
@@ -1077,7 +1074,7 @@ sub socket
 
    # That failed. Most likely because the Domain was unrecognised. This 
    # usually happens if getaddrinfo returns an AF_INET6 address but we don't
-   # have IO::Socket::INET6 loaded. In this case we'll return a generic one.
+   # have a suitable class loaded. In this case we'll return a generic one.
    # It won't be in the specific subclass but that's the best we can do. And
    # it will still work as a generic socket.
    return IO::Socket->new->socket( $family, $socktype, $proto );
