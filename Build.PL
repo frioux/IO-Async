@@ -3,18 +3,6 @@ use warnings;
 
 use Module::Build;
 
-my %also_requires;
-
-# As of Perl 5.13.9, core's Socket now contains getaddrinfo, getnameinfo, and
-# all the associated constants.
-if( eval { require Socket and defined &Socket::getaddrinfo } ) {
-   # Was added in Socket 1.93
-   $also_requires{"Socket"} = '1.93';
-}
-else {
-   $also_requires{"Socket::GetAddrInfo"} = '0.18';
-}
-
 my $build = Module::Build->new(
    module_name => 'IO::Async',
    requires => {
@@ -23,9 +11,9 @@ my $build = Module::Build->new(
       'Exporter' => '5.57',
       'Heap' => '0.80',
       'IO::Poll' => 0,
+      'Socket' => '1.93',
       'Storable' => 0,
       'Time::HiRes' => 0,
-      %also_requires,
 
       # Fails on perl 5.8.3 for unknown reasons
       #   https://rt.cpan.org/Ticket/Display.html?id=64493

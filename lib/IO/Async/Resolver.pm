@@ -11,34 +11,17 @@ use base qw( IO::Async::Function );
 
 our $VERSION = '0.45';
 
+use Socket 1.93 qw(
+   AI_NUMERICHOST AI_PASSIVE
+   NI_NUMERICHOST NI_NUMERICSERV NI_DGRAM
+   EAI_NONAME
+);
+
 BEGIN {
    # We're going to implement methods called getaddrinfo and getnameinfo. We
    # therefore need import them with different names prefixed with underscores
-
-   my @constants = qw(
-      AI_NUMERICHOST AI_PASSIVE
-      NI_NUMERICHOST NI_NUMERICSERV NI_DGRAM
-      EAI_NONAME
-   );
-
-   # Perl 5.13.9 or above has Socket::getaddrinfo support in core.
-   # Before that we need to use Socket::GetAddrInfo
-   if( require Socket and defined &Socket::getaddrinfo ) {
-      Socket->import( @constants );
-
-      *_getaddrinfo = \&Socket::getaddrinfo;
-      *_getnameinfo = \&Socket::getnameinfo;
-   }
-   else {
-      # We can't just perform an empty import and call fully-qualified because
-      # Socket::GetAddrInfo's import method does special magic
-      require Socket::GetAddrInfo;
-      Socket::GetAddrInfo->import( qw( :newapi getaddrinfo getnameinfo ), @constants );
-
-      my $stash = do { no strict 'refs'; \%{__PACKAGE__."::"} };
-      $stash->{_getaddrinfo} = delete $stash->{getaddrinfo};
-      $stash->{_getnameinfo} = delete $stash->{getnameinfo};
-   }
+   *_getaddrinfo = \&Socket::getaddrinfo;
+   *_getnameinfo = \&Socket::getnameinfo;
 }
 
 BEGIN {
@@ -240,13 +223,13 @@ Hint values used to filter the results.
 =item flags => INT
 
 Flags to control the C<getaddrinfo(3)> function. See the C<AI_*> constants in
-L<Socket::GetAddrInfo> for more detail.
+L<Socket>'s C<getaddrinfo> function for more detail.
 
 =item passive => BOOL
 
 If true, sets the C<AI_PASSIVE> flag. This is provided as a convenience to
 avoid the caller from having to import the C<AI_PASSIVE> constant from
-whichever of C<Socket> or C<Socket::GetAddrInfo> it happens to be provided by.
+C<Socket>.
 
 =item timeout => NUMBER
 
@@ -345,7 +328,7 @@ The packed socket address to look up.
 =item flags => INT
 
 Flags to control the C<getnameinfo(3)> function. See the C<NI_*> constants in
-L<Socket::GetAddrInfo> for more detail.
+L<Socket>'s C<getnameinfo> for more detail.
 
 =item numerichost => BOOL
 
@@ -497,25 +480,22 @@ register_resolver getnetbyaddr => sub { return getnetbyaddr( $_[0], $_[1] ) or d
 register_resolver getprotobyname   => sub { return getprotobyname( $_[0] ) or die "$!\n" };
 register_resolver getprotobynumber => sub { return getprotobynumber( $_[0] ) or die "$!\n" };
 
-# The Socket::GetAddrInfo-based ones
-
 =pod
 
-The following three resolver names are implemented using the the
-C<Socket::GetAddrInfo> module.
+The following three resolver names are implemented using the L<Socket> module.
 
  getaddrinfo_hash
  getaddrinfo_array
  getnameinfo
 
 The C<getaddrinfo_hash> resolver takes arguments in a hash of name/value pairs
-and returns a list of hash structures, as the C<getaddrinfo> function does under
-the C<:newapi> tag. For neatness it takes all its arguments as named values;
-taking the host and service names from arguments called C<host> and C<service>
-respectively; all the remaining arguments are passed into the hints hash.
+and returns a list of hash structures, as the C<Socket::getaddrinfo> function
+does. For neatness it takes all its arguments as named values; taking the host
+and service names from arguments called C<host> and C<service> respectively;
+all the remaining arguments are passed into the hints hash.
 
-The C<getaddrinfo_array> resolver behaves more like the C<:Socket6api> version
-of the function. It takes hints in a flat list, and mangles the result of the
+The C<getaddrinfo_array> resolver behaves more like the C<Socket6> version of
+the function. It takes hints in a flat list, and mangles the result of the
 function, so that the returned value is more useful to the caller. It splits
 up the list of 5-tuples into a list of ARRAY refs, where each referenced array
 contains one of the tuples of 5 values.
@@ -531,7 +511,7 @@ on the array-like nature of its arguments and return values, should request it
 specifically by name, as this alias will be changed in a later version of
 C<IO::Async>.
 
-The C<getnameinfo> resolver returns its result in the same form as C<:newapi>.
+The C<getnameinfo> resolver returns its result in the same form as C<Socket>.
 
 Because this module simply uses the system's C<getaddrinfo> resolver, it will
 be fully IPv6-aware if the underlying platform's resolver is. This allows
