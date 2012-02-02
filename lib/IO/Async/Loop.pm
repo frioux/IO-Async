@@ -589,13 +589,7 @@ sub later
    return $self->watch_idle( when => 'later', code => $code );
 }
 
-=head2 $pid = $loop->detach_child( %params )
-
-This method creates a new child process to run a given code block. It is a
-legacy wrapper around the C<fork> method.
-
-=cut
-
+# undocumented, to be removed soon
 sub detach_child
 {
    my $self = shift;
@@ -603,18 +597,7 @@ sub detach_child
    $self->fork( @_ );
 }
 
-=head2 $code = $loop->detach_code( %params )
-
-This method creates a new detached code object. It is equivalent to calling
-the C<IO::Async::DetachedCode> constructor, passing in the given loop. See the
-documentation on this class for more information.
-
-Note that this behaviour is now deprecated, in favour of constructing a
-L<IO::Async::Function> object instead, and adding it to the loop. This object
-is more flexible and more powerful than the legacy C<DetachedCode>.
-
-=cut
-
+# undocumented, to be removed soon
 sub detach_code
 {
    my $self = shift;
