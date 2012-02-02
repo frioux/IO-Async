@@ -14,51 +14,57 @@ my $loop = IO::Async::Loop::Poll->new;
 
 testing_loop( $loop );
 
-my $exitcode;
-
-sub wait_for_exit
 {
-   undef $exitcode;
-   return wait_for { defined $exitcode };
+   my $exitcode;
+   $loop->fork(
+      code    => sub { return 5; },
+      on_exit => sub { ( undef, $exitcode ) = @_ },
+   );
+
+   wait_for { defined $exitcode };
+
+   is( WEXITSTATUS($exitcode), 5, 'WEXITSTATUS($exitcode) after child exit' );
 }
 
-$loop->fork(
-   code    => sub { return 5; },
-   on_exit => sub { ( undef, $exitcode ) = @_ },
-);
+{
+   my $exitcode;
+   $loop->fork(
+      code    => sub { die "error"; },
+      on_exit => sub { ( undef, $exitcode ) = @_ },
+   );
 
-wait_for_exit;
+   wait_for { defined $exitcode };
 
-is( WEXITSTATUS($exitcode), 5, 'WEXITSTATUS($exitcode) after child exit' );
+   is( WEXITSTATUS($exitcode), 255, 'WEXITSTATUS($exitcode) after child die' );
+}
 
-$loop->fork(
-   code    => sub { die "error"; },
-   on_exit => sub { ( undef, $exitcode ) = @_ },
-);
+{
+   local $SIG{INT} = sub { exit( 22 ) };
 
-wait_for_exit;
+   my $exitcode;
+   $loop->fork(
+      code    => sub { kill SIGINT, $$ },
+      on_exit => sub { ( undef, $exitcode ) = @_ },
+   );
 
-is( WEXITSTATUS($exitcode), 255, 'WEXITSTATUS($exitcode) after child die' );
+   wait_for { defined $exitcode };
 
-$SIG{INT} = sub { exit( 22 ) };
+   is( WIFSIGNALED($exitcode), 1, 'WIFSIGNALED($exitcode) after child SIGINT' );
+   is( WTERMSIG($exitcode), SIGINT, 'WTERMSIG($exitcode) after child SIGINT' );
+}
 
-$loop->fork(
-   code    => sub { kill SIGINT, $$ },
-   on_exit => sub { ( undef, $exitcode ) = @_ },
-);
+{
+   local $SIG{INT} = sub { exit( 22 ) };
 
-wait_for_exit;
+   my $exitcode;
+   $loop->fork(
+      code    => sub { kill SIGINT, $$ },
+      on_exit => sub { ( undef, $exitcode ) = @_ },
+      keep_signals => 1,
+   );
 
-is( WIFSIGNALED($exitcode), 1, 'WIFSIGNALED($exitcode) after child SIGINT' );
-is( WTERMSIG($exitcode), SIGINT, 'WTERMSIG($exitcode) after child SIGINT' );
+   wait_for { defined $exitcode };
 
-$loop->fork(
-   code    => sub { kill SIGINT, $$ },
-   on_exit => sub { ( undef, $exitcode ) = @_ },
-   keep_signals => 1,
-);
-
-wait_for_exit;
-
-is( WIFSIGNALED($exitcode), 0, 'WIFSIGNALED($exitcode) after child SIGINT with keep_signals' );
-is( WEXITSTATUS($exitcode), 22, 'WEXITSTATUS($exitcode) after child SIGINT with keep_signals' );
+   is( WIFSIGNALED($exitcode), 0, 'WIFSIGNALED($exitcode) after child SIGINT with keep_signals' );
+   is( WEXITSTATUS($exitcode), 22, 'WEXITSTATUS($exitcode) after child SIGINT with keep_signals' );
+}
