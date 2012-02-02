@@ -180,7 +180,10 @@ sub resolve
    defined $type or croak "Expected 'type'";
 
    # Legacy
-   $type = "getaddrinfo_array" if $type eq "getaddrinfo";
+   if( $type eq "getaddrinfo" ) {
+      warnings::warnif( deprecated => "getaddrinfo resolver will be changed in a future release to be the same as getaddrinfo_hash; please update your code to call it specifically" );
+      $type = "getaddrinfo_array";
+   }
 
    exists $METHODS{$type} or croak "Expected 'type' to be an existing resolver method, got '$type'";
 
