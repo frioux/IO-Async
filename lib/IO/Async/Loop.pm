@@ -475,6 +475,14 @@ sub loop_stop
    $self->stop;
 }
 
+sub wait_for
+{
+   my $self = shift;
+   my ( $task ) = @_;
+
+   $self->loop_once until $task->is_ready;
+}
+
 ############
 # Features #
 ############
