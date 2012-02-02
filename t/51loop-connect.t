@@ -26,48 +26,53 @@ my $listensock = IO::Socket::INET->new(
 
 my $addr = $listensock->sockname;
 
-my $sock;
+{
+   my $sock;
 
-$loop->connect(
-   addr => { family => "inet", socktype => "stream", addr => $addr },
-   on_connected => sub { $sock = shift; },
-   on_connect_error => sub { die "Test died early - connect error $_[0]\n"; },
-);
+   $loop->connect(
+      addr => { family => "inet", socktype => "stream", addr => $addr },
+      on_connected => sub { $sock = shift; },
+      on_connect_error => sub { die "Test died early - connect error $_[0]\n"; },
+   );
 
-wait_for { $sock };
+   wait_for { $sock };
 
-isa_ok( $sock, "IO::Socket::INET", 'by addr: $sock isa IO::Socket::INET' );
-is_deeply( [ unpack_sockaddr_in $sock->peername ],
-           [ unpack_sockaddr_in $addr ], 'by addr: $sock->getpeername is $addr' );
+   isa_ok( $sock, "IO::Socket::INET", 'by addr: $sock isa IO::Socket::INET' );
+   is_deeply( [ unpack_sockaddr_in $sock->peername ],
+              [ unpack_sockaddr_in $addr ], 'by addr: $sock->getpeername is $addr' );
 
-$listensock->accept; # Throw it away
-undef $sock; # This too
+   $listensock->accept; # Throw it away
+}
 
 # Now try by name
+{
+   my $sock;
 
-$loop->connect(
-   host     => $listensock->sockhost,
-   service  => $listensock->sockport,
-   socktype => $listensock->socktype,
-   on_connected => sub { $sock = shift; },
-   on_resolve_error => sub { die "Test died early - resolve error $_[0]\n"; },
-   on_connect_error => sub { die "Test died early - connect error $_[0]\n"; },
-);
+   $loop->connect(
+      host     => $listensock->sockhost,
+      service  => $listensock->sockport,
+      socktype => $listensock->socktype,
+      on_connected => sub { $sock = shift; },
+      on_resolve_error => sub { die "Test died early - resolve error $_[0]\n"; },
+      on_connect_error => sub { die "Test died early - connect error $_[0]\n"; },
+   );
 
-wait_for { $sock };
+   wait_for { $sock };
 
-isa_ok( $sock, "IO::Socket::INET", 'by host/service: $sock isa IO::Socket::INET' );
-is_deeply( [ unpack_sockaddr_in $sock->peername ],
-           [ unpack_sockaddr_in $addr ], 'by host/service: $sock->getpeername is $addr' );
+   isa_ok( $sock, "IO::Socket::INET", 'by host/service: $sock isa IO::Socket::INET' );
+   is_deeply( [ unpack_sockaddr_in $sock->peername ],
+              [ unpack_sockaddr_in $addr ], 'by host/service: $sock->getpeername is $addr' );
 
-is( $sock->sockhost, "127.0.0.1", '$sock->sockhost is 127.0.0.1' );
+   is( $sock->sockhost, "127.0.0.1", '$sock->sockhost is 127.0.0.1' );
 
-$listensock->accept; # Throw it away
-undef $sock; # This too
+   $listensock->accept; # Throw it away
+}
 
 SKIP: {
    # Some OSes can't bind(2) locally to other addresses on 127./8
    skip "Cannot bind to 127.0.0.2", 1 unless eval { IO::Socket::INET->new( LocalHost => "127.0.0.2", LocalPort => 0 ) };
+
+   my $sock;
 
    $loop->connect(
       local_host => "127.0.0.2",
@@ -88,45 +93,46 @@ SKIP: {
 }
 
 # Now try on_stream event
+{
+   my $stream;
 
-my $stream;
+   $loop->connect(
+      host     => $listensock->sockhost,
+      service  => $listensock->sockport,
+      socktype => $listensock->socktype,
+      on_stream => sub { $stream = shift; },
+      on_resolve_error => sub { die "Test died early - resolve error $_[0]\n"; },
+      on_connect_error => sub { die "Test died early - connect error $_[0]\n"; },
+   );
 
-$loop->connect(
-   host     => $listensock->sockhost,
-   service  => $listensock->sockport,
-   socktype => $listensock->socktype,
-   on_stream => sub { $stream = shift; },
-   on_resolve_error => sub { die "Test died early - resolve error $_[0]\n"; },
-   on_connect_error => sub { die "Test died early - connect error $_[0]\n"; },
-);
+   wait_for { $stream };
 
-wait_for { $stream };
+   isa_ok( $stream, "IO::Async::Stream", 'on_stream $stream isa IO::Async::Stream' );
+   my $sock = $stream->read_handle;
+   is_deeply( [ unpack_sockaddr_in $sock->peername ],
+              [ unpack_sockaddr_in $addr ], 'on_stream $sock->getpeername is $addr' );
 
-isa_ok( $stream, "IO::Async::Stream", 'on_stream $stream isa IO::Async::Stream' );
-$sock = $stream->read_handle;
-is_deeply( [ unpack_sockaddr_in $sock->peername ],
-           [ unpack_sockaddr_in $addr ], 'on_stream $sock->getpeername is $addr' );
-
-$listensock->accept; # Throw it away
-undef $stream;
-undef $sock; # This too
+   $listensock->accept; # Throw it away
+}
 
 my $udpsock = IO::Socket::INET->new( LocalAddr => 'localhost', Protocol => 'udp' ) or
    die "Cannot create udpsock - $!";
 
-my $socket;
+{
+   my $sock;
 
-$loop->connect(
-   addr => { family => "inet", socktype => "dgram", addr => $udpsock->sockname },
-   on_socket => sub { $socket = shift; },
-   on_connect_error => sub { die "Test died early - connect error $_[0]\n"; },
-);
+   $loop->connect(
+      addr => { family => "inet", socktype => "dgram", addr => $udpsock->sockname },
+      on_socket => sub { $sock = shift; },
+      on_connect_error => sub { die "Test died early - connect error $_[0]\n"; },
+   );
 
-wait_for { $socket };
+   wait_for { $sock };
 
-isa_ok( $socket, "IO::Async::Socket", 'on_socket $socket isa IO::Async::Socket' );
-is_deeply( [ unpack_sockaddr_in $socket->read_handle->peername ],
-           [ unpack_sockaddr_in $udpsock->sockname ], 'on_socket $socket->read_handle->getpeername is $addr' );
+   isa_ok( $sock, "IO::Async::Socket", 'on_socket $sock isa IO::Async::Socket' );
+   is_deeply( [ unpack_sockaddr_in $sock->read_handle->peername ],
+              [ unpack_sockaddr_in $udpsock->sockname ], 'on_socket $sock->read_handle->getpeername is $addr' );
+}
 
 SKIP: {
    # Now try an address we know to be invalid - a UNIX socket that doesn't exist
