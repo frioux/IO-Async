@@ -3,6 +3,8 @@ use warnings;
 
 use Module::Build;
 
+warn "THIS IS A PRIVATE BRANCH DO NOT RELEASE THIS CODE";
+
 my $build = Module::Build->new(
    module_name => 'IO::Async',
    requires => {
@@ -38,3 +40,5 @@ my $build = Module::Build->new(
 );
 
 $build->create_build_script;
+
+warn "THIS IS A PRIVATE BRANCH DO NOT RELEASE THIS CODE";
