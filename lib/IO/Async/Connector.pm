@@ -14,6 +14,7 @@ use POSIX qw( EINPROGRESS );
 use Socket qw( SOL_SOCKET SO_ERROR );
 
 use CPS qw( kpar kforeach );
+use CPS::Future;
 
 use IO::Async::OS;
 
@@ -352,6 +353,8 @@ sub connect
    my $self = shift;
    my ( %params ) = @_;
 
+   my $task;
+
    # Callbacks
    my $on_connected;
    if( $on_connected = delete $params{on_connected} ) {
@@ -373,11 +376,20 @@ sub connect
          $on_socket->( IO::Async::Socket->new( handle => $handle ) );
       };
    }
+   elsif( defined wantarray ) {
+      $task = CPS::Future->new;
+      $on_connected = sub {
+         my ( $handle ) = @_;
+         $task->done( $handle );
+      };
+   }
    else {
-      croak "Expected 'on_connected' or 'on_stream' callback";
+      croak "Expected 'on_connected' or 'on_stream' callback or to return a Task";
    }
 
-   my $on_connect_error = $params{on_connect_error} or croak "Expected 'on_connect_error' callback";
+   my $on_connect_error = $params{on_connect_error} ||
+      $task && sub { $task->fail( "Cannot connect: $_[0]", connect => $_[1] ) } or
+      croak "Expected 'on_connect_error' callback";
 
    my $on_fail = $params{on_fail};
 
@@ -395,11 +407,14 @@ sub connect
    my @localaddrs;
    my @peeraddrs;
 
+   my $on_resolve_error = $params{on_resolve_error} ||
+      $task && sub { $task->fail( "Cannot resolve: $_[0]", resolve => () ) };
+
    kpar(
       sub {
          my ( $k ) = @_;
          if( exists $params{host} and exists $params{service} ) {
-            my $on_resolve_error = $params{on_resolve_error} or croak "Expected 'on_resolve_error' callback";
+            $on_resolve_error or croak "Expected 'on_resolve_error' callback";
 
             my $host    = $params{host}    or croak "Expected 'host'";
             my $service = $params{service} or croak "Expected 'service'";
@@ -428,7 +443,7 @@ sub connect
       sub {
          my ( $k ) = @_;
          if( defined $params{local_host} or defined $params{local_service} ) {
-            my $on_resolve_error = $params{on_resolve_error} or croak "Expected 'on_resolve_error' callback";
+            $on_resolve_error or croak "Expected 'on_resolve_error' callback";
 
             # Empty is fine on either of these
             my $host    = $params{local_host};
@@ -483,6 +498,8 @@ sub connect
          $self->_connect_addresses( \@addrs, $on_connected, $on_connect_error, $on_fail );
       }
    );
+
+   return $task;
 }
 
 =head1 EXAMPLES
