@@ -137,7 +137,7 @@ sub _get_sock_err
 sub _connect_addresses
 {
    my $self = shift;
-   my ( $addrlist, $on_connected, $on_connect_error, $on_fail ) = @_;
+   my ( $addrlist, $task, $on_fail ) = @_;
 
    my $loop = $self->{loop};
 
@@ -200,12 +200,15 @@ sub _connect_addresses
       },
       sub {
          if( $sock ) {
-            return $on_connected->( $sock );
+            return $task->done( $sock );
          }
          else {
-            return $on_connect_error->( connect => $connecterr ) if $connecterr;
-            return $on_connect_error->( bind    => $binderr    ) if $binderr;
-            return $on_connect_error->( socket  => $socketerr  ) if $socketerr;
+            return $task->fail( "connect: $connecterr", connect => connect => $connecterr )
+               if $connecterr;
+            return $task->fail( "bind: $binderr",       connect => bind    => $binderr    )
+               if $binderr;
+            return $task->fail( "socket: $socketerr",   connect => socket  => $socketerr  )
+               if $socketerr;
             # If it gets this far then something went wrong
             die 'Oops; $loop->connect failed but no error cause was found';
          }
@@ -353,43 +356,40 @@ sub connect
    my $self = shift;
    my ( %params ) = @_;
 
-   my $task;
+   my $task = CPS::Future->new;
 
    # Callbacks
-   my $on_connected;
-   if( $on_connected = delete $params{on_connected} ) {
-      # all fine
+   if( my $on_connected = delete $params{on_connected} ) {
+      $task->on_done( $on_connected );
    }
    elsif( my $on_stream = delete $params{on_stream} ) {
       require IO::Async::Stream;
       # TODO: It doesn't make sense to put a SOCK_DGRAM in an
       # IO::Async::Stream but currently we don't detect this
-      $on_connected = sub {
+      $task->on_done( sub {
          my ( $handle ) = @_;
          $on_stream->( IO::Async::Stream->new( handle => $handle ) );
-      };
+      } );
    }
    elsif( my $on_socket = delete $params{on_socket} ) {
       require IO::Async::Socket;
-      $on_connected = sub {
+      $task->on_done( sub {
          my ( $handle ) = @_;
          $on_socket->( IO::Async::Socket->new( handle => $handle ) );
-      };
+      } );
    }
-   elsif( defined wantarray ) {
-      $task = CPS::Future->new;
-      $on_connected = sub {
-         my ( $handle ) = @_;
-         $task->done( $handle );
-      };
-   }
-   else {
+   elsif( !defined wantarray ) {
       croak "Expected 'on_connected' or 'on_stream' callback or to return a Task";
    }
 
-   my $on_connect_error = $params{on_connect_error} ||
-      $task && sub { $task->fail( "Cannot connect: $_[0]", connect => $_[1] ) } or
+   if( my $on_connect_error = $params{on_connect_error} ) {
+      $task->on_fail( sub {
+         $on_connect_error->( @_[2,3] ) if $_[1] eq "connect";
+      } );
+   }
+   elsif( !defined wantarray ) {
       croak "Expected 'on_connect_error' callback";
+   }
 
    my $on_fail = $params{on_fail};
 
@@ -407,14 +407,24 @@ sub connect
    my @localaddrs;
    my @peeraddrs;
 
-   my $on_resolve_error = $params{on_resolve_error} ||
-      $task && sub { $task->fail( "Cannot resolve: $_[0]", resolve => () ) };
+   my $fail_resolve = sub {
+      $task->fail( "$_[0]\n", resolve => $_[0] );
+   };
+
+   if( my $on_resolve_error = $params{on_resolve_error} ) {
+      $task->on_fail( sub {
+         $on_resolve_error->( $_[2] ) if $_[1] eq "resolve";
+      } );
+   }
+   elsif( !defined wantarray ) {
+      undef $fail_resolve;
+   }
 
    kpar(
       sub {
          my ( $k ) = @_;
          if( exists $params{host} and exists $params{service} ) {
-            $on_resolve_error or croak "Expected 'on_resolve_error' callback";
+            $fail_resolve or croak "Expected 'on_resolve_error' callback or to return a Task";
 
             my $host    = $params{host}    or croak "Expected 'host'";
             my $service = $params{service} or croak "Expected 'service'";
@@ -424,7 +434,7 @@ sub connect
                service => $service,
                %gai_hints,
 
-               on_error => $on_resolve_error,
+               on_error => $fail_resolve,
 
                on_resolved => sub {
                   @peeraddrs = @_;
@@ -443,7 +453,7 @@ sub connect
       sub {
          my ( $k ) = @_;
          if( defined $params{local_host} or defined $params{local_service} ) {
-            $on_resolve_error or croak "Expected 'on_resolve_error' callback";
+            $fail_resolve or croak "Expected 'on_resolve_error' callback or to return a Task";
 
             # Empty is fine on either of these
             my $host    = $params{local_host};
@@ -454,7 +464,7 @@ sub connect
                service => $service,
                %gai_hints,
 
-               on_error => $on_resolve_error,
+               on_error => $fail_resolve,
 
                on_resolved => sub {
                   @localaddrs = @_;
@@ -495,7 +505,7 @@ sub connect
             }
          }
 
-         $self->_connect_addresses( \@addrs, $on_connected, $on_connect_error, $on_fail );
+         $self->_connect_addresses( \@addrs, $task, $on_fail );
       }
    );
 

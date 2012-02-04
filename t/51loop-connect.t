@@ -224,8 +224,8 @@ SKIP: {
    is( $failerr+0, ENOENT, '$failerr is ENOENT' );
 
    ok( scalar $task->failure, '$task failed' );
-   is( ( $task->failure )[1], "connect", '$task fail op is connect' );
-   is( ( $task->failure )[2]+0, ENOENT, '$task fail err is ENOENT' );
+   is( ( $task->failure )[2], "connect", '$task fail op is connect' );
+   is( ( $task->failure )[3]+0, ENOENT, '$task fail err is ENOENT' );
 }
 
 # UNIX sockets always connect(2) synchronously, meaning if they fail, the error
