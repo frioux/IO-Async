@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 19;
+use Test::More tests => 21;
 
 use Socket 1.93 qw( 
    AF_INET SOCK_STREAM INADDR_LOOPBACK AI_PASSIVE
@@ -23,7 +23,22 @@ isa_ok( $resolver, "IO::Async::Resolver", '$loop->resolver' );
 SKIP: {
    my @pwuid;
    defined eval { @pwuid = getpwuid( $< ) } or
-      skip "No getpwuid()", 3;
+      skip "No getpwuid()", 5;
+
+   {
+      my $task = $resolver->resolve(
+         type => 'getpwuid',
+         data => [ $< ], 
+      );
+
+      isa_ok( $task, "CPS::Future", '$task' );
+
+      $loop->wait_for( $task );
+
+      my @result = $task->get;
+
+      is_deeply( \@result, \@pwuid, 'getpwuid from task' );
+   }
 
    {
       my $result;

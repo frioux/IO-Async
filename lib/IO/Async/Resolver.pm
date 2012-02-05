@@ -11,6 +11,8 @@ use base qw( IO::Async::Function );
 
 our $VERSION = '0.51';
 
+use CPS::Future;
+
 use Socket 1.93 qw(
    AI_NUMERICHOST AI_PASSIVE
    NI_NUMERICHOST NI_NUMERICSERV NI_DGRAM
@@ -182,19 +184,33 @@ sub resolve
 
    exists $METHODS{$type} or croak "Expected 'type' to be an existing resolver method, got '$type'";
 
-   my $on_resolved = $args{on_resolved};
-   ref $on_resolved or croak "Expected 'on_resolved' to be a reference";
+   my $task = CPS::Future->new;
 
-   my $on_error = $args{on_error};
-   ref $on_error or croak "Expected 'on_error' to be a reference";
+   if( my $on_resolved = $args{on_resolved} ) {
+      ref $on_resolved or croak "Expected 'on_resolved' to be a reference";
+      $task->on_done( $on_resolved );
+   }
+   elsif( !defined wantarray ) {
+      croak "Expected 'on_resolved' or to return a Task";
+   }
+
+   if( my $on_error = $args{on_error} ) {
+      ref $on_error or croak "Expected 'on_error' to be a reference";
+      $task->on_fail( $on_error );
+   }
+   elsif( !defined wantarray ) {
+      croak "Expected 'on_error' or to return a Task";
+   }
 
    my $timeout = $args{timeout} || 10;
 
    $self->call(
       args      => [ $type, $timeout, @{$args{data}} ],
-      on_return => $on_resolved,
-      on_error  => $on_error,
+      on_return => sub { $task->done( @_ ) },
+      on_error  => sub { $task->fail( @_ ) },
    );
+
+   return $task;
 }
 
 =head2 $resolver->getaddrinfo( %args )
