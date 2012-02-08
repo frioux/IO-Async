@@ -324,6 +324,23 @@ my ( $testerr, $testhost, $testserv ) = getnameinfo( $testaddr );
 }
 
 {
+   my $task = $resolver->getnameinfo(
+      addr => $testaddr,
+   );
+
+   $loop->wait_for( $task );
+
+   if( $testerr ) {
+      is( $task->failure, "$testerr\n", '$resolver->getnameinfo - error message from Task' );
+   }
+   else {
+      my @got = $task->get;
+
+      is_deeply( \@got, [ $testhost, $testserv ], '$resolver->getnameinfo - resolved names from Task' );
+   }
+}
+
+{
    my $result;
 
    $resolver->getnameinfo(
@@ -334,4 +351,13 @@ my ( $testerr, $testhost, $testserv ) = getnameinfo( $testaddr );
    );
 
    is_deeply( $result, [ resolved => "127.0.0.1", 80 ], '$resolver->getnameinfo with numeric is synchronous' );
+}
+
+{
+   my $task = $resolver->getnameinfo(
+      addr    => $testaddr,
+      numeric => 1,
+   );
+
+   is_deeply( [ $task->get ], [ "127.0.0.1", 80 ], '$resolver->getnameinfo with numeric is synchronous for Task' );
 }

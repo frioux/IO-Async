@@ -402,8 +402,16 @@ sub getnameinfo
    my $self = shift;
    my %args = @_;
 
-   my $on_resolved = $args{on_resolved};
-   ref $on_resolved or croak "Expected 'on_resolved' to be a reference";
+   $args{on_resolved} or defined wantarray or
+      croak "Expected 'on_resolved' or to return a Task";
+
+   $args{on_error} or defined wantarray or
+      croak "Expected 'on_error' or to return a Task";
+
+   my $task = CPS::Future->new;
+
+   $task->on_done( $args{on_resolved} ) if $args{on_resolved};
+   $task->on_fail( $args{on_error} )    if $args{on_error};
 
    my $flags = $args{flags} || 0;
 
@@ -417,23 +425,27 @@ sub getnameinfo
       # This is a numeric-only lookup that can be done synchronously
       my ( $err, $host, $service ) = _getnameinfo( $args{addr}, $flags );
       if( $err ) {
-         $args{on_error}->( "$err\n" );
+         $task->fail( "$err\n" );
       }
       else {
-         $on_resolved->( $host, $service );
+         $task->done( $host, $service );
       }
-      return;
+      return $task;
    }
 
-   return $self->resolve(
+   $self->resolve(
       type    => "getnameinfo",
       data    => [ $args{addr}, $flags ],
       timeout => $args{timeout},
       on_resolved => sub {
-         $on_resolved->( @{ $_[0] } ); # unpack the ARRAY ref
+         $task->done( @{ $_[0] } ); # unpack the ARRAY ref
       },
-      on_error    => $args{on_error},
+      on_error    => sub {
+         $task->fail( @_ );
+      },
    );
+
+   return $task;
 }
 
 =head1 FUNCTIONS
