@@ -282,6 +282,12 @@ sub getaddrinfo
    my $self = shift;
    my %args = @_;
 
+   $args{on_resolved} or defined wantarray or
+      croak "Expected 'on_resolved' or to return a Task";
+
+   $args{on_error} or defined wantarray or
+      croak "Expected 'on_error' or to return a Task";
+
    my $host    = $args{host}    || "";
    my $service = $args{service} || "";
    my $flags   = $args{flags}   || 0;
@@ -309,19 +315,23 @@ sub getaddrinfo
        );
 
        if( !$err ) {
-          $args{on_resolved}->( @results );
-          return;
+          my $task = CPS::Future->new;
+          $task->on_done( $args{on_resolved} ) if $args{on_resolved};
+          $task->done( @results );
+          return $task;
        }
        elsif( $err == EAI_NONAME ) {
           # fallthrough to async case
        }
        else {
-          $args{on_error}->( "$err\n" );
-          return;
+          my $task = CPS::Future->new;
+          $task->on_fail( $args{on_error} ) if $args{on_error};
+          $task->fail( "$err\n" );
+          return $task;
        }
    }
 
-   $self->resolve(
+   return $self->resolve(
       type    => "getaddrinfo_hash",
       data    => [
          host    => $host,
@@ -415,7 +425,7 @@ sub getnameinfo
       return;
    }
 
-   $self->resolve(
+   return $self->resolve(
       type    => "getnameinfo",
       data    => [ $args{addr}, $flags ],
       timeout => $args{timeout},

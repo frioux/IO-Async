@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 21;
+use Test::More tests => 25;
 
 use Socket 1.93 qw( 
    AF_INET SOCK_STREAM INADDR_LOOPBACK AI_PASSIVE
@@ -213,6 +213,28 @@ my ( $localhost_err, @localhost_addrs ) = getaddrinfo( "localhost", "www", { fam
 }
 
 {
+   my $task = $resolver->getaddrinfo(
+      host     => "localhost",
+      service  => "www",
+      family   => "inet",
+      socktype => "stream",
+   );
+
+   isa_ok( $task, "CPS::Future", '$task for $resolver->getaddrinfo' );
+
+   $loop->wait_for( $task );
+
+   if( $localhost_err ) {
+      is( $task->failure, "$localhost_err\n", '$resolver->getaddrinfo - error message' );
+   }
+   else {
+      my @got = $task->get;
+
+      is_deeply( \@got, \@localhost_addrs, '$resolver->getaddrinfo - resolved addresses' );
+   }
+}
+
+{
    my ( $lo_err, @lo_addrs ) = getaddrinfo( "127.0.0.1", "80", { socktype => SOCK_STREAM } );
 
    my $result;
@@ -257,6 +279,24 @@ my ( $localhost_err, @localhost_addrs ) = getaddrinfo( "localhost", "www", { fam
 
       is_deeply( \@got, \@passive_addrs, '$resolver->getaddrinfo passive - resolved addresses' );
    }
+}
+
+{
+   my ( $lo_err, @lo_addrs ) = getaddrinfo( "127.0.0.1", "80", { socktype => SOCK_STREAM } );
+
+   my $task = $resolver->getaddrinfo(
+      host     => "127.0.0.1",
+      service  => "80",
+      socktype => SOCK_STREAM,
+   );
+
+   isa_ok( $task, "CPS::Future", '$task for $resolver->getaddrinfo numerical' );
+
+   $loop->wait_for( $task );
+
+   my @got = $task->get;
+
+   is_deeply( \@got, \@lo_addrs, '$resolver->getaddrinfo resolved addresses synchronously' );
 }
 
 my $testaddr = pack_sockaddr_in( 80, INADDR_LOOPBACK );
