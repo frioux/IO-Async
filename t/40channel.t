@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 8;
+use Test::More tests => 11;
 use Test::Identity;
 
 use IO::Async::Channel;
@@ -102,4 +102,45 @@ testing_loop( $loop );
 
    wait_for { $recv_eof };
    is( $recv_eof, 1, 'Async mode channel can on_eof' );
+}
+
+# sync->async late ->recv
+{
+   my ( $pipe_rd, $pipe_wr ) = $loop->pipepair;
+
+   my $channel_rd = IO::Async::Channel->new;
+   $channel_rd->setup_async_mode(
+      stream => my $stream_rd = IO::Async::Stream->new( read_handle => $pipe_rd ),
+   );
+
+   $loop->add( $stream_rd );
+
+   my $channel_wr = IO::Async::Channel->new;
+   $channel_wr->setup_sync_mode( $pipe_wr );
+
+   $channel_wr->send( [ data => "by sync" ] );
+
+   my $recved;
+   $channel_rd->recv(
+      on_recv => sub {
+         identical( $_[0], $channel_rd, 'Channel passed to ->recv on_recv' );
+         $recved = $_[1];
+      },
+      on_eof => sub { die "Test failed early" },
+   );
+
+   wait_for { $recved };
+
+   is_deeply( $recved, [ data => "by sync" ], 'Async mode channel can ->recv on_recv' );
+
+   $channel_wr->close;
+
+   my $recv_eof;
+   $channel_rd->recv(
+      on_recv => sub { die "Channel recv'ed when not expecting" },
+      on_eof  => sub { $recv_eof++ },
+   );
+
+   wait_for { $recv_eof };
+   is( $recv_eof, 1, 'Async mode channel can ->recv on_eof' );
 }

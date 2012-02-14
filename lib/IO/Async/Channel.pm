@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2011 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2011-2012 -- leonerd@leonerd.org.uk
 
 package IO::Async::Channel;
 
@@ -44,6 +44,15 @@ sub send_frozen
    return $self->_send_async( $bytes ) if $self->{mode} eq "async";
 }
 
+sub recv
+{
+   my $self = shift;
+
+   defined $self->{mode} or die "Cannot ->recv without being set up";
+
+   return $self->_recv_sync( @_ )  if $self->{mode} eq "sync";
+   return $self->_recv_async( @_ ) if $self->{mode} eq "async";
+}
 sub close
 {
    my $self = shift;
@@ -79,11 +88,9 @@ sub _read_exactly
    return $_[2];
 }
 
-sub recv
+sub _recv_sync
 {
    my $self = shift;
-
-   $self->{mode} eq "sync" or die "Needs to be in synchronous mode";
 
    my $n = _read_exactly( $self->{fh}, my $lenbuffer, 4 );
    defined $n or die "Cannot read - $!";
@@ -119,9 +126,19 @@ sub setup_async_mode
    my $stream = delete $args{stream} or croak "Expected 'stream'";
 
    if( my $on_recv = delete $args{on_recv} ) {
-      $stream->configure( on_read => $self->_capture_weakself( '_on_stream_read' ) );
       $self->{on_recv} = $on_recv;
       $self->{on_eof} = delete $args{on_eof};
+   }
+   else {
+      $self->{on_result_queue} = \my @on_result_queue;
+      $self->{on_recv} = sub {
+         my ( $self, $result ) = @_;
+         (shift @on_result_queue)->( $self, recv => $result );
+      };
+      $self->{on_eof} = sub {
+         my ( $self ) = @_;
+         (shift @on_result_queue)->( $self, eof => );
+      };
    }
 
    keys %args and croak "Unrecognised keys for setup_async_mode: " . join( ", ", keys %args );
@@ -129,7 +146,10 @@ sub setup_async_mode
    $self->{stream} = $stream;
    $self->{mode} = "async";
 
-   $stream->configure( autoflush => 1 );
+   $stream->configure(
+      autoflush => 1,
+      on_read   => $self->_capture_weakself( '_on_stream_read' )
+   );
 }
 
 sub _send_async
@@ -137,6 +157,24 @@ sub _send_async
    my $self = shift;
    my ( $bytes ) = @_;
    $self->{stream}->write( $bytes );
+}
+
+sub _recv_async
+{
+   my $self = shift;
+   my %args = @_;
+   my $on_recv = $args{on_recv};
+   my $on_eof  = $args{on_eof};
+
+   push @{ $self->{on_result_queue} }, sub {
+      my ( $self, $type, $result ) = @_;
+      if( $type eq "recv" ) {
+         $on_recv->( $self, $result );
+      }
+      else {
+         $on_eof->( $self );
+      }
+   }
 }
 
 sub _close_async
