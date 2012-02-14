@@ -137,7 +137,9 @@ sub setup_async_mode
       };
       $self->{on_eof} = sub {
          my ( $self ) = @_;
-         (shift @on_result_queue)->( $self, eof => );
+         while( @on_result_queue ) {
+            (shift @on_result_queue)->( $self, eof => );
+         }
       };
    }
 
