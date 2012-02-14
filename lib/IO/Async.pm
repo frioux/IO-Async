@@ -37,7 +37,7 @@ C<IO::Async> - Asynchronous event-driven programming
           on_read => sub {
              my ( $self, $buffref, $eof ) = @_;
 
-             while( $buffref =~ s/^(.*\n)// ) {
+             while( $$buffref =~ s/^(.*\n)// ) {
                 print "Received a line $1";
              }
 
