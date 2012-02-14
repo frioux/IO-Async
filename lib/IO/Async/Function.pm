@@ -415,10 +415,6 @@ sub _new_worker
          my $self = shift or return;
          my ( $worker ) = @_;
 
-         if( @{ $worker->{on_result_queue} } ) {
-            print STDERR "TODO: on_result_queue to be flushed\n";
-         }
-
          $self->_new_worker if $self->workers < $self->{min_workers};
 
          $self->_dispatch_pending;
@@ -511,7 +507,6 @@ sub new
       fd4 => { via => "pipe_read" },
    );
 
-   $worker->{on_result_queue} = \my @on_result_queue;
    $worker->{arg_channel} = $arg_channel;
    $worker->{ret_channel} = $ret_channel;
 
@@ -521,15 +516,6 @@ sub new
 
    $ret_channel->setup_async_mode(
       stream => $worker->fd(4),
-      on_recv => sub {
-         my ( undef, $result ) = @_;
-
-         (shift @on_result_queue)->( @$result );
-      },
-      on_eof => sub {
-         my $on_result = shift @on_result_queue;
-         $on_result->( "eof" ) if $on_result;
-      }
    );
 
    return $worker;
@@ -562,32 +548,6 @@ sub call
    my $worker = shift;
    my ( $type, $args, $on_result ) = @_;
 
-   push @{ $worker->{on_result_queue} }, $worker->_capture_weakself( sub {
-      my $worker = shift;
-      my $type = shift;
-
-      $worker->{busy} = 0;
-
-      my $function = $worker->parent;
-
-      if( $type eq "eof" ) {
-         $on_result->( error => "closed" );
-         $worker->stop;
-      }
-      elsif( $type eq "r" ) {
-         $on_result->( return => @_ );
-      }
-      elsif( $type eq "e" ) {
-         $on_result->( error => @_ );
-         $worker->stop if $worker->{exit_on_die};
-      }
-      else {
-         die "Unrecognised type from worker - $type\n";
-      }
-
-      $function->_dispatch_pending if $function;
-   } );
-
    if( $type eq "args" ) {
       $worker->{arg_channel}->send( $args );
    }
@@ -597,6 +557,42 @@ sub call
    else {
       die "TODO: unsure $type\n";
    }
+
+   $worker->{ret_channel}->recv(
+      on_recv => $worker->_capture_weakself( sub {
+         my ( $worker, $channel, $result ) = @_;
+         my ( $type, @values ) = @$result;
+
+         $worker->{busy} = 0;
+
+         my $function = $worker->parent;
+
+         if( $type eq "r" ) {
+            $on_result->( return => @values );
+         }
+         elsif( $type eq "e" ) {
+            $on_result->( error => @values );
+            $worker->stop if $worker->{exit_on_die};
+         }
+         else {
+            die "Unrecognised type from worker - $type\n";
+         }
+
+         $function->_dispatch_pending if $function;
+      } ),
+      on_eof => $worker->_capture_weakself( sub {
+         my ( $worker, $channel ) = @_;
+
+         $worker->{busy} = 0;
+
+         my $function = $worker->parent;
+
+         $on_result->( error => "closed" );
+         $worker->stop;
+
+         $function->_dispatch_pending if $function;
+      } ),
+   );
 
    $worker->{busy} = 1;
 }
