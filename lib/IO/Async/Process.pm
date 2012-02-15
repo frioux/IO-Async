@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2011 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2011-2012 -- leonerd@leonerd.org.uk
 
 package IO::Async::Process;
 
@@ -490,7 +490,8 @@ sub _add_to_loop
    my $is_code = defined $self->{code};
 
    $mergepoint->close(
-      on_finished => sub {
+      on_finished => $self->_capture_weakself( sub {
+         my $self = shift or return;
          my %items = @_;
 
          $self->{exitcode} = $exitcode;
@@ -509,7 +510,7 @@ sub _add_to_loop
          }
 
          $self->remove_from_parent;
-      },
+      } ),
    );
 }
 

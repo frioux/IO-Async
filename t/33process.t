@@ -35,8 +35,7 @@ testing_loop( $loop );
 
    $loop->add( $process );
 
-   # One extra ref exists in the Process's MergePoint
-   is_refcount( $process, 3, '$process has refcount 3 after $loop->add' );
+   is_refcount( $process, 2, '$process has refcount 2 after $loop->add' );
 
    my $pid = $process->pid;
 
@@ -93,7 +92,7 @@ testing_loop( $loop );
 
    $loop->add( $process );
 
-   is_refcount( $process, 3, '$process has refcount 3 after $loop->add' );
+   is_refcount( $process, 2, '$process has refcount 2 after $loop->add' );
 
    wait_for { defined $exitcode };
 
