@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 65;
+use Test::More tests => 69;
 
 use IO::Async::Process;
 
@@ -174,6 +174,25 @@ testing_loop( $loop );
    is( $process->exitstatus, 0, '$process->exitstatus after perl STDIN->STDOUT' );
 
    is( $stdout, "SOME DATA\n", '$stdout after perl STDIN->STDOUT' );
+}
+
+{
+   my $process = IO::Async::Process->new(
+      command => [ $^X, "-e", 'exit 4' ],
+      stdin   => { via => "pipe_write" },
+      on_finish => sub { },
+   );
+
+   isa_ok( $process->stdin, "IO::Async::Stream", '$process->stdin' );
+
+   $loop->add( $process );
+
+   ok( defined $process->stdin->write_handle, '$process->stdin has write_handle for perl STDIN no-wait close' );
+
+   wait_for { !$process->is_running };
+
+   ok( $process->is_exited,     '$process->is_exited after perl STDIN no-wait close' );
+   is( $process->exitstatus, 4, '$process->exitstatus after perl STDIN no-wait close' );
 }
 
 {

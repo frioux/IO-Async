@@ -173,7 +173,8 @@ from the other.
 =item pipe_write
 
 The child will be given the reading end of a C<pipe(2)>; the parent may write
-to the other.
+to the other. Since an EOF condition of this kind of handle cannot reliably be
+detected, C<on_finish> will not wait for this type of pipe to be closed.
 
 =item pipe_rdwr
 
@@ -389,6 +390,7 @@ sub _prepare_fds
       my $handle = $self->fd( $fd );
 
       my $key = $fd eq "io" ? "stdio" : "fd$fd";
+      my $write_only;
 
       if( $via == FD_VIA_PIPEREAD ) {
          my ( $myfd, $childfd ) = $loop->pipepair or croak "Unable to pipe() - $!";
@@ -400,6 +402,7 @@ sub _prepare_fds
       }
       elsif( $via == FD_VIA_PIPEWRITE ) {
          my ( $childfd, $myfd ) = $loop->pipepair or croak "Unable to pipe() - $!";
+         $write_only++;
 
          $handle->configure( write_handle => $myfd );
 
@@ -436,12 +439,14 @@ sub _prepare_fds
          croak "Unsure what to do with fd_via==$via";
       }
 
-      $mergepoint->needs( $key );
-      $handle->configure(
-         on_closed => sub {
-            $mergepoint->done( $key );
-         },
-      );
+      unless( $write_only ) {
+         $mergepoint->needs( $key );
+         $handle->configure(
+            on_closed => sub {
+               $mergepoint->done( $key );
+            },
+         );
+      }
 
       $self->add_child( $handle );
    }
