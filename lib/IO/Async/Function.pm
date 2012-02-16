@@ -469,7 +469,7 @@ sub _dispatch_pending
 package # hide from indexer
    IO::Async::Function::Worker;
 
-use base qw( IO::Async::Process );
+use base qw( IO::Async::Routine );
 
 use IO::Async::Channel;
 
@@ -478,16 +478,11 @@ sub new
    my $class = shift;
    my %params = @_;
 
-   # Use fd3/fd4 for channels, so as to leave STDIN/STDOUT untouched
-
    my $arg_channel = IO::Async::Channel->new;
    my $ret_channel = IO::Async::Channel->new;
 
    my $code = delete $params{code};
    $params{code} = sub {
-      $arg_channel->setup_sync_mode( IO::Handle->new_from_fd( 3, "<" ) );
-      $ret_channel->setup_sync_mode( IO::Handle->new_from_fd( 4, ">" ) );
-
       while( my $args = $arg_channel->recv ) {
          my @ret;
          my $ok = eval { @ret = $code->( @$args ); 1 };
@@ -503,20 +498,12 @@ sub new
 
    my $worker = $class->SUPER::new(
       %params,
-      fd3 => { via => "pipe_write" },
-      fd4 => { via => "pipe_read" },
+      channels_in  => [ $arg_channel ],
+      channels_out => [ $ret_channel ],
    );
 
    $worker->{arg_channel} = $arg_channel;
    $worker->{ret_channel} = $ret_channel;
-
-   $arg_channel->setup_async_mode(
-      stream => $worker->fd(3),
-   );
-
-   $ret_channel->setup_async_mode(
-      stream => $worker->fd(4),
-   );
 
    return $worker;
 }
