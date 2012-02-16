@@ -481,6 +481,8 @@ sub new
    my $arg_channel = IO::Async::Channel->new;
    my $ret_channel = IO::Async::Channel->new;
 
+   my $exit_on_die = delete $params{exit_on_die};
+
    my $code = delete $params{code};
    $params{code} = sub {
       while( my $args = $arg_channel->recv ) {
@@ -504,20 +506,9 @@ sub new
 
    $worker->{arg_channel} = $arg_channel;
    $worker->{ret_channel} = $ret_channel;
+   $worker->{exit_on_die} = $exit_on_die;
 
    return $worker;
-}
-
-sub configure
-{
-   my $worker = shift;
-   my %params = @_;
-
-   foreach (qw( exit_on_die )) {
-      $worker->{$_} = delete $params{$_} if exists $params{$_};
-   }
-
-   $worker->SUPER::configure( %params );
 }
 
 sub stop
