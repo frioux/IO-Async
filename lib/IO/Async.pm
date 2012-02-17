@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2008-2011 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2008-2012 -- leonerd@leonerd.org.uk
 
 package IO::Async;
 
@@ -164,7 +164,7 @@ typical C<fork(2)>/C<exec(2)> style of starting child processes, and
 C<run_child> provide a method similar to perl's C<readpipe> (which is used
 to implement backticks C<``>).
 
-=head2 Asynchronous Functions
+=head2 Asynchronous Co-routines and Functions
 
 The C<IO::Async> framework generally provides mechanisms for multiplexing IO
 tasks between different handles, so there aren't many occasions when it is
@@ -187,7 +187,14 @@ no asynchronous version is supplied.
 For these cases, an instance of L<IO::Async::Function> can be used around
 a code block, to execute it in a worker child process or set of processes.
 The code in the sub-process runs isolated from the main program, communicating
-only by function call arguments and return values.
+only by function call arguments and return values. This can be used to solve
+problems involving state-less library functions.
+
+An L<IO::Async::Routine> object wraps a code block running in a separate
+process to form a kind of co-routine. Communication with it happens via
+L<IO::Async::Channel> objects. It can be used to solve any sort of problem
+involving keeping a possibly-stateful co-routine running alongside the rest of
+an asynchronous program.
 
 =head2 Networking
 

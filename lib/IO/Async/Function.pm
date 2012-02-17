@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2011 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2011-2012 -- leonerd@leonerd.org.uk
 
 package IO::Async::Function;
 
@@ -73,11 +73,8 @@ modifications to the state of the parent program. Therefore, all the data
 required to perform its task must be represented in the call arguments, and
 all of the result must be represented in the return values.
 
-The arguments and return values are passed to it over a file handle, using
-L<Storable>. This can cope with most kinds of Perl data, including plain
-numbers and strings, references to hashes or arrays, and self-referential or
-even cyclic data structures. Note however that passing C<CODE> references or
-IO handles is not supported.
+The Function object is implemented using an L<IO::Async::Routine> with two
+L<IO::Async::Channel> objects to pass calls into and results out from it.
 
 The C<IO::Async> framework generally provides mechanisms for multiplexing IO
 tasks between different handles, so there aren't many occasions when such an
@@ -98,6 +95,11 @@ no nonblocking or asynchronous version is supplied. This is used by
 C<IO::Async::Resolver>.
 
 =back
+
+This object is ideal for representing "pure" functions; that is, blocks of
+code which have no stateful effect on the process, and whose result depends
+only on the arguments passed in. For a more general co-routine ability, see
+also L<IO::Async::Routine>.
 
 =cut
 
