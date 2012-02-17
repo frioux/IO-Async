@@ -14,6 +14,56 @@ our $VERSION = '0.45';
 use Carp;
 use Storable qw( freeze thaw );
 
+=head1 NAME
+
+C<IO::Async::Channel> - pass values into or out from an L<IO::Async::Routine>
+
+=head1 DESCRIPTION
+
+A C<IO::Async::Channel> object allows Perl values to be passed into or out of
+an L<IO::Async::Routine>. It is intended to be used primarily with a Routine
+object rather than independently. For more detail and examples on how to use
+this object see also the documentation for L<IO::Async::Routine>.
+
+A Channel object is shared between the main process of the program and the
+process running within the Routine. In the main process it will be used in
+asynchronous mode, and in the Routine process it will be used in synchronous
+mode. In asynchronous mode all methods return immediately and use
+C<IO::Async>-style callback functions. In synchronous within the Routine
+process the methods block until they are ready and may be used for
+flow-control within the routine.
+
+The channel itself represents a FIFO of Perl reference values. New values may
+be put into the channel by the C<send> method in either mode. Values may be
+retrieved from it by the C<recv> method. Values inserted into the Channel are
+snapshot by the C<send> method. Any changes to referred variables will not be
+observed by the other end of the Channel after the C<send> method returns.
+
+Since the channel uses L<Storable> to serialise values to write over the
+communication filehandle only reference values may be passed. To pass a single
+scalar value, C<send> a SCALAR reference to it, and dereference the result of
+C<recv>.
+
+=cut
+
+=head1 CONSTRUCTOR
+
+=cut
+
+=head2 $channel = IO::Async::Channel->new
+
+Returns a new C<IO::Async::Channel> object. This object reference itself
+should be shared by both sides of a C<fork()>ed process. After C<fork()> the
+two C<setup_*> methods may be used to configure the object for operation on
+either end.
+
+While this object does in fact inherit from L<IO::Async::Notifier> for
+implementation reasons it is not intended that this object be used as a
+Notifier. The C<configure> method should not be called, and it should not be
+added to a Loop object.
+
+=cut
+
 sub new
 {
    my $class = shift;
@@ -21,6 +71,20 @@ sub new
       mode => undef,
    }, $class;
 }
+
+=head1 METHODS
+
+=cut
+
+=head2 $channel->send( $data )
+
+Pushes the data stored in the given Perl reference into the FIFO of the
+Channel, where it can be received by the other end. When called on a
+synchronous mode Channel this method may block if a C<write()> call on the
+underlying filehandle blocks. When called on an asynchronous mode channel this
+method will not block.
+
+=cut
 
 sub send
 {
@@ -30,6 +94,13 @@ sub send
    my $record = freeze $data;
    $self->send_frozen( $record );
 }
+
+=head2 $channel->send_frozen( $record )
+
+A variant of the C<send> method; this method pushes the byte record given.
+This should be the result of a call to C<Storable::freeze()>.
+
+=cut
 
 sub send_frozen
 {
@@ -44,6 +115,41 @@ sub send_frozen
    return $self->_send_async( $bytes ) if $self->{mode} eq "async";
 }
 
+=head2 $data = $channel->recv
+
+When called on a synchronous mode Channel this method will block until a Perl
+reference value is available from the other end and then return it. If the
+Channel is closed this method will return C<undef>. Since only references may
+be passed and all Perl references are true the truth of the result of this
+method can be used to detect that the channel is still open and has not yet
+been closed.
+
+=head2 $channel->recv( %args )
+
+When called on an asynchronous mode Channel this method appends a callback
+function to the receiver queue to handle the next Perl reference value that
+becomes available from the other end. Takes the following named arguments:
+
+=over 8
+
+=item on_recv => CODE
+
+Called when a new Perl reference value is available. Will be passed the
+Channel object and the reference data.
+
+ $on_recv->( $channel, $data )
+
+=item on_eof => CODE
+
+Called if the Channel was closed before a new value was ready. Will be passed
+the Channel object.
+
+ $on_eof->( $channel )
+
+=back
+
+=cut
+
 sub recv
 {
    my $self = shift;
@@ -53,6 +159,14 @@ sub recv
    return $self->_recv_sync( @_ )  if $self->{mode} eq "sync";
    return $self->_recv_async( @_ ) if $self->{mode} eq "async";
 }
+
+=head2 $channel->close
+
+Closes the channel. Causes a pending C<recv> on the other end to return undef
+or the queued C<on_eof> callbacks to be invoked.
+
+=cut
+
 sub close
 {
    my $self = shift;
@@ -61,6 +175,7 @@ sub close
    return $self->_close_async if $self->{mode} eq "async";
 }
 
+# Leave this undocumented for now
 sub setup_sync_mode
 {
    my $self = shift;
@@ -118,6 +233,7 @@ sub _close_sync
    $self->{fh}->close;
 }
 
+# Leave this undocumented for now
 sub setup_async_mode
 {
    my $self = shift;
@@ -206,5 +322,11 @@ sub _on_stream_read
 
    return 1;
 }
+
+=head1 AUTHOR
+
+Paul Evans <leonerd@leonerd.org.uk>
+
+=cut
 
 0x55AA;
