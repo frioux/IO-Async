@@ -31,6 +31,7 @@ testing_loop( $loop );
             $returns->send( \$ret );
          }
       },
+      on_finish => sub { },
    );
 
    isa_ok( $routine, "IO::Async::Routine", '$routine' );
@@ -77,6 +78,7 @@ testing_loop( $loop );
             $out2->send( \$result );
          }
       },
+      on_finish => sub { },
    );
 
    isa_ok( $routine, "IO::Async::Routine", '$routine' );

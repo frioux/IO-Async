@@ -462,6 +462,9 @@ sub _add_to_loop
    $self->{code} or $self->{command} or
       croak "Require either 'code' or 'command' in $self";
 
+   $self->can_event( "on_finish" ) or
+      croak "Expected either an on_finish callback or to be able to ->on_finish";
+
    my @setup;
    push @setup, @{ $self->{setup} } if $self->{setup};
 
