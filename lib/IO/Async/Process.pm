@@ -552,6 +552,20 @@ sub pid
    return $self->{pid};
 }
 
+=head2 $process->kill( $signal )
+
+Sends a signal to the process
+
+=cut
+
+sub kill
+{
+   my $self = shift;
+   my ( $signal ) = @_;
+
+   kill $signal, $self->pid or croak "Cannot kill() - $!";
+}
+
 =head2 $running = $process->is_running
 
 Returns true if the Process has been started, and has not yet finished.
