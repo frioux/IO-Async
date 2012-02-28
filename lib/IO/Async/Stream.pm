@@ -59,30 +59,9 @@ filehandle
     }
  );
 
+ $loop->add( $stream );
+
  $stream->write( "An initial line here\n" );
-
-Or
-
- my $record_stream = IO::Async::Stream->new(
-    handle => ...,
-
-    on_read => sub {
-       my ( $self, $buffref, $eof ) = @_;
-
-       if( length $$buffref >= 16 ) {
-          my $record = substr( $$buffref, 0, 16, "" );
-          print "Received a 16-byte record: $record\n";
-
-          return 1;
-       }
-
-       if( $eof and length $$buffref ) {
-          print "EOF: a partial record still exists\n";
-       }
-
-       return 0;
-    }
- );
 
 =head1 DESCRIPTION
 
@@ -701,6 +680,61 @@ should try again in case more lines exist in the buffer.
 
 For implementing real network protocols that are based on lines of text it may
 be more appropriate to use a subclass of L<IO::Async::Protocol::LineStream>.
+
+=head2 Reading binary data
+
+This C<on_read> method accepts incoming records in 16-byte chunks, printing
+each one.
+
+ sub on_read
+ {
+    my ( $self, $buffref, $eof ) = @_;
+
+    if( length $$buffref >= 16 ) {
+       my $record = substr( $$buffref, 0, 16, "" );
+       print "Received a 16-byte record: $record\n";
+
+       return 1;
+    }
+
+    if( $eof and length $$buffref ) {
+       print "EOF: a partial record still exists\n";
+    }
+
+    return 0;
+ }
+
+The 4-argument form of C<substr()> extracts the 16-byte record from the buffer
+and assigns it to the C<$record> variable, if there was enough data in the
+buffer to extract it.
+
+A lot of protocols use a fixed-size header, followed by a variable-sized body
+of data, whose size is given by one of the fields of the header. The following
+C<on_read> method extracts messages in such a protocol.
+
+ sub on_read
+ {
+    my ( $self, $buffref, $eof ) = @_;
+
+    return 0 unless length $$buffref >= 8; # "N n n" consumes 8 bytes
+
+    my ( $len, $x, $y ) = unpack $$buffref, "N n n";
+
+    return 0 unless length $$buffref >= 8 + $len;
+
+    substr( $$buffref, 0, 8, "" );
+    my $data = substr( $$buffref, 0, $len, "" );
+
+    print "A record with values x=$x y=$y\n";
+
+    return 1;
+ }
+
+In this example, the header is C<unpack()>ed first, to extract the body
+length, and then the body is extracted. If the buffer does not have enough
+data yet for a complete message then C<0> is returned, and the buffer is left
+unmodified for next time. Only when there are enough bytes in total does it
+use C<substr()> to remove them.
 
 =head2 Dynamic replacement of C<on_read>
 
