@@ -207,7 +207,7 @@ wrapped by an C<IO::Async::Stream> using this C<on_read> callback function.
 
 =item into => SCALAR
 
-The child will be given the reading end of a pipe. The referenced scalar will
+The child will be given the writing end of a pipe. The referenced scalar will
 be filled by data read from the child process. This data may not be available
 until the pipe has been closed by the child.
 
@@ -719,6 +719,117 @@ sub stdin  { shift->fd( 0 ) }
 sub stdout { shift->fd( 1 ) }
 sub stderr { shift->fd( 2 ) }
 sub stdio  { shift->fd( 'io' ) }
+
+=head1 EXAMPLES
+
+=head2 Capturing the STDOUT stream of a process
+
+By configuring the C<stdout> filehandle of the process using the C<into> key,
+data written by the process can be captured.
+
+ my $stdout;
+ my $process = IO::Async::Process->new(
+    command => [ "writing-program", "arguments" ],
+    stdout => { into => \$stdout },
+    on_finish => sub {
+       print "The process has finished, and wrote:\n";
+       print $stdout;
+    }
+ );
+
+ $loop->add( $process );
+
+Note that until C<on_finish> is invoked, no guarantees are made about how much
+of the data actually written by the process is yet in the C<$stdout> scalar.
+
+See also the C<run_child> method of L<IO::Async::Loop>.
+
+To handle data more interactively as it arrives, the C<on_read> key can
+instead be used, to provide a callback function to invoke whenever more data
+is available from the process.
+
+ my $process = IO::Async::Process->new(
+    command => [ "writing-program", "arguments" ],
+    stdout => {
+       on_read => sub {
+          my ( $stream, $buffref ) = @_;
+          while( $$buffref =~ s/^(.*)\n// ) {
+             print "The process wrote a line: $1\n";
+          }
+
+          return 0;
+       },
+    },
+    on_finish => sub {
+       print "The process has finished\n";
+    }
+ );
+
+ $loop->add( $process );
+
+If the code to handle data read from the process isn't available yet when
+the object is constructed, it can be supplied later by using the C<configure>
+method on the C<stdout> filestream at some point before it gets added to the
+Loop. In this case, C<stdin> should be configured using C<pipe_read> in the
+C<via> key.
+
+ my $process = IO::Async::Process->new(
+    command => [ "writing-program", "arguments" ],
+    stdout => { via => "pipe_read" },
+    on_finish => sub {
+       print "The process has finished\n";
+    }
+ );
+
+ $process->stdout->configure(
+    on_read => sub {
+       my ( $stream, $buffref ) = @_;
+       while( $$buffref =~ s/^(.*)\n// ) {
+          print "The process wrote a line: $1\n";
+       }
+
+       return 0;
+    },
+ );
+
+ $loop->add( $process );
+
+=head2 Sending data to STDIN of a process
+
+By configuring the C<stdin> filehandle of the process using the C<from> key,
+data can be written into the C<STDIN> stream of the process.
+
+ my $process = IO::Async::Process->new(
+    command => [ "reading-program", "arguments" ],
+    stdin => { from => "Here is the data to send\n" },
+    on_finish => sub { 
+       print "The process has finished\n";
+    }
+ );
+
+ $loop->add( $process );
+
+The data in this scalar will be written until it is all consumed, then the
+handle will be closed. This may be useful if the program waits for EOF on
+C<STDIN> before it exits.
+
+To have the ability to write more data into the process once it has started.
+the C<write> method on the C<stdin> stream can be used, when it is configured
+using the C<pipe_write> value for C<via>:
+
+ my $process = IO::Async::Process->new(
+    command => [ "reading-program", "arguments" ],
+    stdin => { via => "pipe_write" },
+    on_finish => sub { 
+       print "The process has finished\n";
+    }
+ );
+
+ $loop->add( $process );
+
+ $process->stdin->write( "Here is some more data\n" );
+
+=cut
 
 =head1 AUTHOR
 
