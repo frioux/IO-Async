@@ -237,16 +237,15 @@ constructor looks for OS-specific subclasses first.
 
 =item *
 
-Finish splitting the C<IO::Async::Function> logic into C<IO::Async::Channel>
-and C<IO::Async::Routine>. Re-implement the former atop the latter. Also
-consider some form of persistent object wrapper in the form of an
-C<IO::Async::Object>.
+Consider some form of persistent object wrapper in the form of an
+C<IO::Async::Object>, based on C<IO::Async::Routine>.
 
 =item *
 
 Build some sort of future-like system, possibly called C<IO::Async::Task> to
 represent one-shot events like name resolver lookups, socket connects, etc..
 Replace uses of C<Async::MergePoint> with it, removing a dependency.
+Use C<CPS::Future>.
 
 =item *
 
