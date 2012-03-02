@@ -1,5 +1,20 @@
 Revision history for IO-Async
 
+0.46    ADDITIONS:
+         * IO::Async::Routine + IO::Async::Channel
+         * IO::Async::Process->kill method
+
+        CHANGES:
+         * Use Socket 1.93 rather than dual-dependency logic on
+           Socket::GetAddrInfo
+         * Rewrote ::Function based on ::Routine and ::Channel
+         * Cleaner refcount behaviour in ::Process
+         * ::Process no longer waits for EOF condition on write-only pipes
+         * Don't unit-test the reading end of a pipe for HUP condition
+         * Documentation updates
+         * Removed documentation for long-since deprecated $loop->detach_child
+           and ->detach_code methods
+
 0.45    CHANGES:
          * Added Timer->is_expired predicate, remove_on_expire parameter
            (RT71767)
