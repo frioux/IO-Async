@@ -287,7 +287,7 @@ sub getaddrinfo
 
    # These address tests don't have to be perfect as if it fails we'll get
    # EAI_NONAME and just try it asynchronously anyway
-   if( ( $host =~ m/^[\d.]+$/ or $host =~ m/^[[:xdigit:]:]$/ ) and
+   if( ( $host =~ m/^[\d.]+$/ or $host =~ m/^[[:xdigit:]:]$/ or $host eq "" ) and
        $service =~ m/^\d+$/ ) {
 
        my ( $err, @results ) = _getaddrinfo( $host, $service,

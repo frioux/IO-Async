@@ -227,14 +227,12 @@ my ( $localhost_err, @localhost_addrs ) = getaddrinfo( "localhost", "www", { fam
       on_error    => sub { $result = [ 'error',    @_ ] },
    );
 
-   wait_for { $result };
-
    if( $passive_err ) {
-      is( $result->[0], "error", '$resolver->getaddrinfo passive - error' );
+      is( $result->[0], "error", '$resolver->getaddrinfo passive - error synchronously' );
       is_deeply( $result->[1], "$passive_err\n", '$resolver->getaddrinfo passive - error message' );
    }
    else {
-      is( $result->[0], "resolved", '$resolver->getaddrinfo passive - resolved' );
+      is( $result->[0], "resolved", '$resolver->getaddrinfo passive - resolved synchronously' );
 
       my @got = @{$result}[1..$#$result];
 
