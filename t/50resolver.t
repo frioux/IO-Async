@@ -4,9 +4,12 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 17;
+use Test::More tests => 19;
 
-use Socket 1.93 qw( AF_INET SOCK_STREAM pack_sockaddr_in INADDR_LOOPBACK getaddrinfo getnameinfo );
+use Socket 1.93 qw( 
+   AF_INET SOCK_STREAM INADDR_LOOPBACK AI_PASSIVE
+   pack_sockaddr_in getaddrinfo getnameinfo
+);
 
 use IO::Async::Loop::Poll;
 
@@ -208,6 +211,35 @@ my ( $localhost_err, @localhost_addrs ) = getaddrinfo( "localhost", "www", { fam
    my @got = @{$result}[1..$#$result];
 
    is_deeply( \@got, \@lo_addrs, '$resolver->getaddrinfo resolved addresses synchronously' );
+}
+
+{
+   my ( $passive_err, @passive_addrs ) = getaddrinfo( "", "3000", { socktype => SOCK_STREAM, family => AF_INET, flags => AI_PASSIVE } );
+
+   my $result;
+
+   $resolver->getaddrinfo(
+      family   => "inet",
+      service  => "3000",
+      socktype => "stream",
+      passive  => 1,
+      on_resolved => sub { $result = [ 'resolved', @_ ] },
+      on_error    => sub { $result = [ 'error',    @_ ] },
+   );
+
+   wait_for { $result };
+
+   if( $passive_err ) {
+      is( $result->[0], "error", '$resolver->getaddrinfo passive - error' );
+      is_deeply( $result->[1], "$passive_err\n", '$resolver->getaddrinfo passive - error message' );
+   }
+   else {
+      is( $result->[0], "resolved", '$resolver->getaddrinfo passive - resolved' );
+
+      my @got = @{$result}[1..$#$result];
+
+      is_deeply( \@got, \@passive_addrs, '$resolver->getaddrinfo passive - resolved addresses' );
+   }
 }
 
 my $testaddr = pack_sockaddr_in( 80, INADDR_LOOPBACK );

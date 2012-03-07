@@ -309,8 +309,12 @@ sub getaddrinfo
 
    $self->resolve(
       type    => "getaddrinfo_hash",
-      # I really want hash slices
-      data    => [ map { exists $args{$_} ? ( $_ => $args{$_} ) : () } qw( host service family socktype protocol flags ) ],
+      data    => [
+         host    => $host,
+         service => $service,
+         flags   => $flags,
+         map { exists $args{$_} ? ( $_ => $args{$_} ) : () } qw( family socktype protocol ),
+      ],
       timeout => $args{timeout},
       on_resolved => $args{on_resolved},
       on_error    => $args{on_error},
