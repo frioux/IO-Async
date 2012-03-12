@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 72;
+use Test::More tests => 71;
 use Test::Fatal;
 use Test::Refcount;
 use Test::Warn;
@@ -269,8 +269,6 @@ my $sub_writeready = 0;
    $loop->add( $handle );
 
    $handle->close_read;
-
-   is( $Srd2->syswrite( "Oops\n" ), undef, 'syswrite into EOF read handle' );
 
    wait_for { $writeready };
    is( $writeready, 1, '$writeready after ->close_read' );
