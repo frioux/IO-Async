@@ -8,7 +8,7 @@ package IO::Async::Function;
 use strict;
 use warnings;
 
-our $VERSION = '0.46';
+our $VERSION = '0.46_001';
 
 use base qw( IO::Async::Notifier );
 use IO::Async::Timer::Countdown;

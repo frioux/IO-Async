@@ -1,5 +1,13 @@
 Revision history for IO-Async
 
+0.46_001 BUGFIXES:
+         * Fix race condition in t/33process.t (RT75573)
+         * Ensure Timer->stop doesn't fail if the timer isn't running
+           (RT75571)
+         * Possibly-fix some cygwin test failures (RT71706)
+         * Ensure that 'passive' getaddrinfo hint is handled in both
+           synchronous and numeric cases
+
 0.46    ADDITIONS:
          * IO::Async::Routine + IO::Async::Channel
          * IO::Async::Process->kill method

@@ -8,7 +8,7 @@ package IO::Async::DetachedCode;
 use strict;
 use warnings;
 
-our $VERSION = '0.46';
+our $VERSION = '0.46_001';
 
 use Carp;
 
