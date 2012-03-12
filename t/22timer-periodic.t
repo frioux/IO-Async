@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 36;
+use Test::More tests => 37;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -75,6 +75,10 @@ testing_loop( $loop );
    $loop->loop_once( 1 * AUT );
 
    $timer->stop;
+
+   $timer->stop;
+
+   ok( 1, "Timer can be stopped a second time" );
 
    $loop->loop_once( 2 * AUT );
 

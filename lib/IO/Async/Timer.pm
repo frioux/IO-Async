@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2009-2011 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2009-2012 -- leonerd@leonerd.org.uk
 
 package IO::Async::Timer;
 
@@ -166,6 +166,8 @@ sub stop
       delete $self->{pending};
       return;
    }
+
+   return if !$self->is_running;
 
    my $loop = $self->loop or croak "Cannot stop a Timer that is not in a Loop";
 
