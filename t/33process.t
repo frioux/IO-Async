@@ -212,9 +212,11 @@ testing_loop( $loop );
    my $process = IO::Async::Process->new(
       code => sub {
          my $exitcode = 10;
-         $SIG{TERM} = sub { $exitcode = 20; die };
-         kill SIGUSR1 => $parentpid;
-         eval { <STDIN> }; # block
+         eval {
+            local $SIG{TERM} = sub { $exitcode = 20; die };
+            kill SIGUSR1 => $parentpid;
+            <STDIN>; # block on signal
+         };
          return $exitcode;
       },
       on_finish => sub { },
