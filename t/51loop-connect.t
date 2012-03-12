@@ -70,7 +70,15 @@ my $addr = $listensock->sockname;
 
 SKIP: {
    # Some OSes can't bind(2) locally to other addresses on 127./8
-   skip "Cannot bind to 127.0.0.2", 1 unless eval { IO::Socket::INET->new( LocalHost => "127.0.0.2", LocalPort => 0 ) };
+   skip "Cannot bind to 127.0.0.2", 1 unless eval { IO::Socket::INET->new(
+      LocalHost => "127.0.0.2", LocalPort => 0
+   ) };
+
+   # Some can bind(2) but then cannot connect() to 127.0.0.1 from it
+   skip "Cannot connect to 127.0.0.1 from 127.0.0.2", 1 unless eval { IO::Socket::INET->new(
+      LocalHost => "127.0.0.2", LocalPort => 0,
+      PeerHost  => $listensock->sockhost, PeerPort => $listensock->sockport,
+   ) };
 
    my $sock;
 
