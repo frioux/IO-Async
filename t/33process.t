@@ -215,7 +215,7 @@ testing_loop( $loop );
          eval {
             local $SIG{TERM} = sub { $exitcode = 20; die };
             kill SIGUSR1 => $parentpid;
-            <STDIN>; # block on signal
+            sleep 60; # block on signal
          };
          return $exitcode;
       },
