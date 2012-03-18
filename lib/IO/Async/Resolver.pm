@@ -280,6 +280,9 @@ sub getaddrinfo
    $args{family}   = _getfamilybyname( $args{family} )     if defined $args{family};
    $args{socktype} = _getsocktypebyname( $args{socktype} ) if defined $args{socktype};
 
+   # Clear any other existing but undefined hints
+   defined $args{$_} or delete $args{$_} for keys %args;
+
    # It's likely this will succeed with AI_NUMERICHOST if host contains only
    # [\d.] (IPv4) or [[:xdigit:]:] (IPv6)
    # Technically we should pass AI_NUMERICSERV but not all platforms support
@@ -534,6 +537,9 @@ register_resolver getaddrinfo_hash => sub {
 
    $args{family}   = _getfamilybyname( $args{family} )     if defined $args{family};
    $args{socktype} = _getsocktypebyname( $args{socktype} ) if defined $args{socktype};
+
+   # Clear any other existing but undefined hints
+   defined $args{$_} or delete $args{$_} for keys %args;
 
    my ( $err, @addrs ) = _getaddrinfo( $host, $service, \%args );
 
