@@ -3,10 +3,21 @@
 use strict;
 use warnings;
 
+use Getopt::Long;
+
 use IO::Async::Loop;
 use IO::Async::Listener;
 
 my $PORT = 12345;
+my $FAMILY;
+my $V6ONLY;
+
+GetOptions(
+   'port|p=i' => \$PORT,
+   '4'        => sub { $FAMILY = "inet" },
+   '6'        => sub { $FAMILY = "inet6" },
+   'v6only=i' => \$V6ONLY,
+) or exit 1;
 
 my $loop = IO::Async::Loop->new;
 
@@ -46,6 +57,8 @@ $loop->add( $listener );
 $listener->listen(
    service  => $PORT,
    socktype => 'stream',
+   family   => $FAMILY,
+   v6only   => $V6ONLY,
 
    on_resolve_error => sub { die "Cannot resolve - $_[0]\n"; },
    on_listen_error  => sub { die "Cannot listen\n"; },

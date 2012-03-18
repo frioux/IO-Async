@@ -15,7 +15,11 @@ use IO::Async::Handle;
 
 use POSIX qw( EAGAIN );
 
-use Socket qw( sockaddr_family SOL_SOCKET SO_ACCEPTCONN SO_REUSEADDR SO_TYPE );
+use Socket qw(
+   sockaddr_family
+   SOL_SOCKET SO_ACCEPTCONN SO_REUSEADDR SO_TYPE
+   AF_INET6 IPPROTO_IPV6 IPV6_V6ONLY
+);
 
 use Carp;
 
@@ -389,6 +393,13 @@ then 3 will be given instead.
 Optional. If true or not supplied then the C<SO_REUSEADDR> socket option will
 be set. To prevent this, pass a false value such as 0.
 
+=item v6only => BOOL
+
+Optional. If defined, sets or clears the C<IPV6_V6ONLY> socket option on
+C<PF_INET6> sockets. This option disables the ability of C<PF_INET6> socket to
+accept connections from C<AF_INET> addresses. Not all operating systems allow
+this option to be disabled.
+
 =back
 
 As a convenience, it also supports a C<handle> argument, which is passed
@@ -430,6 +441,8 @@ sub listen
       my $reuseaddr = 1;
       $reuseaddr = 0 if defined $params{reuseaddr} and not $params{reuseaddr};
 
+      my $v6only = $params{v6only};
+
       my ( $listenerr, $binderr, $sockopterr, $socketerr );
 
       foreach my $addr ( @$addrlist ) {
@@ -439,27 +452,35 @@ sub listen
 
          unless( $sock = $loop->socket( $family, $socktype, $proto ) ) {
             $socketerr = $!;
-            $on_fail->( "socket", $family, $socktype, $proto, $! ) if $on_fail;
+            $on_fail->( socket => $family, $socktype, $proto, $! ) if $on_fail;
             next;
          }
 
          if( $reuseaddr ) {
             unless( $sock->sockopt( SO_REUSEADDR, 1 ) ) {
                $sockopterr = $!;
-               $on_fail->( "sockopt", $sock, SO_REUSEADDR, 1, $! ) if $on_fail;
+               $on_fail->( sockopt => $sock, SO_REUSEADDR, 1, $! ) if $on_fail;
+               next;
+            }
+         }
+
+         if( defined $v6only and $family == AF_INET6 ) {
+            unless( $sock->setsockopt( IPPROTO_IPV6, IPV6_V6ONLY, $v6only ) ) {
+               $sockopterr = $!;
+               $on_fail->( sockopt => $sock, IPV6_V6ONLY, $v6only, $! ) if $on_fail;
                next;
             }
          }
 
          unless( $sock->bind( $address ) ) {
             $binderr = $!;
-            $on_fail->( "bind", $sock, $address, $! ) if $on_fail;
+            $on_fail->( bind => $sock, $address, $! ) if $on_fail;
             next;
          }
 
          unless( $sock->listen( $queuesize ) ) {
             $listenerr = $!;
-            $on_fail->( "listen", $sock, $queuesize, $! ) if $on_fail;
+            $on_fail->( listen => $sock, $queuesize, $! ) if $on_fail;
             next;
          }
 
