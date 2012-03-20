@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 25;
+use Test::More tests => 27;
 
 use Socket 1.93 qw( 
    AF_INET SOCK_STREAM INADDR_LOOPBACK AI_PASSIVE
