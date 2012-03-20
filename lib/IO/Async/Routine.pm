@@ -12,6 +12,8 @@ our $VERSION = '0.46_001';
 
 use base qw( IO::Async::Process );
 
+use IO::Async::Stream;
+
 =head1 NAME
 
 C<IO::Async::Routine> - execute code in an independent sub-process
@@ -118,38 +120,38 @@ sub _add_to_loop
    my $self = shift;
    my ( $loop ) = @_;
 
-   # Assign fd numbers to channels
-   my %fds;
+   my @setup;
    my @channels_in;
    my @channels_out;
-   {
-      # Start at fd3 so as not to upset STDIN/OUT/ERR
-      my $fd = 3;
 
-      foreach my $ch ( @{ $self->{channels_in} || [] } ) {
-         $fds{"fd" . $fd} = { via => "pipe_write" };
-         push @channels_in, [ $ch, $fd++ ];
-      }
+   foreach my $ch ( @{ $self->{channels_in} || [] } ) {
+      my ( $rd, $wr ) = $loop->pipepair;
+      push @setup, $rd => "keep";
+      push @channels_in, [ $ch, $wr, $rd ];
+   }
 
-      foreach my $ch ( @{ $self->{channels_out} || [] } ) {
-         $fds{"fd" . $fd} = { via => "pipe_read" };
-         push @channels_out, [ $ch, $fd++ ];
-      }
+   foreach my $ch ( @{ $self->{channels_out} || [] } ) {
+      my ( $rd, $wr ) = $loop->pipepair;
+      push @setup, $wr => "keep";
+      push @channels_out, [ $ch, $rd, $wr ];
    }
 
    # TODO: This breaks encap.
-   my $code = delete $self->{code};
+   my $code  = delete $self->{code};
+   my $setup = delete $self->{setup};
+
+   push @setup, @$setup if $setup;
 
    $self->configure(
-      %fds,
+      setup => \@setup,
       code => sub {
          foreach ( @channels_in ) {
-            my ( $ch, $fd ) = @$_;
-            $ch->setup_sync_mode( IO::Handle->new_from_fd( $fd, "<" ) );
+            my ( $ch, undef, $rd ) = @$_;
+            $ch->setup_sync_mode( $rd );
          }
          foreach ( @channels_out ) {
-            my ( $ch, $fd ) = @$_;
-            $ch->setup_sync_mode( IO::Handle->new_from_fd( $fd, ">" ) );
+            my ( $ch, undef, $wr ) = @$_;
+            $ch->setup_sync_mode( $wr );
          }
 
          my $ret = $code->();
@@ -163,12 +165,30 @@ sub _add_to_loop
       },
    );
 
-   foreach ( @channels_in, @channels_out ) {
-      my ( $ch, $fd ) = @$_;
-      $ch->setup_async_mode( stream => $self->fd( $fd ) );
+   foreach ( @channels_in ) {
+      my ( $ch, $wr ) = @$_;
+
+      my $stream = IO::Async::Stream->new( write_handle => $wr );
+      $ch->setup_async_mode( stream => $stream );
+
+      $self->add_child( $stream );
+   }
+
+   foreach ( @channels_out ) {
+      my ( $ch, $rd ) = @$_;
+
+      my $stream = IO::Async::Stream->new( read_handle => $rd );
+      $ch->setup_async_mode( stream => $stream );
+
+      $self->add_child( $stream );
    }
 
    $self->SUPER::_add_to_loop( $loop );
+
+   foreach ( @channels_in, @channels_out ) {
+      my ( undef, undef, $other ) = @$_;
+      $other->close;
+   }
 }
 
 =head1 METHODS
