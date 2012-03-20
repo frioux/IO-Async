@@ -84,7 +84,7 @@ sub run_tests
    my ( $testclass, @tests ) = @_;
 
    my $count = 0;
-   $count += __PACKAGE__->can( "count_tests_$_" )->() + 3 for @tests;
+   $count += __PACKAGE__->can( "count_tests_$_" )->() + 4 for @tests;
 
    plan tests => $count;
 
@@ -97,6 +97,8 @@ sub run_tests
 
    foreach my $test ( @tests ) {
       $loop = $testclass->new;
+
+      isa_ok( $loop, $testclass, '$loop' );
 
       is( IO::Async::Loop->new, $loop, 'magic constructor yields $loop' );
 
