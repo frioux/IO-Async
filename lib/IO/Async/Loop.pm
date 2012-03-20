@@ -1405,9 +1405,6 @@ sub _extract_addrinfo_unix
 
 =back
 
-This method used to be called C<unpack_addrinfo>. A backward compatibility
-wrapper is provided temporarily, but will be removed in a later version.
-
 =cut
 
 sub unpack_addrinfo { goto &extract_addrinfo }
