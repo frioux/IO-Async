@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2009-2011 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2009-2012 -- leonerd@leonerd.org.uk
 
 package IO::Async::Timer::Countdown;
 
@@ -77,7 +77,8 @@ CODE reference for the C<on_expire> event.
 =item delay => NUM
 
 The delay in seconds after starting the timer until it expires. Cannot be
-changed if the timer is running.
+changed if the timer is running. A timer with a zero delay expires
+"immediately".
 
 =item remove_on_expire => BOOL
 
@@ -112,7 +113,7 @@ sub configure
       $self->is_running and croak "Cannot configure 'delay' of a running timer\n";
 
       my $delay = delete $params{delay};
-      $delay > 0 or croak "Expected a 'delay' as a positive number";
+      $delay >= 0 or croak "Expected a 'delay' as a non-negative number";
 
       $self->{delay} = $delay;
    }
