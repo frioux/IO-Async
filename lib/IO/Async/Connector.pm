@@ -13,7 +13,7 @@ our $VERSION = '0.51';
 use POSIX qw( EINPROGRESS );
 use Socket qw( SOL_SOCKET SO_ERROR );
 
-use CPS qw( kpar kforeach );
+use CPS qw( kforeach );
 use CPS::Future;
 
 use IO::Async::OS;
@@ -404,84 +404,65 @@ sub connect
          carp "Attempting to ->connect without either 'socktype' or 'protocol' hint is not portable";
    }
 
-   my @localaddrs;
-   my @peeraddrs;
-
-   my $fail_resolve = sub {
-      $task->fail( "$_[0]\n", resolve => $_[0] );
-   };
-
+   my $have_fail_resolve = 1;
    if( my $on_resolve_error = $params{on_resolve_error} ) {
       $task->on_fail( sub {
          $on_resolve_error->( $_[2] ) if $_[1] eq "resolve";
       } );
    }
    elsif( !defined wantarray ) {
-      undef $fail_resolve;
+      undef $have_fail_resolve;
    }
 
-   kpar(
-      sub {
-         my ( $k ) = @_;
-         if( exists $params{host} and exists $params{service} ) {
-            $fail_resolve or croak "Expected 'on_resolve_error' callback or to return a Task";
+   my $peeraddrtask;
+   if( exists $params{host} and exists $params{service} ) {
+      $have_fail_resolve or croak "Expected 'on_resolve_error' callback or to return a Task";
 
-            my $host    = $params{host}    or croak "Expected 'host'";
-            my $service = $params{service} or croak "Expected 'service'";
+      my $host    = $params{host}    or croak "Expected 'host'";
+      my $service = $params{service} or croak "Expected 'service'";
 
-            $loop->resolver->getaddrinfo(
-               host    => $host,
-               service => $service,
-               %gai_hints,
+      $peeraddrtask = $loop->resolver->getaddrinfo(
+         host    => $host,
+         service => $service,
+         %gai_hints,
+      );
+   }
+   elsif( exists $params{addrs} or exists $params{addr} ) {
+      $peeraddrtask = CPS::Future->new;
+      $peeraddrtask->done( exists $params{addrs} ? @{ $params{addrs} } : ( $params{addr} ) );
+   }
+   else {
+      croak "Expected 'host' and 'service' or 'addrs' or 'addr' arguments";
+   }
 
-               on_error => $fail_resolve,
+   my $localaddrtask;
+   if( defined $params{local_host} or defined $params{local_service} ) {
+      $have_fail_resolve or croak "Expected 'on_resolve_error' callback or to return a Task";
 
-               on_resolved => sub {
-                  @peeraddrs = @_;
-                  goto &$k;
-               },
-            );
-         }
-         elsif( exists $params{addrs} or exists $params{addr} ) {
-            @peeraddrs = exists $params{addrs} ? @{ $params{addrs} } : ( $params{addr} );
-            goto &$k;
-         }
-         else {
-            croak "Expected 'host' and 'service' or 'addrs' or 'addr' arguments";
-         }
-      },
-      sub {
-         my ( $k ) = @_;
-         if( defined $params{local_host} or defined $params{local_service} ) {
-            $fail_resolve or croak "Expected 'on_resolve_error' callback or to return a Task";
+      # Empty is fine on either of these
+      my $host    = $params{local_host};
+      my $service = $params{local_service};
 
-            # Empty is fine on either of these
-            my $host    = $params{local_host};
-            my $service = $params{local_service};
+      $localaddrtask = $loop->resolver->getaddrinfo(
+         host    => $host,
+         service => $service,
+         %gai_hints,
+      );
+   }
+   elsif( exists $params{local_addrs} or exists $params{local_addr} ) {
+      $localaddrtask = CPS::Future->new;
+      $localaddrtask->done( exists $params{local_addrs} ? @{ $params{local_addrs} } : ( $params{local_addr} ) );
+   }
+   else {
+      $localaddrtask = CPS::Future->new;
+      $localaddrtask->done( {} );
+   }
 
-            $loop->resolver->getaddrinfo(
-               host    => $host,
-               service => $service,
-               %gai_hints,
+   my $addrtask = CPS::Future->needs_all( $peeraddrtask, $localaddrtask )
+      ->on_done( sub {
+         my @peeraddrs  = $peeraddrtask->get;
+         my @localaddrs = $localaddrtask->get;
 
-               on_error => $fail_resolve,
-
-               on_resolved => sub {
-                  @localaddrs = @_;
-                  goto &$k;
-               },
-            );
-         }
-         elsif( exists $params{local_addrs} or exists $params{local_addr} ) {
-            @localaddrs = exists $params{local_addrs} ? @{ $params{local_addrs} } : ( $params{local_addr} );
-            goto &$k;
-         }
-         else {
-            @localaddrs = ( {} );
-            goto &$k;
-         }
-      },
-      sub {
          my @addrs;
 
          foreach my $local ( @localaddrs ) {
@@ -506,8 +487,12 @@ sub connect
          }
 
          $self->_connect_addresses( \@addrs, $task, $on_fail );
-      }
-   );
+      } )
+      ->on_fail( sub {
+         $task->fail( "$_[0]\n", resolve => $_[0] );
+      } );
+
+   $task->on_cancel( sub { $addrtask->cancel } ) if !$task->is_ready;
 
    return $task;
 }
