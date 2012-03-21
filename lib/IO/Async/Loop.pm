@@ -400,38 +400,71 @@ sub loop_once
    croak "Expected that $self overrides ->loop_once";
 }
 
+=head2 @result = $loop->run
+
+Runs the actual IO event loop. This method blocks until the C<stop> method is
+called, and returns the result that was passed to C<stop>.
+
+This method is a recent addition and may not be supported by all the
+C<IO::Async::Loop> subclasses currently available on CPAN.
+
+=cut
+
+sub run
+{
+   my $self = shift;
+
+   local $self->{running} = 1;
+   local $self->{result} = [];
+
+   while( $self->{running} ) {
+      $self->loop_once( undef );
+   }
+
+   return @{ $self->{result} };
+}
+
+=head2 $loop->stop( @result )
+
+Stops a C<run> method currently in progress, causing it to return the given
+C<@result>.
+
+This method is a recent addition and may not be supported by all the
+C<IO::Async::Loop> subclasses currently available on CPAN.
+
+=cut
+
+sub stop
+{
+   my $self = shift;
+
+   @{ $self->{result} } = @_;
+   undef $self->{running};
+}
+
 =head2 $loop->loop_forever
 
-This method repeatedly calls the C<loop_once> method with no timeout (i.e.
-allowing the underlying mechanism to block indefinitely), until the
-C<loop_stop> method is called from an event callback.
+A synonym for C<run>, though this method does not return a result.
 
 =cut
 
 sub loop_forever
 {
    my $self = shift;
-
-   $self->{still_looping} = 1;
-
-   while( $self->{still_looping} ) {
-      $self->loop_once( undef );
-   }
+   $self->run;
+   return;
 }
 
 =head2 $loop->loop_stop
 
-This method cancels a running C<loop_forever>, and makes that method return.
-It would be called from an event callback triggered by an event that occured
-within the loop.
+A synonym for C<stop>, though this method does not pass any results.
 
 =cut
 
 sub loop_stop
 {
    my $self = shift;
-   
-   $self->{still_looping} = 0;
+   $self->stop;
 }
 
 ############

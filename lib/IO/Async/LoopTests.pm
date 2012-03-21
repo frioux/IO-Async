@@ -639,16 +639,28 @@ sub run_tests_child
 
 =head2 control
 
-Tests that the C<loop_once> and C<loop_forever> methods behave correctly
+Tests that the C<run>, C<stop>, C<loop_once> and C<loop_forever> methods
+behave correctly
 
 =cut
 
-use constant count_tests_control => 5;
+use constant count_tests_control => 6;
 sub run_tests_control
 {
    time_between { $loop->loop_once( 0 ) } 0, 0.1, 'loop_once(0) when idle';
 
    time_between { $loop->loop_once( 2 * AUT ) } 1.5, 2.5, 'loop_once(2) when idle';
+
+   $loop->enqueue_timer( delay => 0.1, code => sub { $loop->stop( result => "here" ) } );
+
+   local $SIG{ALRM} = sub { die "Test timed out before ->stop" };
+   alarm( 1 );
+
+   my @result = $loop->run;
+
+   alarm( 0 );
+
+   is_deeply( \@result, [ result => "here" ], '->stop arguments returned by ->run' );
 
    $loop->enqueue_timer( delay => 0.1, code => sub { $loop->loop_stop } );
 
