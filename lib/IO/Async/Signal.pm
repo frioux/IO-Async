@@ -34,7 +34,7 @@ C<IO::Async::Signal> - event callback on receipt of a POSIX signal
 
  $loop->add( $signal );
 
- $loop->loop_forever;
+ $loop->run;
 
 =head1 DESCRIPTION
 

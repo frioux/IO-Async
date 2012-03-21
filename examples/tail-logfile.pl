@@ -29,4 +29,4 @@ my $filestream = IO::Async::FileStream->new(
 );
 $loop->add( $filestream );
 
-$loop->loop_forever;
+$loop->run;

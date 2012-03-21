@@ -61,7 +61,7 @@ C<IO::Async::Listener> - listen on network sockets for incoming connections
     on_listen_error  => sub { print STDERR "Cannot listen\n"; },
  );
 
- $loop->loop_forever;
+ $loop->run;
 
 This object can also be used indirectly via an C<IO::Async::Loop>:
 
@@ -82,7 +82,7 @@ This object can also be used indirectly via an C<IO::Async::Loop>:
     on_listen_error  => sub { print STDERR "Cannot listen\n"; },
  );
 
- $loop->loop_forever;
+ $loop->run;
 
 =head1 DESCRIPTION
 
@@ -578,7 +578,7 @@ sockets.
     handle => $socket,
  );
 
- $loop->loop_forever;
+ $loop->run;
 
 =head2 Passing Plain Socket Addresses
 

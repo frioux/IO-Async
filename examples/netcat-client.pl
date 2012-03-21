@@ -83,4 +83,4 @@ $stdiostream = IO::Async::Stream->new_for_stdio(
 );
 $loop->add( $stdiostream );
 
-$loop->loop_forever;
+$loop->run;

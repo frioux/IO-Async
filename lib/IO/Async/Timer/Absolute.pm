@@ -33,13 +33,13 @@ C<IO::Async::Timer::Absolute> - event callback at a fixed future time
 
     on_expire => sub {
        print "It's midnight\n";
-       $loop->loop_stop;
+       $loop->stop;
     },
  );
 
  $loop->add( $timer );
 
- $loop->loop_forever;
+ $loop->run;
 
 =head1 DESCRIPTION
 

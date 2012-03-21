@@ -29,7 +29,7 @@ C<IO::Async::Timer::Countdown> - event callback after a fixed delay
 
     on_expire => sub {
        print "Sorry, your time's up\n";
-       $loop->loop_stop;
+       $loop->stop;
     },
  );
 
@@ -37,7 +37,7 @@ C<IO::Async::Timer::Countdown> - event callback after a fixed delay
 
  $loop->add( $timer );
 
- $loop->loop_forever;
+ $loop->run;
 
 =head1 DESCRIPTION
 

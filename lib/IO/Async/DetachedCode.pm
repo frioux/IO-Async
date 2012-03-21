@@ -44,7 +44,7 @@ method.
     },
  );
 
- $loop->loop_forever;
+ $loop->run;
 
 =head1 DESCRIPTION
 

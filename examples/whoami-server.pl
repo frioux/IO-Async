@@ -53,4 +53,4 @@ $listener->listen(
    on_listen_error  => sub { die "Cannot listen\n"; },
 );
 
-$loop->loop_forever;
+$loop->run;

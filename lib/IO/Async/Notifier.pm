@@ -56,14 +56,14 @@ Usually not directly used by a program, but one valid use case may be:
        name => 'INT',
        on_receipt => sub {
           print "Goodbye!\n";
-          $loop->loop_stop;
+          $loop->stop;
        },
     )
  );
 
  $loop->add( $notifier );
 
- $loop->loop_forever;
+ $loop->run;
 
 =head1 DESCRIPTION
 

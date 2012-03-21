@@ -48,7 +48,7 @@ C<IO::Async::PID> - event callback on exit of a child process
 
  $loop->add( $pid );
 
- $loop->loop_forever;
+ $loop->run;
 
 =head1 DESCRIPTION
 

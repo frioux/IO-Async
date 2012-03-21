@@ -49,11 +49,11 @@ C<IO::Async::Routine> - execute code in an independent sub-process
     on_recv => sub {
        my ( $totalref ) = @_;
        say "The total of 10, 20, 30 is: $$totalref";
-       $loop->loop_stop;
+       $loop->stop;
     }
  );
 
- $loop->loop_forever;
+ $loop->run;
 
 =head1 DESCRIPTION
 

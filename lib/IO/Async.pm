@@ -54,7 +54,7 @@ C<IO::Async> - Asynchronous event-driven programming
     on_connect_error => sub { die "Cannot connect - $_[0] failed $_[-1]\n"; },
  );
 
- $loop->loop_forever;
+ $loop->run;
 
 =head1 DESCRIPTION
 

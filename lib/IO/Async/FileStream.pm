@@ -52,7 +52,7 @@ C<IO::Async::FileStream> - read the tail of a file
 
  $loop->add( $filestream );
 
- $loop->loop_forever;
+ $loop->run;
 
 =head1 DESCRIPTION
 

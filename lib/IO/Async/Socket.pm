@@ -42,7 +42,7 @@ filehandle
              my ( $self, $dgram, $addr ) = @_;
 
              print "Received reply: $dgram\n",
-             $loop->loop_stop;
+             $loop->stop;
           },
           on_recv_error => sub {
              my ( $self, $errno ) = @_;
@@ -59,7 +59,7 @@ filehandle
     on_connect_error => sub { die "Cannot connect\n"; },
  );
 
- $loop->loop_forever;
+ $loop->run;
 
 =head1 DESCRIPTION
 

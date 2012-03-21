@@ -76,7 +76,7 @@ This object is used indirectly via an C<IO::Async::Loop>:
     },
  );
 
- $loop->loop_forever;
+ $loop->run;
 
 =head1 DESCRIPTION
 

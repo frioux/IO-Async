@@ -22,7 +22,7 @@ $listener->listen(
    on_listen_error  => sub { die "Cannot listen\n"; },
 );
 
-$loop->loop_forever;
+$loop->run;
 
 package ChatListener;
 use base qw( IO::Async::Listener );

@@ -36,7 +36,7 @@ C<IO::Async::Timer::Periodic> - event callback at regular intervals
 
  $loop->add( $timer );
 
- $loop->loop_forever;
+ $loop->run;
 
 =head1 DESCRIPTION
 

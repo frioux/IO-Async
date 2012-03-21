@@ -78,7 +78,7 @@ C<IO::Async::Loop> - core loop of the C<IO::Async> framework
     },
  ) );
 
- $loop->loop_forever;
+ $loop->run;
 
 =head1 DESCRIPTION
 
