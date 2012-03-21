@@ -17,7 +17,7 @@ use IO::Async::Stream;
 use Carp;
 use Scalar::Util qw( weaken );
 
-use POSIX qw( _exit sysconf _SC_OPEN_MAX dup2 nice );
+use POSIX qw( _exit sysconf _SC_OPEN_MAX dup dup2 nice );
 
 use constant LENGTH_OF_I => length( pack( "I", 0 ) );
 
@@ -563,6 +563,9 @@ sub _spawn_in_child
       # Count of how many times we'll need to use the current handles.
       my %fds_refcount = %fd_in_use;
 
+      # To dup2() without clashes we might need to temporarily move some handles
+      my %dup_from;
+
       my $max_fd = 0;
       my $writepipe_clashes = 0;
 
@@ -591,6 +594,8 @@ sub _spawn_in_child
                # Keep a count of how many times it will be dup'ed from so we
                # can close it once we've finished
                $fds_refcount{$fileno}++;
+
+               $dup_from{$fileno} = $fileno;
             };
 
             $operation eq "keep" and do {
@@ -625,13 +630,20 @@ sub _spawn_in_child
                   my $from = fileno $params[0];
 
                   if( $from != $fd ) {
+                     if( exists $dup_from{$fd} ) {
+                        defined( $dup_from{$fd} = dup( $fd ) ) or die "Cannot dup($fd) - $!";
+                     }
+
+                     my $real_from = $dup_from{$from};
+
                      POSIX::close( $fd );
-                     dup2( $from, $fd ) or die "Cannot dup2($from to $fd) - $!\n";
+                     dup2( $real_from, $fd ) or die "Cannot dup2($real_from to $fd) - $!\n";
                   }
 
                   $fds_refcount{$from}--;
                   if( !$fds_refcount{$from} and !$fd_in_use{$from} ) {
                      POSIX::close( $from );
+                     delete $dup_from{$from};
                   }
                };
 

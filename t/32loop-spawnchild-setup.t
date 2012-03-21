@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 112;
+use Test::More tests => 116;
 use Test::Fatal;
 
 use File::Temp qw( tmpnam );
@@ -306,6 +306,36 @@ my $ret;
 
    is( $ret, 6,            '$my_r->read after pipe quad to fd0/fd1' );
    is( $buffer, "HELLO\n", '$buffer after pipe quad to fd0/fd1' );
+}
+
+{
+   # Try to swap two filehandles and cause a dup2() collision
+   my @fhA = $loop->pipepair or die "Cannot pipepair - $!";
+   my @fhB = $loop->pipepair or die "Cannot pipepair - $!";
+
+   my $filenoA = $fhA[1]->fileno;
+   my $filenoB = $fhB[1]->fileno;
+
+   TEST "fd swap",
+      setup => [
+         "fd$filenoA" => $fhB[1],
+         "fd$filenoB" => $fhA[1],
+      ],
+      code => sub {
+         $fhA[1]->print( "FHA" ); $fhA[1]->autoflush(1);
+         $fhB[1]->print( "FHB" ); $fhB[1]->autoflush(1);
+         return 0;
+      },
+
+      exitstatus => 0;
+
+   my $buffer;
+
+   read_timeout( $fhA[0], $buffer, 3, 0.1 );
+   is( $buffer, "FHB", '$buffer [A] after dup2() swap' );
+
+   read_timeout( $fhB[0], $buffer, 3, 0.1 );
+   is( $buffer, "FHA", '$buffer [B] after dup2() swap' );
 }
 
 TEST "stdout close",
