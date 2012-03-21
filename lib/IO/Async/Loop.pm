@@ -402,8 +402,12 @@ sub loop_once
 
 =head2 @result = $loop->run
 
+=head2 $result = $loop->run
+
 Runs the actual IO event loop. This method blocks until the C<stop> method is
-called, and returns the result that was passed to C<stop>.
+called, and returns the result that was passed to C<stop>. In scalar context
+only the first result is returned; the others will be discarded if more than
+one value was provided.
 
 This method is a recent addition and may not be supported by all the
 C<IO::Async::Loop> subclasses currently available on CPAN.
@@ -421,7 +425,7 @@ sub run
       $self->loop_once( undef );
    }
 
-   return @{ $self->{result} };
+   return wantarray ? @{ $self->{result} } : $self->{result}[0];
 }
 
 =head2 $loop->stop( @result )
