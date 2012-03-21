@@ -644,7 +644,7 @@ behave correctly
 
 =cut
 
-use constant count_tests_control => 7;
+use constant count_tests_control => 8;
 sub run_tests_control
 {
    time_between { $loop->loop_once( 0 ) } 0, 0.1, 'loop_once(0) when idle';
@@ -667,6 +667,16 @@ sub run_tests_control
    my $result = $loop->run;
 
    is( $result, "result", 'First ->stop argument returned by ->run in scalar context' );
+
+   $loop->enqueue_timer( delay => 0.1, code => sub {
+      $loop->enqueue_timer( delay => 0.1, code => sub { $loop->stop( "inner" ) } );
+      my @result = $loop->run;
+      $loop->stop( @result, "outer" );
+   } );
+
+   @result = $loop->run;
+
+   is_deeply( \@result, [ "inner", "outer" ], '->run can be nested properly' );
 
    $loop->enqueue_timer( delay => 0.1, code => sub { $loop->loop_stop } );
 

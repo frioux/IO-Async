@@ -407,7 +407,7 @@ sub loop_once
 Runs the actual IO event loop. This method blocks until the C<stop> method is
 called, and returns the result that was passed to C<stop>. In scalar context
 only the first result is returned; the others will be discarded if more than
-one value was provided.
+one value was provided. This method may be called recursively.
 
 This method is a recent addition and may not be supported by all the
 C<IO::Async::Loop> subclasses currently available on CPAN.
@@ -430,8 +430,8 @@ sub run
 
 =head2 $loop->stop( @result )
 
-Stops a C<run> method currently in progress, causing it to return the given
-C<@result>.
+Stops the inner-most C<run> method currently in progress, causing it to return
+the given C<@result>.
 
 This method is a recent addition and may not be supported by all the
 C<IO::Async::Loop> subclasses currently available on CPAN.
