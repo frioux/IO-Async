@@ -1,5 +1,15 @@
 Revision history for IO-Async
 
+0.46_002 CHANGES:
+         * Support $listener->listen( v6only => ... )
+         * Added new data-passing $loop->run and $loop->stop methods
+
+         BUGFIXES:
+         * Don't try reading STDIN to block awaiting a signal in unit-tests
+         * Allow zero-delay Countdown timers (RT75954)
+         * Handle dup2() collisions in ChildManager filehandle setups
+           (RT75573)
+
 0.46_001 BUGFIXES:
          * Fix race condition in t/33process.t (RT75573)
          * Ensure Timer->stop doesn't fail if the timer isn't running
