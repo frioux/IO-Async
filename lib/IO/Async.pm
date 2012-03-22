@@ -308,6 +308,25 @@ L<IO::Async::Loop::Ppoll> - use IO::Async with ppoll(2)
 
 =back
 
+Additionally, some other event loops or modules also support being run on top
+of C<IO::Async>:
+
+=over 4
+
+=item *
+
+L<AnyEvent::Impl::IOAsync> - AnyEvent adapter for IO::Async
+
+=item * 
+
+L<Gungho::Engine::IO::Async> - IO::Async Engine
+
+=item *
+
+L<POE::Loop::IO_Async> - IO::Async event loop support for POE
+
+=back
+
 =cut
 
 =head1 AUTHOR
