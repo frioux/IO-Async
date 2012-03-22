@@ -147,10 +147,8 @@ L<IO::Async::Loop::Poll> uses an L<IO::Poll> object for this test.
 
 L<IO::Async::Loop::Select> uses the C<select(2)> syscall.
 
-Other subclasses of loop may appear on CPAN under their own dists; such
-as L<IO::Async::Loop::Glib> which acts as a proxy for the C<Glib::MainLoop> of
-a L<Glib>-based program, or L<IO::Async::Loop::Ppoll> which uses the
-L<IO::Ppoll> object to handle signals safely on Linux.
+Other subclasses of loop may appear on CPAN under their own dists; see the
+L</SEE ALSO> section below for more detail.
 
 As well as these general-purpose classes, the L<IO::Async::Loop> constructor
 also supports looking for OS-specific subclasses, in case a more efficient
@@ -266,6 +264,51 @@ Bugs may be reported via RT at
 
 Support by IRC may also be found on F<irc.perl.org> in the F<#io-async>
 channel.
+
+=cut
+
+=head1 SEE ALSO
+
+As well as the two loops supplied in this distribution, many more exist on
+CPAN. At the time of writing this includes:
+
+=over 4
+
+=item *
+
+L<IO::Async::Loop::AnyEvent> - use IO::Async with AnyEvent
+
+=item *
+
+L<IO::Async::Loop::Epoll> - use IO::Async with epoll on Linux
+
+=item *
+
+L<IO::Async::Loop::EV> - use IO::Async with EV
+
+=item *
+
+L<IO::Async::Loop::Glib> - use IO::Async with Glib or GTK
+
+=item *
+
+L<IO::Async::Loop::KQueue> - use IO::Async with kqueue
+
+=item *
+
+L<IO::Async::Loop::Mojo> - use IO::Async with Mojolicious
+
+=item *
+
+L<IO::Async::Loop::POE> - use IO::Async with POE
+
+=item *
+
+L<IO::Async::Loop::Ppoll> - use IO::Async with ppoll(2)
+
+=back
+
+=cut
 
 =head1 AUTHOR
 
