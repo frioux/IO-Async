@@ -408,11 +408,6 @@ sub getnameinfo
    $args{on_error} or defined wantarray or
       croak "Expected 'on_error' or to return a Task";
 
-   my $task = CPS::Future->new;
-
-   $task->on_done( $args{on_resolved} ) if $args{on_resolved};
-   $task->on_fail( $args{on_error} )    if $args{on_error};
-
    my $flags = $args{flags} || 0;
 
    $flags |= NI_NUMERICHOST if $args{numerichost};
@@ -424,26 +419,30 @@ sub getnameinfo
    if( $flags & (NI_NUMERICHOST|NI_NUMERICSERV) ) {
       # This is a numeric-only lookup that can be done synchronously
       my ( $err, $host, $service ) = _getnameinfo( $args{addr}, $flags );
+      my $task = CPS::Future->new;
+
       if( $err ) {
+         $task->on_fail( $args{on_error} ) if $args{on_error};
          $task->fail( "$err\n" );
       }
       else {
+         $task->on_done( $args{on_resolved} ) if $args{on_resolved};
          $task->done( $host, $service );
       }
+
       return $task;
    }
 
-   $self->resolve(
+   my $task = $self->resolve(
       type    => "getnameinfo",
       data    => [ $args{addr}, $flags ],
       timeout => $args{timeout},
-      on_resolved => sub {
-         $task->done( @{ $_[0] } ); # unpack the ARRAY ref
-      },
-      on_error    => sub {
-         $task->fail( @_ );
-      },
+   )->transform(
+      done => sub { @{ $_[0] } }, # unpack the ARRAY ref
    );
+
+   $task->on_done( $args{on_resolved} ) if $args{on_resolved};
+   $task->on_fail( $args{on_error}    ) if $args{on_error};
 
    return $task;
 }
