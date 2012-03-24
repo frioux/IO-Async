@@ -13,7 +13,8 @@ use base qw( IO::Async::Handle );
 
 use Carp;
 
-use POSIX qw( EAGAIN SIG_BLOCK SIG_SETMASK sigprocmask );
+use Errno qw( EAGAIN EWOULDBLOCK );
+use POSIX qw( SIG_BLOCK SIG_SETMASK sigprocmask );
 use IO::Handle;
 
 use warnings qw();
@@ -79,7 +80,7 @@ sub on_read_ready
       my $buffer;
       my $ret = $handle->sysread( $buffer, 8192 );
 
-      if( !defined $ret and $! == EAGAIN ) {
+      if( !defined $ret and ( $! == EAGAIN || $! == EWOULDBLOCK ) ) {
          # Pipe wasn't ready after all - ignore it
       }
       elsif( !defined $ret ) {

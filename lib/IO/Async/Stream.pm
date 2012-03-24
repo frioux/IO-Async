@@ -12,7 +12,7 @@ our $VERSION = '0.46_002';
 
 use base qw( IO::Async::Handle );
 
-use POSIX qw( EAGAIN EWOULDBLOCK EINTR EPIPE );
+use Errno qw( EAGAIN EWOULDBLOCK EINTR EPIPE );
 
 use Carp;
 

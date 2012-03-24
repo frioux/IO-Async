@@ -8,7 +8,7 @@ use Test::More tests => 40;
 use Test::Fatal;
 use Test::Refcount;
 
-use POSIX qw( EAGAIN ECONNRESET );
+use Errno qw( EAGAIN EWOULDBLOCK ECONNRESET );
 
 use Socket qw( unpack_sockaddr_in );
 
@@ -37,7 +37,7 @@ sub recv_data
 
    return $buffer if defined $ret and length $buffer;
    die "Socket closed" if defined $ret;
-   return "" if $! == EAGAIN;
+   return "" if $! == EAGAIN or $! == EWOULDBLOCK;
    die "Cannot recv - $!";
 }
 

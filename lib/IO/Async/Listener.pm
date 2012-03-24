@@ -13,7 +13,7 @@ our $VERSION = '0.46_002';
 
 use IO::Async::Handle;
 
-use POSIX qw( EAGAIN );
+use Errno qw( EAGAIN EWOULDBLOCK );
 
 use Socket qw(
    sockaddr_family
@@ -119,7 +119,8 @@ This is most useful for C<SOCK_DGRAM> or C<SOCK_RAW> sockets.
 =head2 on_accept_error $socket, $errno
 
 Optional. Invoked if the C<accept> syscall indicates an error (other than
-C<EAGAIN>). If not provided, failures of C<accept> will simply be ignored.
+C<EAGAIN> or C<EWOULDBLOCK>). If not provided, failures of C<accept> will
+simply be ignored.
 
 =cut
 
@@ -218,7 +219,10 @@ sub on_read_ready
          die "ARG! Missing on_accept,on_stream,on_socket!";
       }
    }
-   elsif( $! != EAGAIN ) {
+   elsif( $! == EAGAIN or $! == EWOULDBLOCK ) {
+      # ignore
+   }
+   else {
       $self->maybe_invoke_event( on_accept_error => $socket, $! );
    }
 }

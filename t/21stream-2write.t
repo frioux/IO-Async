@@ -7,7 +7,7 @@ use IO::Async::Test;
 use Test::More tests => 40;
 use Test::Refcount;
 
-use POSIX qw( EAGAIN ECONNRESET );
+use Errno qw( EAGAIN EWOULDBLOCK ECONNRESET );
 
 use IO::Async::Loop;
 
@@ -37,7 +37,7 @@ sub read_data
 
    return $buffer if( defined $ret && $ret > 0 );
    die "Socket closed" if( defined $ret && $ret == 0 );
-   return "" if( $! == EAGAIN );
+   return "" if $! == EAGAIN or $! == EWOULDBLOCK;
    die "Cannot sysread() - $!";
 }
 

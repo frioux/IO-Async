@@ -9,7 +9,7 @@ use Test::Fatal;
 use Test::Refcount;
 
 use IO::File;
-use POSIX qw( EAGAIN );
+use Errno qw( EAGAIN EWOULDBLOCK );
 
 use IO::Async::Loop;
 
@@ -35,7 +35,7 @@ sub read_data
 
    return $buffer if( defined $ret && $ret > 0 );
    die "Socket closed" if( defined $ret && $ret == 0 );
-   return "" if( $! == EAGAIN );
+   return "" if $! == EAGAIN or $! == EWOULDBLOCK;
    die "Cannot sysread() - $!";
 }
 
