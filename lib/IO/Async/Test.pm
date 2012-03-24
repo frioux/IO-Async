@@ -8,7 +8,7 @@ package IO::Async::Test;
 use strict;
 use warnings;
 
-our $VERSION = '0.46_002';
+our $VERSION = '0.47';
 
 use Exporter 'import';
 our @EXPORT = qw(

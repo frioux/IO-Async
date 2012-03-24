@@ -8,7 +8,7 @@ package IO::Async::Protocol::LineStream;
 use strict;
 use warnings;
 
-our $VERSION = '0.46_002';
+our $VERSION = '0.47';
 
 use base qw( IO::Async::Protocol::Stream );
 
