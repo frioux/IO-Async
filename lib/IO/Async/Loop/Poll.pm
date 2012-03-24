@@ -151,7 +151,7 @@ sub post_poll
          $count++, $watch->[2]->() if defined $watch->[2];
       }
 
-      if( $events & POLLHUP ) {
+      if( $events & (POLLHUP|POLLERR) ) {
          $count++, $watch->[3]->() if defined $watch->[3];
       }
    }
