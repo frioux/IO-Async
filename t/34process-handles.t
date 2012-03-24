@@ -10,7 +10,7 @@ use IO::Async::Process;
 
 use IO::Async::Loop::Poll;
 
-use Socket qw( PF_UNIX PF_INET sockaddr_family );
+use Socket qw( PF_INET sockaddr_family );
 
 my $loop = IO::Async::Loop::Poll->new;
 
@@ -326,7 +326,7 @@ testing_loop( $loop );
    $loop->add( $process );
 
    isa_ok( $process->stdio->read_handle, "IO::Socket", '$process->stdio handle isa IO::Socket' );
-   is( sockaddr_family( $process->stdio->read_handle->sockname ), PF_UNIX, '$process->stdio handle sockdomain is PF_UNIX' );
+   ok( defined sockaddr_family( $process->stdio->read_handle->sockname ), '$process->stdio handle sockdomain is defined' );
 
    wait_for { defined $output_packet and !$process->is_running };
 
@@ -385,7 +385,7 @@ testing_loop( $loop );
    $loop->add( $process );
 
    isa_ok( $process->stdio->read_handle, "IO::Socket", '$process->stdio handle isa IO::Socket' );
-   is( sockaddr_family( $process->stdio->read_handle->sockname ), PF_UNIX, '$process->stdio handle sockdomain is PF_UNIX' );
+   ok( defined sockaddr_family( $process->stdio->read_handle->sockname ), '$process->stdio handle sockdomain is defined' );
 
    $process->stdio->send( $_ ) for "First packet", "Second packet";
 
