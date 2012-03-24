@@ -16,6 +16,8 @@ use constant NEED_API_VERSION => '0.33';
 # Base value but some classes might override
 use constant _CAN_ON_HANGUP => 0;
 
+use constant HAVE_MSWIN32 => ( $^O eq "MSWin32" );
+
 use Carp;
 
 use Socket qw( AF_INET AF_UNIX SOCK_STREAM SOCK_DGRAM SOCK_RAW );
@@ -1191,6 +1193,65 @@ sub socketpair
    }
 
    return ( $S1, $S2 );
+}
+
+# TODO: Move this into its own file, have it loaded dynamically via $^O
+if( HAVE_MSWIN32 ) {
+   # Win32 doesn't have a socketpair(). We'll fake one up
+
+   undef *socketpair;
+   *socketpair = sub {
+      my $self = shift;
+      my ( $family, $socktype, $proto ) = @_;
+
+      $family = _getfamilybyname( $family ) || AF_INET;
+
+      # SOCK_STREAM is the most likely
+      $socktype = _getsocktypebyname( $socktype ) || SOCK_STREAM;
+
+      $proto ||= 0;
+
+      if( $socktype == SOCK_STREAM ) {
+         my $listener = IO::Socket::INET->new(
+            LocalAddr => "127.0.0.1",
+            LocalPort => 0,
+            Listen    => 1,
+            Blocking  => 0,
+         ) or croak "Cannot socket() - $!";
+
+         my $S1 = IO::Socket::INET->new(
+            PeerAddr => $listener->sockhost,
+            PeerPort => $listener->sockport
+         ) or croak "Cannot socket() again - $!";
+
+         my $S2 = $listener->accept or croak "Cannot accept() - $!";
+
+         $listener->close;
+
+         return ( $S1, $S2 );
+      }
+      elsif( $socktype == SOCK_DGRAM ) {
+         my $S1 = IO::Socket::INET->new(
+            LocalAddr => "127.0.0.1",
+            Type      => SOCK_DGRAM,
+            Proto     => "udp",
+         ) or croak "Cannot socket() - $!";
+         
+         my $S2 = IO::Socket::INET->new(
+            LocalAddr => "127.0.0.1",
+            Type      => SOCK_DGRAM,
+            Proto     => "udp",
+         ) or croak "Cannot socket() again - $!";
+
+         $S1->connect( $S2->sockname );
+         $S2->connect( $S1->sockname );
+
+         return ( $S1, $S2 );
+      }
+      else {
+         croak "Unrecognised socktype $socktype";
+      }
+   };
 }
 
 =head2 ( $rd, $wr ) = $loop->pipepair
