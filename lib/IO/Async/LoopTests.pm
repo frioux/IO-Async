@@ -22,6 +22,7 @@ use IO::Async::Test qw();
 use IO::File;
 use Fcntl qw( SEEK_SET );
 use POSIX qw( SIGTERM WIFEXITED WEXITSTATUS WIFSIGNALED WTERMSIG );
+use Socket qw( sockaddr_family AF_UNIX );
 use Time::HiRes qw( time );
 
 our $VERSION = '0.46_002';
@@ -257,7 +258,7 @@ sub run_tests_io
          my ( $S1, $S2 ) = $loop->socketpair or die "Cannot socketpair - $!";
          $_->blocking( 0 ) for $S1, $S2;
 
-         $S1->sockdomain == Socket::AF_UNIX() or skip "Cannot reliably detect hangup condition on non AF_UNIX sockets", 1;
+         sockaddr_family( $S1->sockname ) == AF_UNIX or skip "Cannot reliably detect hangup condition on non AF_UNIX sockets", 1;
 
          my $hangup = 0;
          $loop->watch_io(
