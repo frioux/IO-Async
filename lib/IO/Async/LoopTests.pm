@@ -253,25 +253,29 @@ sub run_tests_io
    SKIP: {
       $loop->_CAN_ON_HANGUP or skip "Loop cannot watch_io for on_hangup", 2;
 
-      my ( $S1, $S2 ) = $loop->socketpair or die "Cannot socketpair - $!";
-      $_->blocking( 0 ) for $S1, $S2;
+      SKIP: {
+         my ( $S1, $S2 ) = $loop->socketpair or die "Cannot socketpair - $!";
+         $_->blocking( 0 ) for $S1, $S2;
 
-      my $hangup = 0;
-      $loop->watch_io(
-         handle => $S1,
-         on_hangup => sub { $hangup = 1 },
-      );
+         $S1->sockdomain == Socket::AF_UNIX() or skip "Cannot reliably detect hangup condition on non AF_UNIX sockets", 1;
 
-      $S2->close;
+         my $hangup = 0;
+         $loop->watch_io(
+            handle => $S1,
+            on_hangup => sub { $hangup = 1 },
+         );
 
-      $loop->loop_once( 0.1 );
+         $S2->close;
 
-      is( $hangup, 1, '$hangup after socket close' );
+         $loop->loop_once( 0.1 );
+
+         is( $hangup, 1, '$hangup after socket close' );
+      }
 
       my ( $Prd, $Pwr ) = $loop->pipepair or die "Cannot pipepair - $!";
       $_->blocking( 0 ) for $Prd, $Pwr;
 
-      $hangup = 0;
+      my $hangup = 0;
       $loop->watch_io(
          handle => $Pwr,
          on_hangup => sub { $hangup = 1 },
