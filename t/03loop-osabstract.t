@@ -6,7 +6,7 @@ use Test::More tests => 34;
 
 use IO::Async::Loop::Poll;
 
-use Socket qw( AF_INET AF_UNIX SOCK_STREAM SOCK_DGRAM pack_sockaddr_in pack_sockaddr_un inet_aton );
+use Socket qw( AF_INET AF_UNIX SOCK_STREAM SOCK_DGRAM SO_TYPE pack_sockaddr_in pack_sockaddr_un inet_aton );
 
 use POSIX qw( SIGTERM );
 
@@ -21,13 +21,10 @@ foreach my $family ( undef, "inet" ) {
    isa_ok( $S1, "IO::Socket", '$S1 isa IO::Socket' );
    isa_ok( $S2, "IO::Socket", '$S2 isa IO::Socket' );
 
-   # Due to a bug in IO::Socket, this may not be set
-   SKIP: {
-      skip "IO::Socket doesn't set ->socktype of ->accept'ed sockets", 2 if defined $family;
+   # Due to a bug in IO::Socket, ->socktype may not be set
 
-      is( $S1->socktype, SOCK_STREAM, '$S1->socktype is SOCK_STREAM' );
-      is( $S2->socktype, SOCK_STREAM, '$S2->socktype is SOCK_STREAM' );
-   }
+   is( $S1->sockopt(SO_TYPE), SOCK_STREAM, 'SO_TYPE of $S1 is SOCK_STREAM' );
+   is( $S2->sockopt(SO_TYPE), SOCK_STREAM, 'SO_TYPE of $S2 is SOCK_STREAM' );
 
    $S1->syswrite( "Hello" );
    is( do { my $b; $S2->sysread( $b, 8192 ); $b }, "Hello", '$S1 --writes-> $S2' );
