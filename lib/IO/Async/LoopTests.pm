@@ -529,7 +529,7 @@ Tests the Loop's support for idle handlers
 
 =cut
 
-use constant count_tests_idle => 10;
+use constant count_tests_idle => 11;
 sub run_tests_idle
 {
    my $called = 0;
@@ -566,11 +566,20 @@ sub run_tests_idle
 
    is( $called, 2, 'unwatched deferral not called' );
 
-   $loop->later( sub { $called = 3 } );
+   $id = $loop->watch_idle( when => 'later', code => sub { $called = 3 } );
+   my $timer_id = $loop->enqueue_timer( delay => 5, code => sub {} );
 
    $loop->loop_once( 1 );
 
-   is( $called, 3, '$loop->later shortcut works' );
+   is( $called, 3, '$loop->later still invoked with enqueued timer' );
+
+   $loop->cancel_timer( $timer_id );
+
+   $loop->later( sub { $called = 4 } );
+
+   $loop->loop_once( 1 );
+
+   is( $called, 4, '$loop->later shortcut works' );
 }
 
 =head2 child
