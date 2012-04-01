@@ -373,7 +373,7 @@ Tests the Loop's ability to handle timer events
 
 =cut
 
-use constant count_tests_timer => 12;
+use constant count_tests_timer => 15;
 sub run_tests_timer
 {
    my $done = 0;
@@ -393,6 +393,23 @@ sub run_tests_timer
          $loop->loop_once( 0.1 * AUT );
       }
    } 1.5, 2.5, 'loop_once(5) while waiting for timer';
+
+   # Check that short delays are achievable in one ->loop_once call
+   foreach my $delay ( 0.001, 0.01, 0.1 ) {
+      my $done;
+      my $count = 0;
+      my $start = time;
+
+      $loop->enqueue_timer( delay => $delay, code => sub { $done++ } );
+
+      while( !$done ) {
+         $loop->loop_once( 1 );
+         $count++;
+         last if time - $start > 5; # bailout
+      }
+
+      is( $count, 1, "One ->loop_once(1) sufficient for a single $delay second timer" );
+   }
 
    my $cancelled_fired = 0;
    my $id = $loop->enqueue_timer( delay => 1 * AUT, code => sub { $cancelled_fired = 1 } );
