@@ -40,6 +40,11 @@ C<IO::Async::Routine> - execute code in an independent sub-process
        # Can only send references
        $ret_ch->send( \$ret );
     },
+
+    on_finish => sub {
+       say "The routine aborted early - $_[-1]";
+       $loop->stop;
+    },
  );
 
  $loop->add( $routine );
@@ -47,7 +52,7 @@ C<IO::Async::Routine> - execute code in an independent sub-process
  $nums_ch->send( [ 10, 20, 30 ] );
  $ret_ch->recv(
     on_recv => sub {
-       my ( $totalref ) = @_;
+       my ( $ch, $totalref ) = @_;
        say "The total of 10, 20, 30 is: $$totalref";
        $loop->stop;
     }
