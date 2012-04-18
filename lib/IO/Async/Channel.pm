@@ -245,24 +245,12 @@ sub setup_async_mode
       $self->{on_recv} = $on_recv;
       $self->{on_eof} = delete $args{on_eof};
    }
-   else {
-      $self->{on_result_queue} = \my @on_result_queue;
-      $self->{on_recv} = sub {
-         my ( $self, $result ) = @_;
-         (shift @on_result_queue)->( $self, recv => $result );
-      };
-      $self->{on_eof} = sub {
-         my ( $self ) = @_;
-         while( @on_result_queue ) {
-            (shift @on_result_queue)->( $self, eof => );
-         }
-      };
-   }
 
    keys %args and croak "Unrecognised keys for setup_async_mode: " . join( ", ", keys %args );
 
    $self->{stream} = $stream;
    $self->{mode} = "async";
+   $self->{on_result_queue} = [];
 
    $stream->configure(
       autoflush => 1,
@@ -307,7 +295,10 @@ sub _on_stream_read
    my ( $stream, $buffref, $eof ) = @_;
 
    if( $eof ) {
-      $self->{on_eof}->( $self );
+      while( my $on_result = shift @{ $self->{on_result_queue} } ) {
+         $on_result->( $self, eof => );
+      }
+      $self->{on_eof}->( $self ) if $self->{on_eof};
       return;
    }
 
@@ -318,7 +309,12 @@ sub _on_stream_read
    my $record = thaw( substr( $$buffref, 4, $len ) );
    substr( $$buffref, 0, 4 + $len ) = "";
 
-   $self->{on_recv}->( $self, $record );
+   if( my $on_result = shift @{ $self->{on_result_queue} } ) {
+      $on_result->( $self, recv => $record );
+   }
+   else {
+      $self->{on_recv}->( $self, $record );
+   }
 
    return 1;
 }
