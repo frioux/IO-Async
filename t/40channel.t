@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 11;
+use Test::More tests => 12;
 use Test::Identity;
 
 use IO::Async::Channel;
@@ -132,6 +132,22 @@ testing_loop( $loop );
    wait_for { $recved };
 
    is_deeply( $recved, [ data => "by sync" ], 'Async mode channel can ->recv on_recv' );
+
+   my @recv_queue;
+   $channel_rd->configure(
+      on_recv => sub { push @recv_queue, $_[1] }
+   );
+
+   undef $recved;
+
+   $channel_wr->send( [ first  => "thing" ] );
+   $channel_wr->send( [ second => "thing" ] );
+
+   wait_for { @recv_queue >= 2 };
+
+   is_deeply( \@recv_queue,
+              [ [ first => "thing" ], [ second => "thing" ] ],
+              'Async mode channel can receive with ->configure on_recv' );
 
    $channel_wr->close;
 

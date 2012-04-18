@@ -59,8 +59,8 @@ either end.
 
 While this object does in fact inherit from L<IO::Async::Notifier> for
 implementation reasons it is not intended that this object be used as a
-Notifier. The C<configure> method should not be called, and it should not be
-added to a Loop object.
+Notifier. It should not be added to a Loop object directly; event management
+will be handled by its containing C<IO::Async::Routine> object.
 
 =cut
 
@@ -75,6 +75,39 @@ sub new
 =head1 METHODS
 
 =cut
+
+=head2 $channel->configure( %params )
+
+Similar to the standard C<configure> method on C<IO::Async::Notifier>, this is
+used to change details of the Channel's operation.
+
+=over 4
+
+=item on_recv => CODE
+
+May only be set on an async mode channel. If present, will be invoked whenever
+a new value is received, rather than using the C<recv> method.
+
+ $on_recv->( $channel, $data )
+
+=back
+
+=cut
+
+sub configure
+{
+   my $self = shift;
+   my %params = @_;
+
+   if( exists $params{on_recv} ) {
+      $self->{mode} and $self->{mode} eq "async" or
+         croak "Can only configure on_recv in async mode";
+
+      $self->{on_recv} = delete $params{on_recv};
+   }
+
+   $self->SUPER::configure( %params );
+}
 
 =head2 $channel->send( $data )
 
