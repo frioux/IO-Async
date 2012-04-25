@@ -12,8 +12,6 @@ our $VERSION = '0.47';
 
 use base qw( IO::Async::Process );
 
-use IO::Async::Stream;
-
 =head1 NAME
 
 C<IO::Async::Routine> - execute code in an independent sub-process
@@ -173,19 +171,17 @@ sub _add_to_loop
    foreach ( @channels_in ) {
       my ( $ch, $wr ) = @$_;
 
-      my $stream = IO::Async::Stream->new( write_handle => $wr );
-      $ch->setup_async_mode( stream => $stream );
+      $ch->setup_async_mode( write_handle => $wr );
 
-      $self->add_child( $stream );
+      $self->add_child( $ch );
    }
 
    foreach ( @channels_out ) {
       my ( $ch, $rd ) = @$_;
 
-      my $stream = IO::Async::Stream->new( read_handle => $rd );
-      $ch->setup_async_mode( stream => $stream );
+      $ch->setup_async_mode( read_handle => $rd );
 
-      $self->add_child( $stream );
+      $self->add_child( $ch );
    }
 
    $self->SUPER::_add_to_loop( $loop );

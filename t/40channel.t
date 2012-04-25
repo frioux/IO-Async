@@ -9,7 +9,6 @@ use Test::Identity;
 
 use IO::Async::Channel;
 
-use IO::Async::Stream;
 use IO::Async::Loop::Poll;
 use Storable qw( freeze );
 
@@ -48,17 +47,15 @@ testing_loop( $loop );
    $channel_rd->setup_sync_mode( $pipe_rd );
 
    my $channel_wr = IO::Async::Channel->new;
-   $channel_wr->setup_async_mode(
-      stream => my $stream_wr = IO::Async::Stream->new( write_handle => $pipe_wr ),
-   );
+   $channel_wr->setup_async_mode( write_handle => $pipe_wr );
 
-   $loop->add( $stream_wr );
+   $loop->add( $channel_wr );
 
    $channel_wr->send( [ data => "by async" ] );
 
    # Cheat for semi-sync
    my $flushed;
-   $stream_wr->write( "", on_flush => sub { $flushed++ } );
+   $channel_wr->{stream}->write( "", on_flush => sub { $flushed++ } );
    wait_for { $flushed };
 
    is_deeply( $channel_rd->recv, [ data => "by async" ], 'Async mode channel can send' );
@@ -76,9 +73,9 @@ testing_loop( $loop );
    my $recv_eof;
 
    my $channel_rd = IO::Async::Channel->new;
-   $channel_rd->setup_async_mode(
-      stream => my $stream_rd = IO::Async::Stream->new( read_handle => $pipe_rd )
-   );
+   $channel_rd->setup_async_mode( read_handle => $pipe_rd );
+
+   $loop->add( $channel_rd );
 
    $channel_rd->configure(
       on_recv => sub {
@@ -89,8 +86,6 @@ testing_loop( $loop );
          $recv_eof++;
       },
    );
-
-   $loop->add( $stream_rd );
 
    my $channel_wr = IO::Async::Channel->new;
    $channel_wr->setup_sync_mode( $pipe_wr );
@@ -112,11 +107,9 @@ testing_loop( $loop );
    my ( $pipe_rd, $pipe_wr ) = $loop->pipepair;
 
    my $channel_rd = IO::Async::Channel->new;
-   $channel_rd->setup_async_mode(
-      stream => my $stream_rd = IO::Async::Stream->new( read_handle => $pipe_rd ),
-   );
+   $channel_rd->setup_async_mode( read_handle => $pipe_rd );
 
-   $loop->add( $stream_rd );
+   $loop->add( $channel_rd );
 
    my $channel_wr = IO::Async::Channel->new;
    $channel_wr->setup_sync_mode( $pipe_wr );

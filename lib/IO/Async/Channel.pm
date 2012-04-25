@@ -14,6 +14,8 @@ our $VERSION = '0.47';
 use Carp;
 use Storable qw( freeze thaw );
 
+use IO::Async::Stream;
+
 =head1 NAME
 
 C<IO::Async::Channel> - pass values into or out from an L<IO::Async::Routine>
@@ -280,18 +282,22 @@ sub setup_async_mode
    my $self = shift;
    my %args = @_;
 
-   my $stream = delete $args{stream} or croak "Expected 'stream'";
+   exists $args{$_} and $self->{$_} = delete $args{$_} for qw( read_handle write_handle );
 
    keys %args and croak "Unrecognised keys for setup_async_mode: " . join( ", ", keys %args );
+
+   my $stream = IO::Async::Stream->new(
+      read_handle  => $self->{read_handle},
+      write_handle => $self->{write_handle},
+      autoflush    => 1,
+      on_read      => $self->_capture_weakself( '_on_stream_read' )
+   );
+
+   $self->add_child( $stream );
 
    $self->{stream} = $stream;
    $self->{mode} = "async";
    $self->{on_result_queue} = [];
-
-   $stream->configure(
-      autoflush => 1,
-      on_read   => $self->_capture_weakself( '_on_stream_read' )
-   );
 }
 
 sub _send_async
