@@ -114,6 +114,7 @@ sub configure
          croak "Can only configure $_ in async mode";
 
       $self->{$_} = delete $params{$_};
+      $self->_build_stream;
    }
 
    $self->SUPER::configure( %params );
@@ -286,25 +287,33 @@ sub setup_async_mode
 
    keys %args and croak "Unrecognised keys for setup_async_mode: " . join( ", ", keys %args );
 
-   my $stream = IO::Async::Stream->new(
-      read_handle  => $self->{read_handle},
-      write_handle => $self->{write_handle},
-      autoflush    => 1,
-      on_read      => $self->_capture_weakself( '_on_stream_read' )
-   );
-
-   $self->add_child( $stream );
-
-   $self->{stream} = $stream;
    $self->{mode} = "async";
-   $self->{on_result_queue} = [];
+}
+
+sub _build_stream
+{
+   my $self = shift;
+   return $self->{stream} ||= do {
+      $self->{on_result_queue} = [];
+
+      my $stream = IO::Async::Stream->new(
+         read_handle  => $self->{read_handle},
+         write_handle => $self->{write_handle},
+         autoflush    => 1,
+         on_read      => $self->_capture_weakself( '_on_stream_read' )
+      );
+
+      $self->add_child( $stream );
+
+      $stream;
+   };
 }
 
 sub _send_async
 {
    my $self = shift;
    my ( $bytes ) = @_;
-   $self->{stream}->write( $bytes );
+   $self->_build_stream->write( $bytes );
 }
 
 sub _recv_async
@@ -313,6 +322,8 @@ sub _recv_async
    my %args = @_;
    my $on_recv = $args{on_recv};
    my $on_eof  = $args{on_eof};
+
+   $self->_build_stream;
 
    push @{ $self->{on_result_queue} }, sub {
       my ( $self, $type, $result ) = @_;
