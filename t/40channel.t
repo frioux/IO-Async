@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 12;
+use Test::More tests => 11;
 use Test::Identity;
 
 use IO::Async::Channel;
@@ -68,7 +68,7 @@ testing_loop( $loop );
    is( $channel_rd->recv, undef, 'Sync mode can be closed' );
 }
 
-# sync->async
+# sync->async configured on_recv
 {
    my ( $pipe_rd, $pipe_wr ) = $loop->pipepair;
 
@@ -77,7 +77,10 @@ testing_loop( $loop );
 
    my $channel_rd = IO::Async::Channel->new;
    $channel_rd->setup_async_mode(
-      stream => my $stream_rd = IO::Async::Stream->new( read_handle => $pipe_rd ),
+      stream => my $stream_rd = IO::Async::Stream->new( read_handle => $pipe_rd )
+   );
+
+   $channel_rd->configure(
       on_recv => sub {
          identical( $_[0], $channel_rd, 'Channel passed to on_recv' );
          push @recv_queue, $_[1];
@@ -104,7 +107,7 @@ testing_loop( $loop );
    is( $recv_eof, 1, 'Async mode channel can on_eof' );
 }
 
-# sync->async late ->recv
+# sync->async oneshot ->recv
 {
    my ( $pipe_rd, $pipe_wr ) = $loop->pipepair;
 
@@ -132,22 +135,6 @@ testing_loop( $loop );
    wait_for { $recved };
 
    is_deeply( $recved, [ data => "by sync" ], 'Async mode channel can ->recv on_recv' );
-
-   my @recv_queue;
-   $channel_rd->configure(
-      on_recv => sub { push @recv_queue, $_[1] }
-   );
-
-   undef $recved;
-
-   $channel_wr->send( [ first  => "thing" ] );
-   $channel_wr->send( [ second => "thing" ] );
-
-   wait_for { @recv_queue >= 2 };
-
-   is_deeply( \@recv_queue,
-              [ [ first => "thing" ], [ second => "thing" ] ],
-              'Async mode channel can receive with ->configure on_recv' );
 
    $channel_wr->close;
 

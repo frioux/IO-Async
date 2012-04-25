@@ -90,6 +90,13 @@ a new value is received, rather than using the C<recv> method.
 
  $on_recv->( $channel, $data )
 
+=item on_eof => CODE
+
+May only be set on an async mode channel. If present, will be invoked when the
+channel gets closed by the peer.
+
+ $on_eof->( $channel )
+
 =back
 
 =cut
@@ -99,11 +106,12 @@ sub configure
    my $self = shift;
    my %params = @_;
 
-   if( exists $params{on_recv} ) {
+   foreach (qw( on_recv on_eof )) {
+      next unless exists $params{$_};
       $self->{mode} and $self->{mode} eq "async" or
-         croak "Can only configure on_recv in async mode";
+         croak "Can only configure $_ in async mode";
 
-      $self->{on_recv} = delete $params{on_recv};
+      $self->{$_} = delete $params{$_};
    }
 
    $self->SUPER::configure( %params );
@@ -273,11 +281,6 @@ sub setup_async_mode
    my %args = @_;
 
    my $stream = delete $args{stream} or croak "Expected 'stream'";
-
-   if( my $on_recv = delete $args{on_recv} ) {
-      $self->{on_recv} = $on_recv;
-      $self->{on_eof} = delete $args{on_eof};
-   }
 
    keys %args and croak "Unrecognised keys for setup_async_mode: " . join( ", ", keys %args );
 
