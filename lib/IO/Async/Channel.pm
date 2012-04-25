@@ -33,7 +33,9 @@ asynchronous mode, and in the Routine process it will be used in synchronous
 mode. In asynchronous mode all methods return immediately and use
 C<IO::Async>-style callback functions. In synchronous within the Routine
 process the methods block until they are ready and may be used for
-flow-control within the routine.
+flow-control within the routine. Alternatively, a Channel may be shared
+between two different Routine objects, and not used directly by the
+controlling program.
 
 The channel itself represents a FIFO of Perl reference values. New values may
 be put into the channel by the C<send> method in either mode. Values may be
@@ -70,7 +72,7 @@ sub new
 {
    my $class = shift;
    return bless {
-      mode => undef,
+      mode => "",
    }, $class;
 }
 
@@ -370,6 +372,30 @@ sub _on_stream_read
    }
 
    return 1;
+}
+
+sub _extract_read_handle
+{
+   my $self = shift;
+
+   return undef if !$self->{mode};
+
+   croak "Cannot extract filehandle" if $self->{mode} ne "async";
+   $self->{mode} = "dead";
+
+   return $self->{read_handle};
+}
+
+sub _extract_write_handle
+{
+   my $self = shift;
+
+   return undef if !$self->{mode};
+
+   croak "Cannot extract filehandle" if $self->{mode} ne "async";
+   $self->{mode} = "dead";
+
+   return $self->{write_handle};
 }
 
 =head1 AUTHOR

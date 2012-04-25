@@ -128,13 +128,19 @@ sub _add_to_loop
    my @channels_out;
 
    foreach my $ch ( @{ $self->{channels_in} || [] } ) {
-      my ( $rd, $wr ) = $loop->pipepair;
+      my ( $rd, $wr );
+      unless( $rd = $ch->_extract_read_handle ) {
+         ( $rd, $wr ) = $loop->pipepair;
+      }
       push @setup, $rd => "keep";
       push @channels_in, [ $ch, $wr, $rd ];
    }
 
    foreach my $ch ( @{ $self->{channels_out} || [] } ) {
-      my ( $rd, $wr ) = $loop->pipepair;
+      my ( $rd, $wr );
+      unless( $wr = $ch->_extract_write_handle ) {
+         ( $rd, $wr ) = $loop->pipepair;
+      }
       push @setup, $wr => "keep";
       push @channels_out, [ $ch, $rd, $wr ];
    }
@@ -173,7 +179,7 @@ sub _add_to_loop
 
       $ch->setup_async_mode( write_handle => $wr );
 
-      $self->add_child( $ch );
+      $self->add_child( $ch ) unless $ch->parent;
    }
 
    foreach ( @channels_out ) {
@@ -181,7 +187,7 @@ sub _add_to_loop
 
       $ch->setup_async_mode( read_handle => $rd );
 
-      $self->add_child( $ch );
+      $self->add_child( $ch ) unless $ch->parent;
    }
 
    $self->SUPER::_add_to_loop( $loop );

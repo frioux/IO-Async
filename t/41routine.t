@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 11;
+use Test::More tests => 12;
 use Test::Identity;
 use Test::Refcount;
 
@@ -126,4 +126,36 @@ testing_loop( $loop );
 
    identical( $finishargs[0], $routine, 'on_finish passed self' );
    is( $finishargs[1], 0, 'on_finish passed exit code' );
+}
+
+{
+   my $channel = IO::Async::Channel->new;
+
+   my $src_finished;
+   my $src_routine = IO::Async::Routine->new(
+      channels_out => [ $channel ],
+      code => sub {
+         $channel->send( [ some => "data" ] );
+         return 0;
+      },
+      on_finish => sub { $src_finished++ },
+   );
+
+   $loop->add( $src_routine );
+
+   my $sink_result;
+   my $sink_routine = IO::Async::Routine->new(
+      channels_in => [ $channel ],
+      code => sub {
+         my @data = @{ $channel->recv };
+         return ( $data[0] eq "some" and $data[1] eq "data" ) ? 0 : 1;
+      },
+      on_finish => sub { $sink_result = $_[1] },
+   );
+
+   $loop->add( $sink_routine );
+
+   wait_for { $src_finished and defined $sink_result };
+
+   is( $sink_result, 0, 'synchronous src->sink can share a channel' );
 }
