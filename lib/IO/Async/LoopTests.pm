@@ -373,10 +373,39 @@ Tests the Loop's ability to handle timer events
 
 =cut
 
-use constant count_tests_timer => 15;
+use constant count_tests_timer => 19;
 sub run_tests_timer
 {
    my $done = 0;
+   # New watch/unwatch API
+
+   $loop->watch_time( delay => 2 * AUT, code => sub { $done = 1; } );
+
+   is_oneref( $loop, '$loop has refcount 1 after watch_time' );
+
+   time_between {
+      my $now = time;
+      $loop->loop_once( 5 * AUT );
+
+      # poll might have returned just a little early, such that the TimerQueue
+      # doesn't think anything is ready yet. We need to handle that case.
+      while( !$done ) {
+         die "It should have been ready by now" if( time - $now > 5 * AUT );
+         $loop->loop_once( 0.1 * AUT );
+      }
+   } 1.5, 2.5, 'loop_once(5) while waiting for time';
+
+   my $cancelled_fired = 0;
+   my $id = $loop->watch_time( delay => 1 * AUT, code => sub { $cancelled_fired = 1 } );
+   $loop->unwatch_time( $id );
+   undef $id;
+
+   $loop->loop_once( 2 * AUT );
+
+   ok( !$cancelled_fired, 'unwatched watch_time does not fire' );
+
+   # Legacy enqueue/requeue/cancel API
+   $done = 0;
 
    $loop->enqueue_timer( delay => 2 * AUT, code => sub { $done = 1; } );
 
@@ -411,8 +440,8 @@ sub run_tests_timer
       is( $count, 1, "One ->loop_once(1) sufficient for a single $delay second timer" );
    }
 
-   my $cancelled_fired = 0;
-   my $id = $loop->enqueue_timer( delay => 1 * AUT, code => sub { $cancelled_fired = 1 } );
+   $cancelled_fired = 0;
+   $id = $loop->enqueue_timer( delay => 1 * AUT, code => sub { $cancelled_fired = 1 } );
    $loop->cancel_timer( $id );
    undef $id;
 

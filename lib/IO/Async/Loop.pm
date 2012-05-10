@@ -1807,6 +1807,17 @@ sub unwatch_signal
    }
 }
 
+# New watch/unwatch_time API - currently hidden
+sub watch_time
+{
+   shift->enqueue_timer( @_ );
+}
+
+sub unwatch_time
+{
+   shift->cancel_timer( @_ );
+}
+
 # For subclasses to call
 sub _build_time
 {
