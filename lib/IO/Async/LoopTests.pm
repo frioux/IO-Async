@@ -418,6 +418,29 @@ sub run_tests_timer
 
    ok( !$cancelled_fired, 'unwatched watch_time does not fire' );
 
+   $loop->watch_time( after => -1, code => sub { $done = 1 } );
+
+   $done = 0;
+
+   time_between {
+      $loop->loop_once while !$done;
+   } 0, 0.1, 'loop_once while waiting for negative interval timer';
+
+   my $doneA;
+   my $doneB;
+
+   $id = $loop->watch_time( after => 1 * AUT, code => sub {
+      $loop->unwatch_time( $id ); undef $id;
+      $doneA++;
+   });
+
+   $loop->watch_time( after => 1.1 * AUT, code => sub { $doneB++ } );
+
+   $loop->loop_once( 1 * AUT ) for 1 .. 3;
+
+   is( $doneA, 1, 'Self-cancelling timer still fires' );
+   is( $doneB, 1, 'Other timers still fire after self-cancelling one' );
+
    # Legacy enqueue/requeue/cancel API
    $done = 0;
 
@@ -485,29 +508,6 @@ sub run_tests_timer
    } 1.5, 2.5, 'requeued timer of delay 2';
 
    is( $done, 2, '$done is 2 after requeued timer' );
-
-   $loop->enqueue_timer( delay => -1, code => sub { $done = 1 } );
-
-   $done = 0;
-
-   time_between {
-      $loop->loop_once while !$done;
-   } 0, 0.1, 'loop_once while waiting for negative interval timer';
-
-   my $doneA;
-   my $doneB;
-
-   $id = $loop->enqueue_timer( delay => 1 * AUT, code => sub {
-      $loop->cancel_timer( $id ); undef $id;
-      $doneA++;
-   });
-
-   $loop->enqueue_timer( delay => 1.1 * AUT, code => sub { $doneB++ } );
-
-   $loop->loop_once( 1 * AUT ) for 1 .. 3;
-
-   is( $doneA, 1, 'Self-cancelling timer still fires' );
-   is( $doneB, 1, 'Other timers still fire after self-cancelling one' );
 }
 
 =head2 signal
@@ -627,13 +627,13 @@ sub run_tests_idle
    is( $called, 2, 'unwatched deferral not called' );
 
    $id = $loop->watch_idle( when => 'later', code => sub { $called = 3 } );
-   my $timer_id = $loop->enqueue_timer( delay => 5, code => sub {} );
+   my $timer_id = $loop->watch_time( delay => 5, code => sub {} );
 
    $loop->loop_once( 1 );
 
    is( $called, 3, '$loop->later still invoked with enqueued timer' );
 
-   $loop->cancel_timer( $timer_id );
+   $loop->unwatch_time( $timer_id );
 
    $loop->later( sub { $called = 4 } );
 
@@ -725,7 +725,7 @@ sub run_tests_control
 
    time_between { $loop->loop_once( 2 * AUT ) } 1.5, 2.5, 'loop_once(2) when idle';
 
-   $loop->enqueue_timer( delay => 0.1, code => sub { $loop->stop( result => "here" ) } );
+   $loop->watch_time( after => 0.1, code => sub { $loop->stop( result => "here" ) } );
 
    local $SIG{ALRM} = sub { die "Test timed out before ->stop" };
    alarm( 1 );
@@ -736,14 +736,14 @@ sub run_tests_control
 
    is_deeply( \@result, [ result => "here" ], '->stop arguments returned by ->run' );
 
-   $loop->enqueue_timer( delay => 0.1, code => sub { $loop->stop( result => "here" ) } );
+   $loop->watch_time( after => 0.1, code => sub { $loop->stop( result => "here" ) } );
 
    my $result = $loop->run;
 
    is( $result, "result", 'First ->stop argument returned by ->run in scalar context' );
 
-   $loop->enqueue_timer( delay => 0.1, code => sub {
-      $loop->enqueue_timer( delay => 0.1, code => sub { $loop->stop( "inner" ) } );
+   $loop->watch_time( after => 0.1, code => sub {
+      $loop->watch_time( after => 0.1, code => sub { $loop->stop( "inner" ) } );
       my @result = $loop->run;
       $loop->stop( @result, "outer" );
    } );
@@ -752,7 +752,7 @@ sub run_tests_control
 
    is_deeply( \@result, [ "inner", "outer" ], '->run can be nested properly' );
 
-   $loop->enqueue_timer( delay => 0.1, code => sub { $loop->loop_stop } );
+   $loop->watch_time( after => 0.1, code => sub { $loop->loop_stop } );
 
    local $SIG{ALRM} = sub { die "Test timed out before ->loop_stop" };
    alarm( 1 );

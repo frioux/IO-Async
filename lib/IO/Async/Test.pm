@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2007-2010 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2007-2012 -- leonerd@leonerd.org.uk
 
 package IO::Async::Test;
 
@@ -112,8 +112,8 @@ sub wait_for(&)
    my ( undef, $callerfile, $callerline ) = caller;
 
    my $timedout = 0;
-   my $timerid = $loop->enqueue_timer(
-      delay => 10,
+   my $timerid = $loop->watch_time(
+      after => 10,
       code => sub { $timedout = 1 },
    );
 
@@ -123,7 +123,7 @@ sub wait_for(&)
       die "Nothing was ready after 10 second wait; called at $callerfile line $callerline\n";
    }
    else {
-      $loop->cancel_timer( $timerid );
+      $loop->unwatch_time( $timerid );
    }
 }
 

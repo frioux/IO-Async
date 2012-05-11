@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 24;
+use Test::More tests => 23;
 
 use Time::HiRes qw( time );
 
@@ -90,7 +90,7 @@ $loop->unwatch_io(
    on_write_ready => 1,
 );
 
-# watch_timer
+# watch_time
 
 $rvec = $wvec = $evec = '';
 $timeout = 5 * AUT;
@@ -99,7 +99,7 @@ $loop->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
 is( $timeout, 5 * AUT, '$timeout idling pre_select with timeout' );
 
 my $done = 0;
-$loop->enqueue_timer( delay => 2 * AUT, code => sub { $done = 1; } );
+$loop->watch_time( after => 2 * AUT, code => sub { $done = 1; } );
 
 $loop->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
 cmp_ok( $timeout/AUT, '>', 1.7, '$timeout while timer waiting pre_select at least 1.7' );
@@ -134,9 +134,8 @@ while( !$done ) {
 
 is( $done, 1, '$done after post_select while waiting for timer' );
 
-my $id;
-$id = $loop->enqueue_timer( delay => 1 * AUT, code => sub { $done = 2; } );
-$id = $loop->requeue_timer( $id, delay => 2 * AUT );
+my $id = $loop->watch_time( after => 1 * AUT, code => sub { $done = 2; } );
+$loop->unwatch_time( $id );
 
 $done = 0;
 $now = time;
@@ -145,16 +144,4 @@ $loop->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
 select( $rvec, $wvec, $evec, 1.5 * AUT );
 $loop->post_select( $rvec, $evec, $wvec );
 
-is( $done, 0, '$done still 0 before timeout' );
-
-while( !$done ) {
-   die "It should have been ready by now" if( time - $now > 5 * AUT );
-
-   $timeout = 0.1 * AUT;
-
-   $loop->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
-   select( $rvec, $wvec, $evec, $timeout );
-   $loop->post_select( $rvec, $evec, $wvec );
-}
-
-is( $done, 2, '$done is 2 after timeout' );
+is( $done, 0, '$done still 0 before cancelled timeout' );

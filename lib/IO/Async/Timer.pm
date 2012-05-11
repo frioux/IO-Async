@@ -143,7 +143,7 @@ sub start
       $self->{cb} = $self->_make_cb;
    }
 
-   $self->{id} = $loop->enqueue_timer(
+   $self->{id} = $loop->watch_time(
       $self->_make_enqueueargs,
       code => $self->{cb},
    );
@@ -173,7 +173,7 @@ sub stop
 
    defined $self->{id} or return; # nothing to do but no error
 
-   $loop->cancel_timer( $self->{id} );
+   $loop->unwatch_time( $self->{id} );
 
    undef $self->{id};
 }

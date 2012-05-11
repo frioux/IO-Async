@@ -350,7 +350,7 @@ testing_loop( $loop );
    is( $function->workers, 1, '$function has 1 worker after call' );
 
    my $waited;
-   $loop->enqueue_timer( delay => 1 * AUT, code => sub { $waited++ } );
+   $loop->watch_time( after => 1 * AUT, code => sub { $waited++ } );
 
    wait_for { $waited };
 
@@ -365,7 +365,7 @@ testing_loop( $loop );
    wait_for { defined $result };
 
    undef $waited;
-   $loop->enqueue_timer( delay => 3 * AUT, code => sub { $waited++ } );
+   $loop->watch_time( after => 3 * AUT, code => sub { $waited++ } );
 
    wait_for { $waited };
 
