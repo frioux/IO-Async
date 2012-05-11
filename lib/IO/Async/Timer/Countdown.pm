@@ -180,10 +180,8 @@ sub reset
 
    return if !$self->is_running;
 
-   $self->{id} = $loop->requeue_timer(
-      $self->{id},
-      delay => $self->{delay},
-   );
+   $self->stop;
+   $self->start;
 }
 
 =head1 EXAMPLES
