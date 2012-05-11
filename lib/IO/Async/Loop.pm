@@ -135,6 +135,14 @@ sub __new
    # one
    our $ONE_TRUE_LOOP ||= $self;
 
+   # Legacy support - temporary until all CPAN classes are updated; bump NEEDAPI version at that point
+   my $old_timer = $self->can( "enqueue_timer" ) != \&enqueue_timer;
+   if( $old_timer != ( $self->can( "cancel_timer" ) != \&cancel_timer ) ) {
+      die "$class should overload both ->enqueue_timer and ->cancel_timer, or neither";
+   }
+
+   $self->{old_timer} = $old_timer;
+
    return $self;
 }
 
@@ -1870,7 +1878,17 @@ sub watch_time
    $args{delay} = delete $args{after} if exists $args{after};
    $args{time}  = delete $args{at}    if exists $args{at};
 
-   $self->enqueue_timer( %args );
+   if( $self->{old_timer} ) {
+      $self->enqueue_timer( %args );
+   }
+   else {
+      my $timequeue = $self->{timequeue} ||= $self->__new_feature( "IO::Async::Internals::TimeQueue" );
+
+      my $time = $self->_build_time( %args );
+      my $code = $args{code};
+
+      $timequeue->enqueue( time => $time, code => $code );
+   }
 }
 
 =head2 $loop->unwatch_time( $id )
@@ -1887,10 +1905,17 @@ sub unwatch_time
 {
    my $self = shift;
    my ( $id ) = @_;
-   $self->cancel_timer( $id );
+
+   if( $self->{old_timer} ) {
+      $self->cancel_timer( $id );
+   }
+   else {
+      my $timequeue = $self->{timequeue} ||= $self->__new_feature( "IO::Async::Internals::TimeQueue" );
+
+      $timequeue->cancel( $id );
+   }
 }
 
-# For subclasses to call
 sub _build_time
 {
    my $self = shift;
@@ -1927,11 +1952,8 @@ sub enqueue_timer
    my $self = shift;
    my ( %params ) = @_;
 
-   my $timequeue = $self->{timequeue} ||= $self->__new_feature( "IO::Async::Internals::TimeQueue" );
-
-   $params{time} = $self->_build_time( %params );
-
-   $timequeue->enqueue( %params );
+   my $code = $params{code};
+   return [ $self->watch_time( %params ), $code ];
 }
 
 =head2 $loop->cancel_timer( $id )
@@ -1945,10 +1967,7 @@ sub cancel_timer
 {
    my $self = shift;
    my ( $id ) = @_;
-
-   my $timequeue = $self->{timequeue} ||= $self->__new_feature( "IO::Async::Internals::TimeQueue" );
-
-   $timequeue->cancel( $id );
+   $self->unwatch_time( $id->[0] );
 }
 
 =head2 $newid = $loop->requeue_timer( $id, %params )
@@ -1974,11 +1993,8 @@ sub requeue_timer
    my $self = shift;
    my ( $id, %params ) = @_;
 
-   my $timequeue = $self->{timequeue} ||= $self->__new_feature( "IO::Async::Internals::TimeQueue" );
-
-   $params{time} = $self->_build_time( %params );
-
-   $timequeue->requeue( $id, %params );
+   $self->unwatch_time( $id->[0] );
+   return $self->enqueue_timer( %params, code => $id->[1] );
 }
 
 =head2 $id = $loop->watch_idle( %params )
