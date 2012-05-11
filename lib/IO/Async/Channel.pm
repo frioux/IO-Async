@@ -341,7 +341,7 @@ sub _recv_async
 sub _close_async
 {
    my $self = shift;
-   $self->{stream}->close_when_empty;
+   $self->{stream}->close_when_empty if $self->{stream};
 }
 
 sub _on_stream_read

@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 36;
+use Test::More tests => 37;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -144,6 +144,7 @@ testing_loop( $loop );
    $loop->remove( $function );
 }
 
+# max_workers
 {
    my $count = 0;
 
@@ -175,6 +176,7 @@ testing_loop( $loop );
    $loop->remove( $function );
 }
 
+# exit_on_die
 {
    my $count = 0;
 
@@ -206,6 +208,7 @@ testing_loop( $loop );
    $loop->remove( $function );
 }
 
+# restart after exit
 {
    my $function = IO::Async::Function->new(
       min_workers => 0,
@@ -455,6 +458,19 @@ testing_loop( $loop );
    wait_for { defined $result };
 
    is( $result, 2, '$result after restart' );
+
+   undef $result;
+   $function->call(
+      args => [],
+      on_return => sub { $result = shift },
+      on_error  => sub { die "Test failed early - @_" },
+   );
+
+   $function->restart;
+
+   wait_for { defined $result };
+
+   is( $result, 2, 'call before restart still returns result' );
 
    $loop->remove( $function );
 }
