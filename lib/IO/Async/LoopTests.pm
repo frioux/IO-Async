@@ -373,13 +373,13 @@ Tests the Loop's ability to handle timer events
 
 =cut
 
-use constant count_tests_timer => 19;
+use constant count_tests_timer => 21;
 sub run_tests_timer
 {
    my $done = 0;
    # New watch/unwatch API
 
-   $loop->watch_time( delay => 2 * AUT, code => sub { $done = 1; } );
+   $loop->watch_time( after => 2 * AUT, code => sub { $done = 1; } );
 
    is_oneref( $loop, '$loop has refcount 1 after watch_time' );
 
@@ -393,10 +393,24 @@ sub run_tests_timer
          die "It should have been ready by now" if( time - $now > 5 * AUT );
          $loop->loop_once( 0.1 * AUT );
       }
-   } 1.5, 2.5, 'loop_once(5) while waiting for time';
+   } 1.5, 2.5, 'loop_once(5) while waiting for watch_time after';
+
+   $loop->watch_time( at => time + 2 * AUT, code => sub { $done = 2; } );
+
+   time_between {
+      my $now = time;
+      $loop->loop_once( 5 * AUT );
+
+      # poll might have returned just a little early, such that the TimerQueue
+      # doesn't think anything is ready yet. We need to handle that case.
+      while( !$done ) {
+         die "It should have been ready by now" if( time - $now > 5 * AUT );
+         $loop->loop_once( 0.1 * AUT );
+      }
+   } 1.5, 2.5, 'loop_once(5) while waiting for watch_time at';
 
    my $cancelled_fired = 0;
-   my $id = $loop->watch_time( delay => 1 * AUT, code => sub { $cancelled_fired = 1 } );
+   my $id = $loop->watch_time( after => 1 * AUT, code => sub { $cancelled_fired = 1 } );
    $loop->unwatch_time( $id );
    undef $id;
 

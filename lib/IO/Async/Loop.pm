@@ -1810,12 +1810,21 @@ sub unwatch_signal
 # New watch/unwatch_time API - currently hidden
 sub watch_time
 {
-   shift->enqueue_timer( @_ );
+   my $self = shift;
+   my %args = @_;
+
+   # Renamed args
+   $args{delay} = delete $args{after} if exists $args{after};
+   $args{time}  = delete $args{at}    if exists $args{at};
+
+   $self->enqueue_timer( %args );
 }
 
 sub unwatch_time
 {
-   shift->cancel_timer( @_ );
+   my $self = shift;
+   my ( $id ) = @_;
+   $self->cancel_timer( $id );
 }
 
 # For subclasses to call
