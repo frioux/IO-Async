@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 29;
+use Test::More tests => 24;
 use Test::Fatal;
 
 use IO::Async::Internals::TimeQueue;
@@ -75,20 +75,3 @@ $count = $queue->fire( now => 1510 );
 
 is( $fired, 1, '$fired after fire at time 1510' );
 is( $count, 1, '$count after fire at time 1510' );
-
-$id = $queue->enqueue( time => 1600, code => sub { $fired++ } );
-is( $queue->next_time, 1600, '->next_time before requeue' );
-
-$queue->requeue( $id, time => 1650 );
-
-$fired = 0;
-$count = $queue->fire( now => 1630 );
-
-is( $fired, 0, '$fired after fire at time 1630 after requeue' );
-is( $count, 0, '$count after fire at time 1630 after requeue' );
-
-$fired = 0;
-$count = $queue->fire( now => 1680 );
-
-is( $fired, 1, '$fired after fire at time 1680 after requeue' );
-is( $count, 1, '$count after fire at time 1680 after requeue' );

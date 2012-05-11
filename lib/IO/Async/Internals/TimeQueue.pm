@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2006-2009 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2006-2012 -- leonerd@leonerd.org.uk
 
 package # hide from CPAN
   IO::Async::Internals::TimeQueue;
@@ -47,24 +47,6 @@ sub cancel
    my ( $id ) = @_;
 
    $self->delete( $id );
-}
-
-sub requeue
-{
-   my $self = shift;
-   my ( $id, %params ) = @_;
-
-   defined $params{time} or croak "Expected 'time'";
-   my $time = $params{time};
-
-   my $elem = $self->delete( $id );
-   defined $elem or croak "No such enqueued timer";
-
-   $elem->time( $time );
-
-   $self->add( $elem );
-
-   return $elem;
 }
 
 sub fire
