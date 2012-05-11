@@ -273,6 +273,20 @@ sub stop
    }
 }
 
+=head2 $function->restart
+
+Gracefully stop and restart all the worker processes. 
+
+=cut
+
+sub restart
+{
+   my $self = shift;
+
+   $self->stop;
+   $self->start;
+}
+
 =head2 $function->call( %params )
 
 Schedules an invocation of the contained function to be executed on one of the

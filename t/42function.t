@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 34;
+use Test::More tests => 36;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -419,4 +419,42 @@ testing_loop( $loop );
 
    is( $result, "return", 'Write-to-STD{OUT+ERR} function returned' );
    is( $buffer, "A line to STDOUT\nA line to STDERR\n", 'Write-to-STD{OUT+ERR} wrote to pipe' );
+}
+
+# Restart
+{
+   my $value = 1;
+
+   my $function = IO::Async::Function->new(
+      code => sub { return $value },
+   );
+
+   $loop->add( $function );
+
+   my $result;
+   $function->call(
+      args => [],
+      on_return => sub { $result = shift },
+      on_error  => sub { die "Test failed early - @_" },
+   );
+
+   wait_for { defined $result };
+
+   is( $result, 1, '$result before restart' );
+
+   $value = 2;
+   $function->restart;
+
+   undef $result;
+   $function->call(
+      args => [],
+      on_return => sub { $result = shift },
+      on_error  => sub { die "Test failed early - @_" },
+   );
+
+   wait_for { defined $result };
+
+   is( $result, 2, '$result after restart' );
+
+   $loop->remove( $function );
 }
