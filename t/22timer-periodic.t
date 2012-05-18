@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 37;
+use Test::More tests => 47;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -120,6 +120,52 @@ testing_loop( $loop );
    undef @targs;
 
    is_oneref( $timer, 'Timer has refcount 1 finally' );
+}
+
+# reschedule => "skip"
+{
+   my $tick = 0;
+
+   my $timer = IO::Async::Timer::Periodic->new(
+      interval => 1 * AUT,
+      reschedule => "skip",
+
+      on_tick => sub { $tick++ },
+   );
+
+   $loop->add( $timer );
+   $timer->start;
+
+   time_about( sub { wait_for { $tick == 1 } }, 1, 'skip Timer works' );
+
+   ok( $timer->is_running, 'skip Timer is still running' );
+
+   time_about( sub { wait_for { $tick == 2 } }, 1, 'skip Timer ticks a second time' );
+
+   $loop->remove( $timer );
+}
+
+# reschedule => "drift"
+{
+   my $tick = 0;
+
+   my $timer = IO::Async::Timer::Periodic->new(
+      interval => 1 * AUT,
+      reschedule => "drift",
+
+      on_tick => sub { $tick++ },
+   );
+
+   $loop->add( $timer );
+   $timer->start;
+
+   time_about( sub { wait_for { $tick == 1 } }, 1, 'drift Timer works' );
+
+   ok( $timer->is_running, 'drift Timer is still running' );
+
+   time_about( sub { wait_for { $tick == 2 } }, 1, 'drift Timer ticks a second time' );
+
+   $loop->remove( $timer );
 }
 
 ## Subclass

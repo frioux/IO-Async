@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2009-2011 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2009-2012 -- leonerd@leonerd.org.uk
 
 package IO::Async::Timer::Periodic;
 
@@ -41,9 +41,10 @@ C<IO::Async::Timer::Periodic> - event callback at regular intervals
 =head1 DESCRIPTION
 
 This subclass of L<IO::Async::Timer> implements repeating events at regular
-clock intervals. The timing is not subject to how long it takes the callback
-to execute, but runs at regular intervals beginning at the time the timer was
-started, then adding each interval thereafter.
+clock intervals. The timing may or may not be subject to how long it takes the
+callback to execute. Iterations may be rescheduled runs at fixed regular
+intervals beginning at the time the timer was started, or by a fixed delay
+after the previous code has finished executing.
 
 For a C<Timer> object that only runs a callback once, after a given delay, see
 instead L<IO::Async::Timer::Countdown>. A Countdown timer can also be used to
@@ -90,12 +91,38 @@ Even if this value is zero, the first invocation will be made asynchronously,
 by the containing C<Loop> object, and not synchronously by the C<start> method
 itself.
 
+=item reschedule => STRING
+
+Optional. Must be one of C<hard>, C<skip> or C<drift>. Defines the algorithm
+used to reschedule the next invocation.
+
+C<hard> schedules each iteration at the fixed interval from the previous
+iteration's schedule time, ensuring a regular repeating event.
+
+C<skip> schedules similarly to C<hard>, but skips over times that have already
+passed. This matters if the duration is particularly short and there's a
+possibility that times may be missed, or if the entire process is stopped and
+resumed by C<SIGSTOP> or similar.
+
+C<drift> schedules each iteration at the fixed interval from the time that the
+previous iteration's event handler returns. This allows it to slowly drift over
+time and become desynchronised with other events of the same interval or
+multiples/fractions of it.
+
 =back
 
 Once constructed, the timer object will need to be added to the C<Loop> before
 it will work. It will also need to be started by the C<start> method.
 
 =cut
+
+sub _init
+{
+   my $self = shift;
+   $self->SUPER::_init( @_ );
+
+   $self->{reschedule} = "hard";
+}
 
 sub configure
 {
@@ -128,6 +155,14 @@ sub configure
       $self->{first_interval} = $first_interval;
    }
 
+   if( exists $params{reschedule} ) {
+      my $resched = delete $params{reschedule} || "hard";
+      grep { $_ eq $resched } qw( hard skip drift ) or
+         croak "Expected 'reschedule' to be one of hard, skip, drift";
+
+      $self->{reschedule} = $resched;
+   }
+
    unless( $self->can_event( 'on_tick' ) ) {
       croak 'Expected either a on_tick callback or an ->on_tick method';
    }
@@ -150,11 +185,23 @@ sub start
    # become start-pending. We'll calculate it properly when it gets added to
    # the Loop
    if( my $loop = $self->loop ) {
+      my $now = $loop->time;
+      my $resched = $self->{reschedule};
+
       if( !defined $self->{next_time} ) {
-         $self->{next_time} = $loop->time + $self->_next_interval;
+         $self->{next_time} = $now + $self->_next_interval;
       }
-      else {
+      elsif( $resched eq "hard" ) {
          $self->{next_time} += $self->_next_interval;
+      }
+      elsif( $resched eq "skip" ) {
+         # How many ticks are needed?
+         my $ticks = POSIX::ceil( $now - $self->{next_time} );
+         # $self->{last_ticks} = $ticks;
+         $self->{next_time} += $self->_next_interval * $ticks;
+      }
+      elsif( $resched eq "drift" ) {
+         $self->{next_time} = $now + $self->_next_interval;
       }
    }
 
@@ -179,9 +226,10 @@ sub _make_cb
       undef $self->{first_interval};
 
       undef $self->{id};
-      $self->start;
 
       $self->invoke_event( on_tick => );
+
+      $self->start;
    } );
 }
 
