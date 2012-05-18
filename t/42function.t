@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 37;
+use Test::More tests => 40;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -471,6 +471,47 @@ testing_loop( $loop );
    wait_for { defined $result };
 
    is( $result, 2, 'call before restart still returns result' );
+
+   $loop->remove( $function );
+}
+
+# max_worker_calls
+{
+   my $counter;
+   my $function = IO::Async::Function->new(
+      max_workers      => 1,
+      max_worker_calls => 2,
+      code => sub { return ++$counter; }
+   );
+
+   $loop->add( $function );
+
+   my $result;
+   $function->call(
+      args => [],
+      on_return => sub { $result = shift },
+      on_error  => sub { die "Test failed early - @_" },
+   );
+   wait_for { defined $result };
+   is( $result, 1, '$result from first call' );
+
+   undef $result;
+   $function->call(
+      args => [],
+      on_return => sub { $result = shift },
+      on_error  => sub { die "Test failed early - @_" },
+   );
+   wait_for { defined $result };
+   is( $result, 2, '$result from second call' );
+
+   undef $result;
+   $function->call(
+      args => [],
+      on_return => sub { $result = shift },
+      on_error  => sub { die "Test failed early - @_" },
+   );
+   wait_for { defined $result };
+   is( $result, 1, '$result from third call' );
 
    $loop->remove( $function );
 }

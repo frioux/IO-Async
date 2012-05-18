@@ -121,6 +121,12 @@ The lower and upper bounds of worker processes to try to keep running. The
 actual number running at any time will be kept somewhere between these bounds
 according to load.
 
+=item max_worker_calls => INT
+
+Optional. If provided, stop a worker process after it has processed this
+number of calls. (New workers may be started to replace stopped ones, within
+the bounds given above).
+
 =item idle_timeout => NUM
 
 Optional. If provided, idle worker processes will be shut down after this
@@ -161,7 +167,7 @@ sub configure
    my %params = @_;
 
    my %worker_params;
-   foreach (qw( exit_on_die )) {
+   foreach (qw( exit_on_die max_worker_calls )) {
       $self->{$_} = $worker_params{$_} = delete $params{$_} if exists $params{$_};
    }
 
@@ -426,6 +432,7 @@ sub _new_worker
 
    my $worker = IO::Async::Function::Worker->new(
       ( map { $_ => $self->{$_} } qw( code setup exit_on_die ) ),
+      max_calls => $self->{max_worker_calls},
 
       on_finish => $self->_capture_weakself( sub {
          my $self = shift or return;
@@ -497,8 +504,6 @@ sub new
    my $arg_channel = IO::Async::Channel->new;
    my $ret_channel = IO::Async::Channel->new;
 
-   my $exit_on_die = delete $params{exit_on_die};
-
    my $code = delete $params{code};
    $params{code} = sub {
       while( my $args = $arg_channel->recv ) {
@@ -522,9 +527,18 @@ sub new
 
    $worker->{arg_channel} = $arg_channel;
    $worker->{ret_channel} = $ret_channel;
-   $worker->{exit_on_die} = $exit_on_die;
 
    return $worker;
+}
+
+sub configure
+{
+   my $self = shift;
+   my %params = @_;
+
+   exists $params{$_} and $self->{$_} = delete $params{$_} for qw( exit_on_die max_calls );
+
+   $self->SUPER::configure( %params );
 }
 
 sub stop
@@ -572,6 +586,8 @@ sub call
             die "Unrecognised type from worker - $type\n";
          }
 
+         $worker->stop if !$worker->{max_calls};
+
          $function->_dispatch_pending if $function;
       } ),
       on_eof => $worker->_capture_weakself( sub {
@@ -589,6 +605,7 @@ sub call
    );
 
    $worker->{busy} = 1;
+   $worker->{max_calls}--;
 }
 
 =head1 NOTES
