@@ -1,5 +1,19 @@
 Revision history for IO-Async
 
+0.48    CHANGES:
+         * Support Channel long-running on_recv handler
+         * Support Channel directly between two Routines, in sync. mode at
+           both ends
+         * Added Loop->{watch,unwatch}_time API
+         * Added Function->restart and max_worker_calls parameter
+         * Support other reschedule policies for Timer::Periodic to allow
+           tick skipping, or drift
+
+        BUGFIXES:
+         * Fix example in Routine SYNOPSIS (thanks apeiron)
+         * Connector should check definedness of local_{host,port} rather than
+           existence
+
 0.47    CHANGES:
          * Support $listener->listen( v6only => ... )
          * Added new data-passing $loop->run and $loop->stop methods

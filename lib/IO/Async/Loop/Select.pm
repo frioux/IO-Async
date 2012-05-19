@@ -8,7 +8,7 @@ package IO::Async::Loop::Select;
 use strict;
 use warnings;
 
-our $VERSION = '0.47';
+our $VERSION = '0.48';
 use constant API_VERSION => '0.33';
 
 use base qw( IO::Async::Loop );
