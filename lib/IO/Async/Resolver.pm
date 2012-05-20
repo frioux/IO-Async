@@ -9,7 +9,7 @@ use strict;
 use warnings;
 use base qw( IO::Async::Function );
 
-our $VERSION = '0.48';
+our $VERSION = '0.49';
 
 use Socket 1.93 qw(
    AI_NUMERICHOST AI_PASSIVE

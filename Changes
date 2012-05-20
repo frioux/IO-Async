@@ -1,5 +1,9 @@
 Revision history for IO-Async
 
+0.49    CHANGES:
+         * Fix watch_time => enqueue_timer conversions; fix unit tests and
+           Timer implementations
+
 0.48    CHANGES:
          * Support Channel long-running on_recv handler
          * Support Channel directly between two Routines, in sync. mode at
