@@ -162,7 +162,7 @@ sub _make_enqueueargs
    my $self = shift;
 
    undef $self->{expired};
-   return delay => $self->{delay};
+   return after => $self->{delay};
 }
 
 =head2 $timer->reset

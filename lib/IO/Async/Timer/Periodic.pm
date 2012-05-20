@@ -237,7 +237,7 @@ sub _make_enqueueargs
 {
    my $self = shift;
 
-   return time => $self->{next_time};
+   return at => $self->{next_time};
 }
 
 =head1 AUTHOR

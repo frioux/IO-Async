@@ -627,7 +627,7 @@ sub run_tests_idle
    is( $called, 2, 'unwatched deferral not called' );
 
    $id = $loop->watch_idle( when => 'later', code => sub { $called = 3 } );
-   my $timer_id = $loop->watch_time( delay => 5, code => sub {} );
+   my $timer_id = $loop->watch_time( after => 5, code => sub {} );
 
    $loop->loop_once( 1 );
 

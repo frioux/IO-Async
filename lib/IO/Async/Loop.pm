@@ -1875,8 +1875,15 @@ sub watch_time
    my %args = @_;
 
    # Renamed args
-   $args{delay} = delete $args{after} if exists $args{after};
-   $args{time}  = delete $args{at}    if exists $args{at};
+   if( exists $args{after} ) {
+      $args{delay} = delete $args{after};
+   }
+   elsif( exists $args{at} ) {
+      $args{time}  = delete $args{at};
+   }
+   else {
+      croak "Expected one of 'at' or 'after'";
+   }
 
    if( $self->{old_timer} ) {
       $self->enqueue_timer( %args );
@@ -1951,6 +1958,10 @@ sub enqueue_timer
 {
    my $self = shift;
    my ( %params ) = @_;
+
+   # Renamed args
+   $params{after} = delete $params{delay} if exists $params{delay};
+   $params{at}    = delete $params{time}  if exists $params{time};
 
    my $code = $params{code};
    return [ $self->watch_time( %params ), $code ];
