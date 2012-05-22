@@ -1620,11 +1620,11 @@ required API. This method should return the API version that the loop
 implementation supports. The magic constructor will use that class, provided
 it declares a version at least as new as the version documented here.
 
-The current API version is C<0.33>.
+The current API version is C<0.49>.
 
 This method may be implemented using C<constant>; e.g
 
- use constant API_VERSION => '0.33';
+ use constant API_VERSION => '0.49';
 
 =cut
 
