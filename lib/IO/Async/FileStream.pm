@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2011 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2011-2012 -- leonerd@leonerd.org.uk
 
 package IO::Async::FileStream;
 
@@ -131,6 +131,13 @@ C<IO::Async::Stream>.
 
 =over 8
 
+=item filename => STRING
+
+Optional. If supplied, watches the named file rather than the filehandle given
+in C<read_handle>. The file will be opened by the constructor, and then
+watched for renames. If the file is renamed, the new filename is opened and
+tracked similarly after closing the previous file.
+
 =item interval => NUM
 
 Optional. The interval in seconds to poll the filehandle using C<stat(2)>
@@ -152,6 +159,12 @@ sub configure
 
    foreach (qw( interval )) {
       $self->{timer}->configure( $_ => delete $params{$_} ) if exists $params{$_};
+   }
+
+   if( exists $params{filename} ) {
+      my $filename = delete $params{filename};
+      $params{read_handle} = $self->_reopen_file( $filename );
+      $self->{filename} = $filename;
    }
 
    croak "Cannot have a write_handle in a ".ref($self) if defined $params{write_handle};
@@ -189,11 +202,25 @@ sub _watch_write
    croak "Cannot _watch_write in " . ref($self) if $want;
 }
 
+sub _reopen_file
+{
+   my $self = shift;
+   my ( $path ) = @_;
+
+   open my $fh, "<", $path or croak "Cannot open $path for reading - $!";
+
+   undef $self->{last_size};
+   undef $self->{last_pos};
+
+   return $fh;
+}
+
 sub _do_initial
 {
    my $self = shift;
 
-   my $size = (stat $self->read_handle)[7];
+   # During reopen for rename, start from the beginning
+   my $size = $self->{renamed} ? 0 : (stat $self->read_handle)[7];
 
    $self->{last_size} = $size;
 
@@ -205,7 +232,22 @@ sub on_tick
 {
    my $self = shift;
 
-   my $size = (stat $self->read_handle)[7];
+   my @fstats = stat $self->read_handle;
+
+   if( my $filename = $self->{filename} ) {
+      # Detect rename
+      my @namestats = stat $filename;
+
+      # [0] = dev, [1] = ino
+      if( !@namestats or $namestats[0] != $fstats[0] or $namestats[1] != $fstats[1] ) {
+         $self->{renamed} = 1;
+         $self->debug_printf( "read tail of old file" );
+         $self->read_more;
+         return;
+      }
+   }
+
+   my $size = $fstats[7];
 
    if( $size < $self->{last_size} ) {
       $self->maybe_invoke_event( on_truncated => );
@@ -233,6 +275,14 @@ sub read_more
 
    if( $self->{last_pos} < $self->{last_size} ) {
       $self->loop->later( sub { $self->read_more } );
+   }
+   elsif( $self->{renamed} ) {
+      $self->debug_printf( "reopening for rename" );
+      $self->read_handle->close;
+
+      my $fh = $self->_reopen_file( $self->{filename} );
+      $self->configure( read_handle => $fh );
+      undef $self->{renamed};
    }
 }
 
@@ -361,11 +411,6 @@ sub seek_to_last
 =head1 TODO
 
 =over 4
-
-=item *
-
-Support opening a file by name instead of taking an already-open filehandle.
-With that comes the option to track it for renames too.
 
 =item *
 

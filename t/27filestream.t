@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 20;
+use Test::More tests => 27;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -28,7 +28,7 @@ sub mkhandles
 
    $wr->autoflush( 1 );
 
-   return ( $rd, $wr );
+   return ( $rd, $wr, $filename );
 }
 
 {
@@ -217,6 +217,55 @@ sub mkhandles
    is_deeply( \@lines,
       [ "Some original lines\n", "in the file\n", "And another\n" ],
       'All three lines read' );
+
+   $loop->remove( $filestream );
+}
+
+# Follow by name
+{
+   my ( undef, $wr, $filename ) = mkhandles;
+
+   my @lines;
+
+   my $filestream = IO::Async::FileStream->new(
+      interval => 0.1 * AUT,
+      filename => $filename,
+      on_read => sub {
+         my $self = shift;
+         my ( $buffref, $eof ) = @_;
+
+         push @lines, $1 while $$buffref =~ s/^(.*\n)//;
+         return 0;
+      },
+   );
+
+   ok( defined $filestream, '$filestream defined for filenaem' );
+   isa_ok( $filestream, "IO::Async::FileStream", '$filestream isa IO::Async::FileStream' );
+
+   is_oneref( $filestream, 'reading $filestream has refcount 1 initially' );
+
+   $loop->add( $filestream );
+
+   is_refcount( $filestream, 2, '$filestream has refcount 2 after adding to Loop' );
+
+   $wr->syswrite( "message\n" );
+   wait_for { scalar @lines };
+
+   is_deeply( \@lines, [ "message\n" ], '@lines after wait' );
+   shift @lines;
+
+   $wr->syswrite( "last line of old file\n" );
+   close $wr;
+   rename( $filename, "$filename.old" ) or die "Cannot rename $filename - $!";
+   END { -f $filename and unlink $filename }
+   END { -f "$filename.old" and unlink "$filename.old" }
+   open $wr, ">", $filename or die "Cannot reopen $filename for writing - $!";
+   $wr->syswrite( "first line of new file\n" );
+
+   wait_for { scalar @lines };
+   is_deeply( $lines[0], "last line of old file\n", '@lines sees last line of old file' );
+   wait_for { scalar @lines >= 2 };
+   is_deeply( $lines[1], "first line of new file\n", '@lines sees first line of new file' );
 
    $loop->remove( $filestream );
 }
