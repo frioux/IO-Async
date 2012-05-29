@@ -28,11 +28,9 @@ my $build = Module::Build->new(
       'Test::Refcount' => 0,
       'Test::Warn' => 0,
    },
-   configure_requires => {
-      'Module::Build' => 0,
-   },
+   auto_configure_requires => 0, # Don't add M::B to configure_requires
    license => 'perl',
-   create_makefile_pl => 'small',
+   create_makefile_pl => 'traditional',
    create_license => 1,
    create_readme  => 1,
 );
