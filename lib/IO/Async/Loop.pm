@@ -20,13 +20,16 @@ use constant HAVE_MSWIN32 => ( $^O eq "MSWin32" );
 
 use Carp;
 
-use Socket qw( AF_INET AF_UNIX SOCK_STREAM SOCK_DGRAM SOCK_RAW );
+use Socket qw(
+   AF_INET AF_UNIX INADDR_LOOPBACK SOCK_STREAM SOCK_DGRAM SOCK_RAW
+   pack_sockaddr_in
+);
 BEGIN {
    # Not quite sure where we'll find AF_INET6
    eval { Socket->import( 'AF_INET6' ); 1 } or
       eval { require Socket6; Socket6->import( 'AF_INET6' ) }
 }
-use IO::Socket;
+use IO::Socket (); # empty import
 use Time::HiRes qw(); # empty import
 use POSIX qw( _exit WNOHANG );
 use Scalar::Util qw( refaddr );
