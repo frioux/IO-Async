@@ -15,7 +15,13 @@ use base qw( IO::Async::Loop );
 
 use Carp;
 
+use POSIX qw( S_ISREG );
+
 use constant HAVE_MSWIN32 => $^O eq "MSWin32";
+
+# select() on most platforms claims that ISREG files are always read- and
+# write-ready, but not on MSWin32. We need to fake this
+use constant FAKE_ISREG_READY => HAVE_MSWIN32;
 
 =head1 NAME
 
@@ -77,6 +83,8 @@ sub new
    $self->{rvec} = '';
    $self->{wvec} = '';
    $self->{evec} = '';
+
+   $self->{avec} = ''; # Bitvector of handles always to claim are ready
 
    return $self;
 }
@@ -158,12 +166,14 @@ sub post_select
 
       my $fileno = $watch->[0]->fileno;
 
-      if( vec( $readvec, $fileno, 1 ) ) {
+      if( vec( $readvec, $fileno, 1 ) or 
+          FAKE_ISREG_READY and vec( $self->{avec}, $fileno, 1 ) and vec( $self->{rvec}, $fileno, 1 ) ) {
          $count++, $watch->[1]->() if defined $watch->[1];
       }
 
       if( vec( $writevec, $fileno, 1 ) or
-          HAVE_MSWIN32 and vec( $exceptvec, $fileno, 1 ) ) {
+          HAVE_MSWIN32 and vec( $exceptvec, $fileno, 1 ) or
+          FAKE_ISREG_READY and vec( $self->{avec}, $fileno, 1 ) and vec( $self->{wvec}, $fileno, 1 ) ) {
          $count++, $watch->[2]->() if defined $watch->[2];
       }
    }
@@ -184,7 +194,6 @@ returned an error.
 
 =cut
 
-# override
 sub loop_once
 {
    my $self = shift;
@@ -219,6 +228,8 @@ sub watch_io
    # MSWin32 does not indicate writeready for connect() errors, HUPs, etc
    # but it does indicate exceptional
    vec( $self->{evec}, $fileno, 1 ) = 1 if HAVE_MSWIN32 and $params{on_write_ready};
+
+   vec( $self->{avec}, $fileno, 1 ) = 1 if FAKE_ISREG_READY and S_ISREG(stat $params{handle});
 }
 
 sub unwatch_io
@@ -235,9 +246,11 @@ sub unwatch_io
 
    vec( $self->{evec}, $fileno, 1 ) = 0 if HAVE_MSWIN32 and $params{on_write_ready};
 
+   vec( $self->{avec}, $fileno, 1 ) = 0 if FAKE_ISREG_READY and S_ISREG(stat $params{handle});
+
    # vec will grow a bit vector as needed, but never shrink it. We'll trim
    # trailing null bytes
-   $_ =~s/\0+\z// for $self->{rvec}, $self->{wvec}, $self->{evec};
+   $_ =~s/\0+\z// for $self->{rvec}, $self->{wvec}, $self->{evec}, $self->{avec};
 }
 
 =head1 SEE ALSO
