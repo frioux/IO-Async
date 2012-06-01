@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 69;
+use Test::More tests => 68;
 
 use IO::Async::Process;
 
@@ -326,7 +326,6 @@ testing_loop( $loop );
    $loop->add( $process );
 
    isa_ok( $process->stdio->read_handle, "IO::Socket", '$process->stdio handle isa IO::Socket' );
-   ok( defined sockaddr_family( $process->stdio->read_handle->sockname ), '$process->stdio handle sockdomain is defined' );
 
    wait_for { defined $output_packet and !$process->is_running };
 
