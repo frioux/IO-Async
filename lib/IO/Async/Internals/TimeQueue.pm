@@ -8,21 +8,26 @@ package # hide from CPAN
 
 use strict;
 use warnings;
-use base qw( Heap::Fibonacci );
 
 use Carp;
 
-use Heap::Fibonacci;
 use Time::HiRes qw( time );
 
-sub next_time
-{
-   my $self = shift;
-
-   my $top = $self->top;
-
-   return defined $top ? $top->time : undef;
+BEGIN {
+   my @methods = qw( next_time _enqueue cancel _fire );
+   if( eval { require Heap::Fibonacci } ) {
+      unshift our @ISA, "Heap::Fibonacci";
+      require Heap::Elem;
+      no strict 'refs';
+      *$_ = \&{"HEAP_$_"} for @methods;
+   }
+   else {
+      no strict 'refs';
+      *$_ = \&{"ARRAY_$_"} for "new", @methods;
+   }
 }
+
+# High-level methods
 
 sub enqueue
 {
@@ -35,18 +40,7 @@ sub enqueue
    defined $params{time} or croak "Expected 'time'";
    my $time = $params{time};
 
-   my $elem = IO::Async::Internals::TimeQueue::Elem->new( $time, $code );
-   $self->add( $elem );
-
-   return $elem;
-}
-
-sub cancel
-{
-   my $self = shift;
-   my ( $id ) = @_;
-
-   $self->delete( $id );
+   $self->_enqueue( $time, $code );
 }
 
 sub fire
@@ -55,6 +49,99 @@ sub fire
    my ( %params ) = @_;
 
    my $now = exists $params{now} ? $params{now} : time;
+   $self->_fire( $now );
+}
+
+# Implementation using a Perl array
+
+use constant {
+   TIME => 0,
+   CODE => 1,
+};
+
+sub ARRAY_new
+{
+   my $class = shift;
+   return bless [], $class;
+}
+
+sub ARRAY_next_time
+{
+   my $self = shift;
+   return @$self ? $self->[0]->[TIME] : undef;
+}
+
+sub ARRAY__enqueue
+{
+   my $self = shift;
+   my ( $time, $code ) = @_;
+
+   # TODO: This could be more efficient maybe using a binary search insert
+   @$self = sort { $a->[TIME] <=> $b->[TIME] } @$self, my $elem = [ $time, $code ];
+   return $elem;
+}
+
+sub ARRAY_cancel
+{
+   my $self = shift;
+   my ( $id ) = @_;
+
+   @$self = grep { $_ != $id } @$self;
+}
+
+sub ARRAY__fire
+{
+   my $self = shift;
+   my ( $now ) = @_;
+
+   my $count = 0;
+
+   while( @$self ) {
+      last if( $self->[0]->[TIME] > $now );
+
+      my $top = shift @$self;
+
+      $top->[CODE]->();
+      $count++;
+   }
+
+   return $count;
+}
+
+# Implementation using Heap::Fibonacci
+
+sub HEAP_next_time
+{
+   my $self = shift;
+
+   my $top = $self->top;
+
+   return defined $top ? $top->time : undef;
+}
+
+sub HEAP__enqueue
+{
+   my $self = shift;
+   my ( $time, $code ) = @_;
+
+   my $elem = IO::Async::Internals::TimeQueue::Elem->new( $time, $code );
+   $self->add( $elem );
+
+   return $elem;
+}
+
+sub HEAP_cancel
+{
+   my $self = shift;
+   my ( $id ) = @_;
+
+   $self->delete( $id );
+}
+
+sub HEAP__fire
+{
+   my $self = shift;
+   my ( $now ) = @_;
 
    my $count = 0;
 
@@ -74,7 +161,7 @@ package # hide from CPAN
   IO::Async::Internals::TimeQueue::Elem;
 
 use strict;
-use base qw( Heap::Elem );
+our @ISA = qw( Heap::Elem );
 
 sub new
 {
