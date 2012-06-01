@@ -15,6 +15,8 @@ use base qw( IO::Async::Loop );
 
 use Carp;
 
+use constant HAVE_MSWIN32 => $^O eq "MSWin32";
+
 =head1 NAME
 
 C<IO::Async::Loop::Select> - use C<IO::Async> with C<select(2)>
@@ -74,6 +76,7 @@ sub new
 
    $self->{rvec} = '';
    $self->{wvec} = '';
+   $self->{evec} = '';
 
    return $self;
 }
@@ -113,8 +116,9 @@ sub pre_select
    my ( $readref, $writeref, $exceptref, $timeref ) = @_;
 
    # BITWISE operations
-   $$readref  |= $self->{rvec};
-   $$writeref |= $self->{wvec};
+   $$readref   |= $self->{rvec};
+   $$writeref  |= $self->{wvec};
+   $$exceptref |= $self->{evec};
 
    $self->_adjust_timeout( $timeref );
 
@@ -158,7 +162,8 @@ sub post_select
          $count++, $watch->[1]->() if defined $watch->[1];
       }
 
-      if( vec( $writevec, $fileno, 1 ) ) {
+      if( vec( $writevec, $fileno, 1 ) or
+          HAVE_MSWIN32 and vec( $exceptvec, $fileno, 1 ) ) {
          $count++, $watch->[2]->() if defined $watch->[2];
       }
    }
@@ -210,6 +215,10 @@ sub watch_io
 
    vec( $self->{rvec}, $fileno, 1 ) = 1 if $params{on_read_ready};
    vec( $self->{wvec}, $fileno, 1 ) = 1 if $params{on_write_ready};
+
+   # MSWin32 does not indicate writeready for connect() errors, HUPs, etc
+   # but it does indicate exceptional
+   vec( $self->{evec}, $fileno, 1 ) = 1 if HAVE_MSWIN32 and $params{on_write_ready};
 }
 
 sub unwatch_io
@@ -224,9 +233,11 @@ sub unwatch_io
    vec( $self->{rvec}, $fileno, 1 ) = 0 if $params{on_read_ready};
    vec( $self->{wvec}, $fileno, 1 ) = 0 if $params{on_write_ready};
 
+   vec( $self->{evec}, $fileno, 1 ) = 0 if HAVE_MSWIN32 and $params{on_write_ready};
+
    # vec will grow a bit vector as needed, but never shrink it. We'll trim
    # trailing null bytes
-   $_ =~s/\0+\z// for $self->{rvec}, $self->{wvec};
+   $_ =~s/\0+\z// for $self->{rvec}, $self->{wvec}, $self->{evec};
 }
 
 =head1 SEE ALSO

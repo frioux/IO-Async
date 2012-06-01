@@ -9,6 +9,7 @@ use Time::HiRes qw( time );
 use IO::Async::Loop::Select;
 
 use constant AUT => $ENV{TEST_QUICK_TIMERS} ? 0.1 : 1;
+use constant HAVE_MSWIN32 => $^O eq "MSWin32";
 
 my $loop = IO::Async::Loop::Select->new;
 
@@ -72,7 +73,7 @@ $loop->pre_select( \$rvec, \$wvec, \$evec, \$timeout );
 
 is( $rvec, $testvec, '$rvec writeready pre_select' );
 is( $wvec, $testvec, '$wvec writeready pre_select' );
-is( $evec, '',       '$evec writeready pre_select' );
+is( $evec, HAVE_MSWIN32 ? $testvec : '', '$evec writeready pre_select' );
 is( $timeout, undef, '$timeout writeready pre_select' );
 
 is( $writeready, 0, '$writeready writeready pre_select' );
