@@ -130,6 +130,13 @@ sub pre_select
 
    $self->_adjust_timeout( $timeref );
 
+   # Round up to nearest milisecond
+   if( $$timeref ) {
+      my $mils = $$timeref * 1000;
+      my $fraction = $mils - int $mils;
+      $$timeref += ( 1 - $fraction ) / 1000 if $fraction;
+   }
+
    return;
 }
 

@@ -180,6 +180,13 @@ sub loop_once
 
    $self->_adjust_timeout( \$timeout );
 
+   # Round up to nearest milisecond
+   if( $timeout ) {
+      my $mils = $timeout * 1000;
+      my $fraction = $mils - int $mils;
+      $timeout += ( 1 - $fraction ) / 1000 if $fraction;
+   }
+
    my $poll = $self->{poll};
 
    my $pollret;
