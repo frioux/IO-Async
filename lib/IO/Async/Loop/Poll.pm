@@ -180,7 +180,7 @@ sub loop_once
 
    $self->_adjust_timeout( \$timeout );
 
-   # Round up to nearest milisecond
+   # Round up to nearest millisecond
    if( $timeout ) {
       my $mils = $timeout * 1000;
       my $fraction = $mils - int $mils;
