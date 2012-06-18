@@ -122,6 +122,8 @@ sub _init
    $params->{interval} ||= 2;
 
    $self->SUPER::_init( $params );
+
+   $self->start;
 }
 
 sub configure
@@ -136,7 +138,7 @@ sub configure
    }
    elsif( exists $params{handle} ) {
       $self->{handle} = delete $params{handle};
-      undef $self->{last_stat};
+      $self->{last_stat} = stat $self->{handle};
    }
 
    foreach ( @STATS, "devino", "stat" ) {
@@ -144,11 +146,6 @@ sub configure
    }
 
    $self->SUPER::configure( %params );
-
-   if( $self->{handle} and !defined $self->{last_stat} ) {
-      $self->{last_stat} = stat $self->{handle};
-      $self->start;
-   }
 }
 
 sub _reopen_file
@@ -159,7 +156,7 @@ sub _reopen_file
 
    open $self->{handle}, "<", $path or croak "Cannot open $path for reading - $!";
 
-   undef $self->{last_stat};
+   $self->{last_stat} = stat $self->{handle};
 }
 
 sub on_tick
