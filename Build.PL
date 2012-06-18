@@ -9,6 +9,7 @@ my $build = Module::Build->new(
       'Async::MergePoint' => '0.03',
       'CPS' => 0,
       'Exporter' => '5.57',
+      'File::stat' => 0,
       'IO::Poll' => 0,
       'Socket' => '1.95',
       'Storable' => 0,
