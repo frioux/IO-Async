@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 10;
+use Test::More tests => 12;
 use Test::Refcount;
 
 use Fcntl qw( SEEK_SET SEEK_END );
@@ -53,6 +53,8 @@ sub mkhandles
 
    is_oneref( $file, '$file has refcount 1 initially' );
 
+   is( $file->handle, $rd, '$file->handle is $rd' );
+
    $loop->add( $file );
 
    is_refcount( $file, 2, '$file has refcount 2 after adding to Loop' );
@@ -84,6 +86,8 @@ sub mkhandles
          $devino_changed++;
       },
    );
+
+   ok( $file->handle, '$file has a ->handle' );
 
    $loop->add( $file );
 

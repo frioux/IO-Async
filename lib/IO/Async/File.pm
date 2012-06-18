@@ -188,6 +188,23 @@ sub on_tick
    }
 }
 
+=head1 METHODS
+
+=cut
+
+=head2 $handle = $file->handle
+
+Returns the filehandle currently associated with the instance; either the one
+passed to the C<handle> parameter, or opened from the C<filename> parameter.
+
+=cut
+
+sub handle
+{
+   my $self = shift;
+   return $self->{handle};
+}
+
 =head1 AUTHOR
 
 Paul Evans <leonerd@leonerd.org.uk>
