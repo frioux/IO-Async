@@ -12,7 +12,7 @@ our $VERSION = '0.49';
 
 use base qw( IO::Async::Stream );
 
-use IO::Async::Timer::Periodic;
+use IO::Async::File;
 
 use Carp;
 use Fcntl qw( SEEK_SET SEEK_CUR );
@@ -113,14 +113,14 @@ sub _init
 
    $self->SUPER::_init( $params );
 
-   $self->add_child( $self->{timer} = IO::Async::Timer::Periodic->new(
-      interval => 2,
-      on_tick => $self->_capture_weakself( 'on_tick' ),
-   ) );
-
    $params->{close_on_read_eof} = 0;
 
    $self->{last_size} = undef;
+
+   $self->add_child( $self->{file} = IO::Async::File->new(
+      on_devino_changed => $self->_replace_weakself( 'on_devino_changed' ),
+      on_size_changed   => $self->_replace_weakself( 'on_size_changed' ),
+   ) );
 }
 
 =head1 PARAMETERS
@@ -158,13 +158,15 @@ sub configure
    }
 
    foreach (qw( interval )) {
-      $self->{timer}->configure( $_ => delete $params{$_} ) if exists $params{$_};
+      $self->{file}->configure( $_ => delete $params{$_} ) if exists $params{$_};
    }
-
    if( exists $params{filename} ) {
-      my $filename = delete $params{filename};
-      $params{read_handle} = $self->_reopen_file( $filename );
-      $self->{filename} = $filename;
+      $self->{file}->configure( filename => delete $params{filename} );
+      $params{read_handle} = $self->{file}->handle;
+   }
+   elsif( exists $params{read_handle} ) {
+      $self->{file}->configure( handle => delete $params{read_handle} );
+      $params{read_handle} = $self->{file}->handle;
    }
 
    croak "Cannot have a write_handle in a ".ref($self) if defined $params{write_handle};
@@ -172,7 +174,12 @@ sub configure
    $self->SUPER::configure( %params );
 
    if( $self->read_handle and !defined $self->{last_size} ) {
-      $self->_do_initial;
+      my $size = (stat $self->read_handle)[7];
+
+      $self->{last_size} = $size;
+
+      local $self->{running_initial} = 1;
+      $self->maybe_invoke_event( on_initial => $size );
    }
 }
 
@@ -187,10 +194,10 @@ sub _watch_read
    my ( $want ) = @_;
 
    if( $want ) {
-      $self->{timer}->start if !$self->{timer}->is_running;
+      $self->{file}->start if !$self->{file}->is_running;
    }
    else {
-      $self->{timer}->stop;
+      $self->{file}->stop;
    }
 }
 
@@ -202,59 +209,23 @@ sub _watch_write
    croak "Cannot _watch_write in " . ref($self) if $want;
 }
 
-sub _reopen_file
+sub on_devino_changed
 {
    my $self = shift;
-   my ( $path ) = @_;
 
-   open my $fh, "<", $path or croak "Cannot open $path for reading - $!";
-
-   undef $self->{last_size};
-   undef $self->{last_pos};
-
-   return $fh;
+   $self->{renamed} = 1;
+   $self->debug_printf( "read tail of old file" );
+   $self->read_more;
 }
 
-sub _do_initial
+sub on_size_changed
 {
    my $self = shift;
-
-   # During reopen for rename, start from the beginning
-   my $size = $self->{renamed} ? 0 : (stat $self->read_handle)[7];
-
-   $self->{last_size} = $size;
-
-   local $self->{running_initial} = 1;
-   $self->maybe_invoke_event( on_initial => $size );
-}
-
-sub on_tick
-{
-   my $self = shift;
-
-   my @fstats = stat $self->read_handle;
-
-   if( my $filename = $self->{filename} ) {
-      # Detect rename
-      my @namestats = stat $filename;
-
-      # [0] = dev, [1] = ino
-      if( !@namestats or $namestats[0] != $fstats[0] or $namestats[1] != $fstats[1] ) {
-         $self->{renamed} = 1;
-         $self->debug_printf( "read tail of old file" );
-         $self->read_more;
-         return;
-      }
-   }
-
-   my $size = $fstats[7];
+   my ( $size ) = @_;
 
    if( $size < $self->{last_size} ) {
       $self->maybe_invoke_event( on_truncated => );
       $self->{last_pos} = 0;
-   }
-   elsif( $size == $self->{last_size} ) {
-      return;
    }
 
    $self->{last_size} = $size;
@@ -278,10 +249,16 @@ sub read_more
    }
    elsif( $self->{renamed} ) {
       $self->debug_printf( "reopening for rename" );
-      $self->read_handle->close;
 
-      my $fh = $self->_reopen_file( $self->{filename} );
-      $self->configure( read_handle => $fh );
+      $self->{last_size} = 0;
+
+      if( $self->{last_pos} ) {
+         $self->maybe_invoke_event( on_truncated => );
+         $self->{last_pos} = 0;
+         $self->loop->later( sub { $self->read_more } );
+      }
+
+      $self->configure( read_handle => $self->{file}->handle );
       undef $self->{renamed};
    }
 }
