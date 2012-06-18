@@ -4,8 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 8;
-use Test::Fatal;
+use Test::More tests => 10;
 use Test::Refcount;
 
 use Fcntl qw( SEEK_SET SEEK_END );
@@ -67,6 +66,37 @@ sub mkhandles
 
    isa_ok( $old_stat, "File::stat", '$old_stat isa File::stat' );
    isa_ok( $new_stat, "File::stat", '$new_stat isa File::stat' );
+
+   $loop->remove( $file );
+}
+
+# Follow by name
+{
+   my ( undef, $wr, $filename ) = mkhandles;
+
+   my $devino_changed;
+   my ( $old_stat, $new_stat );
+   my $file = IO::Async::File->new(
+      interval => 0.1 * AUT,
+      filename => $filename,
+      on_devino_changed => sub {
+         ( undef, $new_stat, $old_stat ) = @_;
+         $devino_changed++;
+      },
+   );
+
+   $loop->add( $file );
+
+   close $wr;
+   rename( $filename, "$filename.old" ) or die "Cannot rename $filename - $!";
+   END { -f $filename and unlink $filename }
+   END { -f "$filename.old" and unlink "$filename.old" }
+   open $wr, ">", $filename or die "Cannot reopen $filename for writing - $!";
+
+   wait_for { $devino_changed };
+
+   is( $new_stat->dev, (stat $wr)[0], '$new_stat->dev for renamed file' );
+   is( $new_stat->ino, (stat $wr)[1], '$new_stat->ino for renamed file' );
 
    $loop->remove( $file );
 }

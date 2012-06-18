@@ -12,6 +12,7 @@ our $VERSION = '0.49';
 
 use base qw( IO::Async::Timer::Periodic );
 
+use Carp;
 use File::stat;
 
 # No point watching blksize or blocks
@@ -73,6 +74,12 @@ Invoked when each of the individual C<stat()> fields have changed. All the
 C<stat()> fields are supported apart from C<blocks> and C<blksize>. Each is
 passed the new and old values of the field.
 
+=head2 on_devino_changed $new_stat, $old_stat
+
+Invoked when either of the C<dev> or C<ino> fields have changed. It is passed
+two L<File::stat> instances containing the complete old and new C<stat()>
+fields.
+
 =head2 on_stat_changed $new_stat, $old_stat
 
 Invoked when any of the C<stat()> fields have changed. It is passed two
@@ -89,6 +96,13 @@ The following named parameters may be passed to C<new> or C<configure>.
 =item handle => IO
 
 The filehandle to watch for C<stat()> changes.
+
+=item filename => STRING
+
+Optional. If supplied, watches the named file rather than the filehandle given
+in C<handle>. The file will be opened and then watched for renames. If the
+file is renamed, the new filename is opened and tracked similarly after
+closing the previous file.
 
 =item interval => NUM
 
@@ -115,12 +129,17 @@ sub configure
    my $self = shift;
    my %params = @_;
 
-   if( exists $params{handle} ) {
+   if( exists $params{filename} ) {
+      my $filename = delete $params{filename};
+      $self->{filename} = $filename;
+      $self->_reopen_file;
+   }
+   elsif( exists $params{handle} ) {
       $self->{handle} = delete $params{handle};
       undef $self->{last_stat};
    }
 
-   foreach ( @STATS, "stat" ) {
+   foreach ( @STATS, "devino", "stat" ) {
       $self->{"on_${_}_changed"} = delete $params{"on_${_}_changed"} if exists $params{"on_${_}_changed"};
    }
 
@@ -132,12 +151,23 @@ sub configure
    }
 }
 
+sub _reopen_file
+{
+   my $self = shift;
+
+   my $path = $self->{filename};
+
+   open $self->{handle}, "<", $path or croak "Cannot open $path for reading - $!";
+
+   undef $self->{last_stat};
+}
+
 sub on_tick
 {
    my $self = shift;
 
    my $old = $self->{last_stat};
-   my $new = stat $self->{handle};
+   my $new = stat( $self->{filename} // $self->{handle} );
 
    my $any_changed;
    foreach my $stat ( @STATS ) {
@@ -147,9 +177,15 @@ sub on_tick
       $self->maybe_invoke_event( "on_${stat}_changed", $new->$stat, $old->$stat );
    }
 
-   $self->maybe_invoke_event( on_stat_changed => $new, $old ) if $any_changed;
+   if( $old->dev != $new->dev or $old->ino != $new->ino ) {
+      $self->maybe_invoke_event( on_devino_changed => $new, $old );
+      $self->_reopen_file;
+   }
 
-   $self->{last_stat} = $new if $any_changed;
+   if( $any_changed ) {
+      $self->maybe_invoke_event( on_stat_changed => $new, $old );
+      $self->{last_stat} = $new;
+   }
 }
 
 =head1 AUTHOR
