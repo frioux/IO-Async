@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 
 use strict;
-use Test::More tests => 21;
+use Test::More tests => 23;
 
 use_ok( "IO::Async::MergePoint" );
 
@@ -15,6 +15,8 @@ use_ok( "IO::Async::Timer::Periodic" );
 use_ok( "IO::Async::Signal" );
 use_ok( "IO::Async::Listener" );
 use_ok( "IO::Async::Socket" );
+use_ok( "IO::Async::File" );
+use_ok( "IO::Async::FileStream" );
 
 use_ok( "IO::Async::Loop::Select" );
 use_ok( "IO::Async::Loop::Poll" );

@@ -1,0 +1,72 @@
+#!/usr/bin/perl -w
+
+use strict;
+
+use IO::Async::Test;
+
+use Test::More tests => 8;
+use Test::Fatal;
+use Test::Refcount;
+
+use Fcntl qw( SEEK_SET SEEK_END );
+use File::Temp qw( tempfile );
+
+use IO::Async::Loop;
+
+use IO::Async::File;
+
+use constant AUT => $ENV{TEST_QUICK_TIMERS} ? 0.1 : 1;
+
+my $loop = IO::Async::Loop->new;
+
+testing_loop( $loop );
+
+sub mkhandles
+{
+   my ( $rd, $filename ) = tempfile( "tmpfile.XXXXXX", UNLINK => 1 );
+   open my $wr, ">", $filename or die "Cannot reopen file for writing - $!";
+
+   $wr->autoflush( 1 );
+
+   return ( $rd, $wr, $filename );
+}
+
+{
+   my ( $rd, $wr ) = mkhandles;
+
+   my $size_change;
+   my ( $new_size, $old_size );
+   my ( $new_stat, $old_stat );
+   my $file = IO::Async::File->new(
+      interval => 0.1 * AUT,
+      handle => $rd,
+      on_size_changed => sub {
+         ( undef, $new_size, $old_size ) = @_;
+         $size_change++;
+      },
+      on_stat_changed => sub {
+         ( undef, $new_stat, $old_stat ) = @_;
+      },
+   );
+
+   ok( defined $file, '$file defined' );
+   isa_ok( $file, "IO::Async::File", '$file isa IO::Async::File' );
+
+   is_oneref( $file, '$file has refcount 1 initially' );
+
+   $loop->add( $file );
+
+   is_refcount( $file, 2, '$file has refcount 2 after adding to Loop' );
+
+   $wr->syswrite( "message\n" );
+
+   wait_for { $size_change };
+
+   is( $old_size, 0, '$old_size' );
+   is( $new_size, 8, '$new_size' );
+
+   isa_ok( $old_stat, "File::stat", '$old_stat isa File::stat' );
+   isa_ok( $new_stat, "File::stat", '$new_stat isa File::stat' );
+
+   $loop->remove( $file );
+}
