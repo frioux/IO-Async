@@ -67,6 +67,9 @@ used as the C<transport> for an C<IO::Async::Protocol::Stream> object.
 
 It will not support writing.
 
+To watch a file, directory, or other filesystem entity for updates of other
+properties, such as C<mtime>, see also L<IO::Async::File>.
+
 =cut
 
 =head1 EVENTS
