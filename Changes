@@ -1,5 +1,21 @@
 Revision history for IO-Async
 
+0.50    CHANGES:
+         * Added IO::Async::File
+         * Added filename mode of IO::Async::FileStream
+         * Make Heap dependency optional by reimplementing a tiny but less
+           efficient version of TimeQueue using a plain array
+         * No longer need MB-only Build.PL
+
+        BUGFIXES:
+         * Round up select() and poll() timeouts to nearest milisecond, might
+           help correct wait-time vs. gettimeofday() mismatches
+         * Fake read- and write-readiness of S_ISREG filehandles in select()
+           on MSWin32
+         * select() for exceptional status on MSWin32 to check for connect()
+           failures
+         * Don't unit-test that getsockname() works on socketpair()ed sockets
+
 0.49    CHANGES:
          * Fix watch_time => enqueue_timer conversions; fix unit tests and
            Timer implementations
