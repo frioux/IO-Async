@@ -17,7 +17,7 @@ my $build = Module::Build->new(
 
       # Fails on perl 5.8.3 for unknown reasons
       #   https://rt.cpan.org/Ticket/Display.html?id=64493
-      # Now 5.14 is stable, I see even less reason to worry about such an old Perl
+      # Now 5.16 is stable, I see even less reason to worry about such an old Perl
       'perl' => '5.008005',
    },
    build_requires => {
@@ -26,7 +26,6 @@ my $build = Module::Build->new(
       'Test::Fatal' => 0,
       'Test::Identity' => 0,
       'Test::Refcount' => 0,
-      'Test::Warn' => 0,
    },
    auto_configure_requires => 0, # Don't add M::B to configure_requires
    license => 'perl',

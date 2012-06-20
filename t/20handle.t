@@ -7,7 +7,6 @@ use IO::Async::Test;
 use Test::More tests => 71;
 use Test::Fatal;
 use Test::Refcount;
-use Test::Warn;
 
 use IO::Async::Loop;
 
