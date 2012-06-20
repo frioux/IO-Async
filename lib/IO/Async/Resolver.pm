@@ -24,12 +24,7 @@ BEGIN {
    *_getnameinfo = \&Socket::getnameinfo;
 }
 
-BEGIN {
-   # More cheating
-   require IO::Async::Loop;
-   *_getfamilybyname   = \&IO::Async::OS::_getfamilybyname;
-   *_getsocktypebyname = \&IO::Async::OS::_getsocktypebyname;
-}
+use IO::Async::OS;
 
 use Time::HiRes qw( alarm );
 
@@ -277,8 +272,8 @@ sub getaddrinfo
 
    $flags |= AI_PASSIVE if $args{passive};
 
-   $args{family}   = _getfamilybyname( $args{family} )     if defined $args{family};
-   $args{socktype} = _getsocktypebyname( $args{socktype} ) if defined $args{socktype};
+   $args{family}   = IO::Async::OS->getfamilybyname( $args{family} )     if defined $args{family};
+   $args{socktype} = IO::Async::OS->getsocktypebyname( $args{socktype} ) if defined $args{socktype};
 
    # Clear any other existing but undefined hints
    defined $args{$_} or delete $args{$_} for keys %args;
@@ -535,8 +530,8 @@ register_resolver getaddrinfo_hash => sub {
    my $host    = delete $args{host};
    my $service = delete $args{service};
 
-   $args{family}   = _getfamilybyname( $args{family} )     if defined $args{family};
-   $args{socktype} = _getsocktypebyname( $args{socktype} ) if defined $args{socktype};
+   $args{family}   = IO::Async::OS->getfamilybyname( $args{family} )     if defined $args{family};
+   $args{socktype} = IO::Async::OS->getsocktypebyname( $args{socktype} ) if defined $args{socktype};
 
    # Clear any other existing but undefined hints
    defined $args{$_} or delete $args{$_} for keys %args;
@@ -551,8 +546,8 @@ register_resolver getaddrinfo_hash => sub {
 register_resolver getaddrinfo_array => sub {
    my ( $host, $service, $family, $socktype, $protocol, $flags ) = @_;
 
-   $family   = _getfamilybyname( $family );
-   $socktype = _getsocktypebyname( $socktype );
+   $family   = IO::Async::OS->getfamilybyname( $family );
+   $socktype = IO::Async::OS->getsocktypebyname( $socktype );
 
    my %hints;
    $hints{family}   = $family   if defined $family;

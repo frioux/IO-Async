@@ -2,7 +2,7 @@
 
 use strict;
 
-use Test::More tests => 34;
+use Test::More tests => 38;
 
 use IO::Async::OS;
 use IO::Async::Loop::Poll;
@@ -73,6 +73,12 @@ foreach my $family ( undef, "inet" ) {
 }
 
 is( IO::Async::OS->signame2num( 'TERM' ), SIGTERM, 'signame2num' );
+
+is( IO::Async::OS->getfamilybyname( "inet" ),  AF_INET, 'getfamilybyname "inet"' );
+is( IO::Async::OS->getfamilybyname( AF_INET ), AF_INET, 'getfamilybyname AF_INET' );
+
+is( IO::Async::OS->getsocktypebyname( "stream" ),    SOCK_STREAM, 'getsocktypebyname "stream"' );
+is( IO::Async::OS->getsocktypebyname( SOCK_STREAM ), SOCK_STREAM, 'getsocktypebyname SOCK_STREAM' );
 
 {
    my $sinaddr = pack_sockaddr_in( 56, inet_aton( "1.2.3.4" ) );

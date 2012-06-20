@@ -36,6 +36,54 @@ class so that specific kinds of operating system can override methods in it.
 
 =cut
 
+=head2 $family = IO::Async::OS->getfamilybyname( $name )
+
+Return a protocol family value based on the given name. If C<$name> looks like
+a number it will be returned as-is. The string values C<inet>, C<inet6> and
+C<unix> will be converted to the appropriate C<AF_*> constant.
+
+=cut
+
+sub getfamilybyname
+{
+   shift;
+   my ( $name ) = @_;
+
+   return undef unless defined $name;
+
+   return $name if $name =~ m/^\d+$/;
+
+   return AF_INET    if $name eq "inet";
+   return AF_INET6() if $name eq "inet6" and defined &AF_INET6;
+   return AF_UNIX    if $name eq "unix";
+
+   croak "Unrecognised socktype name '$name'";
+}
+
+=head2 $socktype = IO::Async::OS->getsocktypebyname( $name )
+
+Return a socket type value based on the given name. If C<$name> looks like a
+number it will be returned as-is. The string values C<stream>, C<dgram> and
+C<raw> will be converted to the appropriate C<SOCK_*> constant.
+
+=cut
+
+sub getsocktypebyname
+{
+   shift;
+   my ( $name ) = @_;
+
+   return undef unless defined $name;
+
+   return $name if $name =~ m/^\d+$/;
+
+   return SOCK_STREAM if $name eq "stream";
+   return SOCK_DGRAM  if $name eq "dgram";
+   return SOCK_RAW    if $name eq "raw";
+
+   croak "Unrecognised socktype name '$name'";
+}
+
 # This one isn't documented because it's not really overridable. It's largely
 # here just for completeness
 sub socket
@@ -67,36 +115,6 @@ sub socket
    return IO::Socket->new->socket( $family, $socktype, $proto );
 }
 
-sub _getfamilybyname
-{
-   my ( $name ) = @_;
-
-   return undef unless defined $name;
-
-   return $name if $name =~ m/^\d+$/;
-
-   return AF_INET    if $name eq "inet";
-   return AF_INET6() if $name eq "inet6" and defined &AF_INET6;
-   return AF_UNIX    if $name eq "unix";
-
-   croak "Unrecognised socktype name '$name'";
-}
-
-sub _getsocktypebyname
-{
-   my ( $name ) = @_;
-
-   return undef unless defined $name;
-
-   return $name if $name =~ m/^\d+$/;
-
-   return SOCK_STREAM if $name eq "stream";
-   return SOCK_DGRAM  if $name eq "dgram";
-   return SOCK_RAW    if $name eq "raw";
-
-   croak "Unrecognised socktype name '$name'";
-}
-
 =head2 ( $S1, $S2 ) = IO::Async::OS->socketpair( $family, $socktype, $proto )
 
 An abstraction of the C<socketpair(2)> syscall, where any argument may be
@@ -110,8 +128,8 @@ Additionally, this method supports building connected C<SOCK_STREAM> or
 C<SOCK_DGRAM> pairs in the C<AF_INET> family even if the underlying platform's
 C<socketpair(2)> does not, by connecting two normal sockets together.
 
-C<$family> and C<$socktype> may also be given symbolically similar to the
-behaviour of C<extract_addrinfo>.
+C<$family> and C<$socktype> may also be given symbolically as defined by
+C<getfamilybyname> and C<getsocktypebyname>.
 
 =cut
 
@@ -121,10 +139,10 @@ sub socketpair
    my ( $family, $socktype, $proto ) = @_;
 
    # PF_UNSPEC and undef are both false
-   $family = _getfamilybyname( $family ) || AF_UNIX;
+   $family = $self->getfamilybyname( $family ) || AF_UNIX;
 
    # SOCK_STREAM is the most likely
-   $socktype = _getsocktypebyname( $socktype ) || SOCK_STREAM;
+   $socktype = $self->getsocktypebyname( $socktype ) || SOCK_STREAM;
 
    $proto ||= 0;
 
@@ -169,10 +187,10 @@ if( HAVE_MSWIN32 ) {
       my $self = shift;
       my ( $family, $socktype, $proto ) = @_;
 
-      $family = _getfamilybyname( $family ) || AF_INET;
+      $family = $self->getfamilybyname( $family ) || AF_INET;
 
       # SOCK_STREAM is the most likely
-      $socktype = _getsocktypebyname( $socktype ) || SOCK_STREAM;
+      $socktype = $self->getsocktypebyname( $socktype ) || SOCK_STREAM;
 
       $proto ||= 0;
 
@@ -335,9 +353,8 @@ If given a HASH it should contain the following keys:
 Each field in the result will be initialised to 0 (or empty string for the
 address) if not defined in the C<$ai> value.
 
-The family type may also be given as a symbolic string; C<inet> or possibly
-C<inet6> if the host system supports it, or C<unix>; this will be converted to
-the appropriate C<AF_*> constant.
+The family type may also be given as a symbolic string as defined by
+C<getfamilybyname>.
 
 The socktype may also be given as a symbolic string; C<stream>, C<dgram> or
 C<raw>; this will be converted to the appropriate C<SOCK_*> constant.
@@ -385,8 +402,8 @@ sub extract_addrinfo
       $ai[ADDRINFO_ADDR] = $code->( $self, $ai );
    }
 
-   $ai[ADDRINFO_FAMILY]   = _getfamilybyname( $ai[ADDRINFO_FAMILY] );
-   $ai[ADDRINFO_SOCKTYPE] = _getsocktypebyname( $ai[ADDRINFO_SOCKTYPE] );
+   $ai[ADDRINFO_FAMILY]   = $self->getfamilybyname( $ai[ADDRINFO_FAMILY] );
+   $ai[ADDRINFO_SOCKTYPE] = $self->getsocktypebyname( $ai[ADDRINFO_SOCKTYPE] );
 
    # Make sure all fields are defined
    $ai[$_] ||= 0 for ADDRINFO_FAMILY, ADDRINFO_SOCKTYPE, ADDRINFO_PROTOCOL;
