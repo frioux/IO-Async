@@ -16,8 +16,6 @@ use constant NEED_API_VERSION => '0.33';
 # Base value but some classes might override
 use constant _CAN_ON_HANGUP => 0;
 
-use constant HAVE_MSWIN32 => ( $^O eq "MSWin32" );
-
 use Carp;
 
 use IO::Socket (); # empty import
@@ -1077,73 +1075,17 @@ to give different implementations on that OS.
 
 =head2 ( $S1, $S2 ) = $loop->socketpair( $family, $socktype, $proto )
 
-Legacy wrapper around L<IO::Async::OS> C<socketpair>.
+=head2 ( $rd, $wr ) = $loop->pipepair
+
+=head2 ( $rdA, $wrA, $rdB, $wrB ) = $loop->pipequad
+
+Legacy wrappers around L<IO::Async::OS> functions.
 
 =cut
 
 sub socketpair { shift; IO::Async::OS->socketpair( @_ ) }
-
-=head2 ( $rd, $wr ) = $loop->pipepair
-
-An abstraction of the C<pipe(2)> syscall, which returns the two new handles.
-
-=cut
-
-sub pipepair
-{
-   my $self = shift;
-
-   pipe( my ( $rd, $wr ) ) or return;
-   return ( $rd, $wr );
-}
-
-=head2 ( $rdA, $wrA, $rdB, $wrB ) = $loop->pipequad
-
-This method is intended for creating two pairs of filehandles that are linked
-together, suitable for passing as the STDIN/STDOUT pair to a child process.
-After this function returns, C<$rdA> and C<$wrA> will be a linked pair, as
-will C<$rdB> and C<$wrB>.
-
-On platforms that support C<socketpair(2)>, this implementation will be
-preferred, in which case C<$rdA> and C<$wrB> will actually be the same
-filehandle, as will C<$rdB> and C<$wrA>. This saves a file descriptor in the
-parent process.
-
-When creating a C<IO::Async::Stream> or subclass of it, the C<read_handle>
-and C<write_handle> parameters should always be used.
-
- my ( $childRd, $myWr, $myRd, $childWr ) = $loop->pipequad;
-
- $loop->open_child(
-    stdin  => $childRd,
-    stdout => $childWr,
-    ...
- );
-
- my $str = IO::Async::Stream->new(
-    read_handle  => $myRd,
-    write_handle => $myWr,
-    ...
- );
- $loop->add( $str );
-
-=cut
-
-sub pipequad
-{
-   my $self = shift;
-
-   # Prefer socketpair
-   if( my ( $S1, $S2 ) = IO::Async::OS->socketpair ) {
-      return ( $S1, $S2, $S2, $S1 );
-   }
-
-   # Can't do that, fallback on pipes
-   my ( $rdA, $wrA ) = $self->pipepair or return;
-   my ( $rdB, $wrB ) = $self->pipepair or return;
-
-   return ( $rdA, $wrA, $rdB, $wrB );
-}
+sub pipepair   { shift; IO::Async::OS->pipepair( @_ ) }
+sub pipequad   { shift; IO::Async::OS->pipequad( @_ ) }
 
 =head2 $signum = $loop->signame2num( $signame )
 

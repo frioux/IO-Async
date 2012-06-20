@@ -216,6 +216,68 @@ if( HAVE_MSWIN32 ) {
    };
 }
 
+=head2 ( $rd, $wr ) = IO::Async::OS->pipepair
+
+An abstraction of the C<pipe(2)> syscall, which returns the two new handles.
+
+=cut
+
+sub pipepair
+{
+   my $self = shift;
+
+   pipe( my ( $rd, $wr ) ) or return;
+   return ( $rd, $wr );
+}
+
+=head2 ( $rdA, $wrA, $rdB, $wrB ) = IO::Async::OS->pipequad
+
+This method is intended for creating two pairs of filehandles that are linked
+together, suitable for passing as the STDIN/STDOUT pair to a child process.
+After this function returns, C<$rdA> and C<$wrA> will be a linked pair, as
+will C<$rdB> and C<$wrB>.
+
+On platforms that support C<socketpair(2)>, this implementation will be
+preferred, in which case C<$rdA> and C<$wrB> will actually be the same
+filehandle, as will C<$rdB> and C<$wrA>. This saves a file descriptor in the
+parent process.
+
+When creating a C<IO::Async::Stream> or subclass of it, the C<read_handle>
+and C<write_handle> parameters should always be used.
+
+ my ( $childRd, $myWr, $myRd, $childWr ) = IO::Async::OS->pipequad;
+
+ IO::Async::OS->open_child(
+    stdin  => $childRd,
+    stdout => $childWr,
+    ...
+ );
+
+ my $str = IO::Async::Stream->new(
+    read_handle  => $myRd,
+    write_handle => $myWr,
+    ...
+ );
+ IO::Async::OS->add( $str );
+
+=cut
+
+sub pipequad
+{
+   my $self = shift;
+
+   # Prefer socketpair
+   if( my ( $S1, $S2 ) = $self->socketpair ) {
+      return ( $S1, $S2, $S2, $S1 );
+   }
+
+   # Can't do that, fallback on pipes
+   my ( $rdA, $wrA ) = $self->pipepair or return;
+   my ( $rdB, $wrB ) = $self->pipepair or return;
+
+   return ( $rdA, $wrA, $rdB, $wrB );
+}
+
 =head1 AUTHOR
 
 Paul Evans <leonerd@leonerd.org.uk>
