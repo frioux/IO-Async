@@ -14,12 +14,15 @@ use Carp;
 
 use Socket 1.95 qw(
    AF_INET AF_INET6 AF_UNIX INADDR_LOOPBACK SOCK_DGRAM SOCK_RAW SOCK_STREAM
-   pack_sockaddr_in
+   pack_sockaddr_in inet_aton
+   pack_sockaddr_in6 inet_pton
+   pack_sockaddr_un
 );
 
 use IO::Socket (); # empty import
 
 use constant HAVE_MSWIN32 => ( $^O eq "MSWin32" );
+use constant HAVE_SOCKADDR_IN6 => defined eval { pack_sockaddr_in6 0, inet_pton( AF_INET6, "2001::1" ) };
 
 =head1 NAME
 
@@ -314,6 +317,152 @@ sub signame2num
 
    return $sig_num{$signame};
 }
+
+=head2 ( $family, $socktype, $protocol, $addr ) = IO::Async::OS->extract_addrinfo( $ai )
+
+Given an ARRAY or HASH reference value containing an addrinfo, returns a
+family, socktype and protocol argument suitable for a C<socket> call and an
+address suitable for C<connect> or C<bind>.
+
+If given an ARRAY it should be in the following form:
+
+ [ $family, $socktype, $protocol, $addr ]
+
+If given a HASH it should contain the following keys:
+
+ family socktype protocol addr
+
+Each field in the result will be initialised to 0 (or empty string for the
+address) if not defined in the C<$ai> value.
+
+The family type may also be given as a symbolic string; C<inet> or possibly
+C<inet6> if the host system supports it, or C<unix>; this will be converted to
+the appropriate C<AF_*> constant.
+
+The socktype may also be given as a symbolic string; C<stream>, C<dgram> or
+C<raw>; this will be converted to the appropriate C<SOCK_*> constant.
+
+Note that the C<addr> field, if provided, must be a packed socket address,
+such as returned by C<pack_sockaddr_in> or C<pack_sockaddr_un>.
+
+If the HASH form is used, rather than passing a packed socket address in the
+C<addr> field, certain other hash keys may be used instead for convenience on
+certain named families.
+
+=over 4
+
+=cut
+
+use constant ADDRINFO_FAMILY   => 0;
+use constant ADDRINFO_SOCKTYPE => 1;
+use constant ADDRINFO_PROTOCOL => 2;
+use constant ADDRINFO_ADDR     => 3;
+
+sub extract_addrinfo
+{
+   my $self = shift;
+   my ( $ai, $argname ) = @_;
+
+   $argname ||= "addr";
+
+   my @ai;
+
+   if( ref $ai eq "ARRAY" ) {
+      @ai = @$ai;
+   }
+   elsif( ref $ai eq "HASH" ) {
+      @ai = @{$ai}{qw( family socktype protocol addr )};
+   }
+   else {
+      croak "Expected '$argname' to be an ARRAY or HASH reference";
+   }
+
+   if( defined $ai[ADDRINFO_FAMILY] and !defined $ai[ADDRINFO_ADDR] and ref $ai eq "HASH" ) {
+      my $family = $ai[ADDRINFO_FAMILY];
+      my $method = "_extract_addrinfo_$family";
+      my $code = $self->can( $method ) or croak "Cannot determine addr for extract_addrinfo on family='$family'";
+
+      $ai[ADDRINFO_ADDR] = $code->( $self, $ai );
+   }
+
+   $ai[ADDRINFO_FAMILY]   = _getfamilybyname( $ai[ADDRINFO_FAMILY] );
+   $ai[ADDRINFO_SOCKTYPE] = _getsocktypebyname( $ai[ADDRINFO_SOCKTYPE] );
+
+   # Make sure all fields are defined
+   $ai[$_] ||= 0 for ADDRINFO_FAMILY, ADDRINFO_SOCKTYPE, ADDRINFO_PROTOCOL;
+   $ai[ADDRINFO_ADDR]  = "" if !defined $ai[ADDRINFO_ADDR];
+
+   return @ai;
+}
+
+=item family => 'inet'
+
+Will pack an IP address and port number from keys called C<ip> and C<port>.
+
+=cut
+
+sub _extract_addrinfo_inet
+{
+   my $self = shift;
+   my ( $ai ) = @_;
+
+   defined( my $port = $ai->{port} ) or croak "Expected 'port' for extract_addrinfo on family='inet'";
+   defined( my $ip   = $ai->{ip}   ) or croak "Expected 'ip' for extract_addrinfo on family='inet'";
+
+   return pack_sockaddr_in( $port, inet_aton( $ip ) );
+}
+
+=item family => 'inet6'
+
+Will pack an IP address and port number from keys called C<ip> and C<port>.
+Optionally will also include values from C<scopeid> and C<flowinfo> keys if
+provided.
+
+This will only work if a C<pack_sockaddr_in6> function can be found in
+C<Socket>
+
+=cut
+
+sub _extract_addrinfo_inet6
+{
+   my $self = shift;
+   my ( $ai ) = @_;
+
+   defined( my $port = $ai->{port} ) or croak "Expected 'port' for extract_addrinfo on family='inet6'";
+   defined( my $ip   = $ai->{ip}   ) or croak "Expected 'ip' for extract_addrinfo on family='inet6'";
+
+   my $scopeid  = $ai->{scopeid}  || 0;
+   my $flowinfo = $ai->{flowinfo} || 0;
+
+   if( HAVE_SOCKADDR_IN6 ) {
+      return pack_sockaddr_in6( $port, inet_pton( AF_INET6, $ip ), $scopeid, $flowinfo );
+   }
+   else {
+      croak "Cannot pack_sockaddr_in6";
+   }
+}
+
+=item family => 'unix'
+
+Will pack a UNIX socket path from a key called C<path>.
+
+=cut
+
+sub _extract_addrinfo_unix
+{
+   my $self = shift;
+   my ( $ai ) = @_;
+
+   defined( my $path = $ai->{path} ) or croak "Expected 'path' for extract_addrinfo on family='unix'";
+
+   return pack_sockaddr_un( $path );
+}
+
+=pod
+
+=back
+
+=cut
 
 =head1 AUTHOR
 

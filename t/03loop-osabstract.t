@@ -7,7 +7,10 @@ use Test::More tests => 34;
 use IO::Async::OS;
 use IO::Async::Loop::Poll;
 
-use Socket qw( AF_INET AF_UNIX SOCK_STREAM SOCK_DGRAM SO_TYPE pack_sockaddr_in pack_sockaddr_un inet_aton );
+use Socket qw(
+   AF_INET AF_INET6 AF_UNIX SOCK_STREAM SOCK_DGRAM SO_TYPE
+   pack_sockaddr_in pack_sockaddr_in6 pack_sockaddr_un inet_aton inet_pton
+);
 
 use POSIX qw( SIGTERM );
 
@@ -69,60 +72,57 @@ foreach my $family ( undef, "inet" ) {
    is( do { my $b; $rdB->sysread( $b, 8192 ); $b }, "Goodbye", '$wrB --writes-> $rdB' );
 }
 
-is( IO::Async::OS->signame2num( 'TERM' ), SIGTERM, '$loop->signame2num' );
+is( IO::Async::OS->signame2num( 'TERM' ), SIGTERM, 'signame2num' );
 
 {
    my $sinaddr = pack_sockaddr_in( 56, inet_aton( "1.2.3.4" ) );
 
-   is_deeply( [ $loop->extract_addrinfo( [ "inet", "stream", 0, $sinaddr ] ) ],
+   is_deeply( [ IO::Async::OS->extract_addrinfo( [ "inet", "stream", 0, $sinaddr ] ) ],
               [ AF_INET, SOCK_STREAM, 0, $sinaddr ],
-              '$loop->extract_addrinfo( ARRAY )' );
+              'extract_addrinfo( ARRAY )' );
 
-   is_deeply( [ $loop->extract_addrinfo( {
+   is_deeply( [ IO::Async::OS->extract_addrinfo( {
                   family   => "inet",
                   socktype => "stream",
                   addr     => $sinaddr 
                 } ) ],
               [ AF_INET, SOCK_STREAM, 0, $sinaddr ],
-              '$loop->extract_addrinfo( HASH )' );
+              'extract_addrinfo( HASH )' );
 
-   is_deeply( [ $loop->extract_addrinfo( {
+   is_deeply( [ IO::Async::OS->extract_addrinfo( {
                   family   => "inet",
                   socktype => "stream",
                   ip       => "1.2.3.4",
                   port     => "56",
                 } ) ],
               [ AF_INET, SOCK_STREAM, 0, $sinaddr ],
-              '$loop->extract_addrinfo( HASH ) with inet, ip+port' );
+              'extract_addrinfo( HASH ) with inet, ip+port' );
 }
 
 SKIP: {
-   my $sin6addr = eval { Socket::pack_sockaddr_in6( 1234, Socket::inet_pton( Socket::AF_INET6(), "fe80::5678" ) ) } or
-                  eval { Socket6::pack_sockaddr_in6( 1234, Socket6::inet_pton( Socket6::AF_INET6(), "fe80::5678" ) ) };
+   my $sin6addr = eval { Socket::pack_sockaddr_in6( 1234, inet_pton( AF_INET6, "fe80::5678" ) ) };
    skip "No pack_sockaddr_in6", 1 unless defined $sin6addr;
 
-   my $AF_INET6 = defined &Socket::AF_INET6 ? Socket::AF_INET6() : Socket6::AF_INET6();
-
-   is_deeply( [ $loop->extract_addrinfo( {
+   is_deeply( [ IO::Async::OS->extract_addrinfo( {
                   family   => "inet6",
                   socktype => "stream",
                   ip       => "fe80::5678",
                   port     => "1234",
                 } ) ],
-              [ Socket::AF_INET6(), SOCK_STREAM, 0, $sin6addr ],
-              '$loop->extract_addrinfo( HASH ) with inet6, ip+port' );
+              [ AF_INET6, SOCK_STREAM, 0, $sin6addr ],
+              'extract_addrinfo( HASH ) with inet6, ip+port' );
 }
 
 {
    my $sunaddr = pack_sockaddr_un( "foo.sock" );
 
-   is_deeply( [ $loop->extract_addrinfo( {
+   is_deeply( [ IO::Async::OS->extract_addrinfo( {
                   family   => "unix",
                   socktype => "stream",
                   path     => "foo.sock",
                 } ) ],
               [ AF_UNIX, SOCK_STREAM, 0, $sunaddr ],
-              '$loop->extract_addrinfo( HASH ) with unix, path' );
+              'extract_addrinfo( HASH ) with unix, path' );
 }
 
 cmp_ok( $loop->time - time, "<", 0.1, '$loop->time gives the current time' );
