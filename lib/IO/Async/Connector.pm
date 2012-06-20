@@ -15,6 +15,8 @@ use Socket qw( SOL_SOCKET SO_ERROR );
 
 use CPS qw( kpar kforeach );
 
+use IO::Async::OS;
+
 use Carp;
 
 use constant HAVE_MSWIN32 => ( $^O eq "MSWin32" );
@@ -147,7 +149,7 @@ sub _connect_addresses
          my ( $family, $socktype, $protocol, $localaddr, $peeraddr ) = 
             @{$addr}{qw( family socktype protocol localaddr peeraddr )};
 
-         $sock = $loop->socket( $family, $socktype, $protocol );
+         $sock = IO::Async::OS->socket( $family, $socktype, $protocol );
 
          if( !$sock ) {
             $socketerr = $!;

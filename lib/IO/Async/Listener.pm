@@ -12,6 +12,7 @@ use base qw( IO::Async::Handle );
 our $VERSION = '0.50';
 
 use IO::Async::Handle;
+use IO::Async::OS;
 
 use Errno qw( EAGAIN EWOULDBLOCK );
 
@@ -454,7 +455,7 @@ sub listen
 
          my $sock;
 
-         unless( $sock = $loop->socket( $family, $socktype, $proto ) ) {
+         unless( $sock = IO::Async::OS->socket( $family, $socktype, $proto ) ) {
             $socketerr = $!;
             $on_fail->( socket => $family, $socktype, $proto, $! ) if $on_fail;
             next;

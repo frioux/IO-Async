@@ -34,6 +34,8 @@ use Time::HiRes qw(); # empty import
 use POSIX qw( _exit WNOHANG );
 use Scalar::Util qw( refaddr );
 
+use IO::Async::OS;
+
 # Never sleep for more than 1 second if a signal proxy is registered, to avoid
 # a borderline race condition.
 # There is a race condition in perl involving signals interacting with XS code
@@ -1082,37 +1084,6 @@ to give different implementations on that OS.
 
 =cut
 
-# This one isn't documented because it's not really overridable. It's largely
-# here just for completeness
-sub socket
-{
-   my $self = shift;
-   my ( $family, $socktype, $proto ) = @_;
-
-   croak "Cannot create a new socket without a family" unless $family;
-
-   # SOCK_STREAM is the most likely
-   defined $socktype or $socktype = SOCK_STREAM;
-
-   defined $proto or $proto = 0;
-
-   my $sock = eval {
-      IO::Socket->new(
-         Domain => $family, 
-         Type   => $socktype,
-         Proto  => $proto,
-      );
-   };
-   return $sock if $sock;
-
-   # That failed. Most likely because the Domain was unrecognised. This 
-   # usually happens if getaddrinfo returns an AF_INET6 address but we don't
-   # have a suitable class loaded. In this case we'll return a generic one.
-   # It won't be in the specific subclass but that's the best we can do. And
-   # it will still work as a generic socket.
-   return IO::Socket->new->socket( $family, $socktype, $proto );
-}
-
 sub _getfamilybyname
 {
    my ( $name ) = @_;
@@ -1181,10 +1152,10 @@ sub socketpair
 
    # Now lets emulate an AF_INET socketpair call
 
-   my $Stmp = $self->socket( $family, $socktype ) or return;
+   my $Stmp = IO::Async::OS->socket( $family, $socktype ) or return;
    $Stmp->bind( pack_sockaddr_in( 0, INADDR_LOOPBACK ) ) or return;
 
-   $S1 = $self->socket( $family, $socktype ) or return;
+   $S1 = IO::Async::OS->socket( $family, $socktype ) or return;
 
    if( $socktype == SOCK_STREAM ) {
       $Stmp->listen( 1 ) or return;
