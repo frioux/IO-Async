@@ -18,6 +18,12 @@ use Socket qw( AF_INET SOCK_STREAM SOCK_DGRAM );
 
 use IO::Socket (); # empty import
 
+use constant HAVE_FAKE_ISREG_READY => 1;
+
+use constant HAVE_SELECT_CONNECT_EVEC => 1;
+
+use constant HAVE_CONNECT_EWOULDBLOCK => 1;
+
 =head1 NAME
 
 C<IO::Async::OS::MSWin32> - operating system abstractions on C<MSWin32> for C<IO::Async>

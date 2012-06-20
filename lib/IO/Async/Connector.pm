@@ -19,7 +19,7 @@ use IO::Async::OS;
 
 use Carp;
 
-use constant HAVE_MSWIN32 => ( $^O eq "MSWin32" );
+use constant CONNECT_EWOULDLBOCK => IO::Async::OS->HAVE_CONNECT_EWOULDBLOCK;
 
 =head1 NAME
 
@@ -173,8 +173,7 @@ sub _connect_addresses
             # localhost, or UNIX sockets, or something like that.
             goto &$klast;
          }
-         # On MSWin32 this is reported as EWOULDBLOCK
-         elsif( $! == EINPROGRESS or HAVE_MSWIN32 && $! == POSIX::EWOULDBLOCK ) {
+         elsif( $! == EINPROGRESS or CONNECT_EWOULDLBOCK && $! == POSIX::EWOULDBLOCK ) {
             $loop->watch_io(
                handle => $sock,
                on_write_ready => sub {

@@ -13,15 +13,18 @@ use constant API_VERSION => '0.49';
 
 use base qw( IO::Async::Loop );
 
+use IO::Async::OS;
+
 use Carp;
 
 use POSIX qw( S_ISREG );
 
-use constant HAVE_MSWIN32 => $^O eq "MSWin32";
-
 # select() on most platforms claims that ISREG files are always read- and
 # write-ready, but not on MSWin32. We need to fake this
-use constant FAKE_ISREG_READY => HAVE_MSWIN32;
+use constant FAKE_ISREG_READY => IO::Async::OS->HAVE_FAKE_ISREG_READY;
+# select() on most platforms indicates write-ready when connect() fails, but
+# not on MSWin32. Have to pull from evec in that case
+use constant SELECT_CONNECT_EVEC => IO::Async::OS->HAVE_SELECT_CONNECT_EVEC;
 
 =head1 NAME
 
@@ -179,7 +182,7 @@ sub post_select
       }
 
       if( vec( $writevec, $fileno, 1 ) or
-          HAVE_MSWIN32 and vec( $exceptvec, $fileno, 1 ) or
+          SELECT_CONNECT_EVEC and vec( $exceptvec, $fileno, 1 ) or
           FAKE_ISREG_READY and vec( $self->{avec}, $fileno, 1 ) and vec( $self->{wvec}, $fileno, 1 ) ) {
          $count++, $watch->[2]->() if defined $watch->[2];
       }
@@ -234,7 +237,7 @@ sub watch_io
 
    # MSWin32 does not indicate writeready for connect() errors, HUPs, etc
    # but it does indicate exceptional
-   vec( $self->{evec}, $fileno, 1 ) = 1 if HAVE_MSWIN32 and $params{on_write_ready};
+   vec( $self->{evec}, $fileno, 1 ) = 1 if SELECT_CONNECT_EVEC and $params{on_write_ready};
 
    vec( $self->{avec}, $fileno, 1 ) = 1 if FAKE_ISREG_READY and S_ISREG(stat $params{handle});
 }
@@ -251,7 +254,7 @@ sub unwatch_io
    vec( $self->{rvec}, $fileno, 1 ) = 0 if $params{on_read_ready};
    vec( $self->{wvec}, $fileno, 1 ) = 0 if $params{on_write_ready};
 
-   vec( $self->{evec}, $fileno, 1 ) = 0 if HAVE_MSWIN32 and $params{on_write_ready};
+   vec( $self->{evec}, $fileno, 1 ) = 0 if SELECT_CONNECT_EVEC and $params{on_write_ready};
 
    vec( $self->{avec}, $fileno, 1 ) = 0 if FAKE_ISREG_READY and S_ISREG(stat $params{handle});
 
