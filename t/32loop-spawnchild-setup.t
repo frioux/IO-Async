@@ -10,6 +10,8 @@ use Test::Fatal;
 use File::Temp qw( tmpnam );
 use POSIX qw( WIFEXITED WEXITSTATUS ENOENT EBADF getcwd );
 
+use IO::Async::OS;
+
 use IO::Async::Loop::Poll;
 
 my $loop = IO::Async::Loop::Poll->new;
@@ -76,7 +78,7 @@ my $buffer;
 my $ret;
 
 {
-   my( $pipe_r, $pipe_w ) = $loop->pipepair or die "Cannot pipepair - $!";
+   my( $pipe_r, $pipe_w ) = IO::Async::OS->pipepair or die "Cannot pipepair - $!";
 
    TEST "pipe dup to fd1",
       setup => [ fd1 => [ 'dup', $pipe_w ] ],
@@ -252,7 +254,7 @@ my $ret;
    is( $ret, 4,         '$pipe_r->read after writepipe clash' );
    is( $buffer, 'test', '$buffer after writepipe clash' );
 
-   my( $pipe2_r, $pipe2_w ) = $loop->pipepair or die "Cannot pipepair - $!";
+   my( $pipe2_r, $pipe2_w ) = IO::Async::OS->pipepair or die "Cannot pipepair - $!";
    $pipe2_r->blocking( 0 );
 
    TEST "pipe dup to stdout and stderr",
@@ -289,7 +291,7 @@ my $ret;
 }
 
 {
-   my ( $child_r, $my_w, $my_r, $child_w ) = $loop->pipequad or die "Cannot pipequad - $!";
+   my ( $child_r, $my_w, $my_r, $child_w ) = IO::Async::OS->pipequad or die "Cannot pipequad - $!";
 
    $my_w->syswrite( "hello\n" );
 
@@ -310,8 +312,8 @@ my $ret;
 
 {
    # Try to swap two filehandles and cause a dup2() collision
-   my @fhA = $loop->pipepair or die "Cannot pipepair - $!";
-   my @fhB = $loop->pipepair or die "Cannot pipepair - $!";
+   my @fhA = IO::Async::OS->pipepair or die "Cannot pipepair - $!";
+   my @fhB = IO::Async::OS->pipepair or die "Cannot pipepair - $!";
 
    my $filenoA = $fhA[1]->fileno;
    my $filenoB = $fhB[1]->fileno;

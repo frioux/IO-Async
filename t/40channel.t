@@ -9,6 +9,8 @@ use Test::Identity;
 
 use IO::Async::Channel;
 
+use IO::Async::OS;
+
 use IO::Async::Loop::Poll;
 use Storable qw( freeze );
 
@@ -18,7 +20,7 @@ testing_loop( $loop );
 
 # sync->sync - mostly doesn't involve IO::Async
 {
-   my ( $pipe_rd, $pipe_wr ) = $loop->pipepair;
+   my ( $pipe_rd, $pipe_wr ) = IO::Async::OS->pipepair;
 
    my $channel_rd = IO::Async::Channel->new;
    $channel_rd->setup_sync_mode( $pipe_rd );
@@ -41,7 +43,7 @@ testing_loop( $loop );
 
 # async->sync
 {
-   my ( $pipe_rd, $pipe_wr ) = $loop->pipepair;
+   my ( $pipe_rd, $pipe_wr ) = IO::Async::OS->pipepair;
 
    my $channel_rd = IO::Async::Channel->new;
    $channel_rd->setup_sync_mode( $pipe_rd );
@@ -67,7 +69,7 @@ testing_loop( $loop );
 
 # sync->async configured on_recv
 {
-   my ( $pipe_rd, $pipe_wr ) = $loop->pipepair;
+   my ( $pipe_rd, $pipe_wr ) = IO::Async::OS->pipepair;
 
    my @recv_queue;
    my $recv_eof;
@@ -104,7 +106,7 @@ testing_loop( $loop );
 
 # sync->async oneshot ->recv
 {
-   my ( $pipe_rd, $pipe_wr ) = $loop->pipepair;
+   my ( $pipe_rd, $pipe_wr ) = IO::Async::OS->pipepair;
 
    my $channel_rd = IO::Async::Channel->new;
    $channel_rd->setup_async_mode( read_handle => $pipe_rd );

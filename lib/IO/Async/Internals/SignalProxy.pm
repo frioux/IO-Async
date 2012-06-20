@@ -28,7 +28,7 @@ sub new
 
    my $loop = delete $params{loop} or croak "Expected a 'loop'";
 
-   my ( $reader, $writer ) = $loop->pipepair or croak "Cannot pipe() - $!";
+   my ( $reader, $writer ) = IO::Async::OS->pipepair or croak "Cannot pipe() - $!";
 
    $reader->blocking( 0 );
    $writer->blocking( 0 );

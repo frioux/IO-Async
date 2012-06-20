@@ -9,6 +9,8 @@ use Test::Fatal;
 
 use POSIX qw( WIFEXITED WEXITSTATUS ENOENT EBADF );
 
+use IO::Async::OS;
+
 use IO::Async::Loop::Poll;
 
 # Need to look this up, so we don't hardcode the message in the test script
@@ -143,7 +145,7 @@ is( $dollarbang+0,           0, '$dollarbang after spawn ARRAY' );
 is( $dollarat,              '', '$dollarat after spawn ARRAY' );
 
 {
-   my( $pipe_r, $pipe_w ) = $loop->pipepair or die "Cannot pipepair - $!";
+   my( $pipe_r, $pipe_w ) = IO::Async::OS->pipepair or die "Cannot pipepair - $!";
 
    $spawned_pid = $loop->spawn_child(
       code => sub { return $pipe_w->syswrite( "test" ); },

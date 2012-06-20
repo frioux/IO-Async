@@ -6,12 +6,14 @@ use Test::More tests => 11;
 
 use IO::Poll;
 
+use IO::Async::OS;
+
 use IO::Async::Loop::Poll;
 
 my $poll = IO::Poll->new;
 my $loop = IO::Async::Loop::Poll->new( poll => $poll );
 
-my ( $S1, $S2 ) = $loop->socketpair or die "Cannot create socket pair - $!";
+my ( $S1, $S2 ) = IO::Async::OS->socketpair or die "Cannot create socket pair - $!";
 
 # Need sockets in nonblocking mode
 $S1->blocking( 0 );
@@ -76,7 +78,7 @@ is_deeply( [ $poll->handles ], [], '$poll->handles empty after unwatch_io write_
 
 # Removal is clean (tests for workaround to bug in IO::Poll version 0.05)
 
-my ( $P1, $P2 ) = $loop->pipepair or die "Cannot pipepair - $!";
+my ( $P1, $P2 ) = IO::Async::OS->pipepair or die "Cannot pipepair - $!";
 
 # Just to make the loop non-empty
 $loop->watch_io( handle => $P2, on_read_ready => sub {} );

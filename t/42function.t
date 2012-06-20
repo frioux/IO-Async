@@ -13,6 +13,8 @@ use Time::HiRes qw( sleep );
 
 use IO::Async::Function;
 
+use IO::Async::OS;
+
 use IO::Async::Loop::Poll;
 
 use constant AUT => $ENV{TEST_QUICK_TIMERS} ? 0.1 : 1;
@@ -379,7 +381,7 @@ testing_loop( $loop );
 
 # Test that STDOUT/STDERR are unaffected
 {
-   my ( $pipe_rd, $pipe_wr ) = $loop->pipepair;
+   my ( $pipe_rd, $pipe_wr ) = IO::Async::OS->pipepair;
 
    my $function;
    {

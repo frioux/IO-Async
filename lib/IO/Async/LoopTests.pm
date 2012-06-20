@@ -19,6 +19,8 @@ use Test::Refcount;
 
 use IO::Async::Test qw();
 
+use IO::Async::OS;
+
 use IO::File;
 use Fcntl qw( SEEK_SET );
 use POSIX qw( SIGTERM WIFEXITED WEXITSTATUS WIFSIGNALED WTERMSIG );
@@ -159,7 +161,7 @@ use constant count_tests_io => 16;
 sub run_tests_io
 {
    {
-      my ( $S1, $S2 ) = $loop->socketpair or die "Cannot create socket pair - $!";
+      my ( $S1, $S2 ) = IO::Async::OS->socketpair or die "Cannot create socket pair - $!";
       $_->blocking( 0 ) for $S1, $S2;
 
       my $readready  = 0;
@@ -225,7 +227,7 @@ sub run_tests_io
 
    # HUP of pipe - can be different to sockets on some architectures
    {
-      my ( $Prd, $Pwr ) = $loop->pipepair or die "Cannot pipepair - $!";
+      my ( $Prd, $Pwr ) = IO::Async::OS->pipepair or die "Cannot pipepair - $!";
       $_->blocking( 0 ) for $Prd, $Pwr;
 
       my $readready = 0;
@@ -255,7 +257,7 @@ sub run_tests_io
       $loop->_CAN_ON_HANGUP or skip "Loop cannot watch_io for on_hangup", 2;
 
       SKIP: {
-         my ( $S1, $S2 ) = $loop->socketpair or die "Cannot socketpair - $!";
+         my ( $S1, $S2 ) = IO::Async::OS->socketpair or die "Cannot socketpair - $!";
          $_->blocking( 0 ) for $S1, $S2;
 
          sockaddr_family( $S1->sockname ) == AF_UNIX or skip "Cannot reliably detect hangup condition on non AF_UNIX sockets", 1;
@@ -273,7 +275,7 @@ sub run_tests_io
          is( $hangup, 1, '$hangup after socket close' );
       }
 
-      my ( $Prd, $Pwr ) = $loop->pipepair or die "Cannot pipepair - $!";
+      my ( $Prd, $Pwr ) = IO::Async::OS->pipepair or die "Cannot pipepair - $!";
       $_->blocking( 0 ) for $Prd, $Pwr;
 
       my $hangup = 0;
@@ -291,7 +293,7 @@ sub run_tests_io
 
    # Check that combined read/write handlers can cancel each other
    {
-      my ( $S1, $S2 ) = $loop->socketpair or die "Cannot socketpair - $!";
+      my ( $S1, $S2 ) = IO::Async::OS->socketpair or die "Cannot socketpair - $!";
       $_->blocking( 0 ) for $S1, $S2;
 
       my $callcount = 0;
@@ -317,7 +319,7 @@ sub run_tests_io
    # Check that error conditions that aren't true read/write-ability are still
    # invoked
    {
-      my ( $S1, $S2 ) = $loop->socketpair( 'inet', 'dgram' ) or die "Cannot create AF_INET/SOCK_DGRAM connected pair - $!";
+      my ( $S1, $S2 ) = IO::Async::OS->socketpair( 'inet', 'dgram' ) or die "Cannot create AF_INET/SOCK_DGRAM connected pair - $!";
       $_->blocking( 0 ) for $S1, $S2;
       $S2->close;
 

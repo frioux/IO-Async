@@ -9,13 +9,15 @@ use Test::Refcount;
 
 use IO::Async::Loop;
 
+use IO::Async::OS;
+
 use IO::Async::Protocol::LineStream;
 
 my $loop = IO::Async::Loop->new;
 
 testing_loop( $loop );
 
-my ( $S1, $S2 ) = $loop->socketpair or die "Cannot create socket pair - $!";
+my ( $S1, $S2 ) = IO::Async::OS->socketpair or die "Cannot create socket pair - $!";
 
 # Need sockets in nonblocking mode
 $S1->blocking( 0 );

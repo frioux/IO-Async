@@ -12,6 +12,8 @@ our $VERSION = '0.50';
 
 use base qw( IO::Async::Process );
 
+use IO::Async::OS;
+
 =head1 NAME
 
 C<IO::Async::Routine> - execute code in an independent sub-process
@@ -130,7 +132,7 @@ sub _add_to_loop
    foreach my $ch ( @{ $self->{channels_in} || [] } ) {
       my ( $rd, $wr );
       unless( $rd = $ch->_extract_read_handle ) {
-         ( $rd, $wr ) = $loop->pipepair;
+         ( $rd, $wr ) = IO::Async::OS->pipepair;
       }
       push @setup, $rd => "keep";
       push @channels_in, [ $ch, $wr, $rd ];
@@ -139,7 +141,7 @@ sub _add_to_loop
    foreach my $ch ( @{ $self->{channels_out} || [] } ) {
       my ( $rd, $wr );
       unless( $wr = $ch->_extract_write_handle ) {
-         ( $rd, $wr ) = $loop->pipepair;
+         ( $rd, $wr ) = IO::Async::OS->pipepair;
       }
       push @setup, $wr => "keep";
       push @channels_out, [ $ch, $rd, $wr ];

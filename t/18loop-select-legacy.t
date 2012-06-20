@@ -8,12 +8,14 @@ use Time::HiRes qw( time );
 
 use IO::Async::Loop::Select;
 
+use IO::Async::OS;
+
 use constant AUT => $ENV{TEST_QUICK_TIMERS} ? 0.1 : 1;
 use constant HAVE_MSWIN32 => $^O eq "MSWin32";
 
 my $loop = IO::Async::Loop::Select->new;
 
-my ( $S1, $S2 ) = $loop->socketpair or die "Cannot create socket pair - $!";
+my ( $S1, $S2 ) = IO::Async::OS->socketpair or die "Cannot create socket pair - $!";
 
 # Need sockets in nonblocking mode
 $S1->blocking( 0 );

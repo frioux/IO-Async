@@ -11,6 +11,8 @@ use Errno qw( EAGAIN EWOULDBLOCK ECONNRESET );
 
 use IO::Async::Loop;
 
+use IO::Async::OS;
+
 use IO::Async::Stream;
 
 my $loop = IO::Async::Loop->new;
@@ -19,7 +21,7 @@ testing_loop( $loop );
 
 sub mkhandles
 {
-   my ( $rd, $wr ) = $loop->pipepair or die "Cannot pipe() - $!";
+   my ( $rd, $wr ) = IO::Async::OS->pipepair or die "Cannot pipe() - $!";
    # Need handles in nonblocking mode
    $rd->blocking( 0 );
    $wr->blocking( 0 );

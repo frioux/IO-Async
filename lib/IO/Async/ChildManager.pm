@@ -14,6 +14,8 @@ our $VERSION = '0.50';
 
 use IO::Async::Stream;
 
+use IO::Async::OS;
+
 use Carp;
 use Scalar::Util qw( weaken );
 
@@ -70,7 +72,7 @@ This object is used indirectly via an C<IO::Async::Loop>:
     },
  );
 
- my ( $pipeRd, $pipeWr ) = $loop->pipepair;
+ my ( $pipeRd, $pipeWr ) = IO::Async::OS->pipepair;
  $loop->spawn_child(
     command => "/usr/bin/my-command",
 
@@ -274,7 +276,7 @@ sub spawn_child
       # fiddling with F_GETFL and F_SETFL (e.g. MSWin32)
       local $^F = -1;
 
-      ( $readpipe, $writepipe ) = $loop->pipepair or croak "Cannot pipe() - $!";
+      ( $readpipe, $writepipe ) = IO::Async::OS->pipepair or croak "Cannot pipe() - $!";
    }
 
    if( defined $command ) {

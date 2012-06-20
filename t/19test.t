@@ -6,6 +6,8 @@ use Test::More tests => 5;
 use Test::Refcount;
 use IO::Async::Test;
 
+use IO::Async::OS;
+
 use IO::Async::Loop;
 
 my $loop = IO::Async::Loop->new;
@@ -16,7 +18,7 @@ testing_loop( $loop );
 
 is_refcount( $loop, 3, '$loop has refcount 3 after adding to IO::Async::Test' );
 
-my ( $S1, $S2 ) = $loop->socketpair or die "Cannot create socket pair - $!";
+my ( $S1, $S2 ) = IO::Async::OS->socketpair or die "Cannot create socket pair - $!";
 
 my $readbuffer = "";
 

@@ -14,13 +14,15 @@ use Socket qw( unpack_sockaddr_in );
 
 use IO::Async::Loop;
 
+use IO::Async::OS;
+
 use IO::Async::Socket;
 
 my $loop = IO::Async::Loop->new;
 
 testing_loop( $loop );
 
-my ( $S1, $S2 ) = $loop->socketpair( "inet", "dgram" ) or die "Cannot socketpair - $!";
+my ( $S1, $S2 ) = IO::Async::OS->socketpair( "inet", "dgram" ) or die "Cannot socketpair - $!";
 
 # Need sockets in nonblocking mode
 $S1->blocking( 0 );
@@ -233,7 +235,7 @@ is_oneref( $socket, 'sending $socket has refcount 1 finally' );
 
 # Socket errors
 
-my ( $ES1, $ES2 ) = $loop->socketpair or die "Cannot socketpair - $!";
+my ( $ES1, $ES2 ) = IO::Async::OS->socketpair or die "Cannot socketpair - $!";
 $ES2->syswrite( "X" ); # ensuring $ES1 is read- and write-ready
 # cheating and hackery
 bless $ES1, "ErrorSocket";
