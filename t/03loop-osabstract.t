@@ -69,7 +69,7 @@ foreach my $family ( undef, "inet" ) {
    is( do { my $b; $rdB->sysread( $b, 8192 ); $b }, "Goodbye", '$wrB --writes-> $rdB' );
 }
 
-is( $loop->signame2num( 'TERM' ), SIGTERM, '$loop->signame2num' );
+is( IO::Async::OS->signame2num( 'TERM' ), SIGTERM, '$loop->signame2num' );
 
 {
    my $sinaddr = pack_sockaddr_in( 56, inet_aton( "1.2.3.4" ) );

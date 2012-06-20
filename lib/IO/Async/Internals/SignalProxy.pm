@@ -17,6 +17,8 @@ use Errno qw( EAGAIN EWOULDBLOCK );
 use POSIX qw( SIG_BLOCK SIG_SETMASK sigprocmask );
 use IO::Handle;
 
+use IO::Async::OS;
+
 use warnings qw();
 
 sub new
@@ -152,7 +154,7 @@ sub watch
       push @$signal_queue, $signal;
    };
 
-   my $signum = $self->loop->signame2num( $signal );
+   my $signum = IO::Async::OS->signame2num( $signal );
 
    my $sigset_block = $self->{sigset_block};
    $sigset_block->addset( $signum );

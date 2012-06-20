@@ -1079,50 +1079,16 @@ to give different implementations on that OS.
 
 =head2 ( $rdA, $wrA, $rdB, $wrB ) = $loop->pipequad
 
+=head2 $signum = $loop->signame2num( $signame )
+
 Legacy wrappers around L<IO::Async::OS> functions.
 
 =cut
 
-sub socketpair { shift; IO::Async::OS->socketpair( @_ ) }
-sub pipepair   { shift; IO::Async::OS->pipepair( @_ ) }
-sub pipequad   { shift; IO::Async::OS->pipequad( @_ ) }
-
-=head2 $signum = $loop->signame2num( $signame )
-
-This utility method converts a signal name (such as "TERM") into its system-
-specific signal number. This may be useful to pass to C<POSIX::SigSet> or use
-in other places which use numbers instead of symbolic names.
-
-=cut
-
-my %sig_num;
-sub _init_signum
-{
-   my $self = shift;
-   # Copypasta from Config.pm's documentation
-
-   our %Config;
-   require Config;
-   Config->import;
-
-   unless($Config{sig_name} && $Config{sig_num}) {
-      die "No signals found";
-   }
-   else {
-      my @names = split ' ', $Config{sig_name};
-      @sig_num{@names} = split ' ', $Config{sig_num};
-   }
-}
-
-sub signame2num
-{
-   my $self = shift;
-   my ( $signame ) = @_;
-
-   %sig_num or $self->_init_signum;
-
-   return $sig_num{$signame};
-}
+sub socketpair  { shift; IO::Async::OS->socketpair( @_ ) }
+sub pipepair    { shift; IO::Async::OS->pipepair( @_ ) }
+sub pipequad    { shift; IO::Async::OS->pipequad( @_ ) }
+sub signame2num { shift; IO::Async::OS->signame2num( @_ ) }
 
 =head2 ( $family, $socktype, $protocol, $addr ) = $loop->extract_addrinfo( $ai )
 

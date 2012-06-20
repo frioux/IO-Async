@@ -278,6 +278,43 @@ sub pipequad
    return ( $rdA, $wrA, $rdB, $wrB );
 }
 
+=head2 $signum = IO::Async::OS->signame2num( $signame )
+
+This utility method converts a signal name (such as "TERM") into its system-
+specific signal number. This may be useful to pass to C<POSIX::SigSet> or use
+in other places which use numbers instead of symbolic names.
+
+=cut
+
+my %sig_num;
+sub _init_signum
+{
+   my $self = shift;
+   # Copypasta from Config.pm's documentation
+
+   our %Config;
+   require Config;
+   Config->import;
+
+   unless($Config{sig_name} && $Config{sig_num}) {
+      die "No signals found";
+   }
+   else {
+      my @names = split ' ', $Config{sig_name};
+      @sig_num{@names} = split ' ', $Config{sig_num};
+   }
+}
+
+sub signame2num
+{
+   my $self = shift;
+   my ( $signame ) = @_;
+
+   %sig_num or $self->_init_signum;
+
+   return $sig_num{$signame};
+}
+
 =head1 AUTHOR
 
 Paul Evans <leonerd@leonerd.org.uk>
