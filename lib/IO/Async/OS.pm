@@ -10,6 +10,17 @@ use warnings;
 
 our $VERSION = '0.50';
 
+our @ISA = qw( IO::Async::OS::_Base );
+
+if( eval { require "IO/Async/OS/$^O.pm" } ) {
+   @ISA = "IO::Async::OS::$^O";
+}
+
+# TODO: If we can successfully load IO::Async::OS::$^O, use that instead
+
+package # hide from CPAN
+   IO::Async::OS::_Base;
+
 use Carp;
 
 use Socket 1.95 qw(
@@ -21,7 +32,6 @@ use Socket 1.95 qw(
 
 use IO::Socket (); # empty import
 
-use constant HAVE_MSWIN32 => ( $^O eq "MSWin32" );
 use constant HAVE_SOCKADDR_IN6 => defined eval { pack_sockaddr_in6 0, inet_pton( AF_INET6, "2001::1" ) };
 
 =head1 NAME
@@ -176,65 +186,6 @@ sub socketpair
    }
 
    return ( $S1, $S2 );
-}
-
-# TODO: Move this into its own file, have it loaded dynamically via $^O
-if( HAVE_MSWIN32 ) {
-   # Win32 doesn't have a socketpair(). We'll fake one up
-
-   undef *socketpair;
-   *socketpair = sub {
-      my $self = shift;
-      my ( $family, $socktype, $proto ) = @_;
-
-      $family = $self->getfamilybyname( $family ) || AF_INET;
-
-      # SOCK_STREAM is the most likely
-      $socktype = $self->getsocktypebyname( $socktype ) || SOCK_STREAM;
-
-      $proto ||= 0;
-
-      if( $socktype == SOCK_STREAM ) {
-         my $listener = IO::Socket::INET->new(
-            LocalAddr => "127.0.0.1",
-            LocalPort => 0,
-            Listen    => 1,
-            Blocking  => 0,
-         ) or croak "Cannot socket() - $!";
-
-         my $S1 = IO::Socket::INET->new(
-            PeerAddr => $listener->sockhost,
-            PeerPort => $listener->sockport
-         ) or croak "Cannot socket() again - $!";
-
-         my $S2 = $listener->accept or croak "Cannot accept() - $!";
-
-         $listener->close;
-
-         return ( $S1, $S2 );
-      }
-      elsif( $socktype == SOCK_DGRAM ) {
-         my $S1 = IO::Socket::INET->new(
-            LocalAddr => "127.0.0.1",
-            Type      => SOCK_DGRAM,
-            Proto     => "udp",
-         ) or croak "Cannot socket() - $!";
-         
-         my $S2 = IO::Socket::INET->new(
-            LocalAddr => "127.0.0.1",
-            Type      => SOCK_DGRAM,
-            Proto     => "udp",
-         ) or croak "Cannot socket() again - $!";
-
-         $S1->connect( $S2->sockname );
-         $S2->connect( $S1->sockname );
-
-         return ( $S1, $S2 );
-      }
-      else {
-         croak "Unrecognised socktype $socktype";
-      }
-   };
 }
 
 =head2 ( $rd, $wr ) = IO::Async::OS->pipepair
