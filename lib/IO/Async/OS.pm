@@ -16,8 +16,6 @@ if( eval { require "IO/Async/OS/$^O.pm" } ) {
    @ISA = "IO::Async::OS::$^O";
 }
 
-# TODO: If we can successfully load IO::Async::OS::$^O, use that instead
-
 package # hide from CPAN
    IO::Async::OS::_Base;
 
