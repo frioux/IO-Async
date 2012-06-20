@@ -4,6 +4,7 @@ use strict;
 
 use Test::More tests => 34;
 
+use IO::Async::OS;
 use IO::Async::Loop::Poll;
 
 use Socket qw( AF_INET AF_UNIX SOCK_STREAM SOCK_DGRAM SO_TYPE pack_sockaddr_in pack_sockaddr_un inet_aton );
@@ -15,7 +16,7 @@ use Time::HiRes qw( time );
 my $loop = IO::Async::Loop::Poll->new;
 
 foreach my $family ( undef, "inet" ) {
-   my ( $S1, $S2 ) = $loop->socketpair( $family, "stream" )
+   my ( $S1, $S2 ) = IO::Async::OS->socketpair( $family, "stream" )
       or die "Could not socketpair - $!";
 
    isa_ok( $S1, "IO::Socket", '$S1 isa IO::Socket' );
@@ -32,7 +33,7 @@ foreach my $family ( undef, "inet" ) {
    $S2->syswrite( "Goodbye" );
    is( do { my $b; $S1->sysread( $b, 8192 ); $b }, "Goodbye", '$S2 --writes-> $S1' );
 
-   ( $S1, $S2 ) = $loop->socketpair( $family, "dgram" )
+   ( $S1, $S2 ) = IO::Async::OS->socketpair( $family, "dgram" )
       or die "Could not socketpair - $!";
 
    isa_ok( $S1, "IO::Socket", '$S1 isa IO::Socket' );

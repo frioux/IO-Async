@@ -671,7 +671,7 @@ sub fd
 
       my $handle_class;
       # CHEATING
-      if( defined $opts->{socktype} && IO::Async::Loop::_getsocktypebyname( $opts->{socktype} ) != SOCK_STREAM ) {
+      if( defined $opts->{socktype} && IO::Async::OS::_getsocktypebyname( $opts->{socktype} ) != SOCK_STREAM ) {
          require IO::Async::Socket;
          $handle_class = "IO::Async::Socket";
       }

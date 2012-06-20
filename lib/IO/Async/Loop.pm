@@ -20,15 +20,6 @@ use constant HAVE_MSWIN32 => ( $^O eq "MSWin32" );
 
 use Carp;
 
-use Socket qw(
-   AF_INET AF_UNIX INADDR_LOOPBACK SOCK_STREAM SOCK_DGRAM SOCK_RAW
-   pack_sockaddr_in
-);
-BEGIN {
-   # Not quite sure where we'll find AF_INET6
-   eval { Socket->import( 'AF_INET6' ); 1 } or
-      eval { require Socket6; Socket6->import( 'AF_INET6' ) }
-}
 use IO::Socket (); # empty import
 use Time::HiRes qw(); # empty import
 use POSIX qw( _exit WNOHANG );
@@ -1084,157 +1075,13 @@ to give different implementations on that OS.
 
 =cut
 
-sub _getfamilybyname
-{
-   my ( $name ) = @_;
-
-   return undef unless defined $name;
-
-   return $name if $name =~ m/^\d+$/;
-
-   return AF_INET    if $name eq "inet";
-   return AF_INET6() if $name eq "inet6" and defined &AF_INET6;
-   return AF_UNIX    if $name eq "unix";
-
-   croak "Unrecognised socktype name '$name'";
-}
-
-sub _getsocktypebyname
-{
-   my ( $name ) = @_;
-
-   return undef unless defined $name;
-
-   return $name if $name =~ m/^\d+$/;
-
-   return SOCK_STREAM if $name eq "stream";
-   return SOCK_DGRAM  if $name eq "dgram";
-   return SOCK_RAW    if $name eq "raw";
-
-   croak "Unrecognised socktype name '$name'";
-}
-
 =head2 ( $S1, $S2 ) = $loop->socketpair( $family, $socktype, $proto )
 
-An abstraction of the C<socketpair(2)> syscall, where any argument may be
-missing (or given as C<undef>).
-
-If C<$family> is not provided, a suitable value will be provided by the OS
-(likely C<AF_UNIX> on POSIX-based platforms). If C<$socktype> is not provided,
-then C<SOCK_STREAM> will be used.
-
-Additionally, this method supports building connected C<SOCK_STREAM> or
-C<SOCK_DGRAM> pairs in the C<AF_INET> family even if the underlying platform's
-C<socketpair(2)> does not, by connecting two normal sockets together.
-
-C<$family> and C<$socktype> may also be given symbolically similar to the
-behaviour of C<extract_addrinfo>.
+Legacy wrapper around L<IO::Async::OS> C<socketpair>.
 
 =cut
 
-sub socketpair
-{
-   my $self = shift;
-   my ( $family, $socktype, $proto ) = @_;
-
-   # PF_UNSPEC and undef are both false
-   $family = _getfamilybyname( $family ) || AF_UNIX;
-
-   # SOCK_STREAM is the most likely
-   $socktype = _getsocktypebyname( $socktype ) || SOCK_STREAM;
-
-   $proto ||= 0;
-
-   my ( $S1, $S2 ) = IO::Socket->new->socketpair( $family, $socktype, $proto );
-   return ( $S1, $S2 ) if defined $S1;
-
-   return unless $family == AF_INET and ( $socktype == SOCK_STREAM or $socktype == SOCK_DGRAM );
-
-   # Now lets emulate an AF_INET socketpair call
-
-   my $Stmp = IO::Async::OS->socket( $family, $socktype ) or return;
-   $Stmp->bind( pack_sockaddr_in( 0, INADDR_LOOPBACK ) ) or return;
-
-   $S1 = IO::Async::OS->socket( $family, $socktype ) or return;
-
-   if( $socktype == SOCK_STREAM ) {
-      $Stmp->listen( 1 ) or return;
-      $S1->connect( getsockname $Stmp ) or return;
-      $S2 = $Stmp->accept or return;
-
-      # There's a bug in IO::Socket here, in that $S2 's ->socktype won't
-      # yet be set. We can apply a horribly hacky fix here
-      #   defined $S2->socktype and $S2->socktype == $socktype or
-      #     ${*$S2}{io_socket_type} = $socktype;
-      # But for now we'll skip the test for it instead
-   }
-   else {
-      $S2 = $Stmp;
-      $S1->connect( getsockname $S2 ) or return;
-      $S2->connect( getsockname $S1 ) or return;
-   }
-
-   return ( $S1, $S2 );
-}
-
-# TODO: Move this into its own file, have it loaded dynamically via $^O
-if( HAVE_MSWIN32 ) {
-   # Win32 doesn't have a socketpair(). We'll fake one up
-
-   undef *socketpair;
-   *socketpair = sub {
-      my $self = shift;
-      my ( $family, $socktype, $proto ) = @_;
-
-      $family = _getfamilybyname( $family ) || AF_INET;
-
-      # SOCK_STREAM is the most likely
-      $socktype = _getsocktypebyname( $socktype ) || SOCK_STREAM;
-
-      $proto ||= 0;
-
-      if( $socktype == SOCK_STREAM ) {
-         my $listener = IO::Socket::INET->new(
-            LocalAddr => "127.0.0.1",
-            LocalPort => 0,
-            Listen    => 1,
-            Blocking  => 0,
-         ) or croak "Cannot socket() - $!";
-
-         my $S1 = IO::Socket::INET->new(
-            PeerAddr => $listener->sockhost,
-            PeerPort => $listener->sockport
-         ) or croak "Cannot socket() again - $!";
-
-         my $S2 = $listener->accept or croak "Cannot accept() - $!";
-
-         $listener->close;
-
-         return ( $S1, $S2 );
-      }
-      elsif( $socktype == SOCK_DGRAM ) {
-         my $S1 = IO::Socket::INET->new(
-            LocalAddr => "127.0.0.1",
-            Type      => SOCK_DGRAM,
-            Proto     => "udp",
-         ) or croak "Cannot socket() - $!";
-         
-         my $S2 = IO::Socket::INET->new(
-            LocalAddr => "127.0.0.1",
-            Type      => SOCK_DGRAM,
-            Proto     => "udp",
-         ) or croak "Cannot socket() again - $!";
-
-         $S1->connect( $S2->sockname );
-         $S2->connect( $S1->sockname );
-
-         return ( $S1, $S2 );
-      }
-      else {
-         croak "Unrecognised socktype $socktype";
-      }
-   };
-}
+sub socketpair { shift; IO::Async::OS->socketpair( @_ ) }
 
 =head2 ( $rd, $wr ) = $loop->pipepair
 
@@ -1287,7 +1134,7 @@ sub pipequad
    my $self = shift;
 
    # Prefer socketpair
-   if( my ( $S1, $S2 ) = $self->socketpair ) {
+   if( my ( $S1, $S2 ) = IO::Async::OS->socketpair ) {
       return ( $S1, $S2, $S2, $S1 );
    }
 
@@ -1402,8 +1249,8 @@ sub extract_addrinfo
       $ai[ADDRINFO_ADDR] = $code->( $self, $ai );
    }
 
-   $ai[ADDRINFO_FAMILY]   = _getfamilybyname( $ai[ADDRINFO_FAMILY] );
-   $ai[ADDRINFO_SOCKTYPE] = _getsocktypebyname( $ai[ADDRINFO_SOCKTYPE] );
+   $ai[ADDRINFO_FAMILY]   = IO::Async::OS::_getfamilybyname( $ai[ADDRINFO_FAMILY] );
+   $ai[ADDRINFO_SOCKTYPE] = IO::Async::OS::_getsocktypebyname( $ai[ADDRINFO_SOCKTYPE] );
 
    # Make sure all fields are defined
    $ai[$_] ||= 0 for ADDRINFO_FAMILY, ADDRINFO_SOCKTYPE, ADDRINFO_PROTOCOL;

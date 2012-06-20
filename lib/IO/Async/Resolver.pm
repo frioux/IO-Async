@@ -27,8 +27,8 @@ BEGIN {
 BEGIN {
    # More cheating
    require IO::Async::Loop;
-   *_getfamilybyname   = \&IO::Async::Loop::_getfamilybyname;
-   *_getsocktypebyname = \&IO::Async::Loop::_getsocktypebyname;
+   *_getfamilybyname   = \&IO::Async::OS::_getfamilybyname;
+   *_getsocktypebyname = \&IO::Async::OS::_getsocktypebyname;
 }
 
 use Time::HiRes qw( alarm );
