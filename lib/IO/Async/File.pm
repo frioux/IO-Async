@@ -20,23 +20,21 @@ my @STATS = qw( dev ino mode nlink uid gid rdev size atime mtime ctime );
 
 =head1 NAME
 
-C<IO::Async::File> - watch a filehandle for changes
+C<IO::Async::File> - watch a file for changes
 
 =head1 SYNOPSIS
 
- use IO::Async::FileStream;
+ use IO::Async::File;
 
  use IO::Async::Loop;
  my $loop = IO::Async::Loop->new;
 
- open my $fileh, "<", "config.ini" or
-    die "Cannot open config file - $!";
-
  my $file = IO::Async::File->new(
-    handle => $fileh,
+    filename => "config.ini",
     on_mtime_changed => sub {
+       my ( $self ) = @_;
        print STDERR "Config file has changed\n";
-       reload_config();
+       reload_config( $self->handle );
     }
  );
 
@@ -46,10 +44,10 @@ C<IO::Async::File> - watch a filehandle for changes
 
 =head1 DESCRIPTION
 
-This subclass of L<IO::Async::Notifier> watches an open filehandle for changes
-in its C<stat()> fields. It invokes various events when the values of these
-fields change. It is most often used to watch a file for size changes; for
-this task see also L<IO::Async::FileStream>.
+This subclass of L<IO::Async::Notifier> watches an open filehandle or named
+filesystem entity for changes in its C<stat()> fields. It invokes various
+events when the values of these fields change. It is most often used to watch
+a file for size changes; for this task see also L<IO::Async::FileStream>.
 
 While called "File", it is not required that the watched filehandle be a
 regular file. It is possible to watch anything that C<stat(2)> may be called
@@ -78,7 +76,8 @@ passed the new and old values of the field.
 
 Invoked when either of the C<dev> or C<ino> fields have changed. It is passed
 two L<File::stat> instances containing the complete old and new C<stat()>
-fields.
+fields. This can be used to observe when a named file is renamed; it will not
+be observed to happen on opened filehandles.
 
 =head2 on_stat_changed $new_stat, $old_stat
 
@@ -95,14 +94,15 @@ The following named parameters may be passed to C<new> or C<configure>.
 
 =item handle => IO
 
-The filehandle to watch for C<stat()> changes.
+The opened filehandle to watch for C<stat()> changes if C<filename> is not
+supplied.
 
 =item filename => STRING
 
 Optional. If supplied, watches the named file rather than the filehandle given
-in C<handle>. The file will be opened and then watched for renames. If the
-file is renamed, the new filename is opened and tracked similarly after
-closing the previous file.
+in C<handle>. The file will be opened for reading and then watched for
+renames. If the file is renamed, the new filename is opened and tracked
+similarly after closing the previous file.
 
 =item interval => NUM
 
