@@ -114,7 +114,8 @@ SKIP: {
               'extract_addrinfo( HASH ) with inet6, ip+port' );
 }
 
-{
+SKIP: {
+   skip "No pack_sockaddr_un", 1 unless IO::Async::OS->HAVE_SOCKADDR_UN;
    my $sunaddr = pack_sockaddr_un( "foo.sock" );
 
    is_deeply( [ IO::Async::OS->extract_addrinfo( {

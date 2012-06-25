@@ -33,6 +33,7 @@ use IO::Socket (); # empty import
 # Some constants that define features of the OS
 
 use constant HAVE_SOCKADDR_IN6 => defined eval { pack_sockaddr_in6 0, inet_pton( AF_INET6, "2001::1" ) };
+use constant HAVE_SOCKADDR_UN  => defined eval { pack_sockaddr_un "/foo" };
 
 # Do we have to fake S_ISREG() files read/write-ready in select()?
 use constant HAVE_FAKE_ISREG_READY => 0;
