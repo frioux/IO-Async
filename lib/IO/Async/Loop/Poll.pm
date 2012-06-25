@@ -17,7 +17,7 @@ use Carp;
 
 use IO::Poll qw( POLLIN POLLOUT POLLHUP POLLERR );
 
-use POSIX qw( EINTR );
+use POSIX qw( EINTR S_ISREG );
 
 # IO::Poll version 0.05 contain a bug whereby the ->remove method doesn't
 # properly clean up all the references to the handles. If the version we're
@@ -29,6 +29,10 @@ use constant IO_POLL_REMOVE_BUG => ( $IO::Poll::VERSION == '0.05' );
 use constant _CAN_ON_HANGUP =>
    ( $^O eq "linux" ) ||
    ( $^O eq "freebsd" and do { no warnings 'numeric'; (POSIX::uname)[2] >= 8.0 } );
+
+# poll() on most platforms claims that ISREG files are always read- and
+# write-ready, but not on MSWin32. We need to fake this
+use constant FAKE_ISREG_READY => IO::Async::OS->HAVE_FAKE_ISREG_READY;
 
 =head1 NAME
 
@@ -140,6 +144,9 @@ sub post_poll
       my $watch = $iowatches->{$fd} or next;
 
       my $events = $poll->events( $watch->[0] );
+      if( FAKE_ISREG_READY and $self->{fake_isreg}{$fd} ) {
+         $events |= $self->{fake_isreg}{$fd} & ( POLLIN|POLLOUT );
+      }
 
       # We have to test separately because kernel doesn't report POLLIN when
       # a pipe gets closed.
@@ -179,6 +186,8 @@ sub loop_once
    my ( $timeout ) = @_;
 
    $self->_adjust_timeout( \$timeout );
+
+   $timeout = 0 if FAKE_ISREG_READY and keys %{ $self->{fake_isreg} };
 
    # Round up to nearest millisecond
    if( $timeout ) {
@@ -239,6 +248,10 @@ sub watch_io
    $params{on_write_ready} and $mask |= POLLOUT;
    $params{on_hangup}      and $mask |= POLLHUP;
 
+   if( FAKE_ISREG_READY and S_ISREG(stat $handle) ) {
+      $self->{fake_isreg}{$handle->fileno} = [ $handle, $mask ];
+   }
+
    $poll->mask( $handle, $mask ) if $mask != $curmask;
 }
 
@@ -260,6 +273,15 @@ sub unwatch_io
    $params{on_read_ready}  and $mask &= ~POLLIN;
    $params{on_write_ready} and $mask &= ~POLLOUT;
    $params{on_hangup}      and $mask &= ~POLLHUP;
+
+   if( FAKE_ISREG_READY and S_ISREG(stat $handle) ) {
+      if( $mask ) {
+         $self->{fake_isreg}{$handle->fileno} = [ $handle, $mask ];
+      }
+      else {
+         delete $self->{fake_isreg}{$handle->fileno};
+      }
+   }
 
    $poll->mask( $handle, $mask ) if $mask != $curmask;
 }
