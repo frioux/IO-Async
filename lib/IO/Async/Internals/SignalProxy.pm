@@ -155,9 +155,7 @@ sub watch
    };
 
    my $signum = IO::Async::OS->signame2num( $signal );
-
-   my $sigset_block = $self->{sigset_block};
-   $sigset_block->addset( $signum );
+   $self->{sigset_block}->addset( $signum );
 }
 
 sub unwatch
@@ -175,6 +173,11 @@ sub unwatch
 
    delete $restore_SIG->{$signal};
    delete $self->{callbacks}->{$signal};
+
+   my $signum = IO::Async::OS->signame2num( $signal );
+
+   # Guard during global destruction
+   $self->{sigset_block}->delset( $signum ) if defined $self->{sigset_block};
 }
 
 sub signals
