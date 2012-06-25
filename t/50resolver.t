@@ -20,56 +20,60 @@ testing_loop( $loop );
 my $resolver = $loop->resolver;
 isa_ok( $resolver, "IO::Async::Resolver", '$loop->resolver' );
 
-my @pwuid = getpwuid( $< );
-
-{
-   my $result;
-
-   $resolver->resolve(
-      type => 'getpwuid',
-      data => [ $< ], 
-      on_resolved => sub { $result = [ @_ ] },
-      on_error => sub { die "Test died early" },
-   );
-
-   wait_for { $result };
-
-   is_deeply( $result, \@pwuid, 'getpwuid' );
-}
-
-{
-   my $result;
-
-   $loop->resolve(
-      type => 'getpwuid',
-      data => [ $< ],
-      on_resolved => sub { $result = [ @_ ] },
-      on_error => sub { die "Test died early" },
-   );
-
-   wait_for { $result };
-
-   is_deeply( $result, \@pwuid, 'getpwuid via $loop->resolve' );
-}
-
 SKIP: {
-   my $user_name = $pwuid[0];
-   skip "getpwnam - No user name", 1 unless defined $user_name;
+   my @pwuid;
+   defined eval { @pwuid = getpwuid( $< ) } or
+      skip "No getpwuid()", 3;
 
-   my @pwnam = getpwnam( $user_name );
+   {
+      my $result;
 
-   my $result;
+      $resolver->resolve(
+         type => 'getpwuid',
+         data => [ $< ], 
+         on_resolved => sub { $result = [ @_ ] },
+         on_error => sub { die "Test died early" },
+      );
 
-   $resolver->resolve(
-      type => 'getpwnam',
-      data => [ $user_name ],
-      on_resolved => sub { $result = [ @_ ] },
-      on_error => sub { die "Test died early" },
-   );
+      wait_for { $result };
 
-   wait_for { $result };
+      is_deeply( $result, \@pwuid, 'getpwuid' );
+   }
 
-   is_deeply( $result, \@pwnam, 'getpwnam' );
+   {
+      my $result;
+
+      $loop->resolve(
+         type => 'getpwuid',
+         data => [ $< ],
+         on_resolved => sub { $result = [ @_ ] },
+         on_error => sub { die "Test died early" },
+      );
+
+      wait_for { $result };
+
+      is_deeply( $result, \@pwuid, 'getpwuid via $loop->resolve' );
+   }
+
+   SKIP: {
+      my $user_name = $pwuid[0];
+      skip "getpwnam - No user name", 1 unless defined $user_name;
+
+      my @pwnam = getpwnam( $user_name );
+
+      my $result;
+
+      $resolver->resolve(
+         type => 'getpwnam',
+         data => [ $user_name ],
+         on_resolved => sub { $result = [ @_ ] },
+         on_error => sub { die "Test died early" },
+      );
+
+      wait_for { $result };
+
+      is_deeply( $result, \@pwnam, 'getpwnam' );
+   }
 }
 
 my @proto = getprotobyname( "tcp" );
