@@ -12,6 +12,8 @@ use File::Temp qw( tempfile );
 
 use IO::Async::Loop;
 
+use IO::Async::OS;
+
 use IO::Async::File;
 
 use constant AUT => $ENV{TEST_QUICK_TIMERS} ? 0.1 : 1;
@@ -73,7 +75,9 @@ sub mkhandles
 }
 
 # Follow by name
-{
+SKIP: {
+   skip "OS is unable to rename open files", 3 unless IO::Async::OS->HAVE_RENAME_OPEN_FILES;
+
    my ( undef, $wr, $filename ) = mkhandles;
 
    my $devino_changed;
@@ -93,8 +97,8 @@ sub mkhandles
 
    close $wr;
    rename( $filename, "$filename.old" ) or die "Cannot rename $filename - $!";
-   END { -f $filename and unlink $filename }
-   END { -f "$filename.old" and unlink "$filename.old" }
+   END { defined $filename and -f $filename and unlink $filename }
+   END { defined $filename and -f "$filename.old" and unlink "$filename.old" }
    open $wr, ">", $filename or die "Cannot reopen $filename for writing - $!";
 
    wait_for { $devino_changed };

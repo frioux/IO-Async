@@ -13,6 +13,8 @@ use File::Temp qw( tempfile );
 
 use IO::Async::Loop;
 
+use IO::Async::OS;
+
 use IO::Async::FileStream;
 
 use constant AUT => $ENV{TEST_QUICK_TIMERS} ? 0.1 : 1;
@@ -222,7 +224,9 @@ sub mkhandles
 }
 
 # Follow by name
-{
+SKIP: {
+   skip "OS is unable to rename open files", 7 unless IO::Async::OS->HAVE_RENAME_OPEN_FILES;
+
    my ( undef, $wr, $filename ) = mkhandles;
 
    my @lines;
@@ -257,8 +261,8 @@ sub mkhandles
    $wr->syswrite( "last line of old file\n" );
    close $wr;
    rename( $filename, "$filename.old" ) or die "Cannot rename $filename - $!";
-   END { -f $filename and unlink $filename }
-   END { -f "$filename.old" and unlink "$filename.old" }
+   END { defined $filename and -f $filename and unlink $filename }
+   END { defined $filename and -f "$filename.old" and unlink "$filename.old" }
    open $wr, ">", $filename or die "Cannot reopen $filename for writing - $!";
    $wr->syswrite( "first line of new file\n" );
 

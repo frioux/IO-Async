@@ -24,6 +24,8 @@ use constant HAVE_SELECT_CONNECT_EVEC => 1;
 
 use constant HAVE_CONNECT_EWOULDBLOCK => 1;
 
+use constant HAVE_RENAME_OPEN_FILES => 0;
+
 =head1 NAME
 
 C<IO::Async::OS::MSWin32> - operating system abstractions on C<MSWin32> for C<IO::Async>

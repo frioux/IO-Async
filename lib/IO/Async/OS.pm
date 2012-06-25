@@ -44,6 +44,9 @@ use constant HAVE_SELECT_CONNECT_EVEC => 0;
 # Does connect() yield EWOULDBLOCK for nonblocking in progress?
 use constant HAVE_CONNECT_EWOULDBLOCK => 0;
 
+# Can we rename() files that are open?
+use constant HAVE_RENAME_OPEN_FILES => 1;
+
 =head1 NAME
 
 C<IO::Async::OS> - operating system abstractions for C<IO::Async>
