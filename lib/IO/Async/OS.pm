@@ -464,30 +464,52 @@ Used to implement the C<watch_signal> / C<unwatch_signal> Loop pair.
 
 sub loop_watch_signal
 {
-   shift;
+   my $self = shift;
    my ( $loop, $signal, $code ) = @_;
 
-   my $sigproxy = $loop->{os}{sigproxy} ||= do {
-      require IO::Async::Internals::SignalProxy;
-      IO::Async::Internals::SignalProxy->new( loop => $loop );
-   };
+   exists $SIG{$signal} or croak "Unrecognised signal name $signal";
+   ref $code or croak 'Expected $code as a reference';
 
-   $sigproxy->watch( $signal, $code );
+   my $signum = $self->signame2num( $signal );
+   my $sigwatch = $loop->{os}{sigwatch} ||= {}; # {$num} = $code
+
+   my $sigpipe;
+   unless( $sigpipe = $loop->{os}{sigpipe} ) {
+      require IO::Async::Handle;
+
+      ( my $reader, $sigpipe ) = $self->pipepair or croak "Cannot pipe() - $!";
+      $_->blocking( 0 ) for $reader, $sigpipe;
+
+      $loop->{os}{sigpipe} = $sigpipe;
+
+      $loop->add( $loop->{os}{sigpipe_reader} = IO::Async::Handle->new(
+         notifier_name => "sigpipe",
+         read_handle => $reader,
+         on_read_ready => sub {
+            sysread $reader, my $buffer, 8192 or return;
+            foreach my $signum ( unpack "I*", $buffer ) {
+               $sigwatch->{$signum}->() if $sigwatch->{$signum};
+            }
+         },
+      ) );
+   }
+
+   my $signum_str = pack "I", $signum;
+   $SIG{$signal} = sub { syswrite $sigpipe, $signum_str };
+
+   $sigwatch->{$signum} = $code;
 }
 
 sub loop_unwatch_signal
 {
-   shift;
+   my $self = shift;
    my ( $loop, $signal ) = @_;
 
-   my $sigproxy = $loop->{os}{sigproxy} or return;
+   my $signum = $self->signame2num( $signal );
+   my $sigwatch = $loop->{os}{sigwatch} or return;
 
-   $sigproxy->unwatch( $signal );
-
-   if( !$sigproxy->signals ) {
-      $loop->remove( $sigproxy );
-      undef $loop->{os}{sigproxy};
-   }
+   delete $sigwatch->{$signum};
+   undef $SIG{$signal};
 }
 
 =head1 AUTHOR
