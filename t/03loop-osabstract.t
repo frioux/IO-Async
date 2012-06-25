@@ -2,10 +2,9 @@
 
 use strict;
 
-use Test::More tests => 38;
+use Test::More tests => 37;
 
 use IO::Async::OS;
-use IO::Async::Loop::Poll;
 
 use Socket qw(
    AF_INET AF_INET6 AF_UNIX SOCK_STREAM SOCK_DGRAM SO_TYPE
@@ -13,10 +12,6 @@ use Socket qw(
 );
 
 use POSIX qw( SIGTERM );
-
-use Time::HiRes qw( time );
-
-my $loop = IO::Async::Loop::Poll->new;
 
 foreach my $family ( undef, "inet" ) {
    my ( $S1, $S2 ) = IO::Async::OS->socketpair( $family, "stream" )
@@ -130,5 +125,3 @@ SKIP: {
               [ AF_UNIX, SOCK_STREAM, 0, $sunaddr ],
               'extract_addrinfo( HASH ) with unix, path' );
 }
-
-cmp_ok( $loop->time - time, "<", 0.1, '$loop->time gives the current time' );

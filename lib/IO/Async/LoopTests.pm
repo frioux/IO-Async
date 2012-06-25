@@ -375,11 +375,13 @@ Tests the Loop's ability to handle timer events
 
 =cut
 
-use constant count_tests_timer => 21;
+use constant count_tests_timer => 22;
 sub run_tests_timer
 {
    my $done = 0;
    # New watch/unwatch API
+
+   cmp_ok( abs( $loop->time - time ), "<", 0.1, '$loop->time gives the current time' );
 
    $loop->watch_time( after => 2 * AUT, code => sub { $done = 1; } );
 
