@@ -445,6 +445,51 @@ sub _extract_addrinfo_unix
 
 =cut
 
+=head1 LOOP IMPLEMENTATION METHODS
+
+The following methods are provided on C<IO::Async::OS> because they are likely
+to require OS-specific implementations, but are used by L<IO::Async::Loop> to
+implement its functionality. It can use the HASH reference C<< $loop->{os} >>
+to store other data it requires.
+
+=cut
+
+=head2 IO::Async::OS->loop_watch_signal( $loop, $signal, $code )
+
+=head2 IO::Async::OS->loop_unwatch_signal( $loop, $signal )
+
+Used to implement the C<watch_signal> / C<unwatch_signal> Loop pair.
+
+=cut
+
+sub loop_watch_signal
+{
+   shift;
+   my ( $loop, $signal, $code ) = @_;
+
+   my $sigproxy = $loop->{os}{sigproxy} ||= do {
+      require IO::Async::Internals::SignalProxy;
+      IO::Async::Internals::SignalProxy->new( loop => $loop );
+   };
+
+   $sigproxy->watch( $signal, $code );
+}
+
+sub loop_unwatch_signal
+{
+   shift;
+   my ( $loop, $signal ) = @_;
+
+   my $sigproxy = $loop->{os}{sigproxy} or return;
+
+   $sigproxy->unwatch( $signal );
+
+   if( !$sigproxy->signals ) {
+      $loop->remove( $sigproxy );
+      undef $loop->{os}{sigproxy};
+   }
+}
+
 =head1 AUTHOR
 
 Paul Evans <leonerd@leonerd.org.uk>

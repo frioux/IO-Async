@@ -117,11 +117,11 @@ sub __new
       notifiers    => {}, # {nkey} = notifier
       iowatches    => {}, # {fd} = [ $on_read_ready, $on_write_ready, $on_hangup ]
       sigattaches  => {}, # {sig} => \@callbacks
-      sigproxy     => undef,
       childmanager => undef,
       childwatches => {}, # {pid} => $code
       timequeue    => undef,
       deferrals    => [],
+      os           => {}, # A generic scratchpad for IO::Async::OS to store whatever it wants
    }, $class;
 
    # It's possible this is a specific subclass constructor. We still want the
@@ -1360,8 +1360,7 @@ sub watch_signal
    my $self = shift;
    my ( $signal, $code ) = @_;
 
-   my $sigproxy = $self->{sigproxy} ||= $self->__new_feature( "IO::Async::Internals::SignalProxy" );
-   $sigproxy->watch( $signal, $code );
+   IO::Async::OS->loop_watch_signal( $self, $signal, $code );
 }
 
 =head2 $loop->unwatch_signal( $signal )
@@ -1383,14 +1382,7 @@ sub unwatch_signal
    my $self = shift;
    my ( $signal ) = @_;
 
-   my $sigproxy = $self->{sigproxy} ||= $self->__new_feature( "IO::Async::Internals::SignalProxy" );
-   $sigproxy->unwatch( $signal );
-
-   if( !$sigproxy->signals ) {
-      $self->remove( $sigproxy );
-      undef $sigproxy;
-      undef $self->{sigproxy};
-   }
+   IO::Async::OS->loop_unwatch_signal( $self, $signal );
 }
 
 =head2 $id = $loop->watch_time( %args )
