@@ -133,6 +133,8 @@ sub pre_select
 
    $self->_adjust_timeout( $timeref );
 
+   $$timeref = 0 if FAKE_ISREG_READY and length $self->{avec};
+
    # Round up to nearest millisecond
    if( $$timeref ) {
       my $mils = $$timeref * 1000;
