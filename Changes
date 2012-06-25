@@ -1,5 +1,15 @@
 Revision history for IO-Async
 
+0.51    CHANGES:
+         * Split much code out to new IO::Async::OS heirarchy
+         * Drop dead dependency on Test::Warn
+         * Smaller simpler signal handling, avoid POSIX::SigSet
+         * Expose getfamilybyname and getsocktypebyname as OS methods
+
+        BUGFIXES:
+         * Many small MSWin32 fixes that might help pass some tests. Likely
+           still incomplete though
+
 0.50    CHANGES:
          * Added IO::Async::File
          * Added filename mode of IO::Async::FileStream
