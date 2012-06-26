@@ -690,22 +690,6 @@ sub detach_child
    $self->fork( @_ );
 }
 
-# undocumented, to be removed soon
-sub detach_code
-{
-   my $self = shift;
-   my %params = @_;
-
-   warnings::warnif( deprecated => "Loop->detach_code is deprecated; use IO::Async::Function instead" );
-
-   require IO::Async::DetachedCode;
-
-   return IO::Async::DetachedCode->new(
-      %params,
-      loop => $self
-   );
-}
-
 =head2 $loop->spawn_child( %params )
 
 This method creates a new child process to run a given code block or command.
