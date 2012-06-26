@@ -51,7 +51,7 @@ my $addr = $listensock->sockname;
 
    isa_ok( $task, "CPS::Future", '$task' );
 
-   $loop->wait_for( $task );
+   $loop->await( $task );
 
    my ( $sock ) = $task->get;
 
@@ -95,7 +95,7 @@ my $addr = $listensock->sockname;
 
    isa_ok( $task, "CPS::Future", '$task' );
 
-   $loop->wait_for( $task );
+   $loop->await( $task );
 
    my ( $sock ) = $task->get;
 
@@ -218,7 +218,7 @@ SKIP: {
       on_fail => sub { $failop = shift @_; $failerr = pop @_; },
    );
 
-   $loop->wait_for( $task );
+   $loop->await( $task );
 
    is( $failop, "connect", '$failop is connect' );
    is( $failerr+0, ENOENT, '$failerr is ENOENT' );

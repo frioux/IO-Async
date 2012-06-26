@@ -33,7 +33,7 @@ SKIP: {
 
       isa_ok( $task, "CPS::Future", '$task' );
 
-      $loop->wait_for( $task );
+      $loop->await( $task );
 
       my @result = $task->get;
 
@@ -222,7 +222,7 @@ my ( $localhost_err, @localhost_addrs ) = getaddrinfo( "localhost", "www", { fam
 
    isa_ok( $task, "CPS::Future", '$task for $resolver->getaddrinfo' );
 
-   $loop->wait_for( $task );
+   $loop->await( $task );
 
    if( $localhost_err ) {
       is( $task->failure, "$localhost_err\n", '$resolver->getaddrinfo - error message' );
@@ -292,7 +292,7 @@ my ( $localhost_err, @localhost_addrs ) = getaddrinfo( "localhost", "www", { fam
 
    isa_ok( $task, "CPS::Future", '$task for $resolver->getaddrinfo numerical' );
 
-   $loop->wait_for( $task );
+   $loop->await( $task );
 
    my @got = $task->get;
 
@@ -328,7 +328,7 @@ my ( $testerr, $testhost, $testserv ) = getnameinfo( $testaddr );
       addr => $testaddr,
    );
 
-   $loop->wait_for( $task );
+   $loop->await( $task );
 
    if( $testerr ) {
       is( $task->failure, "$testerr\n", '$resolver->getnameinfo - error message from Task' );

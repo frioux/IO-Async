@@ -475,12 +475,34 @@ sub loop_stop
    $self->stop;
 }
 
-sub wait_for
+#########
+# Tasks #
+#########
+
+=head1 TASK SUPPORT
+
+To support the use of Task objects in semi-synchronous programs, the following
+methods all block until some condition involving tasks is satisifed.
+
+=cut
+
+=head2 $loop->await( $task )
+
+Blocks until the given task is ready, as indicated by its C<is_ready> method.
+As a convenience it returns the task, to simplify code:
+
+ my @result = $loop->await( $task )->get;
+
+=cut
+
+sub await
 {
    my $self = shift;
    my ( $task ) = @_;
 
    $self->loop_once until $task->is_ready;
+
+   return $task;
 }
 
 ############
