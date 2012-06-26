@@ -231,7 +231,8 @@ testing_loop( $loop );
    wait_for { defined $err };
 
    # Not sure what reason we might get - need to check both
-   ok( $err->[0] eq "closed" || $err->[0] eq "exit", '$err->[0] after child death' );
+   ok( $err->[0] eq "closed" || $err->[0] eq "exit", '$err->[0] after child death' )
+      or diag( 'Expected "closed" or "exit", found ' . $err->[0] );
 
    is( scalar $function->workers, 0, '$function->workers is now 0' );
 
