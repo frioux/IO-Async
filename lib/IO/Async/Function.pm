@@ -347,15 +347,23 @@ sub call
    my $args = delete $params{args};
    ref $args eq "ARRAY" or croak "Expected 'args' to be an array";
 
-   my $on_result;
+   my $task = CPS::Future->new;
+
    if( defined $params{on_result} ) {
-      my $inner_on_result = delete $params{on_result};
-      ref $inner_on_result or croak "Expected 'on_result' to be a reference";
-      $on_result = $self->_capture_weakself( sub {
+      my $on_result = delete $params{on_result};
+      ref $on_result or croak "Expected 'on_result' to be a reference";
+
+      $task->on_done( $self->_capture_weakself( sub {
          my $self = shift;
-         $self->debug_printf( "CONT on_$_[0]" );
-         goto &$inner_on_result;
-      } );
+         $self->debug_printf( "CONT on_return" );
+         $on_result->( return => @_ );
+      } ) );
+      $task->on_fail( $self->_capture_weakself( sub {
+         my $self = shift;
+         my ( $err, @values ) = @_;
+         $self->debug_printf( "CONT on_error" );
+         $on_result->( error => @values );
+      } ) );
    }
    elsif( defined $params{on_return} and defined $params{on_error} ) {
       my $on_return = delete $params{on_return};
@@ -363,26 +371,21 @@ sub call
       my $on_error  = delete $params{on_error};
       ref $on_error or croak "Expected 'on_error' to be a reference";
 
-      $on_result = $self->_capture_weakself( sub {
+      $task->on_done( $self->_capture_weakself( sub {
          my $self = shift;
-         my $result = shift;
-         $self->debug_printf( "CONT on_$result" );
-         $on_return->( @_ ) if $result eq "return";
-         $on_error->( @_ )  if $result eq "error";
-      } );
+         $self->debug_printf( "CONT on_return" );
+         $on_return->( @_ );
+      } ) );
+      $task->on_fail( $self->_capture_weakself( sub {
+         my $self = shift;
+         my ( $err, @values ) = @_;
+         $self->debug_printf( "CONT on_error" );
+         $on_error->( @values );
+      } ) );
    }
-   else {
-      croak "Expected either 'on_result' or 'on_return' and 'on_error' keys";
+   elsif( !defined wantarray ) {
+      croak "Expected either 'on_result' or 'on_return' and 'on_error' keys, or to return a Task";
    }
-
-   my $task = CPS::Future->new;
-   $task->on_done( sub {
-      $on_result->( return => @_ );
-   } );
-   $task->on_fail( sub {
-      my ( $err, @values ) = @_;
-      $on_result->( error => @values );
-   } );
 
    my $worker = $self->_get_worker;
 
@@ -393,6 +396,8 @@ sub call
    }
 
    $self->_call_worker( $worker, args => $args, $task );
+
+   return $task;
 }
 
 sub _worker_objects
