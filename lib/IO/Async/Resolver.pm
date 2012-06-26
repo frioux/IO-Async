@@ -166,6 +166,11 @@ passed the exception thrown by the function.
 
 =back
 
+=head2 $task = $resolver->resolve( %params )
+
+When returning a task, the C<on_resolved> and C<on_error> continuations are
+optional.
+
 =cut
 
 sub resolve
@@ -273,6 +278,11 @@ Specifically, if the service name is entirely numeric, and the hostname looks
 like an IPv4 or IPv6 string, a synchronous lookup will first be performed
 using the C<AI_NUMERICHOST> flag. If this gives an C<EAI_NONAME> error, then
 the lookup is performed asynchronously instead.
+
+=head2 $task = $resolver->getaddrinfo( %args )
+
+When returning a task, the C<on_resolved> and C<on_error> continuations are
+optional.
 
 =cut
 
@@ -393,6 +403,11 @@ Callback which is invoked after a failed lookup, including for a timeout.
 As a specific optimsation, this method will try to perform a lookup of numeric
 values synchronously, rather than asynchronously, if both the
 C<NI_NUMERICHOST> and C<NI_NUMERICSERV> flags are given.
+
+=head2 $task = $resolver->getnameinfo( %args )
+
+When returning a task, the C<on_resolved> and C<on_error> continuations are
+optional.
 
 =cut
 

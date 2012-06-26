@@ -334,6 +334,11 @@ circumstances given above. They will be called directly, without the leading
 
 =back
 
+=head2 $task = $function->call( %params )
+
+When returning a task, the C<on_result>, C<on_return> and C<on_error>
+continuations are optional.
+
 =cut
 
 sub call

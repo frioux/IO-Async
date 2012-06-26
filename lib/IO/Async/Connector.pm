@@ -349,6 +349,14 @@ hint is defined when performing a C<getaddrinfo> lookup. To avoid this warning
 while still specifying no particular C<socktype> hint (perhaps to invoke some
 OS-specific behaviour), pass C<0> as the C<socktype> value.
 
+=head2 $task = $loop->connect( %params )
+
+When returning a task, the C<on_connected>, C<on_stream>, C<on_socket> and
+various C<on_*_error> continuations are optional. When the socket is
+connected, the task will be given the connected socket handle. No direct
+support for automatically constructing a C<IO::Async::Stream> or
+C<IO::Async::Socket> object is provided.
+
 =cut
 
 sub connect
