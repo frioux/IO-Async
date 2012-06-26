@@ -464,21 +464,25 @@ sub run_tests_timer
       }
    } 1.5, 2.5, 'loop_once(5) while waiting for timer';
 
-   # Check that short delays are achievable in one ->loop_once call
-   foreach my $delay ( 0.001, 0.01, 0.1 ) {
-      my $done;
-      my $count = 0;
-      my $start = time;
+   SKIP: {
+      skip "Unable to handle sub-second timers accurately", 3 unless $loop->_CAN_SUBSECOND_ACCURATELY;
 
-      $loop->enqueue_timer( delay => $delay, code => sub { $done++ } );
+      # Check that short delays are achievable in one ->loop_once call
+      foreach my $delay ( 0.001, 0.01, 0.1 ) {
+         my $done;
+         my $count = 0;
+         my $start = time;
 
-      while( !$done ) {
-         $loop->loop_once( 1 );
-         $count++;
-         last if time - $start > 5; # bailout
+         $loop->enqueue_timer( delay => $delay, code => sub { $done++ } );
+
+         while( !$done ) {
+            $loop->loop_once( 1 );
+            $count++;
+            last if time - $start > 5; # bailout
+         }
+
+         is( $count, 1, "One ->loop_once(1) sufficient for a single $delay second timer" );
       }
-
-      is( $count, 1, "One ->loop_once(1) sufficient for a single $delay second timer" );
    }
 
    $cancelled_fired = 0;

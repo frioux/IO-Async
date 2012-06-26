@@ -16,6 +16,10 @@ use constant NEED_API_VERSION => '0.33';
 # Base value but some classes might override
 use constant _CAN_ON_HANGUP => 0;
 
+# Some Loop implementations do not accurately handle sub-second timers.
+# This only matters for unit tests
+use constant _CAN_SUBSECOND_ACCURATELY => 1;
+
 use Carp;
 
 use IO::Socket (); # empty import
