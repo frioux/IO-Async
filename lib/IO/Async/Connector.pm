@@ -13,7 +13,8 @@ our $VERSION = '0.51';
 use POSIX qw( EINPROGRESS );
 use Socket qw( SOL_SOCKET SO_ERROR );
 
-use CPS qw( kpar kforeach );
+use CPS qw( kforeach );
+use CPS::Future;
 
 use IO::Async::OS;
 
@@ -136,7 +137,7 @@ sub _get_sock_err
 sub _connect_addresses
 {
    my $self = shift;
-   my ( $addrlist, $on_connected, $on_connect_error, $on_fail ) = @_;
+   my ( $addrlist, $task, $on_fail ) = @_;
 
    my $loop = $self->{loop};
 
@@ -199,12 +200,15 @@ sub _connect_addresses
       },
       sub {
          if( $sock ) {
-            return $on_connected->( $sock );
+            return $task->done( $sock );
          }
          else {
-            return $on_connect_error->( connect => $connecterr ) if $connecterr;
-            return $on_connect_error->( bind    => $binderr    ) if $binderr;
-            return $on_connect_error->( socket  => $socketerr  ) if $socketerr;
+            return $task->fail( "connect: $connecterr", connect => connect => $connecterr )
+               if $connecterr;
+            return $task->fail( "bind: $binderr",       connect => bind    => $binderr    )
+               if $binderr;
+            return $task->fail( "socket: $socketerr",   connect => socket  => $socketerr  )
+               if $socketerr;
             # If it gets this far then something went wrong
             die 'Oops; $loop->connect failed but no error cause was found';
          }
@@ -345,6 +349,14 @@ hint is defined when performing a C<getaddrinfo> lookup. To avoid this warning
 while still specifying no particular C<socktype> hint (perhaps to invoke some
 OS-specific behaviour), pass C<0> as the C<socktype> value.
 
+=head2 $task = $loop->connect( %params )
+
+When returning a task, the C<on_connected>, C<on_stream>, C<on_socket> and
+various C<on_*_error> continuations are optional. When the socket is
+connected, the task will be given the connected socket handle. No direct
+support for automatically constructing a C<IO::Async::Stream> or
+C<IO::Async::Socket> object is provided.
+
 =cut
 
 sub connect
@@ -352,32 +364,40 @@ sub connect
    my $self = shift;
    my ( %params ) = @_;
 
+   my $task = CPS::Future->new;
+
    # Callbacks
-   my $on_connected;
-   if( $on_connected = delete $params{on_connected} ) {
-      # all fine
+   if( my $on_connected = delete $params{on_connected} ) {
+      $task->on_done( $on_connected );
    }
    elsif( my $on_stream = delete $params{on_stream} ) {
       require IO::Async::Stream;
       # TODO: It doesn't make sense to put a SOCK_DGRAM in an
       # IO::Async::Stream but currently we don't detect this
-      $on_connected = sub {
+      $task->on_done( sub {
          my ( $handle ) = @_;
          $on_stream->( IO::Async::Stream->new( handle => $handle ) );
-      };
+      } );
    }
    elsif( my $on_socket = delete $params{on_socket} ) {
       require IO::Async::Socket;
-      $on_connected = sub {
+      $task->on_done( sub {
          my ( $handle ) = @_;
          $on_socket->( IO::Async::Socket->new( handle => $handle ) );
-      };
+      } );
    }
-   else {
-      croak "Expected 'on_connected' or 'on_stream' callback";
+   elsif( !defined wantarray ) {
+      croak "Expected 'on_connected' or 'on_stream' callback or to return a Task";
    }
 
-   my $on_connect_error = $params{on_connect_error} or croak "Expected 'on_connect_error' callback";
+   if( my $on_connect_error = $params{on_connect_error} ) {
+      $task->on_fail( sub {
+         $on_connect_error->( @_[2,3] ) if $_[1] eq "connect";
+      } );
+   }
+   elsif( !defined wantarray ) {
+      croak "Expected 'on_connect_error' callback";
+   }
 
    my $on_fail = $params{on_fail};
 
@@ -392,71 +412,65 @@ sub connect
          carp "Attempting to ->connect without either 'socktype' or 'protocol' hint is not portable";
    }
 
-   my @localaddrs;
-   my @peeraddrs;
+   my $have_fail_resolve = 1;
+   if( my $on_resolve_error = $params{on_resolve_error} ) {
+      $task->on_fail( sub {
+         $on_resolve_error->( $_[2] ) if $_[1] eq "resolve";
+      } );
+   }
+   elsif( !defined wantarray ) {
+      undef $have_fail_resolve;
+   }
 
-   kpar(
-      sub {
-         my ( $k ) = @_;
-         if( exists $params{host} and exists $params{service} ) {
-            my $on_resolve_error = $params{on_resolve_error} or croak "Expected 'on_resolve_error' callback";
+   my $peeraddrtask;
+   if( exists $params{host} and exists $params{service} ) {
+      $have_fail_resolve or croak "Expected 'on_resolve_error' callback or to return a Task";
 
-            my $host    = $params{host}    or croak "Expected 'host'";
-            my $service = $params{service} or croak "Expected 'service'";
+      my $host    = $params{host}    or croak "Expected 'host'";
+      my $service = $params{service} or croak "Expected 'service'";
 
-            $loop->resolver->getaddrinfo(
-               host    => $host,
-               service => $service,
-               %gai_hints,
+      $peeraddrtask = $loop->resolver->getaddrinfo(
+         host    => $host,
+         service => $service,
+         %gai_hints,
+      );
+   }
+   elsif( exists $params{addrs} or exists $params{addr} ) {
+      $peeraddrtask = CPS::Future->new;
+      $peeraddrtask->done( exists $params{addrs} ? @{ $params{addrs} } : ( $params{addr} ) );
+   }
+   else {
+      croak "Expected 'host' and 'service' or 'addrs' or 'addr' arguments";
+   }
 
-               on_error => $on_resolve_error,
+   my $localaddrtask;
+   if( defined $params{local_host} or defined $params{local_service} ) {
+      $have_fail_resolve or croak "Expected 'on_resolve_error' callback or to return a Task";
 
-               on_resolved => sub {
-                  @peeraddrs = @_;
-                  goto &$k;
-               },
-            );
-         }
-         elsif( exists $params{addrs} or exists $params{addr} ) {
-            @peeraddrs = exists $params{addrs} ? @{ $params{addrs} } : ( $params{addr} );
-            goto &$k;
-         }
-         else {
-            croak "Expected 'host' and 'service' or 'addrs' or 'addr' arguments";
-         }
-      },
-      sub {
-         my ( $k ) = @_;
-         if( defined $params{local_host} or defined $params{local_service} ) {
-            my $on_resolve_error = $params{on_resolve_error} or croak "Expected 'on_resolve_error' callback";
+      # Empty is fine on either of these
+      my $host    = $params{local_host};
+      my $service = $params{local_service};
 
-            # Empty is fine on either of these
-            my $host    = $params{local_host};
-            my $service = $params{local_service};
+      $localaddrtask = $loop->resolver->getaddrinfo(
+         host    => $host,
+         service => $service,
+         %gai_hints,
+      );
+   }
+   elsif( exists $params{local_addrs} or exists $params{local_addr} ) {
+      $localaddrtask = CPS::Future->new;
+      $localaddrtask->done( exists $params{local_addrs} ? @{ $params{local_addrs} } : ( $params{local_addr} ) );
+   }
+   else {
+      $localaddrtask = CPS::Future->new;
+      $localaddrtask->done( {} );
+   }
 
-            $loop->resolver->getaddrinfo(
-               host    => $host,
-               service => $service,
-               %gai_hints,
+   my $addrtask = CPS::Future->needs_all( $peeraddrtask, $localaddrtask )
+      ->on_done( sub {
+         my @peeraddrs  = $peeraddrtask->get;
+         my @localaddrs = $localaddrtask->get;
 
-               on_error => $on_resolve_error,
-
-               on_resolved => sub {
-                  @localaddrs = @_;
-                  goto &$k;
-               },
-            );
-         }
-         elsif( exists $params{local_addrs} or exists $params{local_addr} ) {
-            @localaddrs = exists $params{local_addrs} ? @{ $params{local_addrs} } : ( $params{local_addr} );
-            goto &$k;
-         }
-         else {
-            @localaddrs = ( {} );
-            goto &$k;
-         }
-      },
-      sub {
          my @addrs;
 
          foreach my $local ( @localaddrs ) {
@@ -480,9 +494,15 @@ sub connect
             }
          }
 
-         $self->_connect_addresses( \@addrs, $on_connected, $on_connect_error, $on_fail );
-      }
-   );
+         $self->_connect_addresses( \@addrs, $task, $on_fail );
+      } )
+      ->on_fail( sub {
+         $task->fail( "$_[0]\n", resolve => $_[0] );
+      } );
+
+   $task->on_cancel( sub { $addrtask->cancel } ) if !$task->is_ready;
+
+   return $task;
 }
 
 =head1 EXAMPLES

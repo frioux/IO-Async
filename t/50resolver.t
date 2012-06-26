@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 19;
+use Test::More tests => 27;
 
 use Socket 1.93 qw( 
    AF_INET SOCK_STREAM INADDR_LOOPBACK AI_PASSIVE
@@ -23,7 +23,22 @@ isa_ok( $resolver, "IO::Async::Resolver", '$loop->resolver' );
 SKIP: {
    my @pwuid;
    defined eval { @pwuid = getpwuid( $< ) } or
-      skip "No getpwuid()", 3;
+      skip "No getpwuid()", 5;
+
+   {
+      my $task = $resolver->resolve(
+         type => 'getpwuid',
+         data => [ $< ], 
+      );
+
+      isa_ok( $task, "CPS::Future", '$task' );
+
+      $loop->await( $task );
+
+      my @result = $task->get;
+
+      is_deeply( \@result, \@pwuid, 'getpwuid from task' );
+   }
 
    {
       my $result;
@@ -198,6 +213,28 @@ my ( $localhost_err, @localhost_addrs ) = getaddrinfo( "localhost", "www", { fam
 }
 
 {
+   my $task = $resolver->getaddrinfo(
+      host     => "localhost",
+      service  => "www",
+      family   => "inet",
+      socktype => "stream",
+   );
+
+   isa_ok( $task, "CPS::Future", '$task for $resolver->getaddrinfo' );
+
+   $loop->await( $task );
+
+   if( $localhost_err ) {
+      is( $task->failure, "$localhost_err\n", '$resolver->getaddrinfo - error message' );
+   }
+   else {
+      my @got = $task->get;
+
+      is_deeply( \@got, \@localhost_addrs, '$resolver->getaddrinfo - resolved addresses' );
+   }
+}
+
+{
    my ( $lo_err, @lo_addrs ) = getaddrinfo( "127.0.0.1", "80", { socktype => SOCK_STREAM } );
 
    my $result;
@@ -244,6 +281,24 @@ my ( $localhost_err, @localhost_addrs ) = getaddrinfo( "localhost", "www", { fam
    }
 }
 
+{
+   my ( $lo_err, @lo_addrs ) = getaddrinfo( "127.0.0.1", "80", { socktype => SOCK_STREAM } );
+
+   my $task = $resolver->getaddrinfo(
+      host     => "127.0.0.1",
+      service  => "80",
+      socktype => SOCK_STREAM,
+   );
+
+   isa_ok( $task, "CPS::Future", '$task for $resolver->getaddrinfo numerical' );
+
+   $loop->await( $task );
+
+   my @got = $task->get;
+
+   is_deeply( \@got, \@lo_addrs, '$resolver->getaddrinfo resolved addresses synchronously' );
+}
+
 my $testaddr = pack_sockaddr_in( 80, INADDR_LOOPBACK );
 my ( $testerr, $testhost, $testserv ) = getnameinfo( $testaddr );
 
@@ -269,6 +324,23 @@ my ( $testerr, $testhost, $testserv ) = getnameinfo( $testaddr );
 }
 
 {
+   my $task = $resolver->getnameinfo(
+      addr => $testaddr,
+   );
+
+   $loop->await( $task );
+
+   if( $testerr ) {
+      is( $task->failure, "$testerr\n", '$resolver->getnameinfo - error message from Task' );
+   }
+   else {
+      my @got = $task->get;
+
+      is_deeply( \@got, [ $testhost, $testserv ], '$resolver->getnameinfo - resolved names from Task' );
+   }
+}
+
+{
    my $result;
 
    $resolver->getnameinfo(
@@ -279,4 +351,13 @@ my ( $testerr, $testhost, $testserv ) = getnameinfo( $testaddr );
    );
 
    is_deeply( $result, [ resolved => "127.0.0.1", 80 ], '$resolver->getnameinfo with numeric is synchronous' );
+}
+
+{
+   my $task = $resolver->getnameinfo(
+      addr    => $testaddr,
+      numeric => 1,
+   );
+
+   is_deeply( [ $task->get ], [ "127.0.0.1", 80 ], '$resolver->getnameinfo with numeric is synchronous for Task' );
 }

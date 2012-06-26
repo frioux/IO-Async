@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 40;
+use Test::More tests => 42;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -23,6 +23,7 @@ my $loop = IO::Async::Loop::Poll->new;
 
 testing_loop( $loop );
 
+# by Task
 {
    my $function = IO::Async::Function->new(
       min_workers => 1,
@@ -43,6 +44,39 @@ testing_loop( $loop );
    is( $function->workers_busy, 0, '$function has 0 workers busy' );
    is( $function->workers_idle, 1, '$function has 1 workers idle' );
 
+   my $task = $function->call(
+      args => [ 10, 20 ],
+   );
+
+   isa_ok( $task, "CPS::Future", '$task' );
+
+   is_refcount( $function, 2, '$function has refcount 2 after ->call' );
+
+   is( $function->workers_busy, 1, '$function has 1 worker busy after ->call' );
+   is( $function->workers_idle, 0, '$function has 0 worker idle after ->call' );
+
+   $loop->await( $task );
+
+   my ( $result ) = $task->get;
+
+   is( $result, 30, '$result after call returns by Task' );
+
+   is( $function->workers_busy, 0, '$function has 0 workers busy after call returns' );
+   is( $function->workers_idle, 1, '$function has 1 workers idle after call returns' );
+
+   $loop->remove( $function );
+}
+
+# by callback
+{
+   my $function = IO::Async::Function->new(
+      min_workers => 1,
+      max_workers => 1,
+      code => sub { return $_[0] + $_[1] },
+   );
+
+   $loop->add( $function );
+
    my $result;
 
    $function->call(
@@ -51,17 +85,9 @@ testing_loop( $loop );
       on_error  => sub { die "Test failed early - @_" },
    );
 
-   is_refcount( $function, 2, '$function has refcount 2 after ->call' );
-
-   is( $function->workers_busy, 1, '$function has 1 worker busy after ->call' );
-   is( $function->workers_idle, 0, '$function has 0 worker idle after ->call' );
-
    wait_for { defined $result };
 
-   is( $result, 30, '$result after call returns' );
-
-   is( $function->workers_busy, 0, '$function has 0 workers busy after call returns' );
-   is( $function->workers_idle, 1, '$function has 1 workers idle after call returns' );
+   is( $result, 30, '$result after call returns by callback' );
 
    $loop->remove( $function );
 }
@@ -231,7 +257,8 @@ testing_loop( $loop );
    wait_for { defined $err };
 
    # Not sure what reason we might get - need to check both
-   ok( $err->[0] eq "closed" || $err->[0] eq "exit", '$err->[0] after child death' );
+   ok( $err->[0] eq "closed" || $err->[0] eq "exit", '$err->[0] after child death' )
+      or diag( 'Expected "closed" or "exit", found ' . $err->[0] );
 
    is( scalar $function->workers, 0, '$function->workers is now 0' );
 

@@ -11,6 +11,8 @@ use base qw( IO::Async::Function );
 
 our $VERSION = '0.51';
 
+use CPS::Future;
+
 use Socket 1.93 qw(
    AI_NUMERICHOST AI_PASSIVE
    NI_NUMERICHOST NI_NUMERICSERV NI_DGRAM
@@ -164,6 +166,11 @@ passed the exception thrown by the function.
 
 =back
 
+=head2 $task = $resolver->resolve( %params )
+
+When returning a task, the C<on_resolved> and C<on_error> continuations are
+optional.
+
 =cut
 
 sub resolve
@@ -182,19 +189,32 @@ sub resolve
 
    exists $METHODS{$type} or croak "Expected 'type' to be an existing resolver method, got '$type'";
 
-   my $on_resolved = $args{on_resolved};
-   ref $on_resolved or croak "Expected 'on_resolved' to be a reference";
+   my $on_resolved;
+   if( $on_resolved = $args{on_resolved} ) {
+      ref $on_resolved or croak "Expected 'on_resolved' to be a reference";
+   }
+   elsif( !defined wantarray ) {
+      croak "Expected 'on_resolved' or to return a Task";
+   }
 
-   my $on_error = $args{on_error};
-   ref $on_error or croak "Expected 'on_error' to be a reference";
+   my $on_error;
+   if( $on_error = $args{on_error} ) {
+      ref $on_error or croak "Expected 'on_error' to be a reference";
+   }
+   elsif( !defined wantarray ) {
+      croak "Expected 'on_error' or to return a Task";
+   }
 
    my $timeout = $args{timeout} || 10;
 
-   $self->call(
-      args      => [ $type, $timeout, @{$args{data}} ],
-      on_return => $on_resolved,
-      on_error  => $on_error,
+   my $task = $self->call(
+      args => [ $type, $timeout, @{$args{data}} ],
    );
+
+   $task->on_done( $on_resolved ) if $on_resolved;
+   $task->on_fail( $on_error    ) if $on_error;
+
+   return $task;
 }
 
 =head2 $resolver->getaddrinfo( %args )
@@ -259,12 +279,23 @@ like an IPv4 or IPv6 string, a synchronous lookup will first be performed
 using the C<AI_NUMERICHOST> flag. If this gives an C<EAI_NONAME> error, then
 the lookup is performed asynchronously instead.
 
+=head2 $task = $resolver->getaddrinfo( %args )
+
+When returning a task, the C<on_resolved> and C<on_error> continuations are
+optional.
+
 =cut
 
 sub getaddrinfo
 {
    my $self = shift;
    my %args = @_;
+
+   $args{on_resolved} or defined wantarray or
+      croak "Expected 'on_resolved' or to return a Task";
+
+   $args{on_error} or defined wantarray or
+      croak "Expected 'on_error' or to return a Task";
 
    my $host    = $args{host}    || "";
    my $service = $args{service} || "";
@@ -293,19 +324,23 @@ sub getaddrinfo
        );
 
        if( !$err ) {
-          $args{on_resolved}->( @results );
-          return;
+          my $task = CPS::Future->new;
+          $task->on_done( $args{on_resolved} ) if $args{on_resolved};
+          $task->done( @results );
+          return $task;
        }
        elsif( $err == EAI_NONAME ) {
           # fallthrough to async case
        }
        else {
-          $args{on_error}->( "$err\n" );
-          return;
+          my $task = CPS::Future->new;
+          $task->on_fail( $args{on_error} ) if $args{on_error};
+          $task->fail( "$err\n" );
+          return $task;
        }
    }
 
-   $self->resolve(
+   return $self->resolve(
       type    => "getaddrinfo_hash",
       data    => [
          host    => $host,
@@ -369,6 +404,11 @@ As a specific optimsation, this method will try to perform a lookup of numeric
 values synchronously, rather than asynchronously, if both the
 C<NI_NUMERICHOST> and C<NI_NUMERICSERV> flags are given.
 
+=head2 $task = $resolver->getnameinfo( %args )
+
+When returning a task, the C<on_resolved> and C<on_error> continuations are
+optional.
+
 =cut
 
 sub getnameinfo
@@ -376,8 +416,11 @@ sub getnameinfo
    my $self = shift;
    my %args = @_;
 
-   my $on_resolved = $args{on_resolved};
-   ref $on_resolved or croak "Expected 'on_resolved' to be a reference";
+   $args{on_resolved} or defined wantarray or
+      croak "Expected 'on_resolved' or to return a Task";
+
+   $args{on_error} or defined wantarray or
+      croak "Expected 'on_error' or to return a Task";
 
    my $flags = $args{flags} || 0;
 
@@ -390,24 +433,32 @@ sub getnameinfo
    if( $flags & (NI_NUMERICHOST|NI_NUMERICSERV) ) {
       # This is a numeric-only lookup that can be done synchronously
       my ( $err, $host, $service ) = _getnameinfo( $args{addr}, $flags );
+      my $task = CPS::Future->new;
+
       if( $err ) {
-         $args{on_error}->( "$err\n" );
+         $task->on_fail( $args{on_error} ) if $args{on_error};
+         $task->fail( "$err\n" );
       }
       else {
-         $on_resolved->( $host, $service );
+         $task->on_done( $args{on_resolved} ) if $args{on_resolved};
+         $task->done( $host, $service );
       }
-      return;
+
+      return $task;
    }
 
-   $self->resolve(
+   my $task = $self->resolve(
       type    => "getnameinfo",
       data    => [ $args{addr}, $flags ],
       timeout => $args{timeout},
-      on_resolved => sub {
-         $on_resolved->( @{ $_[0] } ); # unpack the ARRAY ref
-      },
-      on_error    => $args{on_error},
+   )->transform(
+      done => sub { @{ $_[0] } }, # unpack the ARRAY ref
    );
+
+   $task->on_done( $args{on_resolved} ) if $args{on_resolved};
+   $task->on_fail( $args{on_error}    ) if $args{on_error};
+
+   return $task;
 }
 
 =head1 FUNCTIONS
