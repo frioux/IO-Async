@@ -184,19 +184,17 @@ sub resolve
 
    exists $METHODS{$type} or croak "Expected 'type' to be an existing resolver method, got '$type'";
 
-   my $task = CPS::Future->new;
-
-   if( my $on_resolved = $args{on_resolved} ) {
+   my $on_resolved;
+   if( $on_resolved = $args{on_resolved} ) {
       ref $on_resolved or croak "Expected 'on_resolved' to be a reference";
-      $task->on_done( $on_resolved );
    }
    elsif( !defined wantarray ) {
       croak "Expected 'on_resolved' or to return a Task";
    }
 
-   if( my $on_error = $args{on_error} ) {
+   my $on_error;
+   if( $on_error = $args{on_error} ) {
       ref $on_error or croak "Expected 'on_error' to be a reference";
-      $task->on_fail( $on_error );
    }
    elsif( !defined wantarray ) {
       croak "Expected 'on_error' or to return a Task";
@@ -204,11 +202,12 @@ sub resolve
 
    my $timeout = $args{timeout} || 10;
 
-   $self->call(
-      args      => [ $type, $timeout, @{$args{data}} ],
-      on_return => sub { $task->done( @_ ) },
-      on_error  => sub { $task->fail( @_ ) },
+   my $task = $self->call(
+      args => [ $type, $timeout, @{$args{data}} ],
    );
+
+   $task->on_done( $on_resolved ) if $on_resolved;
+   $task->on_fail( $on_error    ) if $on_error;
 
    return $task;
 }
