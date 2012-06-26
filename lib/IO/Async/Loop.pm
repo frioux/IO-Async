@@ -505,6 +505,24 @@ sub await
    return $task;
 }
 
+=head2 $loop->await_all( @tasks )
+
+Blocks until all the given tasks are ready, as indicated by the C<is_ready>
+method. Equivalent to calling C<await> on a C<< CPS::Future->wait_all >>
+except that it doesn't create the surrounding future object.
+
+=cut
+
+sub _all_ready { $_->is_ready or return 0 for @_; return 1  }
+
+sub await_all
+{
+   my $self = shift;
+   my @tasks = @_;
+
+   $self->loop_once until _all_ready @tasks;
+}
+
 ############
 # Features #
 ############
