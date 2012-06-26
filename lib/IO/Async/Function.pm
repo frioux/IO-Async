@@ -15,6 +15,8 @@ use IO::Async::Timer::Countdown;
 
 use Carp;
 
+use CPS::Future;
+
 use Storable qw( freeze );
 
 =head1 NAME
@@ -373,15 +375,24 @@ sub call
       croak "Expected either 'on_result' or 'on_return' and 'on_error' keys";
    }
 
+   my $task = CPS::Future->new;
+   $task->on_done( sub {
+      $on_result->( return => @_ );
+   } );
+   $task->on_fail( sub {
+      my ( $err, @values ) = @_;
+      $on_result->( error => @values );
+   } );
+
    my $worker = $self->_get_worker;
 
    if( !$worker ) {
       my $request = freeze( $args );
-      push @{ $self->{pending_queue} }, [ $request, $on_result ];
+      push @{ $self->{pending_queue} }, [ $request, $task ];
       return;
    }
 
-   $self->_call_worker( $worker, args => $args, $on_result );
+   $self->_call_worker( $worker, args => $args, $task );
 }
 
 sub _worker_objects
@@ -467,9 +478,9 @@ sub _get_worker
 sub _call_worker
 {
    my $self = shift;
-   my ( $worker, $type, $args, $on_result ) = @_;
+   my ( $worker, $type, $args, $task ) = @_;
 
-   $worker->call( $type, $args, $on_result );
+   $worker->call( $type, $args, $task );
 
    if( $self->workers_idle == 0 ) {
       $self->{idle_timer}->stop if $self->{idle_timer};
@@ -554,7 +565,7 @@ sub stop
 sub call
 {
    my $worker = shift;
-   my ( $type, $args, $on_result ) = @_;
+   my ( $type, $args, $task ) = @_;
 
    if( $type eq "args" ) {
       $worker->{arg_channel}->send( $args );
@@ -576,10 +587,10 @@ sub call
          my $function = $worker->parent;
 
          if( $type eq "r" ) {
-            $on_result->( return => @values );
+            $task->done( @values );
          }
          elsif( $type eq "e" ) {
-            $on_result->( error => @values );
+            $task->fail( $values[0], @values );
             $worker->stop if $worker->{exit_on_die};
          }
          else {
@@ -597,7 +608,7 @@ sub call
 
          my $function = $worker->parent;
 
-         $on_result->( error => "closed" );
+         $task->fail( "closed", "closed" );
          $worker->stop;
 
          $function->_dispatch_pending if $function;
