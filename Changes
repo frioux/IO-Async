@@ -1,5 +1,12 @@
 Revision history for IO-Async
 
+0.51_001 CHANGES:
+         * Initial attempt at Tasks using CPS::Future
+         * Minor fixes to timer LoopTests to prevent spurious failures of
+           sub-second timing
+         * Declare dependence on perl 5.10 now we're using 5.10 features
+         * Removed long-since deprecated IO::Async::DetachedCode
+
 0.51    CHANGES:
          * Split much code out to new IO::Async::OS heirarchy
          * Drop dead dependency on Test::Warn
