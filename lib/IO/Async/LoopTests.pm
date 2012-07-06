@@ -157,7 +157,7 @@ Tests the Loop's ability to watch filehandles for IO readiness
 
 =cut
 
-use constant count_tests_io => 16;
+use constant count_tests_io => 17;
 sub run_tests_io
 {
    {
@@ -189,6 +189,25 @@ sub run_tests_io
       is( $readready, 1, '$readready after loop_once' );
 
       # Ready $S1 to clear the data
+      $S1->getline; # ignore return
+
+      $loop->unwatch_io(
+         handle => $S1,
+         on_read_ready => 1,
+      );
+
+      $loop->watch_io(
+         handle => $S1,
+         on_read_ready => sub { $readready = 1 },
+      );
+
+      $readready = 0;
+      $S2->syswrite( "more data\n" );
+
+      $loop->loop_once( 0.1 );
+
+      is( $readready, 1, '$readready after ->unwatch_io/->watch_io' );
+
       $S1->getline; # ignore return
 
       $loop->watch_io(
