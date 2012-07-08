@@ -363,7 +363,7 @@ testing_loop( $loop );
          }
          return 0;
       },
-      stdio => { via => "socketpair", socktype => "dgram" },
+      stdio => { via => "socketpair", socktype => "dgram", family => "inet" },
       on_finish => sub { },
    );
 
