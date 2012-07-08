@@ -8,7 +8,7 @@ package IO::Async::Connector;
 use strict;
 use warnings;
 
-our $VERSION = '0.51_002';
+our $VERSION = '0.52';
 
 use POSIX qw( EINPROGRESS );
 use Socket qw( SOL_SOCKET SO_ERROR );

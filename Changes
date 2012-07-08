@@ -1,9 +1,6 @@
 Revision history for IO-Async
 
-0.51_002 BUGFIXES:
-         * Removed use_ok() test of IO::Async::DetachedCode from t/00use.t
-
-0.51_001 CHANGES:
+0.52    CHANGES:
          * Initial attempt at Tasks using CPS::Future
          * Minor fixes to timer LoopTests to prevent spurious failures of
            sub-second timing
