@@ -246,18 +246,8 @@ some of the potentially-useful parts or features currently missing are:
 
 =item *
 
-An L<IO::Async::Loop> subclass to perform integration with L<Event>. Consider
-further ideas on Solaris' I<ports>, BSD's I<Kevents> and anything that might
-be useful on Win32.
-
-=item *
-
-A consideration on how to provide per-OS versions of the utility classes. For
-example, Win32 would probably need an extensively-different C<ChildManager>,
-or OSes may have specific ways to perform asynchronous name resolution
-operations better than the generic C<IO::Async::Function> approach. This
-should be easier to implement now that the L<IO::Async::Loop> magic
-constructor looks for OS-specific subclasses first.
+Consider further ideas on Solaris' I<ports>, BSD's I<Kevents> and anything that
+might be useful on Win32.
 
 =item *
 
@@ -307,6 +297,10 @@ L<IO::Async::Loop::AnyEvent> - use IO::Async with AnyEvent
 =item *
 
 L<IO::Async::Loop::Epoll> - use IO::Async with epoll on Linux
+
+=item *
+
+L<IO::Async::Loop::Event> - use IO::Async with Event
 
 =item *
 
