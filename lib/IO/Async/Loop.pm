@@ -26,6 +26,7 @@ use constant _CAN_WATCHDOG => 0;
 # Watchdog configuration constants
 use constant WATCHDOG_ENABLE   => $ENV{IO_ASYNC_WATCHDOG};
 use constant WATCHDOG_INTERVAL => $ENV{IO_ASYNC_WATCHDOG_INTERVAL} || 10;
+use constant WATCHDOG_SIGABRT  => $ENV{IO_ASYNC_WATCHDOG_SIGABRT};
 
 use Carp;
 
@@ -59,7 +60,13 @@ our $LOOP_NO_OS;
 $SIG{ALRM} = sub {
    # There are two extra frames here; this one and the signal handler itself
    local $Carp::CarpLevel = $Carp::CarpLevel + 2;
-   Carp::confess( "Watchdog timeout" );
+   if( WATCHDOG_SIGABRT ) {
+      print STDERR Carp::longmess( "Watchdog timeout" );
+      kill ABRT => $$;
+   }
+   else {
+      Carp::confess( "Watchdog timeout" );
+   }
 } if WATCHDOG_ENABLE;
 
 =head1 NAME
@@ -1958,6 +1965,13 @@ Enables the stall watchdog if set to a non-zero value.
 
 Watchdog interval, in seconds, to pass to the C<alarm(2)> call. Defaults to 10
 seconds.
+
+=item IO_ASYNC_WATCHDOG_SIGABRT => BOOL
+
+If enabled, the watchdog signal handler will raise a C<SIGABRT>, which usually
+has the effect of breaking out of a running program in debuggers such as
+F<gdb>. If not set then the process is terminated by throwing an exception with
+C<die>.
 
 =back
 
