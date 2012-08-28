@@ -397,7 +397,7 @@ sub call
    if( !$worker ) {
       my $request = freeze( $args );
       push @{ $self->{pending_queue} }, [ $request, $task ];
-      return;
+      return $task;
    }
 
    $self->_call_worker( $worker, args => $args, $task );

@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 42;
+use Test::More tests => 44;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -104,18 +104,21 @@ testing_loop( $loop );
 
    my @result;
 
-   $function->call(
+   my $f1 = $function->call(
       args => [ 1, 2 ],
       on_return => sub { push @result, shift },
       on_error  => sub { die "Test failed early - @_" },
    );
-   $function->call(
+   my $f2 = $function->call(
       args => [ 3, 4 ],
       on_return => sub { push @result, shift },
       on_error  => sub { die "Test failed early - @_" },
    );
 
    is( $function->workers, 1, '$function->workers is still 1 after 2 calls' );
+
+   isa_ok( $f1, "CPS::Future", '$f1' );
+   isa_ok( $f2, "CPS::Future", '$f2' );
 
    wait_for { @result == 2 };
 
