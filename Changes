@@ -1,5 +1,12 @@
 Revision history for IO-Async
 
+0.53    CHANGES:
+         * Added IO_ASYNC_WATCHDOG debugging support
+
+        BUGFIXES:
+         * Remember to return a task from Function->call even if it's queued
+           (RT79248)
+
 0.52    CHANGES:
          * Initial attempt at Tasks using CPS::Future
          * Minor fixes to timer LoopTests to prevent spurious failures of

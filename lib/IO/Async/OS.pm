@@ -8,7 +8,7 @@ package IO::Async::OS;
 use strict;
 use warnings;
 
-our $VERSION = '0.52';
+our $VERSION = '0.53';
 
 our @ISA = qw( IO::Async::OS::_Base );
 
