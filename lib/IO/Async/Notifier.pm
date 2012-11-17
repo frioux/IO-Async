@@ -249,10 +249,6 @@ sub configure
 
 Returns the C<IO::Async::Loop> that this Notifier is a member of.
 
-=head2 $loop = $notifier->get_loop
-
-Synonym for C<loop>.
-
 =cut
 
 sub loop

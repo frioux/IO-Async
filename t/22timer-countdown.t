@@ -230,7 +230,7 @@ testing_loop( $loop );
 
    time_about( sub { wait_for { $timer->is_expired } }, 1, 'remove_on_expire Timer' );
 
-   is( $timer->get_loop, undef, 'remove_on_expire Timer removed from Loop after expire' );
+   is( $timer->loop, undef, 'remove_on_expire Timer removed from Loop after expire' );
 }
 
 ## Subclass
