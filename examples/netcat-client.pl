@@ -5,7 +5,8 @@ use warnings;
 
 use IO::Async::Loop;
 use IO::Async::Stream;
-use Async::MergePoint;
+
+use Future;
 
 my $CRLF = "\x0d\x0a"; # because \r\n is not portable
 
@@ -38,12 +39,7 @@ print STDERR "Connected to $peeraddr\n";
 # easily without a temporary variable
 my ( $socketstream, $stdiostream );
 
-my $quit_mergepoint = Async::MergePoint->new(
-   needs => [qw[ socket stdio ]],
-
-   on_finished => sub { $loop->loop_stop },
-);
-
+my $socket_closed_future = Future->new;
 $socketstream = IO::Async::Stream->new(
    handle => $socket,
 
@@ -59,12 +55,13 @@ $socketstream = IO::Async::Stream->new(
 
    on_closed => sub {
       print STDERR "Closed connection to $peeraddr\n";
-      $quit_mergepoint->done( 'socket' );
+      $socket_closed_future->done;
       $stdiostream->close_when_empty;
    },
 );
 $loop->add( $socketstream );
 
+my $stdio_closed_future = Future->new;
 $stdiostream = IO::Async::Stream->new_for_stdio(
    on_read => sub {
       my ( undef, $buffref, $eof ) = @_;
@@ -77,10 +74,10 @@ $stdiostream = IO::Async::Stream->new_for_stdio(
    },
 
    on_closed => sub {
-      $quit_mergepoint->done( 'stdio' );
+      $stdio_closed_future->done;
       $socketstream->close_when_empty;
    },
 );
 $loop->add( $stdiostream );
 
-$loop->run;
+$loop->await_all( $socket_closed_future, $stdio_closed_future );
