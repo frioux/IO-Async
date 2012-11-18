@@ -14,6 +14,8 @@ use Carp;
 
 use base qw( Async::MergePoint );
 
+carp "This module is deprecated; use Async::MergePoint instead";
+
 =head1 NAME
 
 C<IO::Async::MergePoint> - resynchronise diverged control flow

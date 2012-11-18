@@ -1,9 +1,7 @@
 #!/usr/bin/perl -w
 
 use strict;
-use Test::More tests => 23;
-
-use_ok( "IO::Async::MergePoint" );
+use Test::More tests => 22;
 
 use_ok( "IO::Async::Notifier" );
 use_ok( "IO::Async::Handle" );
