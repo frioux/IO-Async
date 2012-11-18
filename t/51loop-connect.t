@@ -49,7 +49,7 @@ my $addr = $listensock->sockname;
       addr => { family => "inet", socktype => "stream", addr => $addr },
    );
 
-   isa_ok( $task, "CPS::Future", '$task' );
+   isa_ok( $task, "Future", '$task' );
 
    $loop->await( $task );
 
@@ -93,7 +93,7 @@ my $addr = $listensock->sockname;
       socktype => $listensock->socktype,
    );
 
-   isa_ok( $task, "CPS::Future", '$task' );
+   isa_ok( $task, "Future", '$task' );
 
    $loop->await( $task );
 

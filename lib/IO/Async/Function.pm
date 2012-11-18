@@ -15,7 +15,7 @@ use IO::Async::Timer::Countdown;
 
 use Carp;
 
-use CPS::Future;
+use Future;
 
 use Storable qw( freeze );
 
@@ -352,7 +352,7 @@ sub call
    my $args = delete $params{args};
    ref $args eq "ARRAY" or croak "Expected 'args' to be an array";
 
-   my $task = CPS::Future->new;
+   my $task = Future->new;
 
    if( defined $params{on_result} ) {
       my $on_result = delete $params{on_result};

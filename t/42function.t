@@ -48,7 +48,7 @@ testing_loop( $loop );
       args => [ 10, 20 ],
    );
 
-   isa_ok( $task, "CPS::Future", '$task' );
+   isa_ok( $task, "Future", '$task' );
 
    is_refcount( $function, 2, '$function has refcount 2 after ->call' );
 
@@ -117,8 +117,8 @@ testing_loop( $loop );
 
    is( $function->workers, 1, '$function->workers is still 1 after 2 calls' );
 
-   isa_ok( $f1, "CPS::Future", '$f1' );
-   isa_ok( $f2, "CPS::Future", '$f2' );
+   isa_ok( $f1, "Future", '$f1' );
+   isa_ok( $f2, "Future", '$f2' );
 
    wait_for { @result == 2 };
 

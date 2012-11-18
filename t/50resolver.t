@@ -31,7 +31,7 @@ SKIP: {
          data => [ $< ], 
       );
 
-      isa_ok( $task, "CPS::Future", '$task' );
+      isa_ok( $task, "Future", '$task' );
 
       $loop->await( $task );
 
@@ -220,7 +220,7 @@ my ( $localhost_err, @localhost_addrs ) = getaddrinfo( "localhost", "www", { fam
       socktype => "stream",
    );
 
-   isa_ok( $task, "CPS::Future", '$task for $resolver->getaddrinfo' );
+   isa_ok( $task, "Future", '$task for $resolver->getaddrinfo' );
 
    $loop->await( $task );
 
@@ -290,7 +290,7 @@ my ( $localhost_err, @localhost_addrs ) = getaddrinfo( "localhost", "www", { fam
       socktype => SOCK_STREAM,
    );
 
-   isa_ok( $task, "CPS::Future", '$task for $resolver->getaddrinfo numerical' );
+   isa_ok( $task, "Future", '$task for $resolver->getaddrinfo numerical' );
 
    $loop->await( $task );
 

@@ -212,9 +212,9 @@ signal.
 
 Tasks are a recent addition to the C<IO::Async> API and details are still
 subject to change and experimentation. Currently a Task object is an instance
-of L<CPS::Future>, but it is possible this may change in future (pardon the
-pun ;) ) to being some class within the C<IO::Async::> namespace, and having
-a reference to the containing Loop object.
+of L<Future>, but it is possible this may change in future (pardon the pun
+;) ) to being some class within the C<IO::Async::> namespace, and having a
+reference to the containing Loop object.
 
 In general, methods that support Tasks return a new Task object to represent
 the outstanding operation. If callback functions are supplied as well, these
@@ -259,7 +259,7 @@ C<IO::Async::Object>, based on C<IO::Async::Routine>.
 Build some sort of future-like system, possibly called C<IO::Async::Task> to
 represent one-shot events like name resolver lookups, socket connects, etc..
 Replace uses of C<Async::MergePoint> with it, removing a dependency.
-Use C<CPS::Future>.
+Use C<Future>.
 
 =item *
 

@@ -7,12 +7,12 @@ use Test::Identity;
 
 use IO::Async::Loop;
 
-use CPS::Future;
+use Future;
 
 my $loop = IO::Async::Loop->new;
 
 {
-   my $task = CPS::Future->new;
+   my $task = Future->new;
 
    $loop->later( sub { $task->done( "result" ) } );
 
@@ -23,7 +23,7 @@ my $loop = IO::Async::Loop->new;
 }
 
 {
-   my @tasks = map { CPS::Future->new } 0 .. 2;
+   my @tasks = map { Future->new } 0 .. 2;
 
    do { my $id = $_; $loop->later( sub { $tasks[$id]->done } ) } for 0 .. 2;
 

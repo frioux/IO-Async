@@ -14,7 +14,7 @@ use POSIX qw( EINPROGRESS );
 use Socket qw( SOL_SOCKET SO_ERROR );
 
 use CPS qw( kforeach );
-use CPS::Future;
+use Future;
 
 use IO::Async::OS;
 
@@ -364,7 +364,7 @@ sub connect
    my $self = shift;
    my ( %params ) = @_;
 
-   my $task = CPS::Future->new;
+   my $task = Future->new;
 
    # Callbacks
    if( my $on_connected = delete $params{on_connected} ) {
@@ -436,7 +436,7 @@ sub connect
       );
    }
    elsif( exists $params{addrs} or exists $params{addr} ) {
-      $peeraddrtask = CPS::Future->new;
+      $peeraddrtask = Future->new;
       $peeraddrtask->done( exists $params{addrs} ? @{ $params{addrs} } : ( $params{addr} ) );
    }
    else {
@@ -458,15 +458,15 @@ sub connect
       );
    }
    elsif( exists $params{local_addrs} or exists $params{local_addr} ) {
-      $localaddrtask = CPS::Future->new;
+      $localaddrtask = Future->new;
       $localaddrtask->done( exists $params{local_addrs} ? @{ $params{local_addrs} } : ( $params{local_addr} ) );
    }
    else {
-      $localaddrtask = CPS::Future->new;
+      $localaddrtask = Future->new;
       $localaddrtask->done( {} );
    }
 
-   my $addrtask = CPS::Future->needs_all( $peeraddrtask, $localaddrtask )
+   my $addrtask = Future->needs_all( $peeraddrtask, $localaddrtask )
       ->on_done( sub {
          my @peeraddrs  = $peeraddrtask->get;
          my @localaddrs = $localaddrtask->get;

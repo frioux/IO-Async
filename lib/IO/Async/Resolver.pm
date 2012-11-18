@@ -11,7 +11,7 @@ use base qw( IO::Async::Function );
 
 our $VERSION = '0.53';
 
-use CPS::Future;
+use Future;
 
 use Socket 1.93 qw(
    AI_NUMERICHOST AI_PASSIVE
@@ -324,7 +324,7 @@ sub getaddrinfo
        );
 
        if( !$err ) {
-          my $task = CPS::Future->new;
+          my $task = Future->new;
           $task->on_done( $args{on_resolved} ) if $args{on_resolved};
           $task->done( @results );
           return $task;
@@ -333,7 +333,7 @@ sub getaddrinfo
           # fallthrough to async case
        }
        else {
-          my $task = CPS::Future->new;
+          my $task = Future->new;
           $task->on_fail( $args{on_error} ) if $args{on_error};
           $task->fail( "$err\n" );
           return $task;
@@ -433,7 +433,7 @@ sub getnameinfo
    if( $flags & (NI_NUMERICHOST|NI_NUMERICSERV) ) {
       # This is a numeric-only lookup that can be done synchronously
       my ( $err, $host, $service ) = _getnameinfo( $args{addr}, $flags );
-      my $task = CPS::Future->new;
+      my $task = Future->new;
 
       if( $err ) {
          $task->on_fail( $args{on_error} ) if $args{on_error};

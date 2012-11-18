@@ -536,8 +536,8 @@ sub await
 =head2 $loop->await_all( @tasks )
 
 Blocks until all the given tasks are ready, as indicated by the C<is_ready>
-method. Equivalent to calling C<await> on a C<< CPS::Future->wait_all >>
-except that it doesn't create the surrounding future object.
+method. Equivalent to calling C<await> on a C<< Future->wait_all >> except
+that it doesn't create the surrounding future object.
 
 =cut
 
