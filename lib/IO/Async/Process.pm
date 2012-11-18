@@ -19,7 +19,7 @@ use POSIX qw(
 
 use Socket qw( SOCK_STREAM );
 
-use Async::MergePoint 0.03;
+use Future;
 
 use IO::Async::OS;
 
@@ -111,7 +111,7 @@ sub _init
    $self->SUPER::_init( @_ );
 
    $self->{to_close}   = {};
-   $self->{mergepoint} = Async::MergePoint->new;
+   $self->{finish_futures} = [];
 }
 
 =head1 PARAMETERS
@@ -381,7 +381,7 @@ sub _prepare_fds
    my $fd_handle = $self->{fd_handle};
    my $fd_opts   = $self->{fd_opts};
 
-   my $mergepoint = $self->{mergepoint};
+   my $finish_futures = $self->{finish_futures};
 
    my @setup;
 
@@ -442,11 +442,9 @@ sub _prepare_fds
       }
 
       unless( $write_only ) {
-         $mergepoint->needs( $key );
+         push @$finish_futures, my $future = Future->new;
          $handle->configure(
-            on_closed => sub {
-               $mergepoint->done( $key );
-            },
+            on_closed => sub { $future->done },
          );
       }
 
@@ -472,13 +470,10 @@ sub _add_to_loop
 
    push @setup, $self->_prepare_fds( $loop );
 
-   # Once we start the Process we'll close the MergePoint. Its on_finished
-   # coderef will strongly reference $self. So we need to break this cycle.
-   my $mergepoint = delete $self->{mergepoint};
-   
-   $mergepoint->needs( "exit" );
+   my $finish_futures = delete $self->{finish_futures};
 
    my ( $exitcode, $dollarbang, $dollarat );
+   push @$finish_futures, my $exit_future = Future->new;
 
    $self->{pid} = $loop->spawn_child(
       code    => $self->{code},
@@ -488,7 +483,7 @@ sub _add_to_loop
 
       on_exit => sub {
          ( undef, $exitcode, $dollarbang, $dollarat ) = @_;
-         $mergepoint->done( "exit" );
+         $exit_future->done;
       },
    );
    $self->{running} = 1;
@@ -499,10 +494,9 @@ sub _add_to_loop
 
    my $is_code = defined $self->{code};
 
-   $mergepoint->close(
-      on_finished => $self->_capture_weakself( sub {
+   $self->{finish_future} = Future->needs_all( @$finish_futures )
+      ->on_done( $self->_capture_weakself( sub {
          my $self = shift or return;
-         my %items = @_;
 
          $self->{exitcode} = $exitcode;
          $self->{dollarbang} = $dollarbang;

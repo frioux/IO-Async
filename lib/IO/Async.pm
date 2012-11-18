@@ -256,13 +256,6 @@ C<IO::Async::Object>, based on C<IO::Async::Routine>.
 
 =item *
 
-Build some sort of future-like system, possibly called C<IO::Async::Task> to
-represent one-shot events like name resolver lookups, socket connects, etc..
-Replace uses of C<Async::MergePoint> with it, removing a dependency.
-Use C<Future>.
-
-=item *
-
 C<IO::Async::Protocol::Datagram>
 
 =item *
