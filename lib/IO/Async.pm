@@ -263,6 +263,14 @@ C<IO::Async::Protocol::Datagram>
 Support for watching filesystem entries for change. Extract logic from
 C<IO::Async::FileStream>. Define Loop watch/unwatch method pair.
 
+=item *
+
+Define more C<Future>-returning methods. Consider also one-shot Futures on
+things like C<IO::Async::Process> exits, or C<IO::Async::Handle> close.
+
+Use C<< Future->or_else >> to replace the one remaining use of C<CPS>, in
+C<IO::Async::Connector>.
+
 =back
 
 =head1 SUPPORT
