@@ -436,8 +436,7 @@ sub connect
       );
    }
    elsif( exists $params{addrs} or exists $params{addr} ) {
-      $peeraddrtask = Future->new;
-      $peeraddrtask->done( exists $params{addrs} ? @{ $params{addrs} } : ( $params{addr} ) );
+      $peeraddrtask = Future->new->done( exists $params{addrs} ? @{ $params{addrs} } : ( $params{addr} ) );
    }
    else {
       croak "Expected 'host' and 'service' or 'addrs' or 'addr' arguments";
@@ -458,12 +457,10 @@ sub connect
       );
    }
    elsif( exists $params{local_addrs} or exists $params{local_addr} ) {
-      $localaddrtask = Future->new;
-      $localaddrtask->done( exists $params{local_addrs} ? @{ $params{local_addrs} } : ( $params{local_addr} ) );
+      $localaddrtask = Future->new->done( exists $params{local_addrs} ? @{ $params{local_addrs} } : ( $params{local_addr} ) );
    }
    else {
-      $localaddrtask = Future->new;
-      $localaddrtask->done( {} );
+      $localaddrtask = Future->new->done( {} );
    }
 
    my $addrtask = Future->needs_all( $peeraddrtask, $localaddrtask )

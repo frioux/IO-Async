@@ -324,18 +324,16 @@ sub getaddrinfo
        );
 
        if( !$err ) {
-          my $task = Future->new;
+          my $task = Future->new->done( @results );
           $task->on_done( $args{on_resolved} ) if $args{on_resolved};
-          $task->done( @results );
           return $task;
        }
        elsif( $err == EAI_NONAME ) {
           # fallthrough to async case
        }
        else {
-          my $task = Future->new;
+          my $task = Future->new->fail( "$err\n" );
           $task->on_fail( $args{on_error} ) if $args{on_error};
-          $task->fail( "$err\n" );
           return $task;
        }
    }
@@ -433,18 +431,17 @@ sub getnameinfo
    if( $flags & (NI_NUMERICHOST|NI_NUMERICSERV) ) {
       # This is a numeric-only lookup that can be done synchronously
       my ( $err, $host, $service ) = _getnameinfo( $args{addr}, $flags );
-      my $task = Future->new;
 
       if( $err ) {
+         my $task = Future->new->fail( "$err\n" );
          $task->on_fail( $args{on_error} ) if $args{on_error};
-         $task->fail( "$err\n" );
+         return $task;
       }
       else {
+         my $task = Future->new->done( $host, $service );
          $task->on_done( $args{on_resolved} ) if $args{on_resolved};
-         $task->done( $host, $service );
+         return $task;
       }
-
-      return $task;
    }
 
    my $task = $self->resolve(
