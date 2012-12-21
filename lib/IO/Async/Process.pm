@@ -483,7 +483,7 @@ sub _add_to_loop
 
       on_exit => sub {
          ( undef, $exitcode, $dollarbang, $dollarat ) = @_;
-         $exit_future->done;
+         $exit_future->done unless $exit_future->is_cancelled;
       },
    );
    $self->{running} = 1;
@@ -516,6 +516,12 @@ sub _add_to_loop
          $self->remove_from_parent;
       } ),
    );
+}
+
+sub DESTROY
+{
+   my $self = shift;
+   $self->{finish_future}->cancel if $self->{finish_future};
 }
 
 sub notifier_name
