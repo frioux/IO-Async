@@ -2,13 +2,14 @@
 
 use strict;
 
-use Test::More tests => 37;
+use Test::More tests => 39;
 
 use IO::Async::OS;
 
 use Socket qw(
    AF_INET AF_INET6 AF_UNIX SOCK_STREAM SOCK_DGRAM SO_TYPE
    pack_sockaddr_in pack_sockaddr_in6 pack_sockaddr_un inet_aton inet_pton
+   INADDR_ANY
 );
 
 use POSIX qw( SIGTERM );
@@ -98,6 +99,21 @@ is( IO::Async::OS->getsocktypebyname( SOCK_STREAM ), SOCK_STREAM, 'getsocktypeby
                 } ) ],
               [ AF_INET, SOCK_STREAM, 0, $sinaddr ],
               'extract_addrinfo( HASH ) with inet, ip+port' );
+
+   is_deeply( [ IO::Async::OS->extract_addrinfo( {
+                  family   => "inet",
+                  socktype => "stream",
+                  port     => "56",
+                } ) ],
+              [ AF_INET, SOCK_STREAM, 0, pack_sockaddr_in( 56, INADDR_ANY ) ],
+              'extract_addrinfo( HASH ) with inet, port' );
+
+   is_deeply( [ IO::Async::OS->extract_addrinfo( {
+                  family   => "inet",
+                  socktype => "stream",
+                } ) ],
+              [ AF_INET, SOCK_STREAM, 0, pack_sockaddr_in( 0, INADDR_ANY ) ],
+              'extract_addrinfo( HASH ) with inet only' );
 }
 
 SKIP: {

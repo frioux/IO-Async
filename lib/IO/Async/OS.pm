@@ -379,6 +379,8 @@ sub extract_addrinfo
 =item family => 'inet'
 
 Will pack an IP address and port number from keys called C<ip> and C<port>.
+If C<ip> is missing it will be set to "0.0.0.0". If C<port> is missing it will
+be set to 0.
 
 =cut
 
@@ -387,8 +389,8 @@ sub _extract_addrinfo_inet
    my $self = shift;
    my ( $ai ) = @_;
 
-   defined( my $port = $ai->{port} ) or croak "Expected 'port' for extract_addrinfo on family='inet'";
-   defined( my $ip   = $ai->{ip}   ) or croak "Expected 'ip' for extract_addrinfo on family='inet'";
+   my $port = $ai->{port} || 0;
+   my $ip   = $ai->{ip}   || "0.0.0.0";
 
    return pack_sockaddr_in( $port, inet_aton( $ip ) );
 }
@@ -396,8 +398,9 @@ sub _extract_addrinfo_inet
 =item family => 'inet6'
 
 Will pack an IP address and port number from keys called C<ip> and C<port>.
-Optionally will also include values from C<scopeid> and C<flowinfo> keys if
-provided.
+If C<ip> is missing it will be set to "::". If C<port> is missing it will be
+set to 0. Optionally will also include values from C<scopeid> and C<flowinfo>
+keys if provided.
 
 This will only work if a C<pack_sockaddr_in6> function can be found in
 C<Socket>
@@ -409,9 +412,8 @@ sub _extract_addrinfo_inet6
    my $self = shift;
    my ( $ai ) = @_;
 
-   defined( my $port = $ai->{port} ) or croak "Expected 'port' for extract_addrinfo on family='inet6'";
-   defined( my $ip   = $ai->{ip}   ) or croak "Expected 'ip' for extract_addrinfo on family='inet6'";
-
+   my $port     = $ai->{port}     || 0;
+   my $ip       = $ai->{ip}       || "::";
    my $scopeid  = $ai->{scopeid}  || 0;
    my $flowinfo = $ai->{flowinfo} || 0;
 
