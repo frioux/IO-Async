@@ -4,7 +4,7 @@ use strict;
 
 use IO::Async::Test;
 
-use Test::More tests => 71;
+use Test::More tests => 73;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -241,9 +241,17 @@ my $sub_writeready = 0;
       on_closed => sub { $closed = 1 },
    );
 
+   my $close_task = $handle->new_close_task;
+
+   my $closed_by_task;
+   $close_task->on_done( sub { $closed_by_task++ } );
+
    $handle->close;
 
    is( $closed, 1, '$closed after ->close' );
+
+   ok( $close_task->is_ready, '$close_task is now ready' );
+   is( $closed_by_task, 1, '$closed_by_task after ->close' );
 }
 
 # Close read/write

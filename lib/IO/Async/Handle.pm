@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2006-2011 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2006-2012 -- leonerd@leonerd.org.uk
 
 package IO::Async::Handle;
 
@@ -14,6 +14,8 @@ our $VERSION = '0.53';
 use Carp;
 
 use IO::Handle; # give methods to bare IO handles
+
+use Future;
 
 =head1 NAME
 
@@ -367,7 +369,17 @@ sub close
    my $write_handle = delete $self->{write_handle};
    $write_handle->close if defined $write_handle;
 
+   $self->_closed;
+}
+
+sub _closed
+{
+   my $self = shift;
+
    $self->maybe_invoke_event( on_closed => );
+   if( $self->{close_tasks} ) {
+      $_->done for @{ $self->{close_tasks} };
+   }
    $self->remove_from_parent;
 }
 
@@ -392,10 +404,7 @@ sub close_read
    my $read_handle = delete $self->{read_handle};
    $read_handle->close if defined $read_handle;
 
-   if( !$self->{write_handle} ) {
-      $self->maybe_invoke_event( on_closed => );
-      $self->remove_from_parent;
-   }
+   $self->_closed if !$self->{write_handle};
 }
 
 sub close_write
@@ -407,10 +416,32 @@ sub close_write
    my $write_handle = delete $self->{write_handle};
    $write_handle->close if defined $write_handle;
 
-   if( !$self->{read_handle} ) {
-      $self->maybe_invoke_event( on_closed => );
-      $self->remove_from_parent;
-   }
+   $self->_closed if !$self->{read_handle};
+}
+
+=head2 $task = $handle->new_close_task
+
+Returns a new L<Future> object which will become done when the handle is
+closed. Cancelling the C<$task> will remove this notification ability but
+will not otherwise affect the C<$handle>.
+
+=cut
+
+sub new_close_task
+{
+   my $self = shift;
+
+   push @{ $self->{close_tasks} }, my $task = Future->new;
+   $task->on_cancel(
+      $self->_capture_weakself( sub {
+         my $self = shift;
+         my $task = shift;
+
+         @{ $self->{close_tasks} } = grep { $_ != $task } @{ $self->{close_tasks} };
+      })
+   );
+
+   return $task;
 }
 
 =head2 $handle = $handle->read_handle
