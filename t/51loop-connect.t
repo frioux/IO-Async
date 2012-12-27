@@ -45,19 +45,19 @@ my $addr = $listensock->sockname;
 }
 
 {
-   my $task = $loop->connect(
+   my $future = $loop->connect(
       addr => { family => "inet", socktype => "stream", addr => $addr },
    );
 
-   isa_ok( $task, "Future", '$task' );
+   isa_ok( $future, "Future", '$future' );
 
-   $loop->await( $task );
+   $loop->await( $future );
 
-   my ( $sock ) = $task->get;
+   my ( $sock ) = $future->get;
 
-   isa_ok( $sock, "IO::Socket::INET", 'by addr: $sock isa IO::Socket::INET from task' );
+   isa_ok( $sock, "IO::Socket::INET", 'by addr: $sock isa IO::Socket::INET from future' );
    is_deeply( [ unpack_sockaddr_in $sock->peername ],
-              [ unpack_sockaddr_in $addr ], 'by addr: $sock->getpeername is $addr from task' );
+              [ unpack_sockaddr_in $addr ], 'by addr: $sock->getpeername is $addr from future' );
 
    $listensock->accept; # Throw it away
 }
@@ -87,23 +87,23 @@ my $addr = $listensock->sockname;
 }
 
 {
-   my $task = $loop->connect(
+   my $future = $loop->connect(
       host     => $listensock->sockhost,
       service  => $listensock->sockport,
       socktype => $listensock->socktype,
    );
 
-   isa_ok( $task, "Future", '$task' );
+   isa_ok( $future, "Future", '$future' );
 
-   $loop->await( $task );
+   $loop->await( $future );
 
-   my ( $sock ) = $task->get;
+   my ( $sock ) = $future->get;
 
-   isa_ok( $sock, "IO::Socket::INET", 'by host/service: $sock isa IO::Socket::INET from Task' );
+   isa_ok( $sock, "IO::Socket::INET", 'by host/service: $sock isa IO::Socket::INET from future' );
    is_deeply( [ unpack_sockaddr_in $sock->peername ],
-              [ unpack_sockaddr_in $addr ], 'by host/service: $sock->getpeername is $addr from Task' );
+              [ unpack_sockaddr_in $addr ], 'by host/service: $sock->getpeername is $addr from future' );
 
-   is( $sock->sockhost, "127.0.0.1", '$sock->sockhost is 127.0.0.1 from Task' );
+   is( $sock->sockhost, "127.0.0.1", '$sock->sockhost is 127.0.0.1 from future' );
 
    $listensock->accept; # Throw it away
 }
@@ -213,19 +213,19 @@ SKIP: {
    my $failop;
    my $failerr;
 
-   my $task = $loop->connect(
+   my $future = $loop->connect(
       addr => { family => "unix", socktype => "stream", path => "/some/path/we/know/breaks" },
       on_fail => sub { $failop = shift @_; $failerr = pop @_; },
    );
 
-   $loop->await( $task );
+   $loop->await( $future );
 
    is( $failop, "connect", '$failop is connect' );
    is( $failerr+0, ENOENT, '$failerr is ENOENT' );
 
-   ok( scalar $task->failure, '$task failed' );
-   is( ( $task->failure )[2], "connect", '$task fail op is connect' );
-   is( ( $task->failure )[3]+0, ENOENT, '$task fail err is ENOENT' );
+   ok( scalar $future->failure, '$future failed' );
+   is( ( $future->failure )[2], "connect", '$future fail op is connect' );
+   is( ( $future->failure )[3]+0, ENOENT, '$future fail err is ENOENT' );
 }
 
 # UNIX sockets always connect(2) synchronously, meaning if they fail, the error

@@ -377,8 +377,8 @@ sub _closed
    my $self = shift;
 
    $self->maybe_invoke_event( on_closed => );
-   if( $self->{close_tasks} ) {
-      $_->done for @{ $self->{close_tasks} };
+   if( $self->{close_futures} ) {
+      $_->done for @{ $self->{close_futures} };
    }
    $self->remove_from_parent;
 }
@@ -419,29 +419,29 @@ sub close_write
    $self->_closed if !$self->{read_handle};
 }
 
-=head2 $task = $handle->new_close_task
+=head2 $future = $handle->new_close_future
 
 Returns a new L<Future> object which will become done when the handle is
-closed. Cancelling the C<$task> will remove this notification ability but
+closed. Cancelling the C<$future> will remove this notification ability but
 will not otherwise affect the C<$handle>.
 
 =cut
 
-sub new_close_task
+sub new_close_future
 {
    my $self = shift;
 
-   push @{ $self->{close_tasks} }, my $task = Future->new;
-   $task->on_cancel(
+   push @{ $self->{close_futures} }, my $future = Future->new;
+   $future->on_cancel(
       $self->_capture_weakself( sub {
          my $self = shift;
-         my $task = shift;
+         my $future = shift;
 
-         @{ $self->{close_tasks} } = grep { $_ != $task } @{ $self->{close_tasks} };
+         @{ $self->{close_futures} } = grep { $_ != $future } @{ $self->{close_futures} };
       })
    );
 
-   return $task;
+   return $future;
 }
 
 =head2 $handle = $handle->read_handle

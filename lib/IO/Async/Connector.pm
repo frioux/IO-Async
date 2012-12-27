@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2008-2011 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2008-2012 -- leonerd@leonerd.org.uk
 
 package IO::Async::Connector;
 
@@ -137,7 +137,7 @@ sub _get_sock_err
 sub _connect_addresses
 {
    my $self = shift;
-   my ( $addrlist, $task, $on_fail ) = @_;
+   my ( $addrlist, $future, $on_fail ) = @_;
 
    my $loop = $self->{loop};
 
@@ -200,14 +200,14 @@ sub _connect_addresses
       },
       sub {
          if( $sock ) {
-            return $task->done( $sock );
+            return $future->done( $sock );
          }
          else {
-            return $task->fail( "connect: $connecterr", connect => connect => $connecterr )
+            return $future->fail( "connect: $connecterr", connect => connect => $connecterr )
                if $connecterr;
-            return $task->fail( "bind: $binderr",       connect => bind    => $binderr    )
+            return $future->fail( "bind: $binderr",       connect => bind    => $binderr    )
                if $binderr;
-            return $task->fail( "socket: $socketerr",   connect => socket  => $socketerr  )
+            return $future->fail( "socket: $socketerr",   connect => socket  => $socketerr  )
                if $socketerr;
             # If it gets this far then something went wrong
             die 'Oops; $loop->connect failed but no error cause was found';
@@ -349,11 +349,11 @@ hint is defined when performing a C<getaddrinfo> lookup. To avoid this warning
 while still specifying no particular C<socktype> hint (perhaps to invoke some
 OS-specific behaviour), pass C<0> as the C<socktype> value.
 
-=head2 $task = $loop->connect( %params )
+=head2 $future = $loop->connect( %params )
 
-When returning a task, the C<on_connected>, C<on_stream>, C<on_socket> and
+When returning a future, the C<on_connected>, C<on_stream>, C<on_socket> and
 various C<on_*_error> continuations are optional. When the socket is
-connected, the task will be given the connected socket handle. No direct
+connected, the future will be given the connected socket handle. No direct
 support for automatically constructing a C<IO::Async::Stream> or
 C<IO::Async::Socket> object is provided.
 
@@ -364,34 +364,34 @@ sub connect
    my $self = shift;
    my ( %params ) = @_;
 
-   my $task = Future->new;
+   my $future = Future->new;
 
    # Callbacks
    if( my $on_connected = delete $params{on_connected} ) {
-      $task->on_done( $on_connected );
+      $future->on_done( $on_connected );
    }
    elsif( my $on_stream = delete $params{on_stream} ) {
       require IO::Async::Stream;
       # TODO: It doesn't make sense to put a SOCK_DGRAM in an
       # IO::Async::Stream but currently we don't detect this
-      $task->on_done( sub {
+      $future->on_done( sub {
          my ( $handle ) = @_;
          $on_stream->( IO::Async::Stream->new( handle => $handle ) );
       } );
    }
    elsif( my $on_socket = delete $params{on_socket} ) {
       require IO::Async::Socket;
-      $task->on_done( sub {
+      $future->on_done( sub {
          my ( $handle ) = @_;
          $on_socket->( IO::Async::Socket->new( handle => $handle ) );
       } );
    }
    elsif( !defined wantarray ) {
-      croak "Expected 'on_connected' or 'on_stream' callback or to return a Task";
+      croak "Expected 'on_connected' or 'on_stream' callback or to return a Future";
    }
 
    if( my $on_connect_error = $params{on_connect_error} ) {
-      $task->on_fail( sub {
+      $future->on_fail( sub {
          $on_connect_error->( @_[2,3] ) if $_[1] eq "connect";
       } );
    }
@@ -414,7 +414,7 @@ sub connect
 
    my $have_fail_resolve = 1;
    if( my $on_resolve_error = $params{on_resolve_error} ) {
-      $task->on_fail( sub {
+      $future->on_fail( sub {
          $on_resolve_error->( $_[2] ) if $_[1] eq "resolve";
       } );
    }
@@ -422,51 +422,51 @@ sub connect
       undef $have_fail_resolve;
    }
 
-   my $peeraddrtask;
+   my $peeraddrfuture;
    if( exists $params{host} and exists $params{service} ) {
-      $have_fail_resolve or croak "Expected 'on_resolve_error' callback or to return a Task";
+      $have_fail_resolve or croak "Expected 'on_resolve_error' callback or to return a Future";
 
       my $host    = $params{host}    or croak "Expected 'host'";
       my $service = $params{service} or croak "Expected 'service'";
 
-      $peeraddrtask = $loop->resolver->getaddrinfo(
+      $peeraddrfuture = $loop->resolver->getaddrinfo(
          host    => $host,
          service => $service,
          %gai_hints,
       );
    }
    elsif( exists $params{addrs} or exists $params{addr} ) {
-      $peeraddrtask = Future->new->done( exists $params{addrs} ? @{ $params{addrs} } : ( $params{addr} ) );
+      $peeraddrfuture = Future->new->done( exists $params{addrs} ? @{ $params{addrs} } : ( $params{addr} ) );
    }
    else {
       croak "Expected 'host' and 'service' or 'addrs' or 'addr' arguments";
    }
 
-   my $localaddrtask;
+   my $localaddrfuture;
    if( defined $params{local_host} or defined $params{local_service} ) {
-      $have_fail_resolve or croak "Expected 'on_resolve_error' callback or to return a Task";
+      $have_fail_resolve or croak "Expected 'on_resolve_error' callback or to return a Future";
 
       # Empty is fine on either of these
       my $host    = $params{local_host};
       my $service = $params{local_service};
 
-      $localaddrtask = $loop->resolver->getaddrinfo(
+      $localaddrfuture = $loop->resolver->getaddrinfo(
          host    => $host,
          service => $service,
          %gai_hints,
       );
    }
    elsif( exists $params{local_addrs} or exists $params{local_addr} ) {
-      $localaddrtask = Future->new->done( exists $params{local_addrs} ? @{ $params{local_addrs} } : ( $params{local_addr} ) );
+      $localaddrfuture = Future->new->done( exists $params{local_addrs} ? @{ $params{local_addrs} } : ( $params{local_addr} ) );
    }
    else {
-      $localaddrtask = Future->new->done( {} );
+      $localaddrfuture = Future->new->done( {} );
    }
 
-   my $addrtask = Future->needs_all( $peeraddrtask, $localaddrtask )
+   my $addrfuture = Future->needs_all( $peeraddrfuture, $localaddrfuture )
       ->on_done( sub {
-         my @peeraddrs  = $peeraddrtask->get;
-         my @localaddrs = $localaddrtask->get;
+         my @peeraddrs  = $peeraddrfuture->get;
+         my @localaddrs = $localaddrfuture->get;
 
          my @addrs;
 
@@ -491,15 +491,15 @@ sub connect
             }
          }
 
-         $self->_connect_addresses( \@addrs, $task, $on_fail );
+         $self->_connect_addresses( \@addrs, $future, $on_fail );
       } )
       ->on_fail( sub {
-         $task->fail( "$_[0]\n", resolve => $_[0] );
+         $future->fail( "$_[0]\n", resolve => $_[0] );
       } );
 
-   $task->on_cancel( sub { $addrtask->cancel } ) if !$task->is_ready;
+   $future->on_cancel( sub { $addrfuture->cancel } ) if !$future->is_ready;
 
-   return $task;
+   return $future;
 }
 
 =head1 EXAMPLES

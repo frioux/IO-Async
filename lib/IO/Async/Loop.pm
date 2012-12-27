@@ -503,39 +503,40 @@ sub loop_stop
    $self->stop;
 }
 
-#########
-# Tasks #
-#########
+###########
+# Futures #
+###########
 
-=head1 TASK SUPPORT
+=head1 FUTURE SUPPORT
 
-To support the use of Task objects in semi-synchronous programs, the following
-methods all block until some condition involving tasks is satisifed.
+To support the use of Future objects in semi-synchronous programs, the
+following methods all block until some condition involving Futures is
+satisifed.
 
 =cut
 
-=head2 $loop->await( $task )
+=head2 $loop->await( $future )
 
-Blocks until the given task is ready, as indicated by its C<is_ready> method.
-As a convenience it returns the task, to simplify code:
+Blocks until the given future is ready, as indicated by its C<is_ready> method.
+As a convenience it returns the future, to simplify code:
 
- my @result = $loop->await( $task )->get;
+ my @result = $loop->await( $future )->get;
 
 =cut
 
 sub await
 {
    my $self = shift;
-   my ( $task ) = @_;
+   my ( $future ) = @_;
 
-   $self->loop_once until $task->is_ready;
+   $self->loop_once until $future->is_ready;
 
-   return $task;
+   return $future;
 }
 
-=head2 $loop->await_all( @tasks )
+=head2 $loop->await_all( @futures )
 
-Blocks until all the given tasks are ready, as indicated by the C<is_ready>
+Blocks until all the given futures are ready, as indicated by the C<is_ready>
 method. Equivalent to calling C<await> on a C<< Future->wait_all >> except
 that it doesn't create the surrounding future object.
 
@@ -546,9 +547,9 @@ sub _all_ready { $_->is_ready or return 0 for @_; return 1  }
 sub await_all
 {
    my $self = shift;
-   my @tasks = @_;
+   my @futures = @_;
 
-   $self->loop_once until _all_ready @tasks;
+   $self->loop_once until _all_ready @futures;
 }
 
 ############

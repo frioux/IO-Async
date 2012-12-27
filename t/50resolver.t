@@ -26,18 +26,18 @@ SKIP: {
       skip "No getpwuid()", 5;
 
    {
-      my $task = $resolver->resolve(
+      my $future = $resolver->resolve(
          type => 'getpwuid',
          data => [ $< ], 
       );
 
-      isa_ok( $task, "Future", '$task' );
+      isa_ok( $future, "Future", '$future' );
 
-      $loop->await( $task );
+      $loop->await( $future );
 
-      my @result = $task->get;
+      my @result = $future->get;
 
-      is_deeply( \@result, \@pwuid, 'getpwuid from task' );
+      is_deeply( \@result, \@pwuid, 'getpwuid from future' );
    }
 
    {
@@ -213,22 +213,22 @@ my ( $localhost_err, @localhost_addrs ) = getaddrinfo( "localhost", "www", { fam
 }
 
 {
-   my $task = $resolver->getaddrinfo(
+   my $future = $resolver->getaddrinfo(
       host     => "localhost",
       service  => "www",
       family   => "inet",
       socktype => "stream",
    );
 
-   isa_ok( $task, "Future", '$task for $resolver->getaddrinfo' );
+   isa_ok( $future, "Future", '$future for $resolver->getaddrinfo' );
 
-   $loop->await( $task );
+   $loop->await( $future );
 
    if( $localhost_err ) {
-      is( $task->failure, "$localhost_err\n", '$resolver->getaddrinfo - error message' );
+      is( $future->failure, "$localhost_err\n", '$resolver->getaddrinfo - error message' );
    }
    else {
-      my @got = $task->get;
+      my @got = $future->get;
 
       is_deeply( \@got, \@localhost_addrs, '$resolver->getaddrinfo - resolved addresses' );
    }
@@ -284,17 +284,17 @@ my ( $localhost_err, @localhost_addrs ) = getaddrinfo( "localhost", "www", { fam
 {
    my ( $lo_err, @lo_addrs ) = getaddrinfo( "127.0.0.1", "80", { socktype => SOCK_STREAM } );
 
-   my $task = $resolver->getaddrinfo(
+   my $future = $resolver->getaddrinfo(
       host     => "127.0.0.1",
       service  => "80",
       socktype => SOCK_STREAM,
    );
 
-   isa_ok( $task, "Future", '$task for $resolver->getaddrinfo numerical' );
+   isa_ok( $future, "Future", '$future for $resolver->getaddrinfo numerical' );
 
-   $loop->await( $task );
+   $loop->await( $future );
 
-   my @got = $task->get;
+   my @got = $future->get;
 
    is_deeply( \@got, \@lo_addrs, '$resolver->getaddrinfo resolved addresses synchronously' );
 }
@@ -324,19 +324,19 @@ my ( $testerr, $testhost, $testserv ) = getnameinfo( $testaddr );
 }
 
 {
-   my $task = $resolver->getnameinfo(
+   my $future = $resolver->getnameinfo(
       addr => $testaddr,
    );
 
-   $loop->await( $task );
+   $loop->await( $future );
 
    if( $testerr ) {
-      is( $task->failure, "$testerr\n", '$resolver->getnameinfo - error message from Task' );
+      is( $future->failure, "$testerr\n", '$resolver->getnameinfo - error message from future' );
    }
    else {
-      my @got = $task->get;
+      my @got = $future->get;
 
-      is_deeply( \@got, [ $testhost, $testserv ], '$resolver->getnameinfo - resolved names from Task' );
+      is_deeply( \@got, [ $testhost, $testserv ], '$resolver->getnameinfo - resolved names from future' );
    }
 }
 
@@ -354,10 +354,10 @@ my ( $testerr, $testhost, $testserv ) = getnameinfo( $testaddr );
 }
 
 {
-   my $task = $resolver->getnameinfo(
+   my $future = $resolver->getnameinfo(
       addr    => $testaddr,
       numeric => 1,
    );
 
-   is_deeply( [ $task->get ], [ "127.0.0.1", 80 ], '$resolver->getnameinfo with numeric is synchronous for Task' );
+   is_deeply( [ $future->get ], [ "127.0.0.1", 80 ], '$resolver->getnameinfo with numeric is synchronous for future' );
 }

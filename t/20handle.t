@@ -241,17 +241,17 @@ my $sub_writeready = 0;
       on_closed => sub { $closed = 1 },
    );
 
-   my $close_task = $handle->new_close_task;
+   my $close_future = $handle->new_close_future;
 
-   my $closed_by_task;
-   $close_task->on_done( sub { $closed_by_task++ } );
+   my $closed_by_future;
+   $close_future->on_done( sub { $closed_by_future++ } );
 
    $handle->close;
 
    is( $closed, 1, '$closed after ->close' );
 
-   ok( $close_task->is_ready, '$close_task is now ready' );
-   is( $closed_by_task, 1, '$closed_by_task after ->close' );
+   ok( $close_future->is_ready, '$close_future is now ready' );
+   is( $closed_by_future, 1, '$closed_by_future after ->close' );
 }
 
 # Close read/write

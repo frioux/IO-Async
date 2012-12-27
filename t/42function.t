@@ -23,7 +23,7 @@ my $loop = IO::Async::Loop::Poll->new;
 
 testing_loop( $loop );
 
-# by Task
+# by future
 {
    my $function = IO::Async::Function->new(
       min_workers => 1,
@@ -44,22 +44,22 @@ testing_loop( $loop );
    is( $function->workers_busy, 0, '$function has 0 workers busy' );
    is( $function->workers_idle, 1, '$function has 1 workers idle' );
 
-   my $task = $function->call(
+   my $future = $function->call(
       args => [ 10, 20 ],
    );
 
-   isa_ok( $task, "Future", '$task' );
+   isa_ok( $future, "Future", '$future' );
 
    is_refcount( $function, 2, '$function has refcount 2 after ->call' );
 
    is( $function->workers_busy, 1, '$function has 1 worker busy after ->call' );
    is( $function->workers_idle, 0, '$function has 0 worker idle after ->call' );
 
-   $loop->await( $task );
+   $loop->await( $future );
 
-   my ( $result ) = $task->get;
+   my ( $result ) = $future->get;
 
-   is( $result, 30, '$result after call returns by Task' );
+   is( $result, 30, '$result after call returns by future' );
 
    is( $function->workers_busy, 0, '$function has 0 workers busy after call returns' );
    is( $function->workers_idle, 1, '$function has 1 workers idle after call returns' );

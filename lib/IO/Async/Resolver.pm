@@ -166,9 +166,9 @@ passed the exception thrown by the function.
 
 =back
 
-=head2 $task = $resolver->resolve( %params )
+=head2 $future = $resolver->resolve( %params )
 
-When returning a task, the C<on_resolved> and C<on_error> continuations are
+When returning a future, the C<on_resolved> and C<on_error> continuations are
 optional.
 
 =cut
@@ -194,7 +194,7 @@ sub resolve
       ref $on_resolved or croak "Expected 'on_resolved' to be a reference";
    }
    elsif( !defined wantarray ) {
-      croak "Expected 'on_resolved' or to return a Task";
+      croak "Expected 'on_resolved' or to return a Future";
    }
 
    my $on_error;
@@ -202,19 +202,19 @@ sub resolve
       ref $on_error or croak "Expected 'on_error' to be a reference";
    }
    elsif( !defined wantarray ) {
-      croak "Expected 'on_error' or to return a Task";
+      croak "Expected 'on_error' or to return a Future";
    }
 
    my $timeout = $args{timeout} || 10;
 
-   my $task = $self->call(
+   my $future = $self->call(
       args => [ $type, $timeout, @{$args{data}} ],
    );
 
-   $task->on_done( $on_resolved ) if $on_resolved;
-   $task->on_fail( $on_error    ) if $on_error;
+   $future->on_done( $on_resolved ) if $on_resolved;
+   $future->on_fail( $on_error    ) if $on_error;
 
-   return $task;
+   return $future;
 }
 
 =head2 $resolver->getaddrinfo( %args )
@@ -279,9 +279,9 @@ like an IPv4 or IPv6 string, a synchronous lookup will first be performed
 using the C<AI_NUMERICHOST> flag. If this gives an C<EAI_NONAME> error, then
 the lookup is performed asynchronously instead.
 
-=head2 $task = $resolver->getaddrinfo( %args )
+=head2 $future = $resolver->getaddrinfo( %args )
 
-When returning a task, the C<on_resolved> and C<on_error> continuations are
+When returning a future, the C<on_resolved> and C<on_error> continuations are
 optional.
 
 =cut
@@ -292,10 +292,10 @@ sub getaddrinfo
    my %args = @_;
 
    $args{on_resolved} or defined wantarray or
-      croak "Expected 'on_resolved' or to return a Task";
+      croak "Expected 'on_resolved' or to return a Future";
 
    $args{on_error} or defined wantarray or
-      croak "Expected 'on_error' or to return a Task";
+      croak "Expected 'on_error' or to return a Future";
 
    my $host    = $args{host}    || "";
    my $service = $args{service} || "";
@@ -324,17 +324,17 @@ sub getaddrinfo
        );
 
        if( !$err ) {
-          my $task = Future->new->done( @results );
-          $task->on_done( $args{on_resolved} ) if $args{on_resolved};
-          return $task;
+          my $future = Future->new->done( @results );
+          $future->on_done( $args{on_resolved} ) if $args{on_resolved};
+          return $future;
        }
        elsif( $err == EAI_NONAME ) {
           # fallthrough to async case
        }
        else {
-          my $task = Future->new->fail( "$err\n" );
-          $task->on_fail( $args{on_error} ) if $args{on_error};
-          return $task;
+          my $future = Future->new->fail( "$err\n" );
+          $future->on_fail( $args{on_error} ) if $args{on_error};
+          return $future;
        }
    }
 
@@ -402,9 +402,9 @@ As a specific optimsation, this method will try to perform a lookup of numeric
 values synchronously, rather than asynchronously, if both the
 C<NI_NUMERICHOST> and C<NI_NUMERICSERV> flags are given.
 
-=head2 $task = $resolver->getnameinfo( %args )
+=head2 $future = $resolver->getnameinfo( %args )
 
-When returning a task, the C<on_resolved> and C<on_error> continuations are
+When returning a future, the C<on_resolved> and C<on_error> continuations are
 optional.
 
 =cut
@@ -415,10 +415,10 @@ sub getnameinfo
    my %args = @_;
 
    $args{on_resolved} or defined wantarray or
-      croak "Expected 'on_resolved' or to return a Task";
+      croak "Expected 'on_resolved' or to return a Future";
 
    $args{on_error} or defined wantarray or
-      croak "Expected 'on_error' or to return a Task";
+      croak "Expected 'on_error' or to return a Future";
 
    my $flags = $args{flags} || 0;
 
@@ -433,18 +433,18 @@ sub getnameinfo
       my ( $err, $host, $service ) = _getnameinfo( $args{addr}, $flags );
 
       if( $err ) {
-         my $task = Future->new->fail( "$err\n" );
-         $task->on_fail( $args{on_error} ) if $args{on_error};
-         return $task;
+         my $future = Future->new->fail( "$err\n" );
+         $future->on_fail( $args{on_error} ) if $args{on_error};
+         return $future;
       }
       else {
-         my $task = Future->new->done( $host, $service );
-         $task->on_done( $args{on_resolved} ) if $args{on_resolved};
-         return $task;
+         my $future = Future->new->done( $host, $service );
+         $future->on_done( $args{on_resolved} ) if $args{on_resolved};
+         return $future;
       }
    }
 
-   my $task = $self->resolve(
+   my $future = $self->resolve(
       type    => "getnameinfo",
       data    => [ $args{addr}, $flags ],
       timeout => $args{timeout},
@@ -452,10 +452,10 @@ sub getnameinfo
       done => sub { @{ $_[0] } }, # unpack the ARRAY ref
    );
 
-   $task->on_done( $args{on_resolved} ) if $args{on_resolved};
-   $task->on_fail( $args{on_error}    ) if $args{on_error};
+   $future->on_done( $args{on_resolved} ) if $args{on_resolved};
+   $future->on_fail( $args{on_error}    ) if $args{on_error};
 
-   return $task;
+   return $future;
 }
 
 =head1 FUNCTIONS

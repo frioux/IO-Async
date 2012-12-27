@@ -74,4 +74,4 @@ $stdiostream = IO::Async::Stream->new_for_stdio(
 );
 $loop->add( $stdiostream );
 
-$loop->await_all( $socketstream->new_close_task, $stdiostream->new_close_task );
+$loop->await_all( $socketstream->new_close_future, $stdiostream->new_close_future );

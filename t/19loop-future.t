@@ -1,0 +1,34 @@
+#!/usr/bin/perl -w
+
+use strict;
+
+use Test::More tests => 6;
+use Test::Identity;
+
+use IO::Async::Loop;
+
+use Future;
+
+my $loop = IO::Async::Loop->new;
+
+{
+   my $future = Future->new;
+
+   $loop->later( sub { $future->done( "result" ) } );
+
+   my $ret = $loop->await( $future );
+   identical( $ret, $future, '$loop->await( $future ) returns $future' );
+
+   is_deeply( [ $future->get ], [ "result" ], '$future->get' );
+}
+
+{
+   my @futures = map { Future->new } 0 .. 2;
+
+   do { my $id = $_; $loop->later( sub { $futures[$id]->done } ) } for 0 .. 2;
+
+   $loop->await_all( @futures );
+
+   ok( 1, '$loop->await_all' );
+   ok( $futures[$_]->is_ready, "future $_ ready" ) for 0 .. 2;
+}
