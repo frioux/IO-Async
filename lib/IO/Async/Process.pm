@@ -442,10 +442,7 @@ sub _prepare_fds
       }
 
       unless( $write_only ) {
-         push @$finish_futures, my $future = Future->new;
-         $handle->configure(
-            on_closed => sub { $future->done },
-         );
+         push @$finish_futures, $handle->new_close_task;
       }
 
       $self->add_child( $handle );

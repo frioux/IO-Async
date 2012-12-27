@@ -6,8 +6,6 @@ use warnings;
 use IO::Async::Loop;
 use IO::Async::Stream;
 
-use Future;
-
 my $CRLF = "\x0d\x0a"; # because \r\n is not portable
 
 my $HOST = shift @ARGV or die "Need HOST";
@@ -39,7 +37,6 @@ print STDERR "Connected to $peeraddr\n";
 # easily without a temporary variable
 my ( $socketstream, $stdiostream );
 
-my $socket_closed_future = Future->new;
 $socketstream = IO::Async::Stream->new(
    handle => $socket,
 
@@ -55,13 +52,11 @@ $socketstream = IO::Async::Stream->new(
 
    on_closed => sub {
       print STDERR "Closed connection to $peeraddr\n";
-      $socket_closed_future->done;
       $stdiostream->close_when_empty;
    },
 );
 $loop->add( $socketstream );
 
-my $stdio_closed_future = Future->new;
 $stdiostream = IO::Async::Stream->new_for_stdio(
    on_read => sub {
       my ( undef, $buffref, $eof ) = @_;
@@ -74,10 +69,9 @@ $stdiostream = IO::Async::Stream->new_for_stdio(
    },
 
    on_closed => sub {
-      $stdio_closed_future->done;
       $socketstream->close_when_empty;
    },
 );
 $loop->add( $stdiostream );
 
-$loop->await_all( $socket_closed_future, $stdio_closed_future );
+$loop->await_all( $socketstream->new_close_task, $stdiostream->new_close_task );
