@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2007-2012 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2007-2013 -- leonerd@leonerd.org.uk
 
 package IO::Async::Resolver;
 
@@ -10,8 +10,6 @@ use warnings;
 use base qw( IO::Async::Function );
 
 our $VERSION = '0.53';
-
-use Future;
 
 use Socket 1.93 qw(
    AI_NUMERICHOST AI_PASSIVE
@@ -324,7 +322,7 @@ sub getaddrinfo
        );
 
        if( !$err ) {
-          my $future = Future->new->done( @results );
+          my $future = $self->loop->new_future->done( @results );
           $future->on_done( $args{on_resolved} ) if $args{on_resolved};
           return $future;
        }
@@ -332,7 +330,7 @@ sub getaddrinfo
           # fallthrough to async case
        }
        else {
-          my $future = Future->new->fail( "$err\n" );
+          my $future = $self->loop->new_future->fail( "$err\n" );
           $future->on_fail( $args{on_error} ) if $args{on_error};
           return $future;
        }
@@ -433,12 +431,12 @@ sub getnameinfo
       my ( $err, $host, $service ) = _getnameinfo( $args{addr}, $flags );
 
       if( $err ) {
-         my $future = Future->new->fail( "$err\n" );
+         my $future = $self->loop->new_future->fail( "$err\n" );
          $future->on_fail( $args{on_error} ) if $args{on_error};
          return $future;
       }
       else {
-         my $future = Future->new->done( $host, $service );
+         my $future = $self->loop->new_future->done( $host, $service );
          $future->on_done( $args{on_resolved} ) if $args{on_resolved};
          return $future;
       }

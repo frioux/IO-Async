@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2011-2012 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2011-2013 -- leonerd@leonerd.org.uk
 
 package IO::Async::Function;
 
@@ -14,8 +14,6 @@ use base qw( IO::Async::Notifier );
 use IO::Async::Timer::Countdown;
 
 use Carp;
-
-use Future;
 
 use Storable qw( freeze );
 
@@ -352,7 +350,7 @@ sub call
    my $args = delete $params{args};
    ref $args eq "ARRAY" or croak "Expected 'args' to be an array";
 
-   my $future = Future->new;
+   my $future = $self->loop->new_future;
 
    if( defined $params{on_result} ) {
       my $on_result = delete $params{on_result};

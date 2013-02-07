@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2008-2012 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2008-2013 -- leonerd@leonerd.org.uk
 
 package IO::Async::Connector;
 
@@ -364,7 +364,9 @@ sub connect
    my $self = shift;
    my ( %params ) = @_;
 
-   my $future = Future->new;
+   my $loop = $self->{loop};
+
+   my $future = $loop->new_future;
 
    # Callbacks
    if( my $on_connected = delete $params{on_connected} ) {
@@ -401,8 +403,6 @@ sub connect
 
    my $on_fail = $params{on_fail};
 
-   my $loop = $self->{loop};
-
    my %gai_hints;
    exists $params{$_} and $gai_hints{$_} = $params{$_} for qw( family socktype protocol flags );
 
@@ -436,7 +436,7 @@ sub connect
       );
    }
    elsif( exists $params{addrs} or exists $params{addr} ) {
-      $peeraddrfuture = Future->new->done( exists $params{addrs} ? @{ $params{addrs} } : ( $params{addr} ) );
+      $peeraddrfuture = $loop->new_future->done( exists $params{addrs} ? @{ $params{addrs} } : ( $params{addr} ) );
    }
    else {
       croak "Expected 'host' and 'service' or 'addrs' or 'addr' arguments";
@@ -457,10 +457,10 @@ sub connect
       );
    }
    elsif( exists $params{local_addrs} or exists $params{local_addr} ) {
-      $localaddrfuture = Future->new->done( exists $params{local_addrs} ? @{ $params{local_addrs} } : ( $params{local_addr} ) );
+      $localaddrfuture = $loop->new_future->done( exists $params{local_addrs} ? @{ $params{local_addrs} } : ( $params{local_addr} ) );
    }
    else {
-      $localaddrfuture = Future->new->done( {} );
+      $localaddrfuture = $loop->new_future->done( {} );
    }
 
    my $addrfuture = Future->needs_all( $peeraddrfuture, $localaddrfuture )

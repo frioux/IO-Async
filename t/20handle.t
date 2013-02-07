@@ -241,6 +241,8 @@ my $sub_writeready = 0;
       on_closed => sub { $closed = 1 },
    );
 
+   $loop->add( $handle );
+
    my $close_future = $handle->new_close_future;
 
    my $closed_by_future;
@@ -252,6 +254,8 @@ my $sub_writeready = 0;
 
    ok( $close_future->is_ready, '$close_future is now ready' );
    is( $closed_by_future, 1, '$closed_by_future after ->close' );
+
+   # removed itself
 }
 
 # Close read/write

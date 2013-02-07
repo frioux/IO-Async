@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2011-2012 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2011-2013 -- leonerd@leonerd.org.uk
 
 package IO::Async::Process;
 
@@ -441,11 +441,11 @@ sub _prepare_fds
          croak "Unsure what to do with fd_via==$via";
       }
 
+      $self->add_child( $handle );
+
       unless( $write_only ) {
          push @$finish_futures, $handle->new_close_future;
       }
-
-      $self->add_child( $handle );
    }
 
    return @setup;
@@ -470,7 +470,7 @@ sub _add_to_loop
    my $finish_futures = delete $self->{finish_futures};
 
    my ( $exitcode, $dollarbang, $dollarat );
-   push @$finish_futures, my $exit_future = Future->new;
+   push @$finish_futures, my $exit_future = $loop->new_future;
 
    $self->{pid} = $loop->spawn_child(
       code    => $self->{code},

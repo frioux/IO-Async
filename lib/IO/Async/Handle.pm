@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2006-2012 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2006-2013 -- leonerd@leonerd.org.uk
 
 package IO::Async::Handle;
 
@@ -421,9 +421,9 @@ sub close_write
 
 =head2 $future = $handle->new_close_future
 
-Returns a new L<Future> object which will become done when the handle is
-closed. Cancelling the C<$future> will remove this notification ability but
-will not otherwise affect the C<$handle>.
+Returns a new L<IO::Async::Future> object which will become done when the
+handle is closed. Cancelling the C<$future> will remove this notification
+ability but will not otherwise affect the C<$handle>.
 
 =cut
 
@@ -431,7 +431,7 @@ sub new_close_future
 {
    my $self = shift;
 
-   push @{ $self->{close_futures} }, my $future = Future->new;
+   push @{ $self->{close_futures} }, my $future = $self->loop->new_future;
    $future->on_cancel(
       $self->_capture_weakself( sub {
          my $self = shift;
