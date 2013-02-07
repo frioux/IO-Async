@@ -210,11 +210,8 @@ stands in contrast to a C<IO::Async::Notifier>, which is an object that
 represents an ongoing source of activity, such as a readable filehandle of
 bytes or a POSIX signal.
 
-Futures are a recent addition to the C<IO::Async> API and details are still
-subject to change and experimentation. Currently a Future object is an
-instance of L<Future>, but it is possible this may change in future (pardon
-the pun ;) ) to being some class within the C<IO::Async::> namespace, and
-having a reference to the containing Loop object.
+L<IO::Async::Future>s are a recent addition to the C<IO::Async> API and
+details are still subject to change and experimentation.
 
 In general, methods that support Futures return a new Future object to
 represent the outstanding operation. If callback functions are supplied as
