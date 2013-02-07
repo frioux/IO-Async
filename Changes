@@ -1,5 +1,17 @@
 Revision history for IO-Async
 
+0.54    CHANGES:
+         * Use Future instead of CPS::Future
+         * Created IO::Async::Future subclass
+         * Initial support for Futures on Loops
+         * Rewrite lots of internals to use Futures instead of MergePoints or
+           other logic
+         * Renamed all "task" to "future" in APIs
+         * Allow packing of inet/inet6 address structures to omit the IP or
+           port and presume passive or port 0
+         * Removed $notifier->get_loop synonym
+         * Make IO::Async::MergePoint throw a deprecation warning
+
 0.53    CHANGES:
          * Added IO_ASYNC_WATCHDOG debugging support
 
