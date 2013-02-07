@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2007-2012 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2007-2013 -- leonerd@leonerd.org.uk
 
 package IO::Async::Loop;
 
@@ -509,11 +509,22 @@ sub loop_stop
 
 =head1 FUTURE SUPPORT
 
-To support the use of Future objects in semi-synchronous programs, the
-following methods all block until some condition involving Futures is
-satisifed.
+The following methods relate to L<IO::Async::Future> objects.
 
 =cut
+
+=head2 $future = $loop->new_future
+
+Returns a new C<IO::Async::Future> instance with a reference to the Loop.
+
+=cut
+
+sub new_future
+{
+   my $self = shift;
+   require IO::Async::Future;
+   return IO::Async::Future->new( $self );
+}
 
 =head2 $loop->await( $future )
 

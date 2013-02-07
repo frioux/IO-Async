@@ -2,12 +2,13 @@
 
 use strict;
 
-use Test::More tests => 6;
+use Test::More tests => 8;
 use Test::Identity;
 
 use IO::Async::Loop;
 
 use Future;
+use IO::Async::Future;
 
 my $loop = IO::Async::Loop->new;
 
@@ -31,4 +32,20 @@ my $loop = IO::Async::Loop->new;
 
    ok( 1, '$loop->await_all' );
    ok( $futures[$_]->is_ready, "future $_ ready" ) for 0 .. 2;
+}
+
+{
+   my $future = IO::Async::Future->new( $loop );
+
+   $loop->later( sub { $future->done( "result" ) } );
+
+   is_deeply( [ $future->get ], [ "result" ], '$future->get on IO::Async::Future' );
+}
+
+{
+   my $future = $loop->new_future;
+
+   $loop->later( sub { $future->done( "result" ) } );
+
+   is_deeply( [ $future->get ], [ "result" ], '$future->get on IO::Async::Future from $loop->new_future' );
 }
