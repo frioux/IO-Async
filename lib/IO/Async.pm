@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2008-2012 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2008-2013 -- leonerd@leonerd.org.uk
 
 package IO::Async;
 
@@ -204,14 +204,14 @@ an asynchronous program.
 
 =head2 Futures
 
-A Future object represents a single outstanding action that is yet to
-complete, such as a name resolution operation or a socket connection. It
-stands in contrast to a C<IO::Async::Notifier>, which is an object that
+An L<IO::Async::Future> object represents a single outstanding action that is
+yet to complete, such as a name resolution operation or a socket connection.
+It stands in contrast to a C<IO::Async::Notifier>, which is an object that
 represents an ongoing source of activity, such as a readable filehandle of
 bytes or a POSIX signal.
 
-L<IO::Async::Future>s are a recent addition to the C<IO::Async> API and
-details are still subject to change and experimentation.
+Futures are a recent addition to the C<IO::Async> API and details are still
+subject to change and experimentation.
 
 In general, methods that support Futures return a new Future object to
 represent the outstanding operation. If callback functions are supplied as
@@ -258,7 +258,7 @@ C<IO::Async::Protocol::Datagram>
 =item *
 
 Support for watching filesystem entries for change. Extract logic from
-C<IO::Async::FileStream>. Define Loop watch/unwatch method pair.
+C<IO::Async::File> and define a Loop watch/unwatch method pair.
 
 =item *
 
