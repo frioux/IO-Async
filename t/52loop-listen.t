@@ -85,7 +85,8 @@ $loop->listen(
 wait_for { defined $listensock };
 
 ok( defined $listensock->fileno, '$listensock has a fileno' );
-isa_ok( $listensock, "IO::Socket::INET", '$listenaddr isa IO::Socket::INET' );
+# Not sure if it'll be an IO::Socket::INET or ::IP, but either way it should support these
+can_ok( $listensock, qw( peerhost peerport ) );
 
 wait_for { defined $notifier };
 
@@ -111,7 +112,7 @@ is( (unpack_sockaddr_in( $clientsock->peername ))[0], $listenport, '$clientsock 
 
 wait_for { defined $newclient };
 
-isa_ok( $newclient, "IO::Socket::INET", '$newclient isa IO::Socket::INET' );
+can_ok( $newclient, qw( peerhost peerport ) );
 
 is_deeply( [ unpack_sockaddr_in $newclient->peername ],
            [ unpack_sockaddr_in $clientsock->sockname ], '$newclient peer is correct' );
