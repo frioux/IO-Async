@@ -22,6 +22,9 @@ my $build = Module::Build->new(
       # Furthermore we've started using 5.10'isms
       'perl' => '5.010',
    },
+   recommends => {
+      'IO::Socket::IP' => 0,
+   },
    build_requires => {
       'File::Temp' => 0,
       'Test::More' => 0,
