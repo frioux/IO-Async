@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
-use Test::More tests => 5;
+use Test::More;
 
 use IO::Async::Loop;
 
@@ -43,3 +44,5 @@ is( IO::Async::Loop->new, $loop, 'IO::Async::Loop->new again yields same loop' )
 
    isa_ok( $loop, "IO::Async::Loop::Select", 'Magic constructor expands unqualified package names' );
 }
+
+done_testing;

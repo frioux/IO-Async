@@ -1,10 +1,11 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
 use IO::Async::Test;
 
-use Test::More tests => 27;
+use Test::More;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -304,6 +305,8 @@ my @sub_lines;
 
    $loop->remove( $filestream );
 }
+
+done_testing;
 
 package TestStream;
 use base qw( IO::Async::FileStream );

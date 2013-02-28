@@ -1,10 +1,11 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
 use IO::Async::Test;
 
-use Test::More tests => 68;
+use Test::More;
 
 use IO::Async::Process;
 
@@ -397,3 +398,5 @@ testing_loop( $loop );
               [ "First packet", "Second packet" ],
               '@output_packets after perl STDIO via dgram socketpair' );
 }
+
+done_testing;

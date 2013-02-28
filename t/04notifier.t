@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
-use Test::More tests => 38;
+use Test::More;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -150,6 +151,8 @@ is( $notifier->maybe_make_event_cb( 'mangle' ), undef, '->maybe_make_event_cb on
 undef @subargs;
 
 is_oneref( $notifier, '$notifier has refcount 1 finally' );
+
+done_testing;
 
 package TestNotifier;
 use base qw( IO::Async::Notifier );

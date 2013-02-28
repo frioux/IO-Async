@@ -1,10 +1,11 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
 use IO::Async::Test;
 
-use Test::More tests => 50;
+use Test::More;
 use Test::Refcount;
 
 use POSIX qw( WIFEXITED WEXITSTATUS ENOENT SIGTERM SIGUSR1 );
@@ -235,3 +236,5 @@ testing_loop( $loop );
 
    $loop->unwatch_signal( USR1 => );
 }
+
+done_testing;

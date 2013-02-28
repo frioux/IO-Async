@@ -1,10 +1,11 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
 use IO::Async::Test;
 
-use Test::More tests => 12;
+use Test::More;
 use Test::Refcount;
 
 use Fcntl qw( SEEK_SET SEEK_END );
@@ -108,3 +109,5 @@ SKIP: {
 
    $loop->remove( $file );
 }
+
+done_testing;

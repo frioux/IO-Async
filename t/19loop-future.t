@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
-use Test::More tests => 8;
+use Test::More;
 use Test::Identity;
 
 use IO::Async::Loop;
@@ -49,3 +50,5 @@ my $loop = IO::Async::Loop->new;
 
    is_deeply( [ $future->get ], [ "result" ], '$future->get on IO::Async::Future from $loop->new_future' );
 }
+
+done_testing;

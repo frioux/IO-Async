@@ -1,10 +1,11 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
 use IO::Async::Test;
 
-use Test::More tests => 26;
+use Test::More;
 use Test::Refcount;
 
 use Time::HiRes qw( time );
@@ -152,6 +153,8 @@ my $sub_expired;
 
    is_oneref( $timer, 'subclass $timer has refcount 1 after removing from Loop' );
 }
+
+done_testing;
 
 package TestTimer;
 use base qw( IO::Async::Timer::Absolute );

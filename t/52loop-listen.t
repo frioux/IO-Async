@@ -1,10 +1,11 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
 use IO::Async::Test;
 
-use Test::More tests => 19;
+use Test::More;
 
 use IO::Socket::INET;
 
@@ -173,3 +174,5 @@ SKIP: {
    ok( defined $listener, '$listener defined after bind failure' );
    ok( !$listener->loop, '$listener not in loop after bind failure' );
 }
+
+done_testing;

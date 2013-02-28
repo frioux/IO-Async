@@ -1,10 +1,11 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
 use IO::Async::Test;
 
-use Test::More tests => 40;
+use Test::More;
 use Test::Refcount;
 
 use Errno qw( EAGAIN EWOULDBLOCK ECONNRESET );
@@ -290,3 +291,5 @@ sub read_data
    my $stream = IO::Async::Stream->new_for_stdout;
    is( $stream->write_handle, \*STDOUT, 'Stream->new_for_stdout->write_handle is STDOUT' );
 }
+
+done_testing;

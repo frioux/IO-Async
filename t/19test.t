@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
-use Test::More tests => 5;
+use Test::More;
 use Test::Refcount;
 use IO::Async::Test;
 
@@ -64,3 +65,5 @@ $S2->syswrite( "Some dynamic data\n" );
 wait_for_stream { $readbuffer =~ m/\n/ } $S1 => sub { $readbuffer .= shift };
 
 is( $readbuffer, "Some dynamic data\n" );
+
+done_testing;

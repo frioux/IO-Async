@@ -1,10 +1,11 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
 use IO::Async::Test;
 
-use Test::More tests => 44;
+use Test::More;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -547,3 +548,5 @@ testing_loop( $loop );
 
    $loop->remove( $function );
 }
+
+done_testing;

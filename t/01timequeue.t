@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
-use Test::More tests => 24;
+use Test::More;
 use Test::Fatal;
 
 use IO::Async::Internals::TimeQueue;
@@ -75,3 +76,5 @@ $count = $queue->fire( now => 1510 );
 
 is( $fired, 1, '$fired after fire at time 1510' );
 is( $count, 1, '$count after fire at time 1510' );
+
+done_testing;

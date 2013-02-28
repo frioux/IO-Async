@@ -1,10 +1,11 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
 use IO::Async::Test;
 
-use Test::More tests => 6;
+use Test::More;
 
 use POSIX qw( SIGINT WEXITSTATUS WIFSIGNALED WTERMSIG );
 
@@ -68,3 +69,5 @@ testing_loop( $loop );
    is( WIFSIGNALED($exitcode), 0, 'WIFSIGNALED($exitcode) after child SIGINT with keep_signals' );
    is( WEXITSTATUS($exitcode), 22, 'WEXITSTATUS($exitcode) after child SIGINT with keep_signals' );
 }
+
+done_testing;

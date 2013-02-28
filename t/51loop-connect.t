@@ -1,10 +1,11 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
 use IO::Async::Test;
 
-use Test::More tests => 28;
+use Test::More;
 
 use IO::Socket::INET;
 use POSIX qw( ENOENT );
@@ -271,3 +272,5 @@ SKIP: {
    is( $error[0], "connect", '$error[0] is connect' );
    is( "$error[1]", $failure, "\$error[1] is '$failure'" );
 }
+
+done_testing;

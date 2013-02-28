@@ -1,10 +1,11 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
 use IO::Async::Test;
 
-use Test::More tests => 36;
+use Test::More;
 use Test::Fatal;
 
 use POSIX qw( WIFEXITED WEXITSTATUS ENOENT EBADF );
@@ -160,3 +161,5 @@ is( $dollarat,              '', '$dollarat after spawn ARRAY' );
    is( $dollarbang+0,        EBADF, '$dollarbang numerically after pipe close test' );
    is( $dollarat,               '', '$dollarat after pipe close test' );
 }
+
+done_testing;

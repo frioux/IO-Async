@@ -1,10 +1,11 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
 use IO::Async::Test;
 
-use Test::More tests => 21;
+use Test::More;
 use Test::Identity;
 use Test::Refcount;
 
@@ -109,6 +110,8 @@ is_refcount( $proto, 2, '$proto has refcount 2 before removal from Loop' );
 $loop->remove( $proto );
 
 is_oneref( $proto, '$proto has refcount 1 before EOF' );
+
+done_testing;
 
 package TestProtocol;
 use base qw( IO::Async::Protocol );

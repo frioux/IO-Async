@@ -1,6 +1,7 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
 use IO::Async::Test;
 
@@ -11,10 +12,7 @@ use POSIX qw( WEXITSTATUS );
 # These tests check the parts of Loop->spawn_child that need to be root to
 # work. Since we're unlikely to be root, skip the lot if we're not.
 
-if( $< == 0 ) {
-   plan tests => 5;
-}
-else { 
+unless( $< == 0 ) {
    plan skip_all => "not root";
 }
 
@@ -84,3 +82,5 @@ wait_for { defined $exitcode };
 is( $child_out,
     "EUID: 20\nEGID: 10\nGroups: 4 5 6 10\n",
     'combined setuid/gid/groups' );
+
+done_testing;

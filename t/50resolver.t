@@ -1,10 +1,11 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
 use IO::Async::Test;
 
-use Test::More tests => 27;
+use Test::More;
 
 use Socket 1.93 qw( 
    AF_INET SOCK_STREAM INADDR_LOOPBACK AI_PASSIVE
@@ -361,3 +362,5 @@ my ( $testerr, $testhost, $testserv ) = getnameinfo( $testaddr );
 
    is_deeply( [ $future->get ], [ "127.0.0.1", 80 ], '$resolver->getnameinfo with numeric is synchronous for future' );
 }
+
+done_testing;

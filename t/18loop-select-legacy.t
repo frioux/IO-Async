@@ -147,3 +147,5 @@ select( $rvec, $wvec, $evec, 1.5 * AUT );
 $loop->post_select( $rvec, $evec, $wvec );
 
 is( $done, 0, '$done still 0 before cancelled timeout' );
+
+done_testing;

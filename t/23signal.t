@@ -1,10 +1,11 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
 use IO::Async::Test;
 
-use Test::More tests => 23;
+use Test::More;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -135,6 +136,8 @@ ok( exception {
    },
    'Bad signal name fails'
 );
+
+done_testing;
 
 package TestSignal;
 use base qw( IO::Async::Signal );

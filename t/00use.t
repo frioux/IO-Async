@@ -1,7 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
-use Test::More tests => 22;
+use warnings;
+
+use Test::More;
 
 use_ok( "IO::Async::Notifier" );
 use_ok( "IO::Async::Handle" );
@@ -30,3 +32,5 @@ use_ok( "IO::Async::Connector" );
 use_ok( "IO::Async::Protocol" );
 use_ok( "IO::Async::Protocol::Stream" );
 use_ok( "IO::Async::Protocol::LineStream" );
+
+done_testing;

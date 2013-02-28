@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
-use Test::More tests => 31;
+use Test::More;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -89,6 +90,8 @@ $parent->remove_child( $child );
 
 is_oneref( $parent, '$parent has refcount 1 finally' );
 is_oneref( $child,  '$child has refcount 1 finally' );
+
+done_testing;
 
 package TestNotifier;
 use base qw( IO::Async::Notifier );

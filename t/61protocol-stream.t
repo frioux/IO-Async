@@ -1,10 +1,11 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
 use IO::Async::Test;
 
-use Test::More tests => 26;
+use Test::More;
 use Test::Refcount;
 
 use IO::Async::Loop;
@@ -211,6 +212,8 @@ undef @lines;
 wait_for { @lines };
 
 is( $lines[0], "A message\n", 'Protocol transport works' );
+
+done_testing;
 
 package TestProtocol::Stream;
 use base qw( IO::Async::Protocol::Stream );

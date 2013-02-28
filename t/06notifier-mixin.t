@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
-use Test::More tests => 9;
+use Test::More;
 use Test::Refcount;
 
 use IO::Async::Loop;
@@ -31,6 +32,8 @@ $loop->remove( $notifier );
 is( $notifier->loop, undef, '$notifier->loop is undef' );
 
 ok( !$in_loop, 'SomeEventSource::Async removed from Loop' );
+
+done_testing;
 
 package SomeEventSource;
 

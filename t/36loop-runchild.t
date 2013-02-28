@@ -1,10 +1,11 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
 use IO::Async::Test;
 
-use Test::More tests => 36;
+use Test::More;
 use Test::Fatal;
 
 use POSIX qw( WIFEXITED WEXITSTATUS );
@@ -152,3 +153,5 @@ ok( exception { $loop->run_child(
       ) },
    'unrecognised key fails'
 );
+
+done_testing;

@@ -1,10 +1,11 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
 use IO::Async::Test;
 
-use Test::More tests => 12;
+use Test::More;
 use Test::Identity;
 use Test::Refcount;
 
@@ -159,3 +160,5 @@ testing_loop( $loop );
 
    is( $sink_result, 0, 'synchronous src->sink can share a channel' );
 }
+
+done_testing;

@@ -1,10 +1,11 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
 use IO::Async::Test;
 
-use Test::More tests => 35;
+use Test::More;
 use Test::Identity;
 use Test::Refcount;
 
@@ -206,6 +207,8 @@ is_refcount( $listener, 2, 'subclass $listener has refcount 2 before removing fr
 $loop->remove( $listener );
 
 is_oneref( $listener, 'subclass $listener has refcount 1 after removing from Loop' );
+
+done_testing;
 
 package TestListener;
 use base qw( IO::Async::Listener );

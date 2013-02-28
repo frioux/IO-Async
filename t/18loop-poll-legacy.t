@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
-use Test::More tests => 11;
+use Test::More;
 
 use IO::Poll;
 
@@ -90,3 +91,5 @@ is( scalar $poll->handles, 2, '$poll->handles before removal in clean removal te
 $loop->unwatch_io( handle => \*STDOUT, on_write_ready => 1 );
 
 is( scalar $poll->handles, 1, '$poll->handles after removal in clean removal test' );
+
+done_testing;

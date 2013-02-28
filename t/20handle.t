@@ -1,10 +1,11 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
 use IO::Async::Test;
 
-use Test::More tests => 73;
+use Test::More;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -350,6 +351,8 @@ my $sub_writeready = 0;
 
    is( $handle->notifier_name, "rw=$fd1", '$handle->notifier_name for late bind after handles' );
 }
+
+done_testing;
 
 package TestHandle;
 use base qw( IO::Async::Handle );

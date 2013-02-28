@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
-use Test::More tests => 41;
+use Test::More;
 
 use IO::Async::OS;
 
@@ -152,3 +153,5 @@ SKIP: {
               [ AF_UNIX, SOCK_STREAM, 0, $sunaddr ],
               'extract_addrinfo( HASH ) with unix, path' );
 }
+
+done_testing;

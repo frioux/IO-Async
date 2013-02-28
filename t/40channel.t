@@ -1,10 +1,11 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
 use IO::Async::Test;
 
-use Test::More tests => 11;
+use Test::More;
 use Test::Identity;
 
 use IO::Async::Channel;
@@ -142,3 +143,5 @@ testing_loop( $loop );
    wait_for { $recv_eof };
    is( $recv_eof, 1, 'Async mode channel can ->recv on_eof' );
 }
+
+done_testing;

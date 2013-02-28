@@ -1,10 +1,11 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
 use IO::Async::Test;
 
-use Test::More tests => 15;
+use Test::More;
 use Test::Refcount;
 
 use IO::Async::Loop;
@@ -103,6 +104,8 @@ undef @lines;
 $loop->remove( $linestreamproto );
 
 undef $linestreamproto;
+
+done_testing;
 
 package TestProtocol::Stream;
 use base qw( IO::Async::Protocol::LineStream );

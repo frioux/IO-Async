@@ -1,10 +1,11 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
 use IO::Async::Test;
 
-use Test::More tests => 10;
+use Test::More;
 use Test::Identity;
 
 use IO::Async::Loop::Poll;
@@ -82,3 +83,5 @@ is_deeply( \%listenargs,
              param1 => "one",
              param2 => "two" },
            'FOO_listen still receives other extensions' );
+
+done_testing;

@@ -1,10 +1,11 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
 use IO::Async::Test;
 
-use Test::More tests => 40;
+use Test::More;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -273,6 +274,8 @@ wait_for { defined $send_errno };
 cmp_ok( $send_errno, "==", ECONNRESET, 'errno after failed send' );
 
 $loop->remove( $socket );
+
+done_testing;
 
 package TestSocket;
 use base qw( IO::Async::Socket );

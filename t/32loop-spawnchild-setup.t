@@ -1,10 +1,11 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
 use IO::Async::Test;
 
-use Test::More tests => 116;
+use Test::More;
 use Test::Fatal;
 
 use File::Temp qw( tmpnam );
@@ -433,3 +434,5 @@ TEST "chdir works",
 
    exitstatus => 0,
    dollarat   => '';
+
+done_testing;

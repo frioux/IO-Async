@@ -1,6 +1,7 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
 use IO::Async::Test;
 
@@ -386,6 +387,8 @@ my @sub_lines;
    my $stream = IO::Async::Stream->new_for_stdin;
    is( $stream->read_handle, \*STDIN, 'Stream->new_for_stdin->read_handle is STDIN' );
 }
+
+done_testing;
 
 package TestStream;
 use base qw( IO::Async::Stream );

@@ -1,10 +1,11 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
 use IO::Async::Test;
 
-use Test::More tests => 7;
+use Test::More;
 use Test::Fatal;
 use Test::Refcount;
 
@@ -131,3 +132,5 @@ sub read_data
 
    $loop->remove( $stream );
 }
+
+done_testing;

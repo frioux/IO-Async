@@ -1,10 +1,11 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 
 use strict;
+use warnings;
 
 use IO::Async::Test;
 
-use Test::More tests => 7;
+use Test::More;
 use Test::Fatal;
 
 use POSIX qw( WIFEXITED WEXITSTATUS );
@@ -59,3 +60,5 @@ ok( exception { $loop->open_child(
       ) },
    'on_exit parameter fails'
 );
+
+done_testing;
