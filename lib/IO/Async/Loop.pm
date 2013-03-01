@@ -718,14 +718,6 @@ sub later
    return $self->watch_idle( when => 'later', code => $code );
 }
 
-# undocumented, to be removed soon
-sub detach_child
-{
-   my $self = shift;
-   warnings::warnif( deprecated => "Loop->detach_child is deprecated; use ->fork instead" );
-   $self->fork( @_ );
-}
-
 =head2 $loop->spawn_child( %params )
 
 This method creates a new child process to run a given code block or command.
