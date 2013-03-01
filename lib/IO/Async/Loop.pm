@@ -163,6 +163,10 @@ sub __new
       die "$class should overload both ->enqueue_timer and ->cancel_timer, or neither";
    }
 
+   if( $old_timer ) {
+      warnings::warnif( deprecated => "Enabling old_timer workaround for old loop class " . $class );
+   }
+
    $self->{old_timer} = $old_timer;
 
    return $self;
