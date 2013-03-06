@@ -1236,8 +1236,6 @@ sub fork
       _exit( $exitvalue );
    }
 
-   my $loop = $self->{loop};
-
    if( defined $params{on_exit} ) {
       $self->watch_child( $kid => $params{on_exit} );
    }
