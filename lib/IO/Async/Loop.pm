@@ -1159,7 +1159,6 @@ sub pipequad    { shift; IO::Async::OS->pipequad( @_ ) }
 sub signame2num { shift; IO::Async::OS->signame2num( @_ ) }
 
 sub extract_addrinfo { shift; IO::Async::OS->extract_addrinfo( @_ ) }
-sub unpack_addrinfo  { goto &extract_addrinfo }
 
 =head2 $time = $loop->time
 
