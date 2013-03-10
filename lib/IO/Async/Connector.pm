@@ -137,13 +137,13 @@ sub _get_sock_err
 sub _connect_addresses
 {
    my $self = shift;
-   my ( $addrlist, $future, $on_fail ) = @_;
+   my ( $addrlist, $on_fail ) = @_;
 
    my $loop = $self->{loop};
 
    my ( $connecterr, $binderr, $socketerr );
 
-   my $f = repeat_until_success {
+   my $future = repeat_until_success {
       my $addr = shift;
       my ( $family, $socktype, $protocol, $localaddr, $peeraddr ) =
          @{$addr}{qw( family socktype protocol localaddr peeraddr )};
@@ -193,23 +193,20 @@ sub _connect_addresses
             return $f->fail( 1 );
          },
       );
+      # TODO: $f->on_cancel( sub { $loop->unwatch_io .... } );
       return $f;
    } foreach => $addrlist;
 
-   $f->on_done( $future );
-   $f->on_fail( sub {
-      return $future->fail( "connect: $connecterr", connect => connect => $connecterr )
+   return $future->or_else( sub {
+      return $future->new->fail( "connect: $connecterr", connect => connect => $connecterr )
          if $connecterr;
-      return $future->fail( "bind: $binderr",       connect => bind    => $binderr    )
+      return $future->new->fail( "bind: $binderr",       connect => bind    => $binderr    )
          if $binderr;
-      return $future->fail( "socket: $socketerr",   connect => socket  => $socketerr  )
+      return $future->new->fail( "socket: $socketerr",   connect => socket  => $socketerr  )
          if $socketerr;
       # If it gets this far then something went wrong
       die 'Oops; $loop->connect failed but no error cause was found';
    } );
-
-   $future->on_cancel( $f );
-   return $f;
 }
 
 =head2 $loop->connect( %params )
@@ -457,9 +454,12 @@ sub connect
       $localaddrfuture = $loop->new_future->done( {} );
    }
 
-   my $future = $loop->new_future;
-   my $addrfuture = Future->needs_all( $peeraddrfuture, $localaddrfuture )
-      ->on_done( sub {
+   my $future = Future->needs_all( $peeraddrfuture, $localaddrfuture )
+      ->or_else( sub {
+         my $f = shift;
+         return $loop->new_future->fail( $f->failure, resolve => $f->failure );
+      } )
+      ->and_then( sub {
          my @peeraddrs  = $peeraddrfuture->get;
          my @localaddrs = $localaddrfuture->get;
 
@@ -486,13 +486,8 @@ sub connect
             }
          }
 
-         $self->_connect_addresses( \@addrs, $future, $on_fail );
-      } )
-      ->on_fail( sub {
-         $future->fail( "$_[0]\n", resolve => $_[0] );
+         return $self->_connect_addresses( \@addrs, $on_fail );
       } );
-
-   $future->on_cancel( sub { $addrfuture->cancel } ) if !$future->is_ready;
 
    $future->on_done( $on_done ) if $on_done;
    $future->on_fail( sub {
