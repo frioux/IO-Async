@@ -1,5 +1,15 @@
 Revision history for IO-Async
 
+0.55    CHANGES:
+         * Try to ensure IO::Async::OS->socket returns an IO::Socket::IP
+           instance for PF_INET or PF_INET6 if it is available
+         * Don't bother testing subsecond loop_once behaviour because most
+           loops can't actually do it
+         * Use Future::Utils instead of CPS, removing a dependency
+         * Removed IO::Async::Sequencer
+         * Print a deprecation warning on old loop classes with old timer
+           support
+
 0.54    CHANGES:
          * Use Future instead of CPS::Future
          * Created IO::Async::Future subclass
