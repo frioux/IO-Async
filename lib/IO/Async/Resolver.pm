@@ -336,7 +336,7 @@ sub getaddrinfo
        }
    }
 
-   return $self->resolve(
+   my $future = $self->resolve(
       type    => "getaddrinfo_hash",
       data    => [
          host    => $host,
@@ -345,9 +345,12 @@ sub getaddrinfo
          map { exists $args{$_} ? ( $_ => $args{$_} ) : () } qw( family socktype protocol ),
       ],
       timeout => $args{timeout},
-      on_resolved => $args{on_resolved},
-      on_error    => $args{on_error},
    );
+
+   $future->on_done( $args{on_resolved} ) if $args{on_resolved};
+   $future->on_fail( $args{on_error}    ) if $args{on_error};
+
+   return $future;
 }
 
 =head2 $resolver->getnameinfo( %args )

@@ -193,7 +193,9 @@ sub _connect_addresses
             return $f->fail( 1 );
          },
       );
-      # TODO: $f->on_cancel( sub { $loop->unwatch_io .... } );
+      $f->on_cancel(
+         sub { $loop->unwatch_io( handle => $sock, on_write_ready => 1 ); }
+      );
       return $f;
    } foreach => $addrlist;
 
