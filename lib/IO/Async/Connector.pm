@@ -362,36 +362,35 @@ sub connect
 
    my $loop = $self->{loop};
 
-   my $future = $loop->new_future;
+   my $on_done;
 
    # Callbacks
    if( my $on_connected = delete $params{on_connected} ) {
-      $future->on_done( $on_connected );
+      $on_done = $on_connected;
    }
    elsif( my $on_stream = delete $params{on_stream} ) {
       require IO::Async::Stream;
       # TODO: It doesn't make sense to put a SOCK_DGRAM in an
       # IO::Async::Stream but currently we don't detect this
-      $future->on_done( sub {
+      $on_done = sub {
          my ( $handle ) = @_;
          $on_stream->( IO::Async::Stream->new( handle => $handle ) );
-      } );
+      };
    }
    elsif( my $on_socket = delete $params{on_socket} ) {
       require IO::Async::Socket;
-      $future->on_done( sub {
+      $on_done = sub {
          my ( $handle ) = @_;
          $on_socket->( IO::Async::Socket->new( handle => $handle ) );
-      } );
+      };
    }
    elsif( !defined wantarray ) {
       croak "Expected 'on_connected' or 'on_stream' callback or to return a Future";
    }
 
-   if( my $on_connect_error = $params{on_connect_error} ) {
-      $future->on_fail( sub {
-         $on_connect_error->( @_[2,3] ) if $_[1] eq "connect";
-      } );
+   my $on_connect_error;
+   if( $on_connect_error = $params{on_connect_error} ) {
+      # OK
    }
    elsif( !defined wantarray ) {
       croak "Expected 'on_connect_error' callback";
@@ -409,10 +408,9 @@ sub connect
    }
 
    my $have_fail_resolve = 1;
-   if( my $on_resolve_error = $params{on_resolve_error} ) {
-      $future->on_fail( sub {
-         $on_resolve_error->( $_[2] ) if $_[1] eq "resolve";
-      } );
+   my $on_resolve_error;
+   if( $on_resolve_error = $params{on_resolve_error} ) {
+      # OK
    }
    elsif( !defined wantarray ) {
       undef $have_fail_resolve;
@@ -459,6 +457,7 @@ sub connect
       $localaddrfuture = $loop->new_future->done( {} );
    }
 
+   my $future = $loop->new_future;
    my $addrfuture = Future->needs_all( $peeraddrfuture, $localaddrfuture )
       ->on_done( sub {
          my @peeraddrs  = $peeraddrfuture->get;
@@ -494,6 +493,12 @@ sub connect
       } );
 
    $future->on_cancel( sub { $addrfuture->cancel } ) if !$future->is_ready;
+
+   $future->on_done( $on_done ) if $on_done;
+   $future->on_fail( sub {
+      $on_connect_error->( @_[2,3] ) if $on_connect_error and $_[1] eq "connect";
+      $on_resolve_error->( $_[2] )   if $on_resolve_error and $_[1] eq "resolve";
+   } );
 
    return $future;
 }
