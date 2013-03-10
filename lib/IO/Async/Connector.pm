@@ -13,8 +13,8 @@ our $VERSION = '0.54';
 use POSIX qw( EINPROGRESS );
 use Socket qw( SOL_SOCKET SO_ERROR );
 
-use CPS qw( kforeach );
 use Future;
+use Future::Utils qw( repeat_until_success );
 
 use IO::Async::OS;
 
@@ -141,79 +141,75 @@ sub _connect_addresses
 
    my $loop = $self->{loop};
 
-   my $sock;
    my ( $connecterr, $binderr, $socketerr );
 
-   kforeach( $addrlist,
-      sub {
-         my ( $addr, $knext, $klast ) = @_;
-         my ( $family, $socktype, $protocol, $localaddr, $peeraddr ) = 
-            @{$addr}{qw( family socktype protocol localaddr peeraddr )};
+   my $f = repeat_until_success {
+      my $addr = shift;
+      my ( $family, $socktype, $protocol, $localaddr, $peeraddr ) =
+         @{$addr}{qw( family socktype protocol localaddr peeraddr )};
 
-         $sock = IO::Async::OS->socket( $family, $socktype, $protocol );
+      my $sock = IO::Async::OS->socket( $family, $socktype, $protocol );
 
-         if( !$sock ) {
-            $socketerr = $!;
-            $on_fail->( "socket", $family, $socktype, $protocol, $! ) if $on_fail;
-            goto &$knext;
-         }
-
-         if( $localaddr and not $sock->bind( $localaddr ) ) {
-            $binderr = $!;
-            $on_fail->( "bind", $sock, $localaddr, $! ) if $on_fail;
-            undef $sock;
-            goto &$knext;
-         }
-
-         $sock->blocking( 0 );
-
-         # TODO: $sock->connect returns success masking EINPROGRESS
-         my $ret = connect( $sock, $peeraddr );
-         if( $ret ) {
-            # Succeeded already? Dubious, but OK. Can happen e.g. with connections to
-            # localhost, or UNIX sockets, or something like that.
-            goto &$klast;
-         }
-         elsif( $! == EINPROGRESS or CONNECT_EWOULDLBOCK && $! == POSIX::EWOULDBLOCK ) {
-            $loop->watch_io(
-               handle => $sock,
-               on_write_ready => sub {
-                  $loop->unwatch_io( handle => $sock, on_write_ready => 1 );
-
-                  my $err = _get_sock_err( $sock );
-
-                  goto &$klast if !defined $err;
-
-                  $connecterr = $!;
-                  $on_fail->( "connect", $sock, $peeraddr, $err ) if $on_fail;
-                  undef $sock;
-                  goto &$knext;
-               },
-            );
-         }
-         else {
-            $connecterr = $!;
-            $on_fail->( "connect", $sock, $peeraddr, $! ) if $on_fail;
-            undef $sock;
-            goto &$knext;
-         }
-      },
-      sub {
-         if( $sock ) {
-            return $future->done( $sock );
-         }
-         else {
-            return $future->fail( "connect: $connecterr", connect => connect => $connecterr )
-               if $connecterr;
-            return $future->fail( "bind: $binderr",       connect => bind    => $binderr    )
-               if $binderr;
-            return $future->fail( "socket: $socketerr",   connect => socket  => $socketerr  )
-               if $socketerr;
-            # If it gets this far then something went wrong
-            die 'Oops; $loop->connect failed but no error cause was found';
-         }
+      if( !$sock ) {
+         $socketerr = $!;
+         $on_fail->( "socket", $family, $socktype, $protocol, $! ) if $on_fail;
+         return Future->new->fail( 1 );
       }
-   );
+
+      if( $localaddr and not $sock->bind( $localaddr ) ) {
+         $binderr = $!;
+         $on_fail->( "bind", $sock, $localaddr, $! ) if $on_fail;
+         return Future->new->fail( 1 );
+      }
+
+      $sock->blocking( 0 );
+
+      # TODO: $sock->connect returns success masking EINPROGRESS
+      my $ret = connect( $sock, $peeraddr );
+      if( $ret ) {
+         # Succeeded already? Dubious, but OK. Can happen e.g. with connections to
+         # localhost, or UNIX sockets, or something like that.
+         return Future->new->done( $sock );
+      }
+      elsif( $! != EINPROGRESS and !CONNECT_EWOULDLBOCK || $! != POSIX::EWOULDBLOCK ) {
+         $connecterr = $!;
+         $on_fail->( "connect", $sock, $peeraddr, $! ) if $on_fail;
+         return Future->new->fail( 1 );
+      }
+
+      # Else
+      my $f = $loop->new_future;
+      $loop->watch_io(
+         handle => $sock,
+         on_write_ready => sub {
+            $loop->unwatch_io( handle => $sock, on_write_ready => 1 );
+
+            my $err = _get_sock_err( $sock );
+
+            return $f->done( $sock ) if !$err;
+
+            $connecterr = $!;
+            $on_fail->( "connect", $sock, $peeraddr, $err ) if $on_fail;
+            return $f->fail( 1 );
+         },
+      );
+      return $f;
+   } foreach => $addrlist;
+
+   $f->on_done( $future );
+   $f->on_fail( sub {
+      return $future->fail( "connect: $connecterr", connect => connect => $connecterr )
+         if $connecterr;
+      return $future->fail( "bind: $binderr",       connect => bind    => $binderr    )
+         if $binderr;
+      return $future->fail( "socket: $socketerr",   connect => socket  => $socketerr  )
+         if $socketerr;
+      # If it gets this far then something went wrong
+      die 'Oops; $loop->connect failed but no error cause was found';
+   } );
+
+   $future->on_cancel( $f );
+   return $f;
 }
 
 =head2 $loop->connect( %params )
