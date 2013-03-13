@@ -76,8 +76,11 @@ sub ARRAY__enqueue
    my $self = shift;
    my ( $time, $code ) = @_;
 
-   # TODO: This could be more efficient maybe using a binary search insert
-   @$self = sort { $a->[TIME] <=> $b->[TIME] } @$self, my $elem = [ $time, $code ];
+   # TODO: This could be more efficient maybe using a binary search
+   my $idx = 0;
+   $idx++ while $idx < @$self and $self->[$idx][TIME] < $time;
+   splice @$self, $idx, 0, ( my $elem = [ $time, $code ]);
+
    return $elem;
 }
 

@@ -77,4 +77,18 @@ $count = $queue->fire( now => 1510 );
 is( $fired, 1, '$fired after fire at time 1510' );
 is( $count, 1, '$count after fire at time 1510' );
 
+# Performance for large collections
+{
+   foreach my $t ( 2000 .. 2100 ) {
+      $queue->enqueue( time => $t, code => sub {} );
+   }
+
+   foreach my $t ( 2000 .. 2100 ) {
+      $queue->next_time == $t or fail( "Failed for large collection - expected $t" ), last;
+      $queue->fire( now => $t );
+   }
+
+   ok( "Large collection" );
+}
+
 done_testing;
