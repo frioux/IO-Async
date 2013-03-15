@@ -224,6 +224,30 @@ testing_loop( $loop );
    my $stdout;
 
    my $process = IO::Async::Process->new(
+      command => [ $^X, "-pe", '$_ = "line"' ],
+      stdin   => { from => "" },
+      stdout  => { into => \$stdout },
+      on_finish => sub { },
+   );
+
+   isa_ok( $process->stdin, "IO::Async::Stream", '$process->stdin' );
+
+   $loop->add( $process );
+
+   ok( defined $process->stdin->write_handle, '$process->stdin has write_handle for perl STDIN->STDOUT from empty string' );
+
+   wait_for { !$process->is_running };
+
+   ok( $process->is_exited,     '$process->is_exited after perl STDIN->STDOUT from empty string' );
+   is( $process->exitstatus, 0, '$process->exitstatus after perl STDIN->STDOUT from empty string' );
+
+   is( $stdout, "", '$stdout after perl STDIN->STDOUT from empty string' );
+}
+
+{
+   my $stdout;
+
+   my $process = IO::Async::Process->new(
       command => [ $^X, "-pe", '$_ = uc' ],
       fd0 => { from => "some data\n" },
       fd1 => { into => \$stdout },

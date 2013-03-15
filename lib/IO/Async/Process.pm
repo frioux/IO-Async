@@ -337,7 +337,7 @@ sub configure_fd
       $wants_read++;
    }
 
-   if( my $from = delete $args{from} ) {
+   if( defined( my $from = delete $args{from} ) ) {
       $opts->{from} = $from;
 
       $wants_write++;
