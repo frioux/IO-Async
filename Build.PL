@@ -6,7 +6,7 @@ use Module::Build;
 my $build = Module::Build->new(
    module_name => 'IO::Async',
    requires => {
-      'Future' => '0.08',
+      'Future' => '0.12',
       'Exporter' => '5.57',
       'File::stat' => 0,
       'IO::Poll' => 0,

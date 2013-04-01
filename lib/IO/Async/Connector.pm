@@ -197,7 +197,7 @@ sub _connect_addresses
          sub { $loop->unwatch_io( handle => $sock, on_write_ready => 1 ); }
       );
       return $f;
-   } foreach => $addrlist;
+   } foreach => $addrlist, return => $loop->new_future;
 
    return $future->or_else( sub {
       return $future->new->fail( "connect: $connecterr", connect => connect => $connecterr )
