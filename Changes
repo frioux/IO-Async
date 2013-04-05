@@ -1,5 +1,18 @@
 Revision history for IO-Async
 
+0.56    CHANGES:
+         * Added $loop->delay_future and $loop->timeout_future
+         * Added $future->loop accessor
+         * Use a faster splice()-based mechanism for the ARRAY-based TimeQueue
+         * Updated for Future::Utils 0.12 'repeat' function
+
+        BUGFIXES:
+         * Ensure that Process from => "" works
+         * If select() returns -1 ignore the bit vectors
+         * pipe() on Windows doesn't play with select(); emulate ->pipepair
+           using ->socketpair
+         * Correct use of S_ISREG and stat()
+
 0.55    CHANGES:
          * Try to ensure IO::Async::OS->socket returns an IO::Socket::IP
            instance for PF_INET or PF_INET6 if it is available
