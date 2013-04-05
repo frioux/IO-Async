@@ -224,6 +224,11 @@ sub loop_once
 
    my $ret = select( $rvec, $wvec, $evec, $timeout );
 
+   if( $ret < 0 ) {
+      # r/w/e vec can't be trusted
+      $rvec = $wvec = $evec = '';
+   }
+
    {
       local $!;
       $self->post_select( $rvec, $wvec, $evec );
