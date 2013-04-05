@@ -567,6 +567,54 @@ sub await_all
    $self->loop_once until _all_ready @futures;
 }
 
+=head2 $future = $loop->delay_future( %args )
+
+Returns a new C<IO::Async::Future> instance which will become done at a given
+point in time. The C<%args> should contain an C<at> or C<after> key as per the
+C<watch_time> method. The returned future may be cancelled to cancel the
+timer. At the alloted time the future will succeed with an empty result list.
+
+=cut
+
+sub delay_future
+{
+   my $self = shift;
+   my %args = @_;
+
+   my $future = $self->new_future;
+   my $id = $self->watch_time( %args,
+      code => sub { $future->done },
+   );
+
+   $future->on_cancel( sub { shift->loop->unwatch_time( $id ) } );
+
+   return $future;
+}
+
+=head2 $future = $loop->timeout_future( %args )
+
+Returns a new C<IO::Async::Future> instance which will fail at a given point
+in time. The C<%args> should contain an C<at> or C<after> key as per the
+C<watch_time> method. The returned future may be cancelled to cancel the
+timer. At the alloted time, the future will fail with the string C<"Timeout">.
+
+=cut
+
+sub timeout_future
+{
+   my $self = shift;
+   my %args = @_;
+
+   my $future = $self->new_future;
+   my $id = $self->watch_time( %args,
+      code => sub { $future->fail( "Timeout" ) },
+   );
+
+   $future->on_cancel( sub { shift->loop->unwatch_time( $id ) } );
+
+   return $future;
+}
+
 ############
 # Features #
 ############
