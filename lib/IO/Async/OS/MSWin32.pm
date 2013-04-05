@@ -38,6 +38,13 @@ See instead L<IO::Async::OS>.
 
 =cut
 
+# Win32's pipes don't actually work with select(). We'll have to create
+# sockets instead
+sub pipepair
+{
+   shift->socketpair( 'inet', 'stream' );
+}
+
 # Win32 doesn't have a socketpair(). We'll fake one up
 sub socketpair
 {
