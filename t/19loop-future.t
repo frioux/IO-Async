@@ -38,6 +38,8 @@ my $loop = IO::Async::Loop->new;
 {
    my $future = IO::Async::Future->new( $loop );
 
+   identical( $future->loop, $loop, '$future->loop yields $loop' );
+
    $loop->later( sub { $future->done( "result" ) } );
 
    is_deeply( [ $future->get ], [ "result" ], '$future->get on IO::Async::Future' );

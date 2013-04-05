@@ -55,6 +55,22 @@ sub new
    return $self;
 }
 
+=head1 METHODS
+
+=cut
+
+=head2 $loop = $future->loop
+
+Returns the underlying C<IO::Async::Loop> object.
+
+=cut
+
+sub loop
+{
+   my $self = shift;
+   return $self->{loop};
+}
+
 sub await
 {
    my $self = shift;
