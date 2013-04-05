@@ -1141,24 +1141,13 @@ to give different implementations on that OS.
 
 =cut
 
-=head2 ( $S1, $S2 ) = $loop->socketpair( $family, $socktype, $proto )
-
-=head2 ( $rd, $wr ) = $loop->pipepair
-
-=head2 ( $rdA, $wrA, $rdB, $wrB ) = $loop->pipequad
-
 =head2 $signum = $loop->signame2num( $signame )
 
 Legacy wrappers around L<IO::Async::OS> functions.
 
 =cut
 
-sub socketpair  { shift; IO::Async::OS->socketpair( @_ ) }
-sub pipepair    { shift; IO::Async::OS->pipepair( @_ ) }
-sub pipequad    { shift; IO::Async::OS->pipequad( @_ ) }
 sub signame2num { shift; IO::Async::OS->signame2num( @_ ) }
-
-sub extract_addrinfo { shift; IO::Async::OS->extract_addrinfo( @_ ) }
 
 =head2 $time = $loop->time
 
