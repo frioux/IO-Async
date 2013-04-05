@@ -17,7 +17,7 @@ use IO::Async::OS;
 
 use Carp;
 
-use POSIX qw( S_ISREG );
+use Fcntl qw( S_ISREG );
 
 # select() on most platforms claims that ISREG files are always read- and
 # write-ready, but not on MSWin32. We need to fake this

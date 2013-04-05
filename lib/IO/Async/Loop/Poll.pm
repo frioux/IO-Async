@@ -17,7 +17,8 @@ use Carp;
 
 use IO::Poll qw( POLLIN POLLOUT POLLHUP POLLERR );
 
-use POSIX qw( EINTR S_ISREG );
+use Errno qw( EINTR );
+use Fcntl qw( S_ISREG );
 
 # IO::Poll version 0.05 contain a bug whereby the ->remove method doesn't
 # properly clean up all the references to the handles. If the version we're
