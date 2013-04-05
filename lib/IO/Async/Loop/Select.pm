@@ -253,7 +253,7 @@ sub watch_io
    # but it does indicate exceptional
    vec( $self->{evec}, $fileno, 1 ) = 1 if SELECT_CONNECT_EVEC and $params{on_write_ready};
 
-   vec( $self->{avec}, $fileno, 1 ) = 1 if FAKE_ISREG_READY and S_ISREG(stat $params{handle});
+   vec( $self->{avec}, $fileno, 1 ) = 1 if FAKE_ISREG_READY and S_ISREG +(stat $params{handle})[2];
 }
 
 sub unwatch_io
@@ -270,7 +270,7 @@ sub unwatch_io
 
    vec( $self->{evec}, $fileno, 1 ) = 0 if SELECT_CONNECT_EVEC and $params{on_write_ready};
 
-   vec( $self->{avec}, $fileno, 1 ) = 0 if FAKE_ISREG_READY and S_ISREG(stat $params{handle});
+   vec( $self->{avec}, $fileno, 1 ) = 0 if FAKE_ISREG_READY and S_ISREG +(stat $params{handle})[2];
 
    # vec will grow a bit vector as needed, but never shrink it. We'll trim
    # trailing null bytes

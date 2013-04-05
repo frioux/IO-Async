@@ -255,7 +255,7 @@ sub watch_io
    $params{on_write_ready} and $mask |= POLLOUT;
    $params{on_hangup}      and $mask |= POLLHUP;
 
-   if( FAKE_ISREG_READY and S_ISREG(stat $handle) ) {
+   if( FAKE_ISREG_READY and S_ISREG +(stat $handle)[2] ) {
       $self->{fake_isreg}{$handle->fileno} = [ $handle, $mask ];
    }
 
@@ -281,7 +281,7 @@ sub unwatch_io
    $params{on_write_ready} and $mask &= ~POLLOUT;
    $params{on_hangup}      and $mask &= ~POLLHUP;
 
-   if( FAKE_ISREG_READY and S_ISREG(stat $handle) ) {
+   if( FAKE_ISREG_READY and S_ISREG +(stat $handle)[2] ) {
       if( $mask ) {
          $self->{fake_isreg}{$handle->fileno} = [ $handle, $mask ];
       }
