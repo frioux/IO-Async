@@ -229,7 +229,8 @@ sub _make_cb
 
       $self->invoke_event( on_tick => );
 
-      $self->start;
+      # detect ->stop
+      $self->start if defined $self->{next_time};
    } );
 }
 

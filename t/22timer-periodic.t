@@ -148,6 +148,29 @@ testing_loop( $loop );
    $loop->remove( $timer );
 }
 
+# Self-stopping
+{
+   my $count = 0;
+   my $timer = IO::Async::Timer::Periodic->new(
+      interval => 0.1 * AUT,
+
+      on_tick => sub { $count++; shift->stop if $count >= 5 },
+   );
+
+   $loop->add( $timer );
+   $timer->start;
+
+   my $timedout;
+   my $id = $loop->watch_time( after => 1 * AUT, code => sub { $timedout++ } );
+
+   wait_for { $timedout };
+
+   is( $count, 5, 'Self-stopping timer can stop itself' );
+
+   $loop->remove( $timer );
+   $loop->unwatch_time( $id );
+}
+
 ## Subclass
 
 my $sub_tick = 0;
