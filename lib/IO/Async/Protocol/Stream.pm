@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2010-2011 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2010-2013 -- leonerd@leonerd.org.uk
 
 package IO::Async::Protocol::Stream;
 
@@ -197,7 +197,8 @@ sub write
       $args{on_flush} = $self->_replace_weakself( $args{on_flush} );
    }
 
-   $self->transport->write( $data, %args );
+   my $transport = $self->transport or croak "Attempted to ->write to a ".ref($self)." with no transport";
+   $transport->write( $data, %args );
 }
 
 =head2 $protocol->connect( %args )
