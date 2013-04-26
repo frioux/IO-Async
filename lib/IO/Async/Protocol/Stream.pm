@@ -83,7 +83,11 @@ references in parameters:
 
 =head2 $ret = on_read \$buffer, $eof
 
-The C<on_read> handler is invoked identically to C<IO::Async::Stream>.
+=head2 on_read_eof
+
+=head2 on_write_eof
+
+The event handlers are invoked identically to C<IO::Async::Stream>.
 
 =head2 on_closed
 
@@ -101,7 +105,11 @@ The following named parameters may be passed to C<new> or C<configure>:
 
 =item on_read => CODE
 
-CODE reference for the C<on_read> event.
+=item on_read_eof => CODE
+
+=item on_write_eof => CODE
+
+CODE references for the events.
 
 =item handle => IO
 
@@ -119,7 +127,7 @@ sub configure
    my $self = shift;
    my %params = @_;
 
-   for (qw( on_read )) {
+   for (qw( on_read on_read_eof on_write_eof )) {
       $self->{$_} = delete $params{$_} if exists $params{$_};
    }
 
@@ -154,9 +162,18 @@ sub setup_transport
    $transport->configure( 
       on_read => $self->_capture_weakself( sub {
          my $self = shift;
-         my ( $transport, $buffref, $eof ) = @_;
-
-         $self->invoke_event( on_read => $buffref, $eof );
+         shift;
+         $self->invoke_event( on_read => @_ );
+      } ),
+      on_read_eof => $self->_capture_weakself( sub {
+         my $self = shift;
+         shift;
+         $self->maybe_invoke_event( on_read_eof => @_ );
+      } ),
+      on_write_eof => $self->_capture_weakself( sub {
+         my $self = shift;
+         shift;
+         $self->maybe_invoke_event( on_write_eof => @_ );
       } ),
    );
 }

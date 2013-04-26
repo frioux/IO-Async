@@ -213,6 +213,23 @@ my @sub_lines;
    is( $lines[0], "A message\n", 'Protocol transport works' );
 }
 
+{
+   my $read_eof;
+   my $write_eof;
+   my $streamproto = IO::Async::Protocol::Stream->new(
+      on_read_eof  => sub { $read_eof++ },
+      on_write_eof => sub { $write_eof++ },
+   );
+
+   $streamproto->configure( transport => my $stream = IO::Async::Stream->new );
+
+   $stream->invoke_event( on_read_eof => );
+   is( $read_eof, 1, '$read_eof after on_read_eof' );
+
+   $stream->invoke_event( on_write_eof => );
+   is( $write_eof, 1, '$write_eof after on_write_eof' );
+}
+
 done_testing;
 
 package TestProtocol::Stream;
