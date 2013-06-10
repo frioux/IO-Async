@@ -26,7 +26,6 @@ our $WRITELEN = 8192;
 # Indicies in writequeue elements
 use constant WQ_DATA     => 0;
 use constant WQ_ON_FLUSH => 1;
-use constant WQ_GENSUB   => 2;
 
 =head1 NAME
 
@@ -150,7 +149,7 @@ sub _init
 {
    my $self = shift;
 
-   $self->{writequeue} = []; # Queue of ARRAYs. Each will be [ $data, $on_flushed, $gensub ]
+   $self->{writequeue} = []; # Queue of ARRAYs. Each will be [ $data, $on_flushed ]
    $self->{readbuff} = "";
 
    $self->{read_len}  = $READLEN;
@@ -338,19 +337,26 @@ sub _flush_one
 {
    my $self = shift;
 
-   my $head = $self->{writequeue}[WQ_DATA];
+   my $writequeue = $self->{writequeue};
 
-   if( !defined $head->[WQ_DATA] ) {
-      my $gensub = $head->[WQ_GENSUB] or die "Internal consistency problem - empty writequeue item without a gensub\n";
-      $head->[WQ_DATA] = $gensub->( $self );
-
-      if( !defined $head->[WQ_DATA] ) {
-         $head->[WQ_ON_FLUSH]->( $self ) if $head->[WQ_ON_FLUSH];
-         shift @{ $self->{writequeue} };
-
-         return 1;
+   my $head;
+   while( $head = $writequeue->[0] and ref $head->[WQ_DATA] ) {
+      if( ref $head->[WQ_DATA] eq "CODE" ) {
+         my $data = $head->[WQ_DATA]->( $self );
+         if( !defined $data ) {
+            $head->[WQ_ON_FLUSH]->( $self ) if $head->[WQ_ON_FLUSH];
+            shift @$writequeue;
+            return 1;
+         }
+         unshift @$writequeue, [ $data ];
+         next;
+      }
+      else {
+         die "Unsure what to do with non-reference ".ref($head->[WQ_DATA])." in write queue";
       }
    }
+
+   die "TODO: head data does not contain a plain string" if ref $head->[WQ_DATA];
 
    my $len = $self->write_handle->syswrite( $head->[WQ_DATA], $self->{write_len} );
 
@@ -370,13 +376,8 @@ sub _flush_one
    substr( $head->[WQ_DATA], 0, $len ) = "";
 
    if( !length $head->[WQ_DATA] ) {
-      if( $head->[WQ_GENSUB] ) {
-         undef $head->[WQ_DATA]; # We'll get some more next time around
-      }
-      else {
-         $head->[WQ_ON_FLUSH]->( $self ) if $head->[WQ_ON_FLUSH];
-         shift @{ $self->{writequeue} };
-      }
+      $head->[WQ_ON_FLUSH]->( $self ) if $head->[WQ_ON_FLUSH];
+      shift @{ $self->{writequeue} };
    }
 
    return 1;
@@ -512,25 +513,16 @@ sub write
    # Combine short writes we can
    my $tail = @{ $self->{writequeue} } ? $self->{writequeue}[-1] : undef;
 
+   # TODO: This might be better moved into ->_flush_one
    if( $tail and
        !ref $data and
-       !$tail->[WQ_GENSUB] and
        length($data) + length($tail->[WQ_DATA]) < $self->{write_len} and
        !$params{on_flush} and
        !$tail->[WQ_ON_FLUSH]) {
       $tail->[WQ_DATA] .= $data;
    }
    else {
-      push @{ $self->{writequeue} }, my $elem = [];
-
-      if( ref $data eq "CODE" ) {
-         $elem->[WQ_GENSUB] = $data;
-      }
-      else {
-         $elem->[WQ_DATA] = $data;
-      }
-
-      $elem->[WQ_ON_FLUSH] = delete $params{on_flush};
+      push @{ $self->{writequeue} }, [ $data, delete $params{on_flush} ];
    }
 
    keys %params and croak "Unrecognised keys for ->write - " . join( ", ", keys %params );
