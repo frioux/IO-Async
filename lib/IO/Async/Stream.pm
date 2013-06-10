@@ -236,11 +236,11 @@ may be useful for reading regular files, or interacting with TTY devices.
 =item encoding => STRING
 
 If supplied, sets the name of encoding of the underlying stream. If an
-encoding is set, then the C<print> method will expect to receive Unicode
+encoding is set, then the C<write> method will expect to receive Unicode
 strings and encodes them into bytes, and incoming bytes will be decoded into
 Unicode strings for the C<on_read> event.
 
-If an encoding is not supplied then C<print> and C<on_read> will work in byte
+If an encoding is not supplied then C<write> and C<on_read> will work in byte
 strings.
 
 I<IMPORTANT NOTE:> in order to handle reads of UTF-8 content or other
