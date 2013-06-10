@@ -17,6 +17,7 @@ use Errno qw( EAGAIN EWOULDBLOCK EINTR EPIPE );
 use Carp;
 
 use Encode 2.11 qw( find_encoding STOP_AT_PARTIAL );
+use Scalar::Util qw( blessed );
 
 # Tuneable from outside
 # Not yet documented
@@ -26,6 +27,7 @@ our $WRITELEN = 8192;
 # Indicies in writequeue elements
 use constant WQ_DATA     => 0;
 use constant WQ_ON_FLUSH => 1;
+use constant WQ_WATCHING => 2;
 
 =head1 NAME
 
@@ -351,8 +353,19 @@ sub _flush_one
          unshift @$writequeue, [ $data ];
          next;
       }
+      elsif( blessed $head->[WQ_DATA] and $head->[WQ_DATA]->isa( "Future" ) ) {
+         my $f = $head->[WQ_DATA];
+         if( $f->is_ready ) {
+            $head->[WQ_DATA] = $f->get;
+            next;
+         }
+         return 0 if $head->[WQ_WATCHING];
+         $f->on_ready( sub { $self->_flush_one } );
+         $head->[WQ_WATCHING]++;
+         return 0;
+      }
       else {
-         die "Unsure what to do with non-reference ".ref($head->[WQ_DATA])." in write queue";
+         die "Unsure what to do with reference ".ref($head->[WQ_DATA])." in write queue";
       }
    }
 
@@ -450,12 +463,21 @@ will have been written by the time this method returns. If it fails to write
 completely, then the data is queued as if C<autoflush> were not set, and will
 be flushed as normal.
 
-C<$data> can either be a plain string, or a CODE reference. If it is a CODE
-reference, it will be invoked to generate data to be written. Each time the
-filehandle is ready to receive more data to it, the function is invoked, and
-what it returns written to the filehandle. Once the function has finished
-generating data it should return undef. The function is passed the Stream
-object as its first argument.
+C<$data> can either be a plain string, a L<Future>, or a CODE reference. If it
+is a plain string it is written immediately. If it is not, its value will be
+used to generate more C<$data> values, eventually leading to strings to be
+written.
+
+If C<$data> is a C<Future>, the Stream will wait until it is ready, and take
+the single value it yields.
+
+If C<$data> is a CODE reference, it will be repeatedly invoked to generate new
+values. Each time the filehandle is ready to write more data to it, the
+function is invoked. Once the function has finished generating data it should
+return undef. The function is passed the Stream object as its first argument.
+
+It is allowed that C<Future>s yield CODE references, or CODE references return
+C<Future>s, as well as plain strings.
 
 For example, to stream the contents of an existing opened filehandle:
 

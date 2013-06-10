@@ -210,13 +210,38 @@ sub read_data
    is_oneref( $stream, 'closing $stream refcount 1 finally' );
 }
 
+# ->write( Future )
+{
+   my ( $rd, $wr ) = mkhandles;
+   my $stream = IO::Async::Stream->new(
+      write_handle => $wr,
+   );
+   $loop->add( $stream );
+
+   my $flushed;
+   $stream->write(
+      my $future = $loop->new_future,
+      on_flush => sub { $flushed++ },
+   );
+
+   $loop->loop_once( 0.1 );
+   is( read_data( $rd ), "", 'stream idle before Future completes' );
+
+   $future->done( "some data to write" );
+
+   wait_for { $flushed };
+
+   is( read_data( $rd ), "some data to write", 'stream written by Future completion' );
+
+   $loop->remove( $stream );
+}
+
 # ->write( CODE )
 {
    my ( $rd, $wr ) = mkhandles;
    my $stream = IO::Async::Stream->new(
       write_handle => $wr,
    );
-
    $loop->add( $stream );
 
    my $done;
@@ -238,7 +263,9 @@ sub read_data
    my @chunks = ( "some ", "message chunks ", "here\n" );
 
    $stream->write(
-      sub { return shift @chunks },
+      sub {
+         return shift @chunks;
+      },
       on_flush => sub { $flushed++ },
    );
 
@@ -246,6 +273,33 @@ sub read_data
    wait_for { $flushed };
 
    is( read_data( $rd ), "some message chunks here\n", 'multiple lazy data was written' );
+
+   $loop->remove( $stream );
+}
+
+# ->write mixed returns
+{
+   my ( $rd, $wr ) = mkhandles;
+   my $stream = IO::Async::Stream->new(
+      write_handle => $wr,
+   );
+   $loop->add( $stream );
+
+   my $flushed;
+   $stream->write( my $future = $loop->new_future, on_flush => sub { $flushed++ } );
+
+   my $once = 0;
+   $future->done( sub {
+      return $once++ ? undef : ( $future = $loop->new_future );
+   });
+
+   wait_for { $once };
+
+   $future->done( "Eventual string" );
+
+   wait_for { $flushed };
+
+   is( read_data( $rd ), "Eventual string", 'multiple lazy data was written' );
 
    $loop->remove( $stream );
 }
