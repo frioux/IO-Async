@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2006-2012 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2006-2013 -- leonerd@leonerd.org.uk
 
 package IO::Async::Stream;
 
@@ -335,74 +335,6 @@ sub _is_empty
    return !@{ $self->{writequeue} };
 }
 
-sub _flush_one
-{
-   my $self = shift;
-
-   my $writequeue = $self->{writequeue};
-
-   my $head;
-   while( $head = $writequeue->[0] and ref $head->[WQ_DATA] ) {
-      if( ref $head->[WQ_DATA] eq "CODE" ) {
-         my $data = $head->[WQ_DATA]->( $self );
-         if( !defined $data ) {
-            $head->[WQ_ON_FLUSH]->( $self ) if $head->[WQ_ON_FLUSH];
-            shift @$writequeue;
-            return 1;
-         }
-         if( !ref $data and my $encoding = $self->{encoding} ) {
-            $data = $encoding->encode( $data );
-         }
-         unshift @$writequeue, [ $data ];
-         next;
-      }
-      elsif( blessed $head->[WQ_DATA] and $head->[WQ_DATA]->isa( "Future" ) ) {
-         my $f = $head->[WQ_DATA];
-         if( !$f->is_ready ) {
-            return 0 if $head->[WQ_WATCHING];
-            $f->on_ready( sub { $self->_flush_one } );
-            $head->[WQ_WATCHING]++;
-            return 0;
-         }
-         my $data = $f->get;
-         if( !ref $data and my $encoding = $self->{encoding} ) {
-            $data = $encoding->encode( $data );
-         }
-         $head->[WQ_DATA] = $data;
-         next;
-      }
-      else {
-         die "Unsure what to do with reference ".ref($head->[WQ_DATA])." in write queue";
-      }
-   }
-
-   die "TODO: head data does not contain a plain string" if ref $head->[WQ_DATA];
-
-   my $len = $self->write_handle->syswrite( $head->[WQ_DATA], $self->{write_len} );
-
-   if( !defined $len ) {
-      my $errno = $!;
-
-      return 0 if _nonfatal_error( $errno );
-
-      $self->maybe_invoke_event( on_write_eof => ) if $errno == EPIPE;
-
-      $self->maybe_invoke_event( on_write_error => $errno )
-         or $self->close_now;
-
-      return 0;
-   }
-
-   substr( $head->[WQ_DATA], 0, $len ) = "";
-
-   if( !length $head->[WQ_DATA] ) {
-      $head->[WQ_ON_FLUSH]->( $self ) if $head->[WQ_ON_FLUSH];
-      shift @{ $self->{writequeue} };
-   }
-
-   return 1;
-}
-
 =head2 $stream->close
 
 A synonym for C<close_when_empty>. This should not be used when the deferred
@@ -522,6 +454,74 @@ to this point.
 
 =cut
 
+sub _flush_one_write
+{
+   my $self = shift;
+
+   my $writequeue = $self->{writequeue};
+
+   my $head;
+   while( $head = $writequeue->[0] and ref $head->[WQ_DATA] ) {
+      if( ref $head->[WQ_DATA] eq "CODE" ) {
+         my $data = $head->[WQ_DATA]->( $self );
+         if( !defined $data ) {
+            $head->[WQ_ON_FLUSH]->( $self ) if $head->[WQ_ON_FLUSH];
+            shift @$writequeue;
+            return 1;
+         }
+         if( !ref $data and my $encoding = $self->{encoding} ) {
+            $data = $encoding->encode( $data );
+         }
+         unshift @$writequeue, [ $data ];
+         next;
+      }
+      elsif( blessed $head->[WQ_DATA] and $head->[WQ_DATA]->isa( "Future" ) ) {
+         my $f = $head->[WQ_DATA];
+         if( !$f->is_ready ) {
+            return 0 if $head->[WQ_WATCHING];
+            $f->on_ready( sub { $self->_flush_one_write } );
+            $head->[WQ_WATCHING]++;
+            return 0;
+         }
+         my $data = $f->get;
+         if( !ref $data and my $encoding = $self->{encoding} ) {
+            $data = $encoding->encode( $data );
+         }
+         $head->[WQ_DATA] = $data;
+         next;
+      }
+      else {
+         die "Unsure what to do with reference ".ref($head->[WQ_DATA])." in write queue";
+      }
+   }
+
+   die "TODO: head data does not contain a plain string" if ref $head->[WQ_DATA];
+
+   my $len = $self->write_handle->syswrite( $head->[WQ_DATA], $self->{write_len} );
+
+   if( !defined $len ) {
+      my $errno = $!;
+
+      return 0 if _nonfatal_error( $errno );
+
+      $self->maybe_invoke_event( on_write_eof => ) if $errno == EPIPE;
+
+      $self->maybe_invoke_event( on_write_error => $errno )
+         or $self->close_now;
+
+      return 0;
+   }
+
+   substr( $head->[WQ_DATA], 0, $len ) = "";
+
+   if( !length $head->[WQ_DATA] ) {
+      $head->[WQ_ON_FLUSH]->( $self ) if $head->[WQ_ON_FLUSH];
+      shift @{ $self->{writequeue} };
+   }
+
+   return 1;
+}
+
 sub write
 {
    my $self = shift;
@@ -542,7 +542,7 @@ sub write
    # Combine short writes we can
    my $tail = @{ $self->{writequeue} } ? $self->{writequeue}[-1] : undef;
 
-   # TODO: This might be better moved into ->_flush_one
+   # TODO: This might be better moved into ->_flush_one_write
    if( $tail and
        !ref $data and
        length($data) + length($tail->[WQ_DATA]) < $self->{write_len} and
@@ -559,7 +559,7 @@ sub write
    return unless $handle;
 
    if( $self->{autoflush} ) {
-      1 while !$self->_is_empty and $self->_flush_one;
+      1 while !$self->_is_empty and $self->_flush_one_write;
 
       if( $self->_is_empty ) {
          $self->want_writeready( 0 );
@@ -641,7 +641,7 @@ sub on_write_ready
 {
    my $self = shift;
 
-   1 while !$self->_is_empty and $self->_flush_one and $self->{write_all};
+   1 while !$self->_is_empty and $self->_flush_one_write and $self->{write_all};
 
    # All data successfully flushed
    if( $self->_is_empty ) {
