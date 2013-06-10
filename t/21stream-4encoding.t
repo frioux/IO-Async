@@ -116,7 +116,7 @@ sub read_data
 
    wait_for { $flushed };
 
-   is( read_data( $rd ), "\xc4\x89", 'UTF-8 bytes written by ->write' );
+   is( read_data( $rd ), "\xc4\x89", 'UTF-8 bytes written by ->write string' );
 
    $stream->configure( write_len => 1 );
 
@@ -129,6 +129,21 @@ sub read_data
 
    $loop->loop_once while !length( $byte = read_data( $rd ) );
    is( $byte, "\x89", 'Remaining UTF-8 byte written with write_len 1' );
+
+   $flushed = 0;
+   $stream->write( Future->new->done( "\x{10a}" ), on_flush => sub { $flushed++ } );
+
+   wait_for { $flushed };
+
+   is( read_data( $rd ), "\xc4\x8a", 'UTF-8 bytes written by ->write Future' );
+
+   $flushed = 0;
+   my $once = 0;
+   $stream->write( sub { $once++ ? undef : "\x{10b}" }, on_flush => sub { $flushed++ } );
+
+   wait_for { $flushed };
+
+   is( read_data( $rd ), "\xc4\x8b", 'UTF-8 bytes written by ->write CODE' );
 
    $loop->remove( $stream );
 }

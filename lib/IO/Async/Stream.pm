@@ -350,19 +350,26 @@ sub _flush_one
             shift @$writequeue;
             return 1;
          }
+         if( !ref $data and my $encoding = $self->{encoding} ) {
+            $data = $encoding->encode( $data );
+         }
          unshift @$writequeue, [ $data ];
          next;
       }
       elsif( blessed $head->[WQ_DATA] and $head->[WQ_DATA]->isa( "Future" ) ) {
          my $f = $head->[WQ_DATA];
-         if( $f->is_ready ) {
-            $head->[WQ_DATA] = $f->get;
-            next;
+         if( !$f->is_ready ) {
+            return 0 if $head->[WQ_WATCHING];
+            $f->on_ready( sub { $self->_flush_one } );
+            $head->[WQ_WATCHING]++;
+            return 0;
          }
-         return 0 if $head->[WQ_WATCHING];
-         $f->on_ready( sub { $self->_flush_one } );
-         $head->[WQ_WATCHING]++;
-         return 0;
+         my $data = $f->get;
+         if( !ref $data and my $encoding = $self->{encoding} ) {
+            $data = $encoding->encode( $data );
+         }
+         $head->[WQ_DATA] = $data;
+         next;
       }
       else {
          die "Unsure what to do with reference ".ref($head->[WQ_DATA])." in write queue";
@@ -528,7 +535,7 @@ sub write
 
    croak "Cannot write data to a Stream with no write_handle" if !$handle and $self->loop;
 
-   if( my $encoding = $self->{encoding} ) {
+   if( !ref $data and my $encoding = $self->{encoding} ) {
       $data = $encoding->encode( $data );
    }
 
