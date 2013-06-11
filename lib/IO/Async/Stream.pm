@@ -691,6 +691,123 @@ sub push_on_read
    1 while length $self->{readbuff} and $self->_flush_one_read( 0 );
 }
 
+=head1 FUTURE-RETURNING READ METHODS
+
+The following methods all return a L<Future> which will become ready when
+enough data has been read by the Stream into its buffer. At this point, the
+data is removed from the buffer and given to the C<Future> object to complete
+it.
+
+Unlike the C<on_read> event handlers, these methods don't allow for access to
+"partial" results; they only provide the final result once it is ready.
+
+If a C<Future> is cancelled before it completes it is removed from the read
+queue without consuming any data; i.e. each C<Future> atomically either
+completes or is cancelled.
+
+=cut
+
+sub _read_future
+{
+   my $self = shift;
+   my $f = $self->loop->new_future;
+   $f->on_cancel( $self->_capture_weakself( sub {
+      my $self = shift;
+      1 while $self->_flush_one_read;
+   }));
+   return $f;
+}
+
+=head2 $f = $stream->read_atmost( $len )
+
+=head2 $f = $stream->read_exactly( $len )
+
+Completes the C<Future> when the read buffer contains C<$len> or more
+characters of input. C<read_atmost> will also complete after the first
+invocation of C<on_read>, even if fewer characters are available, whereas
+C<read_exactly> will wait until at least C<$len> are available.
+
+=cut
+
+sub read_atmost
+{
+   my $self = shift;
+   my ( $len ) = @_;
+
+   my $f = $self->_read_future;
+   $self->push_on_read( sub {
+      my ( undef, $buffref ) = @_;
+      return undef if $f->is_cancelled;
+      $f->done( substr( $$buffref, 0, $len, "" ) );
+      return undef;
+   });
+   return $f;
+}
+
+sub read_exactly
+{
+   my $self = shift;
+   my ( $len ) = @_;
+
+   my $f = $self->_read_future;
+   $self->push_on_read( sub {
+      my ( undef, $buffref ) = @_;
+      return undef if $f->is_cancelled;
+      return 0 unless length $$buffref >= $len;
+      $f->done( substr( $$buffref, 0, $len, "" ) );
+      return undef;
+   });
+   return $f;
+}
+
+=head2 $f = $stream->read_until( $end )
+
+Completes the C<Future> when the read buffer contains a match for C<$end>,
+which may either be a plain string or a compiled C<Regexp> reference. Yields
+the prefix of the buffer before and including this match.
+
+=cut
+
+sub read_until
+{
+   my $self = shift;
+   my ( $until ) = @_;
+
+   ref $until or $until = qr/\Q$until\E/;
+
+   my $f = $self->_read_future;
+   $self->push_on_read( sub {
+      my ( undef, $buffref ) = @_;
+      return undef if $f->is_cancelled;
+      return 0 unless $$buffref =~ $until;
+      $f->done( substr( $$buffref, 0, $+[0], "" ) );
+      return undef;
+   });
+   return $f;
+}
+
+=head2 $f = $stream->read_until_eof
+
+Completes the C<Future> when the stream is eventually closed at EOF, and
+yields all of the data that was available.
+
+=cut
+
+sub read_until_eof
+{
+   my $self = shift;
+
+   my $f = $self->_read_future;
+   $self->push_on_read( sub {
+      my ( undef, $buffref, $eof ) = @_;
+      return undef if $f->is_cancelled;
+      return 0 unless $eof;
+      $f->done( $$buffref ); $$buffref = "";
+      return undef;
+   });
+   return $f;
+}
+
 =head1 UTILITY CONSTRUCTORS
 
 =cut

@@ -400,6 +400,61 @@ my @sub_lines;
    is_oneref( $stream, 'closing $stream refcount 1 finally' );
 }
 
+# ->read Futures
+{
+   my ( $rd, $wr ) = mkhandles;
+
+   my $stream = IO::Async::Stream->new( read_handle => $rd,
+      on_read => sub {
+         my ( $self, $buffref ) = @_;
+         die "Base on_read invoked with data in the buffer" if length $$buffref;
+         return 0;
+      },
+   );
+
+   $loop->add( $stream );
+
+   my $f_atmost = $stream->read_atmost( 256 );
+
+   $wr->syswrite( "Some data\n" );
+   wait_for { $f_atmost->is_ready };
+
+   is( scalar $f_atmost->get, "Some data\n", '->read_atmost' );
+
+   my $f_exactly   = $stream->read_exactly( 4 );
+   my $f_until_qr  = $stream->read_until( qr/[A-Z][a-z]*/ );
+   my $f_until_str = $stream->read_until( "\n" );
+
+   $wr->syswrite( "Here is the First line of input\n" );
+
+   wait_for { $f_exactly->is_ready and $f_until_qr->is_ready and $f_until_str->is_ready };
+
+   is( scalar $f_exactly->get,   "Here", '->read_exactly' );
+   is( scalar $f_until_qr->get,  " is the First", '->read_until regexp' );
+   is( scalar $f_until_str->get, " line of input\n", '->read_until str' );
+
+   my $f_first = $stream->read_until( "\n" );
+   my $f_second = $stream->read_until( "\n" );
+   $f_first->cancel;
+
+   $wr->syswrite( "For the second\n" );
+
+   wait_for { $f_second->is_ready };
+
+   is( scalar $f_second->get, "For the second\n", 'Second ->read_until recieves data after first is ->cancelled' );
+
+   my $f_until_eof = $stream->read_until_eof;
+
+   $wr->syswrite( "And the rest of it" );
+   $wr->close;
+
+   wait_for { $f_until_eof->is_ready };
+
+   is( scalar $f_until_eof->get, "And the rest of it", '->read_until_eof' );
+
+   # No need to remove as ->close did it
+}
+
 # Errors
 {
    my ( $rd, $wr ) = mkhandles;
