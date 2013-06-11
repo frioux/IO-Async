@@ -253,6 +253,52 @@ my @sub_lines;
    is_oneref( $stream, 'dynamic reading $stream has refcount 1 finally' );
 }
 
+# ->push_on_read
+{
+   my ( $rd, $wr ) = mkhandles;
+
+   my $base;
+   my $stream = IO::Async::Stream->new( read_handle => $rd,
+      on_read => sub {
+         my ( $self, $buffref ) = @_;
+         $base = $$buffref; $$buffref = "";
+         return 0;
+      },
+   );
+
+   $loop->add( $stream );
+
+   my $firstline;
+   $stream->push_on_read(
+      sub {
+         my ( $stream, $buffref, $eof ) = @_;
+         return 0 unless $$buffref =~ s/(.*)\n//;
+         $firstline = $1;
+         return undef;
+      }
+   );
+
+   my $eightbytes;
+   $stream->push_on_read(
+      sub {
+         my ( $stream, $buffref, $eof ) = @_;
+         return 0 unless length $$buffref >= 8;
+         $eightbytes = substr( $$buffref, 0, 8, "" );
+         return undef;
+      }
+   );
+
+   $wr->syswrite( "The first line\nABCDEFGHIJK" );
+
+   wait_for { defined $firstline and defined $eightbytes };
+
+   is( $firstline,  "The first line", '$firstline from ->push_on_read CODE' );
+   is( $eightbytes, "ABCDEFGH",       '$eightbytes from ->push_on_read CODE' );
+   is( $base,       "IJK",            '$base from ->push_on_read CODE' );
+
+   $loop->remove( $stream );
+}
+
 # EOF
 {
    my ( $rd, $wr ) = mkhandles;

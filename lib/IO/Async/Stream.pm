@@ -112,6 +112,10 @@ C<undef>. Whenever the callback is changed in this way, the new code is called
 again; even if the read buffer is currently empty. See the examples at the end
 of this documentation for more detail.
 
+The C<push_on_read> method can be used to insert new, temporary handlers that
+take precedence over the global C<on_read> handler. This event is only used if
+there are no further pending handlers created by C<push_on_read>.
+
 =head2 on_read_eof
 
 Optional. Invoked when the read handle indicates an end-of-file (EOF)
@@ -657,6 +661,34 @@ sub on_read_ready
 
       last unless $self->{read_all};
    }
+}
+
+=head2 $stream->push_on_read( $on_read )
+
+Pushes a new temporary C<on_read> handler to the end of the queue. This queue,
+if non-empty, is used to provide C<on_read> event handling code in preference
+to using the object's main event handler or method. New handlers can be
+supplied at any time, and they will be used in first-in first-out (FIFO)
+order.
+
+As with the main C<on_read> event handler, each can return a (defined) boolean
+to indicate if they wish to be invoked again or not, another C<CODE> reference
+to replace themself with, or C<undef> to indicate it is now complete and
+should be removed. When a temporary handler returns C<undef> it is shifted
+from the queue and the next one, if present, is invoked instead. If there are
+no more then the object's main handler is invoked instead.
+
+=cut
+
+sub push_on_read
+{
+   my $self = shift;
+   my ( $on_read ) = @_;
+
+   push @{ $self->{readqueue} }, $on_read;
+
+   # TODO: Should this always defer?
+   1 while length $self->{readbuff} and $self->_flush_one_read( 0 );
 }
 
 =head1 UTILITY CONSTRUCTORS
