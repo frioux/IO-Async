@@ -257,7 +257,7 @@ sub watch_io
    $params{on_hangup}      and $mask |= POLLHUP;
 
    if( FAKE_ISREG_READY and S_ISREG +(stat $handle)[2] ) {
-      $self->{fake_isreg}{$handle->fileno} = [ $handle, $mask ];
+      $self->{fake_isreg}{$handle->fileno} = $mask;
    }
 
    $poll->mask( $handle, $mask ) if $mask != $curmask;
@@ -284,7 +284,7 @@ sub unwatch_io
 
    if( FAKE_ISREG_READY and S_ISREG +(stat $handle)[2] ) {
       if( $mask ) {
-         $self->{fake_isreg}{$handle->fileno} = [ $handle, $mask ];
+         $self->{fake_isreg}{$handle->fileno} = $mask;
       }
       else {
          delete $self->{fake_isreg}{$handle->fileno};
