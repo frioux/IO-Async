@@ -162,10 +162,12 @@ sub read_data
 
    $rd->close;
 
+   ok( !$stream->is_write_eof, '$stream->is_write_eof before wait' );
    is( $eof, 0, 'EOF indication before wait' );
 
    wait_for { $eof };
 
+   ok( $stream->is_write_eof, '$stream->is_write_eof after wait' );
    is( $eof, 1, 'EOF indication after wait' );
 
    ok( !defined $stream->loop, 'EOF stream no longer member of Loop' );

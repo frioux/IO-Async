@@ -321,10 +321,12 @@ my @sub_lines;
 
    $wr->close;
 
+   ok( !$stream->is_read_eof, '$stream ->is_read_eof before wait' );
    is( $eof, 0, 'EOF indication before wait' );
 
    wait_for { $eof };
 
+   ok( $stream->is_read_eof, '$stream ->is_read_eof after wait' );
    is( $eof, 1, 'EOF indication after wait' );
    is( $partial, "Incomplete", 'EOF stream retains partial input' );
 

@@ -396,6 +396,27 @@ sub close_now
    $self->SUPER::close;
 }
 
+=head2 $eof = $stream->is_read_eof
+
+=head2 $eof = $stream->is_write_eof
+
+Returns true after an EOF condition is reported on either the read or the
+write handle, respectively.
+
+=cut
+
+sub is_read_eof
+{
+   my $self = shift;
+   return $self->{read_eof};
+}
+
+sub is_write_eof
+{
+   my $self = shift;
+   return $self->{write_eof};
+}
+
 =head2 $stream->write( $data, %params )
 
 This method adds data to the outgoing data queue, or writes it immediately,
@@ -509,7 +530,10 @@ sub _flush_one_write
 
       return 0 if _nonfatal_error( $errno );
 
-      $self->maybe_invoke_event( on_write_eof => ) if $errno == EPIPE;
+      if( $errno == EPIPE ) {
+         $self->{write_eof} = 1;
+         $self->maybe_invoke_event( on_write_eof => );
+      }
 
       $self->maybe_invoke_event( on_write_error => $errno )
          or $self->close_now;
@@ -654,6 +678,7 @@ sub on_read_ready
       1 while $self->_flush_one_read( $eof );
 
       if( $eof ) {
+         $self->{read_eof} = 1;
          $self->maybe_invoke_event( on_read_eof => );
          $self->close_now if $self->{close_on_read_eof};
          return;
