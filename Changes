@@ -1,5 +1,13 @@
 Revision history for IO-Async
 
+0.57    CHANGES:
+         * Allow Stream->write from a Future, CODE that returns Future, Future
+           that returns CODE, etc...
+         * Added Future-returning Stream->read_* methods and ->push_on_read
+         * Return a flush-complete notification Future from Stream->write
+         * Allow Timer::Periodic to stop itself from its own on_tick event
+         * Wrap transport on_{read,write}_eof from Protocol::Stream
+
 0.56    CHANGES:
          * Added $loop->delay_future and $loop->timeout_future
          * Added $future->loop accessor
