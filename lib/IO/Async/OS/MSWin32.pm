@@ -14,7 +14,7 @@ our @ISA = qw( IO::Async::OS::_Base );
 
 use Carp;
 
-use Socket qw( AF_INET SOCK_STREAM SOCK_DGRAM );
+use Socket qw( AF_INET SOCK_STREAM SOCK_DGRAM INADDR_LOOPBACK pack_sockaddr_in );
 
 use IO::Socket (); # empty import
 
@@ -60,46 +60,33 @@ sub socketpair
 
    $family == AF_INET or croak "Cannot emulate ->socketpair except on AF_INET";
 
+   my $Stmp = $self->socket( $family, $socktype ) or return;
+   $Stmp->bind( pack_sockaddr_in( 0, INADDR_LOOPBACK ) ) or return;
+
+   my $S1 = $self->socket( $family, $socktype ) or return;
+
+   my $S2;
    if( $socktype == SOCK_STREAM ) {
-      my $listener = IO::Socket::INET->new(
-         LocalAddr => "127.0.0.1",
-         LocalPort => 0,
-         Listen    => 1,
-         Proto     => "tcp",
-      ) or croak "Cannot socket() - $!";
+      $Stmp->listen( 1 ) or return;
+      $S1->connect( getsockname $Stmp ) or return;
+      $S2 = $Stmp->accept or return;
 
-      my $S1 = IO::Socket::INET->new(
-         PeerAddr => $listener->sockhost,
-         PeerPort => $listener->sockport
-      ) or croak "Cannot socket() again - $!";
-
-      my $S2 = $listener->accept or croak "Cannot accept() - $!";
-
-      $listener->close;
-
-      return ( $S1, $S2 );
+      # There's a bug in IO::Socket here, in that $S2 's ->socktype won't
+      # yet be set. We can apply a horribly hacky fix here
+      #   defined $S2->socktype and $S2->socktype == $socktype or
+      #     ${*$S2}{io_socket_type} = $socktype;
+      # But for now we'll skip the test for it instead
    }
    elsif( $socktype == SOCK_DGRAM ) {
-      my $S1 = IO::Socket::INET->new(
-         LocalAddr => "127.0.0.1",
-         Type      => SOCK_DGRAM,
-         Proto     => "udp",
-      ) or croak "Cannot socket() - $!";
-
-      my $S2 = IO::Socket::INET->new(
-         LocalAddr => "127.0.0.1",
-         Type      => SOCK_DGRAM,
-         Proto     => "udp",
-      ) or croak "Cannot socket() again - $!";
-
-      $S1->connect( $S2->sockname );
-      $S2->connect( $S1->sockname );
-
-      return ( $S1, $S2 );
+      $S2 = $Stmp;
+      $S1->connect( getsockname $S2 ) or return;
+      $S2->connect( getsockname $S1 ) or return;
    }
    else {
       croak "Unrecognised socktype $socktype";
    }
+
+   return ( $S1, $S2 );
 };
 
 =head1 AUTHOR
