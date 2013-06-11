@@ -77,13 +77,16 @@ sub read_data
 
    my $flushed;
 
-   $stream->write( "hello again\n", on_flush => sub {
+   my $f = $stream->write( "hello again\n", on_flush => sub {
       is( $_[0], $stream, 'on_flush $_[0] is $stream' );
       $flushed++
    } );
 
+   ok( !$f->is_ready, '->write future not yet ready' );
+
    wait_for { $flushed };
 
+   ok( $f->is_ready, '->write future is ready after flush' );
    is( read_data( $rd ), "hello again\n", 'flushed data does get flushed' );
 
    $flushed = 0;

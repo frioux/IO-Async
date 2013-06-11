@@ -481,6 +481,12 @@ C<on_flush> continuation will be invoked, if supplied. This can be used to
 obtain a marker, to invoke some code once the output queue has been flushed up
 to this point.
 
+=head2 $f = $stream->write( ... )
+
+If called in non-void context, this method returns a L<Future> which will
+complete (with no value) when the write operation has been flushed. This may
+be used as an alternative to, or combined with, the C<on_flush> callback.
+
 =cut
 
 sub _flush_one_write
@@ -579,22 +585,35 @@ sub write
       $data = $encoding->encode( $data );
    }
 
-   push @{ $self->{writequeue} }, [ $data, delete $params{on_flush} ];
+   my $on_flush = delete $params{on_flush};
+
+   my $f;
+   if( defined wantarray ) {
+      my $orig_on_flush = $on_flush;
+      $f = $self->loop->new_future;
+      $on_flush = sub {
+         $f->done;
+         $orig_on_flush->( @_ ) if $orig_on_flush;
+      };
+   }
+
+   push @{ $self->{writequeue} }, [ $data, $on_flush ];
 
    keys %params and croak "Unrecognised keys for ->write - " . join( ", ", keys %params );
 
-   return unless $handle;
+   return $f unless $handle;
 
    if( $self->{autoflush} ) {
       1 while !$self->_is_empty and $self->_flush_one_write;
 
       if( $self->_is_empty ) {
          $self->want_writeready( 0 );
-         return;
+         return $f;
       }
    }
 
    $self->want_writeready( 1 );
+   return $f;
 }
 
 sub on_write_ready

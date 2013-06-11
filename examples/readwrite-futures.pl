@@ -14,6 +14,4 @@ $loop->add( my $stdout = IO::Async::Stream->new_for_stdout );
 $stdout->write( sub {
    return undef if $stdin->is_read_eof;
    return $stdin->read_atmost( 64 * 1024 );
-}, on_flush => sub { $loop->stop } );
-
-$loop->run;
+})->get;
