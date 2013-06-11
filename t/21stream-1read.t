@@ -482,6 +482,11 @@ my @sub_lines;
 
    cmp_ok( $read_errno, "==", ECONNRESET, 'errno after failed read' );
 
+   my $f = $stream->read_atmost( 256 );
+
+   wait_for { $f->is_ready };
+   cmp_ok( $f->failure, "==", ECONNRESET, 'failure from ->read_atmost after failed read' );
+
    $loop->remove( $stream );
 }
 

@@ -28,6 +28,9 @@ our $WRITELEN = 8192;
 use constant WQ_DATA     => 0;
 use constant WQ_ON_FLUSH => 1;
 use constant WQ_WATCHING => 2;
+# Indicies into readqueue elements
+use constant RQ_ONREAD => 0;
+use constant RQ_FUTURE => 1;
 
 =head1 NAME
 
@@ -155,8 +158,8 @@ sub _init
 {
    my $self = shift;
 
-   $self->{writequeue} = []; # Queue of ARRAYs. Each will be [ $data, $on_flushed ]
-   $self->{readqueue} = []; # Queue of CODEs
+   $self->{writequeue} = []; # Queue of ARRAYs of [ $data, $on_flushed ]
+   $self->{readqueue} = []; # Queue of ARRAYs of [ CODE, $readfuture ]
    $self->{readbuff} = "";
 
    $self->{read_len}  = $READLEN;
@@ -623,7 +626,7 @@ sub _flush_one_read
    my $readqueue = $self->{readqueue};
 
    my $ret;
-   if( my $on_read = $readqueue->[0] ) {
+   if( $readqueue->[0] and my $on_read = $readqueue->[0][RQ_ONREAD] ) {
       $ret = $on_read->( $self, \$self->{readbuff}, $eof );
    }
    else {
@@ -632,7 +635,7 @@ sub _flush_one_read
 
    if( ref $ret eq "CODE" ) {
       # Replace the top CODE, or add it if there was none
-      $readqueue->[0] = $ret;
+      $readqueue->[0] = [ $ret ];
       return 1;
    }
    elsif( @$readqueue and !defined $ret ) {
@@ -662,6 +665,11 @@ sub on_read_ready
          $self->maybe_invoke_event( on_read_error => $errno )
             or $self->close_now;
 
+         foreach ( @{ $self->{readqueue} } ) {
+            $_->[RQ_FUTURE]->fail( $errno ) if $_->[RQ_FUTURE];
+         }
+         undef @{ $self->{readqueue} };
+
          return;
       }
 
@@ -681,6 +689,10 @@ sub on_read_ready
          $self->{read_eof} = 1;
          $self->maybe_invoke_event( on_read_eof => );
          $self->close_now if $self->{close_on_read_eof};
+         foreach ( @{ $self->{readqueue} } ) {
+            $_->[RQ_FUTURE]->done( undef ) if $_->[RQ_FUTURE];
+         }
+         undef @{ $self->{readqueue} };
          return;
       }
 
@@ -708,9 +720,10 @@ no more then the object's main handler is invoked instead.
 sub push_on_read
 {
    my $self = shift;
-   my ( $on_read ) = @_;
+   my ( $on_read, %args ) = @_;
+   # %args undocumented for internal use
 
-   push @{ $self->{readqueue} }, $on_read;
+   push @{ $self->{readqueue} }, [ $on_read, $args{future} ];
 
    # TODO: Should this always defer?
    1 while length $self->{readbuff} and $self->_flush_one_read( 0 );
@@ -739,6 +752,11 @@ any input, and to allow it to be added to a C<Loop> in the first place.
  $loop->add( $stream );
 
  my $f = $stream->read_...
+
+If a read EOF or error condition happens while there are read C<Future>s
+pending, they are all completed. In the case of a read EOF, they are done with
+C<undef>; in the case of a read error they are failed using the C<$!> error
+value as the failure.
 
 =cut
 
@@ -775,7 +793,7 @@ sub read_atmost
       return undef if $f->is_cancelled;
       $f->done( substr( $$buffref, 0, $len, "" ) );
       return undef;
-   });
+   }, future => $f );
    return $f;
 }
 
@@ -791,7 +809,7 @@ sub read_exactly
       return 0 unless length $$buffref >= $len;
       $f->done( substr( $$buffref, 0, $len, "" ) );
       return undef;
-   });
+   }, future => $f );
    return $f;
 }
 
@@ -817,7 +835,7 @@ sub read_until
       return 0 unless $$buffref =~ $until;
       $f->done( substr( $$buffref, 0, $+[0], "" ) );
       return undef;
-   });
+   }, future => $f );
    return $f;
 }
 
@@ -839,7 +857,7 @@ sub read_until_eof
       return 0 unless $eof;
       $f->done( $$buffref ); $$buffref = "";
       return undef;
-   });
+   }, future => $f );
    return $f;
 }
 
