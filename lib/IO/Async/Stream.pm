@@ -705,6 +705,16 @@ If a C<Future> is cancelled before it completes it is removed from the read
 queue without consuming any data; i.e. each C<Future> atomically either
 completes or is cancelled.
 
+Since it is possible to use a readable C<Stream> entirely using these
+C<Future>-returning methods instead of the C<on_read> event, it may be useful
+to configure a trivial return-false event handler to keep it from consuming
+any input, and to allow it to be added to a C<Loop> in the first place.
+
+ my $stream = IO::Async::Stream->new( on_read => sub { 0 }, ... );
+ $loop->add( $stream );
+
+ my $f = $stream->read_...
+
 =cut
 
 sub _read_future
