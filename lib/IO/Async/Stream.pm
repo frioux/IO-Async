@@ -152,6 +152,7 @@ sub _init
    my $self = shift;
 
    $self->{writequeue} = []; # Queue of ARRAYs. Each will be [ $data, $on_flushed ]
+   $self->{readqueue} = []; # Queue of CODEs
    $self->{readbuff} = "";
 
    $self->{read_len}  = $READLEN;
@@ -570,6 +571,51 @@ sub write
    $self->want_writeready( 1 );
 }
 
+sub on_write_ready
+{
+   my $self = shift;
+
+   1 while !$self->_is_empty and $self->_flush_one_write and $self->{write_all};
+
+   # All data successfully flushed
+   if( $self->_is_empty ) {
+      $self->want_writeready( 0 );
+
+      $self->maybe_invoke_event( on_outgoing_empty => );
+
+      $self->close_now if $self->{stream_closing};
+   }
+}
+
+sub _flush_one_read
+{
+   my $self = shift;
+   my ( $eof ) = @_;
+
+   my $readqueue = $self->{readqueue};
+
+   my $ret;
+   if( my $on_read = $readqueue->[0] ) {
+      $ret = $on_read->( $self, \$self->{readbuff}, $eof );
+   }
+   else {
+      $ret = $self->invoke_event( on_read => \$self->{readbuff}, $eof );
+   }
+
+   if( ref $ret eq "CODE" ) {
+      # Replace the top CODE, or add it if there was none
+      $readqueue->[0] = $ret;
+      return 1;
+   }
+   elsif( @$readqueue and !defined $ret ) {
+      shift @$readqueue;
+      return 1;
+   }
+   else {
+      return $ret && ( length( $self->{readbuff} ) > 0 || $eof );
+   }
+}
+
 sub on_read_ready
 {
    my $self = shift;
@@ -601,31 +647,7 @@ sub on_read_ready
 
       $self->{readbuff} .= $data if !$eof;
 
-      while(1) {
-         my $ret;
-         if( my $on_read = $self->{current_on_read} ) {
-            $ret = $on_read->( $self, \$self->{readbuff}, $eof );
-         }
-         else {
-            $ret = $self->invoke_event( on_read => \$self->{readbuff}, $eof );
-         }
-
-         my $again;
-
-         if( ref $ret eq "CODE" ) {
-            $self->{current_on_read} = $ret;
-            $again = 1;
-         }
-         elsif( $self->{current_on_read} and !defined $ret ) {
-            undef $self->{current_on_read};
-            $again = 1;
-         }
-         else {
-            $again = $ret && ( length( $self->{readbuff} ) > 0 || $eof );
-         }
-
-         last if !$again;
-      }
+      1 while $self->_flush_one_read( $eof );
 
       if( $eof ) {
          $self->maybe_invoke_event( on_read_eof => );
@@ -634,22 +656,6 @@ sub on_read_ready
       }
 
       last unless $self->{read_all};
-   }
-}
-
-sub on_write_ready
-{
-   my $self = shift;
-
-   1 while !$self->_is_empty and $self->_flush_one_write and $self->{write_all};
-
-   # All data successfully flushed
-   if( $self->_is_empty ) {
-      $self->want_writeready( 0 );
-
-      $self->maybe_invoke_event( on_outgoing_empty => );
-
-      $self->close_now if $self->{stream_closing};
    }
 }
 
