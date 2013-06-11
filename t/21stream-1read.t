@@ -5,7 +5,7 @@ use warnings;
 
 use IO::Async::Test;
 
-use Test::More tests => 54;
+use Test::More;
 use Test::Fatal;
 use Test::Refcount;
 
