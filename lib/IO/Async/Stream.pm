@@ -736,6 +736,10 @@ enough data has been read by the Stream into its buffer. At this point, the
 data is removed from the buffer and given to the C<Future> object to complete
 it.
 
+ my $f = $stream->read_...
+
+ my ( $string ) = $f->get;
+
 Unlike the C<on_read> event handlers, these methods don't allow for access to
 "partial" results; they only provide the final result once it is ready.
 
@@ -757,6 +761,15 @@ If a read EOF or error condition happens while there are read C<Future>s
 pending, they are all completed. In the case of a read EOF, they are done with
 C<undef>; in the case of a read error they are failed using the C<$!> error
 value as the failure.
+
+If a read EOF condition happens to the currently-processing read C<Future>, it
+will return a partial result. The calling code can detect this by the fact
+that the returned data is not complete according to the specification (too
+short in C<read_exactly>'s case, or lacking the ending pattern in
+C<read_until>'s case). Additionally, each C<Future> will yield the C<$eof>
+value in its results.
+
+ my ( $string, $eof ) = $f->get;
 
 =cut
 
@@ -789,9 +802,9 @@ sub read_atmost
 
    my $f = $self->_read_future;
    $self->push_on_read( sub {
-      my ( undef, $buffref ) = @_;
+      my ( undef, $buffref, $eof ) = @_;
       return undef if $f->is_cancelled;
-      $f->done( substr( $$buffref, 0, $len, "" ) );
+      $f->done( substr( $$buffref, 0, $len, "" ), $eof );
       return undef;
    }, future => $f );
    return $f;
@@ -804,10 +817,10 @@ sub read_exactly
 
    my $f = $self->_read_future;
    $self->push_on_read( sub {
-      my ( undef, $buffref ) = @_;
+      my ( undef, $buffref, $eof ) = @_;
       return undef if $f->is_cancelled;
-      return 0 unless length $$buffref >= $len;
-      $f->done( substr( $$buffref, 0, $len, "" ) );
+      return 0 unless $eof or length $$buffref >= $len;
+      $f->done( substr( $$buffref, 0, $len, "" ), $eof );
       return undef;
    }, future => $f );
    return $f;
@@ -830,11 +843,19 @@ sub read_until
 
    my $f = $self->_read_future;
    $self->push_on_read( sub {
-      my ( undef, $buffref ) = @_;
+      my ( undef, $buffref, $eof ) = @_;
       return undef if $f->is_cancelled;
-      return 0 unless $$buffref =~ $until;
-      $f->done( substr( $$buffref, 0, $+[0], "" ) );
-      return undef;
+      if( $$buffref =~ $until ) {
+         $f->done( substr( $$buffref, 0, $+[0], "" ), $eof );
+         return undef;
+      }
+      elsif( $eof ) {
+         $f->done( $$buffref, $eof ); $$buffref = "";
+         return undef;
+      }
+      else {
+         return 0;
+      }
    }, future => $f );
    return $f;
 }
@@ -855,7 +876,7 @@ sub read_until_eof
       my ( undef, $buffref, $eof ) = @_;
       return undef if $f->is_cancelled;
       return 0 unless $eof;
-      $f->done( $$buffref ); $$buffref = "";
+      $f->done( $$buffref, $eof ); $$buffref = "";
       return undef;
    }, future => $f );
    return $f;
