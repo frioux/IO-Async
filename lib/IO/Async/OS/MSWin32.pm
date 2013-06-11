@@ -58,12 +58,14 @@ sub socketpair
 
    $proto ||= 0;
 
+   $family == AF_INET or croak "Cannot emulate ->socketpair except on AF_INET";
+
    if( $socktype == SOCK_STREAM ) {
       my $listener = IO::Socket::INET->new(
          LocalAddr => "127.0.0.1",
          LocalPort => 0,
          Listen    => 1,
-         Blocking  => 0,
+         Proto     => "tcp",
       ) or croak "Cannot socket() - $!";
 
       my $S1 = IO::Socket::INET->new(
@@ -83,7 +85,7 @@ sub socketpair
          Type      => SOCK_DGRAM,
          Proto     => "udp",
       ) or croak "Cannot socket() - $!";
-      
+
       my $S2 = IO::Socket::INET->new(
          LocalAddr => "127.0.0.1",
          Type      => SOCK_DGRAM,
