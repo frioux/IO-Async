@@ -524,6 +524,14 @@ sub _flush_one_write
       }
    }
 
+   while( !$head->[WQ_ON_FLUSH] and
+          $writequeue->[1] and
+          !ref $writequeue->[1][WQ_DATA] ) {
+      $head->[WQ_DATA] .= $writequeue->[1][WQ_DATA];
+      $head->[WQ_ON_FLUSH] = $writequeue->[1][WQ_ON_FLUSH];
+      splice @$writequeue, 1, 1, ();
+   }
+
    die "TODO: head data does not contain a plain string" if ref $head->[WQ_DATA];
 
    my $len = $self->write_handle->syswrite( $head->[WQ_DATA], $self->{write_len} );
@@ -571,20 +579,7 @@ sub write
       $data = $encoding->encode( $data );
    }
 
-   # Combine short writes we can
-   my $tail = @{ $self->{writequeue} } ? $self->{writequeue}[-1] : undef;
-
-   # TODO: This might be better moved into ->_flush_one_write
-   if( $tail and
-       !ref $data and
-       length($data) + length($tail->[WQ_DATA]) < $self->{write_len} and
-       !$params{on_flush} and
-       !$tail->[WQ_ON_FLUSH]) {
-      $tail->[WQ_DATA] .= $data;
-   }
-   else {
-      push @{ $self->{writequeue} }, [ $data, delete $params{on_flush} ];
-   }
+   push @{ $self->{writequeue} }, [ $data, delete $params{on_flush} ];
 
    keys %params and croak "Unrecognised keys for ->write - " . join( ", ", keys %params );
 
