@@ -792,7 +792,7 @@ sub _read_future
    my $self = shift;
    my $f = $self->loop->new_future;
    $f->on_cancel( $self->_capture_weakself( sub {
-      my $self = shift;
+      my $self = shift or return;
       1 while $self->_flush_one_read;
    }));
    return $f;

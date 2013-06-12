@@ -221,7 +221,7 @@ sub _make_cb
    my $self = shift;
 
    return $self->_capture_weakself( sub {
-      my $self = shift;
+      my $self = shift or return;
 
       undef $self->{first_interval};
 

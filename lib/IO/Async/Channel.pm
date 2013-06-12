@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2011-2012 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2011-2013 -- leonerd@leonerd.org.uk
 
 package IO::Async::Channel;
 
@@ -346,7 +346,7 @@ sub _close_async
 
 sub _on_stream_read
 {
-   my $self = shift;
+   my $self = shift or return;
    my ( $stream, $buffref, $eof ) = @_;
 
    if( $eof ) {

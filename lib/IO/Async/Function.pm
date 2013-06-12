@@ -189,7 +189,7 @@ sub configure
          $self->{idle_timer} = IO::Async::Timer::Countdown->new(
             delay => $timeout,
             on_expire => $self->_capture_weakself( sub {
-               my $self = shift;
+               my $self = shift or return;
                my $workers = $self->{workers};
 
                # Shut down atmost one idle worker, starting from the highest
@@ -357,12 +357,12 @@ sub call
       ref $on_result or croak "Expected 'on_result' to be a reference";
 
       $future->on_done( $self->_capture_weakself( sub {
-         my $self = shift;
+         my $self = shift or return;
          $self->debug_printf( "CONT on_return" );
          $on_result->( return => @_ );
       } ) );
       $future->on_fail( $self->_capture_weakself( sub {
-         my $self = shift;
+         my $self = shift or return;
          my ( $err, @values ) = @_;
          $self->debug_printf( "CONT on_error" );
          $on_result->( error => @values );
@@ -375,12 +375,12 @@ sub call
       ref $on_error or croak "Expected 'on_error' to be a reference";
 
       $future->on_done( $self->_capture_weakself( sub {
-         my $self = shift;
+         my $self = shift or return;
          $self->debug_printf( "CONT on_return" );
          $on_return->( @_ );
       } ) );
       $future->on_fail( $self->_capture_weakself( sub {
-         my $self = shift;
+         my $self = shift or return;
          my ( $err, @values ) = @_;
          $self->debug_printf( "CONT on_error" );
          $on_error->( @values );

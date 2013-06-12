@@ -122,7 +122,7 @@ sub _make_cb
    my $self = shift;
 
    return $self->_capture_weakself( sub {
-      my ( $self ) = @_;
+      my $self = shift or return;
 
       undef $self->{id};
 

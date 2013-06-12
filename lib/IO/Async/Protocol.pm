@@ -227,7 +227,7 @@ sub setup_transport
 
    $transport->configure( 
       on_closed => $self->_capture_weakself( sub {
-         my $self = shift;
+         my $self = shift or return;
          my ( $transport ) = @_;
 
          $self->maybe_invoke_event( on_closed => );
