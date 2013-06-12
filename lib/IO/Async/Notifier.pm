@@ -520,6 +520,9 @@ code body.
     ...
  } );
 
+For stand-alone generic implementation of this behaviour, see also L<curry>
+and C<curry::weak>.
+
 =cut
 
 sub _capture_weakself
