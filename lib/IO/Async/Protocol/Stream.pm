@@ -166,11 +166,11 @@ sub setup_transport
       } ),
       on_read_eof => $self->_replace_weakself( sub {
          my $self = shift or return;
-         $self->maybe_invoke_event( on_read_eof => @_ ) if $self;
+         $self->maybe_invoke_event( on_read_eof => @_ );
       } ),
       on_write_eof => $self->_replace_weakself( sub {
          my $self = shift or return;
-         $self->maybe_invoke_event( on_write_eof => @_ ) if $self;
+         $self->maybe_invoke_event( on_write_eof => @_ );
       } ),
    );
 }
