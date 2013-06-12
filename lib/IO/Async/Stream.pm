@@ -7,6 +7,7 @@ package IO::Async::Stream;
 
 use strict;
 use warnings;
+use 5.010; # //
 
 our $VERSION = '0.57';
 
@@ -148,6 +149,24 @@ runs so it should always use the value passed in).
 If an error occurs when the corresponding error callback is not supplied, and
 there is not a handler for it, then the C<close> method is called instead.
 
+=head2 on_read_high_watermark $length
+
+=head2 on_read_low_watermark $length
+
+Optional. Invoked when the read buffer grows larger than the high watermark
+or smaller than the low watermark respectively. These are edge-triggered
+events; they will only be triggered once per crossing, not continuously while
+the buffer remains above or below the given limit.
+
+If these event handlers are not defined, the default behaviour is to disable
+read-ready notifications if the read buffer grows larger than the high
+watermark (so as to avoid it growing arbitrarily if nothing is consuming it),
+and re-enable notifications again once something has read enough to cause it to
+drop. If these events are overridden, the overriding code will have to perform
+this behaviour if required, by using
+
+ $self->want_readready(...)
+
 =head2 on_outgoing_empty
 
 Optional. Invoked when the writing data buffer becomes empty.
@@ -234,6 +253,34 @@ Optional. Analogous to the C<read_all> option, but for writing. When
 C<autoflush> is enabled, this option only affects deferred writing if the
 initial attempt failed due to buffer space.
 
+=item read_high_watermark => INT
+
+=item read_low_watermark => INT
+
+Optional. If defined, gives a way to implement flow control or other
+behaviours that depend on the size of Stream's read buffer.
+
+If after more data is read from the underlying filehandle the read buffer is
+now larger than the high watermark, the C<on_read_high_watermark> event is
+triggered (which, by default, will disable read-ready notifications and pause
+reading from the filehandle).
+
+If after data is consumed by an C<on_read> handler the read buffer is now
+smaller than the low watermark, the C<on_read_low_watermark> event is
+triggered (which, by default, will re-enable read-ready notifications and
+resume reading from the filehandle). For to be possible, the read handler
+would have to be one added by the C<push_on_read> method or one of the
+Future-returning C<read_*> methods.
+
+By default these options are not defined, so this behaviour will not happen.
+C<read_low_watermark> may not be set to a larger value than
+C<read_high_watermark>, but it may be set to a smaller value, creating a
+hysteresis region. If either option is defined then both must be.
+
+If these options are used with the default event handlers, be careful not to
+cause deadlocks by having a high watermark sufficiently low that a single
+C<on_read> invocation might not consider it finished yet.
+
 =item close_on_read_eof => BOOL
 
 Optional. Usually true, but if set to a false value then the stream will not
@@ -288,8 +335,24 @@ sub configure
 
    for (qw( on_read on_outgoing_empty on_read_eof on_write_eof on_read_error
             on_write_error autoflush read_len read_all write_len write_all
+            on_read_high_watermark on_read_low_watermark
             close_on_read_eof )) {
       $self->{$_} = delete $params{$_} if exists $params{$_};
+   }
+
+   if( exists $params{read_high_watermark} or exists $params{read_low_watermark} ) {
+      my $high = delete $params{read_high_watermark} // $self->{read_high_watermark};
+      my $low  = delete $params{read_low_watermark}  // $self->{read_low_watermark};
+
+      croak "Cannot set read_low_watermark without read_high_watermark" if defined $low and !defined $high;
+      croak "Cannot set read_high_watermark without read_low_watermark" if defined $high and !defined $low;
+
+      croak "Cannot set read_low_watermark higher than read_high_watermark" if defined $low and defined $high and $low > $high;
+
+      $self->{read_high_watermark} = $high;
+      $self->{read_low_watermark}  = $low;
+
+      # TODO: reassert levels if we've moved them
    }
 
    if( exists $params{encoding} ) {
@@ -647,6 +710,12 @@ sub _flush_one_read
       $ret = $self->invoke_event( on_read => \$self->{readbuff}, $eof );
    }
 
+   if( defined $self->{read_low_watermark} and $self->{at_read_high_watermark} and
+       length $self->{readbuff} < $self->{read_low_watermark} ) {
+      undef $self->{at_read_high_watermark};
+      $self->invoke_event( on_read_low_watermark => length $self->{readbuff} );
+   }
+
    if( ref $ret eq "CODE" ) {
       # Replace the top CODE, or add it if there was none
       $readqueue->[0] = [ $ret ];
@@ -712,6 +781,25 @@ sub on_read_ready
 
       last unless $self->{read_all};
    }
+
+   if( defined $self->{read_high_watermark} and length $self->{readbuff} >= $self->{read_high_watermark} ) {
+      $self->{at_read_high_watermark} or
+         $self->invoke_event( on_read_high_watermark => length $self->{readbuff} );
+
+      $self->{at_read_high_watermark} = 1;
+   }
+}
+
+sub on_read_high_watermark
+{
+   my $self = shift;
+   $self->want_readready( 0 );
+}
+
+sub on_read_low_watermark
+{
+   my $self = shift;
+   $self->want_readready( 1 );
 }
 
 =head2 $stream->push_on_read( $on_read )

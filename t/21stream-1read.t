@@ -457,6 +457,34 @@ my @sub_lines;
    # No need to remove as ->close did it
 }
 
+# watermarks
+{
+   my ( $rd, $wr ) = mkhandles;
+
+   my $high_hit = 0;
+   my $low_hit  = 0;
+
+   my $stream = IO::Async::Stream->new(
+      read_handle => $rd,
+      on_read => sub { 0 }, # we'll work by Futures
+      read_high_watermark => 8,
+      read_low_watermark  => 4,
+      on_read_high_watermark => sub { $high_hit++ },
+      on_read_low_watermark  => sub { $low_hit++ },
+   );
+
+   $loop->add( $stream );
+
+   $wr->syswrite( "1234567890" );
+
+   wait_for { $high_hit };
+   ok( 1, "Reading too much hits high watermark" );
+
+   is( $stream->read_exactly( 8 )->get, "12345678", 'Stream->read_exactly yields bytes' );
+
+   is( $low_hit, 1, 'Low watermark hit after ->read' );
+}
+
 # Errors
 {
    my ( $rd, $wr ) = mkhandles;
