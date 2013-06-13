@@ -756,7 +756,7 @@ sub on_read_ready
          return;
       }
 
-      my $eof = ( $len == 0 );
+      my $eof = $self->{read_eof} = ( $len == 0 );
 
       if( my $encoding = $self->{encoding} ) {
          my $bytes = defined $self->{bytes_remaining} ? $self->{bytes_remaining} . $data : $data;
@@ -769,7 +769,6 @@ sub on_read_ready
       1 while $self->_flush_one_read( $eof );
 
       if( $eof ) {
-         $self->{read_eof} = 1;
          $self->maybe_invoke_event( on_read_eof => );
          $self->close_now if $self->{close_on_read_eof};
          foreach ( @{ $self->{readqueue} } ) {
