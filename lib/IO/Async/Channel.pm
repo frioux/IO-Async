@@ -9,7 +9,7 @@ use strict;
 use warnings;
 use base qw( IO::Async::Notifier ); # just to get _capture_weakself
 
-our $VERSION = '0.57';
+our $VERSION = '0.58';
 
 use Carp;
 use Storable qw( freeze thaw );

@@ -1,5 +1,11 @@
 Revision history for IO-Async
 
+0.58    CHANGES:
+         * Added Stream read watermarks
+
+        BUGFIXES:
+         * Fix weakself event handlers' use of "shift or return"
+
 0.57    CHANGES:
          * Allow Stream->write from a Future, CODE that returns Future, Future
            that returns CODE, etc...
