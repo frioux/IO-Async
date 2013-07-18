@@ -112,6 +112,41 @@ sub mkhandles
    is_oneref( $stream, 'reading $stream refcount 1 finally' );
 }
 
+# Abstract reading with reader function
+{
+   my ( $rd, $wr ) = mkhandles;
+   my $buffer = "Here is the contents\n";
+
+   my @lines;
+   my $stream = IO::Async::Stream->new(
+      read_handle => $rd,
+      reader => sub {
+         my $self = shift;
+         my $more = substr( $buffer, 0, $_[2], "" );
+         $_[1] .= $more;
+         return length $more;
+      },
+      on_read => sub {
+         my $self = shift;
+         my ( $buffref, $eof ) = @_;
+
+         push @lines, $1 while $$buffref =~ s/^(.*\n)//;
+         return 0;
+      },
+   );
+
+   $loop->add( $stream );
+
+   # make it readready
+   $wr->syswrite( "1" );
+
+   wait_for { scalar @lines };
+
+   is_deeply( \@lines, [ "Here is the contents\n" ], '@lines from stream with abstract reader' );
+
+   $loop->remove( $stream );
+}
+
 {
    my ( $rd, $wr ) = mkhandles;
 

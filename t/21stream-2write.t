@@ -116,6 +116,32 @@ sub read_data
    is_oneref( $stream, 'writing $stream refcount 1 finally' );
 }
 
+# Abstract writing with writer function
+{
+   my ( $rd, $wr ) = mkhandles;
+   my $buffer;
+
+   my $stream = IO::Async::Stream->new(
+      write_handle => $wr,
+      writer => sub {
+         my $self = shift;
+         $buffer .= substr( $_[1], 0, $_[2], "" );
+         return $_[2];
+      },
+   );
+
+   $loop->add( $stream );
+
+   my $flushed;
+   $stream->write( "Some data for abstract buffer\n", on_flush => sub { $flushed++ } );
+
+   wait_for { $flushed };
+
+   is( $buffer, "Some data for abstract buffer\n", '$buffer after ->write to stream with abstract writer' );
+
+   $loop->remove( $stream );
+}
+
 {
    my ( $rd, $wr ) = mkhandles;
 

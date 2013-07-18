@@ -181,6 +181,9 @@ sub _init
    $self->{readqueue} = []; # Queue of ARRAYs of [ CODE, $readfuture ]
    $self->{readbuff} = "";
 
+   $self->{reader} = "_sysread";
+   $self->{writer} = "_syswrite";
+
    $self->{read_len}  = $READLEN;
    $self->{write_len} = $WRITELEN;
 
@@ -281,6 +284,23 @@ If these options are used with the default event handlers, be careful not to
 cause deadlocks by having a high watermark sufficiently low that a single
 C<on_read> invocation might not consider it finished yet.
 
+=head2 reader => STRING|CODE
+
+=head2 writer => STRING|CODE
+
+Optional. If defined, gives the name of a method or a CODE reference to use
+to implement the actual reading from or writing to the filehandle. These will
+be invoked as
+
+ $stream->reader( $read_handle, $buffer, $len )
+ $stream->writer( $write_handle, $buffer, $len )
+
+Each is expected to modify the passed buffer; C<reader> by appending to it,
+C<writer> by removing a prefix from it. Each is expected to return a true
+value on success, zero on EOF, or C<undef> with C<$!> set for errors. If not
+provided, they will be substituted by implenentations using C<sysread> and
+C<syswrite> on the underlying handle, respectively.
+
 =item close_on_read_eof => BOOL
 
 Optional. Usually true, but if set to a false value then the stream will not
@@ -335,7 +355,7 @@ sub configure
 
    for (qw( on_read on_outgoing_empty on_read_eof on_write_eof on_read_error
             on_write_error autoflush read_len read_all write_len write_all
-            on_read_high_watermark on_read_low_watermark
+            on_read_high_watermark on_read_low_watermark reader writer
             close_on_read_eof )) {
       $self->{$_} = delete $params{$_} if exists $params{$_};
    }
@@ -552,6 +572,18 @@ be used as an alternative to, or combined with, the C<on_flush> callback.
 
 =cut
 
+sub _syswrite
+{
+   my $self = shift;
+   my ( $handle, undef, $len ) = @_;
+
+   my $written = $handle->syswrite( $_[1], $len );
+   return $written if !$written; # zero or undef
+
+   substr( $_[1], 0, $written ) = "";
+   return $written;
+}
+
 sub _flush_one_write
 {
    my $self = shift;
@@ -603,7 +635,8 @@ sub _flush_one_write
 
    die "TODO: head data does not contain a plain string" if ref $head->[WQ_DATA];
 
-   my $len = $self->write_handle->syswrite( $head->[WQ_DATA], $self->{write_len} );
+   my $writer = $self->{writer};
+   my $len = $self->$writer( $self->write_handle, $head->[WQ_DATA], $self->{write_len} );
 
    if( !defined $len ) {
       my $errno = $!;
@@ -620,8 +653,6 @@ sub _flush_one_write
 
       return 0;
    }
-
-   substr( $head->[WQ_DATA], 0, $len ) = "";
 
    if( !length $head->[WQ_DATA] ) {
       $head->[WQ_ON_FLUSH]->( $self ) if $head->[WQ_ON_FLUSH];
@@ -730,15 +761,23 @@ sub _flush_one_read
    }
 }
 
+sub _sysread
+{
+   my $self = shift;
+   my ( $handle, undef, $len ) = @_;
+   return $handle->sysread( $_[1], $len );
+}
+
 sub on_read_ready
 {
    my $self = shift;
 
    my $handle = $self->read_handle;
+   my $reader = $self->{reader};
 
    while(1) {
       my $data;
-      my $len = $handle->sysread( $data, $self->{read_len} );
+      my $len = $self->$reader( $handle, $data, $self->{read_len} );
 
       if( !defined $len ) {
          my $errno = $!;
