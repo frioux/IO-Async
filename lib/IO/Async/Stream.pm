@@ -284,9 +284,9 @@ If these options are used with the default event handlers, be careful not to
 cause deadlocks by having a high watermark sufficiently low that a single
 C<on_read> invocation might not consider it finished yet.
 
-=head2 reader => STRING|CODE
+=item reader => STRING|CODE
 
-=head2 writer => STRING|CODE
+=item writer => STRING|CODE
 
 Optional. If defined, gives the name of a method or a CODE reference to use
 to implement the actual reading from or writing to the filehandle. These will
