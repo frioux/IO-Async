@@ -32,6 +32,13 @@ use constant WQ_WATCHING => 2;
 # Indicies into readqueue elements
 use constant RQ_ONREAD => 0;
 use constant RQ_FUTURE => 1;
+# Bitfields in the want flags
+use constant WANT_READ_FOR_READ   => 0x01;
+use constant WANT_READ_FOR_WRITE  => 0x02;
+use constant WANT_WRITE_FOR_READ  => 0x04;
+use constant WANT_WRITE_FOR_WRITE => 0x08;
+use constant WANT_ANY_READ  => WANT_READ_FOR_READ |WANT_READ_FOR_WRITE;
+use constant WANT_ANY_WRITE => WANT_WRITE_FOR_READ|WANT_WRITE_FOR_WRITE;
 
 =head1 NAME
 
@@ -165,7 +172,7 @@ and re-enable notifications again once something has read enough to cause it to
 drop. If these events are overridden, the overriding code will have to perform
 this behaviour if required, by using
 
- $self->want_readready(...)
+ $self->want_readready_for_read(...)
 
 =head2 on_outgoing_empty
 
@@ -186,6 +193,8 @@ sub _init
 
    $self->{read_len}  = $READLEN;
    $self->{write_len} = $WRITELEN;
+
+   $self->{want} = WANT_READ_FOR_READ;
 
    $self->{close_on_read_eof} = 1;
 }
@@ -402,13 +411,83 @@ sub _add_to_loop
    $self->SUPER::_add_to_loop( @_ );
 
    if( !$self->_is_empty ) {
-      $self->want_writeready( 1 );
+      $self->want_writeready_for_write( 1 );
    }
 }
 
 =head1 METHODS
 
 =cut
+
+=head2 $stream->want_readready_for_read( $set )
+
+=head2 $stream->want_readready_for_write( $set )
+
+Mutators for the C<want_readready> property on L<IO::Async::Handle>, which
+control whether the C<read> or C<write> behaviour should be continued once the
+filehandle becomes ready for read.
+
+Normally, C<want_readready_for_read> is always true (though the read watermark
+behaviour can modify it), and C<want_readready_for_write> is not used.
+However, if a custom C<writer> function is provided, it may find this useful
+for being invoked again if it cannot proceed with a write operation until the
+filehandle becomes readable (such as during transport negotiation or SSL key
+management, for example).
+
+=cut
+
+sub want_readready_for_read
+{
+   my $self = shift;
+   my ( $set ) = @_;
+   $set ? ( $self->{want} |= WANT_READ_FOR_READ ) : ( $self->{want} &= ~WANT_READ_FOR_READ );
+
+   $self->want_readready( $self->{want} & WANT_ANY_READ ) if $self->read_handle;
+}
+
+sub want_readready_for_write
+{
+   my $self = shift;
+   my ( $set ) = @_;
+   $set ? ( $self->{want} |= WANT_READ_FOR_WRITE ) : ( $self->{want} &= ~WANT_READ_FOR_WRITE );
+
+   $self->want_readready( $self->{want} & WANT_ANY_READ ) if $self->read_handle;
+}
+
+=head2 $stream->want_writeready_for_write( $set )
+
+=head2 $stream->want_writeready_for_read( $set )
+
+Mutators for the C<want_writeready> property on L<IO::Async::Handle>, which
+control whether the C<write> or C<read> behaviour should be continued once the
+filehandle becomes ready for write.
+
+Normally, C<want_writeready_for_write> is managed by the C<write> method and
+associated flushing, and C<want_writeready_for_read> is not used. However, if
+a custom C<reader> function is provided, it may find this useful for being
+invoked again if it cannot proceed with a read operation until the filehandle
+becomes writable (such as during transport negotiation or SSL key management,
+for example).
+
+=cut
+
+sub want_writeready_for_write
+{
+   my $self = shift;
+   my ( $set ) = @_;
+   $set ? ( $self->{want} |= WANT_WRITE_FOR_WRITE ) : ( $self->{want} &= ~WANT_WRITE_FOR_WRITE );
+
+   $self->want_writeready( $self->{want} & WANT_ANY_WRITE ) if $self->write_handle;
+}
+
+sub want_writeready_for_read
+{
+   my $self = shift;
+   my ( $set ) = @_;
+   $set ? ( $self->{want} |= WANT_WRITE_FOR_READ ) : ( $self->{want} &= ~WANT_WRITE_FOR_READ );
+
+   $self->want_writeready( $self->{want} & WANT_ANY_WRITE ) if $self->write_handle;
+}
 
 # FUNCTION not method
 sub _nonfatal_error
@@ -701,12 +780,12 @@ sub write
       1 while !$self->_is_empty and $self->_flush_one_write;
 
       if( $self->_is_empty ) {
-         $self->want_writeready( 0 );
+         $self->want_writeready_for_write( 0 );
          return $f;
       }
    }
 
-   $self->want_writeready( 1 );
+   $self->want_writeready_for_write( 1 );
    return $f;
 }
 
@@ -714,11 +793,19 @@ sub on_write_ready
 {
    my $self = shift;
 
+   $self->_do_write if $self->{want} & WANT_WRITE_FOR_WRITE;
+   $self->_do_read  if $self->{want} & WANT_WRITE_FOR_READ;
+}
+
+sub _do_write
+{
+   my $self = shift;
+
    1 while !$self->_is_empty and $self->_flush_one_write and $self->{write_all};
 
    # All data successfully flushed
    if( $self->_is_empty ) {
-      $self->want_writeready( 0 );
+      $self->want_writeready_for_write( 0 );
 
       $self->maybe_invoke_event( on_outgoing_empty => );
 
@@ -769,6 +856,14 @@ sub _sysread
 }
 
 sub on_read_ready
+{
+   my $self = shift;
+
+   $self->_do_read  if $self->{want} & WANT_READ_FOR_READ;
+   $self->_do_write if $self->{want} & WANT_READ_FOR_WRITE;
+}
+
+sub _do_read
 {
    my $self = shift;
 
@@ -831,13 +926,13 @@ sub on_read_ready
 sub on_read_high_watermark
 {
    my $self = shift;
-   $self->want_readready( 0 );
+   $self->want_readready_for_read( 0 );
 }
 
 sub on_read_low_watermark
 {
    my $self = shift;
-   $self->want_readready( 1 );
+   $self->want_readready_for_read( 1 );
 }
 
 =head2 $stream->push_on_read( $on_read )

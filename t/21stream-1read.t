@@ -147,6 +147,44 @@ sub mkhandles
    $loop->remove( $stream );
 }
 
+# ->want_readready_for_write
+{
+   my ( $rd, $wr ) = mkhandles;
+
+   my $reader_called;
+   my $writer_called;
+   my $stream = IO::Async::Stream->new(
+      handle => $rd,
+      on_read => sub { return 0; }, # ignore reading
+      reader => sub { $reader_called++; sysread( $rd, $_[2], $_[3] ) },
+      writer => sub { $writer_called++; return 1 },
+   );
+
+   $loop->add( $stream );
+
+   # Hacky hack - make the stream want to write, but don't mark the stream write-ready
+   $stream->write( "A" );
+   $stream->want_writeready_for_write( 0 );
+   # End hack
+
+   # make it readready
+   $wr->syswrite( "1" );
+
+   wait_for { $reader_called };
+
+   ok( !$writer_called, 'writer not yet called before ->want_readready_for_write' );
+
+   $stream->want_readready_for_write( 1 );
+
+   undef $reader_called;
+   $wr->syswrite( "2" );
+   wait_for { $reader_called && $writer_called };
+
+   ok( $writer_called, 'writer now invoked with ->want_readready_for_write' );
+
+   $loop->remove( $stream );
+}
+
 {
    my ( $rd, $wr ) = mkhandles;
 

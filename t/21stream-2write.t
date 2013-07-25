@@ -142,6 +142,32 @@ sub read_data
    $loop->remove( $stream );
 }
 
+# ->want_writeready_for_read
+{
+   my ( $rd, $wr ) = mkhandles;
+
+   my $reader_called;
+   my $stream = IO::Async::Stream->new(
+      handle => $wr,
+      on_read => sub { return 0; }, # ignore reading
+      reader => sub { $reader_called++; $! = EAGAIN; return undef },
+   );
+
+   $loop->add( $stream );
+
+   $loop->loop_once( 0.1 ); # haaaaack
+
+   ok( !$reader_called, 'reader not yet called before ->want_writeready_for_read' );
+
+   $stream->want_writeready_for_read( 1 );
+
+   wait_for { $reader_called };
+
+   ok( $reader_called, 'reader now invoked with ->want_writeready_for_read' );
+
+   $loop->remove( $stream );
+}
+
 {
    my ( $rd, $wr ) = mkhandles;
 
