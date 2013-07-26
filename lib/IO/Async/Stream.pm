@@ -27,9 +27,10 @@ our $WRITELEN = 8192;
 
 # Indicies in writequeue elements
 use constant WQ_DATA     => 0;
-use constant WQ_ON_WRITE => 1;
-use constant WQ_ON_FLUSH => 2;
-use constant WQ_WATCHING => 3;
+use constant WQ_WRITELEN => 1;
+use constant WQ_ON_WRITE => 2;
+use constant WQ_ON_FLUSH => 3;
+use constant WQ_WATCHING => 4;
 # Indicies into readqueue elements
 use constant RQ_ONREAD => 0;
 use constant RQ_FUTURE => 1;
@@ -625,6 +626,10 @@ Takes the following optional named parameters in C<%params>:
 
 =over 8
 
+=item write_len => INT
+
+Overrides the C<write_len> parameter for the data written by this call.
+
 =item on_write => CODE
 
 A CODE reference which will be invoked after every successful C<syswrite>
@@ -716,10 +721,11 @@ sub _flush_one_write
    }
 
    my $second;
-   while( !$head->[WQ_ON_WRITE] and !$head->[WQ_ON_FLUSH] and
-          $second = $writequeue->[1] and
-          !$second->[WQ_ON_WRITE] and
-          !ref $second->[WQ_DATA] ) {
+   while( $second = $writequeue->[1] and
+          !ref $second->[WQ_DATA] and
+          $head->[WQ_WRITELEN] == $second->[WQ_WRITELEN] and
+          !$head->[WQ_ON_WRITE] and !$second->[WQ_ON_WRITE] and
+          !$head->[WQ_ON_FLUSH] ) {
       $head->[WQ_DATA] .= $second->[WQ_DATA];
       $head->[WQ_ON_WRITE] = $second->[WQ_ON_WRITE];
       $head->[WQ_ON_FLUSH] = $second->[WQ_ON_FLUSH];
@@ -729,7 +735,7 @@ sub _flush_one_write
    die "TODO: head data does not contain a plain string" if ref $head->[WQ_DATA];
 
    my $writer = $self->{writer};
-   my $len = $self->$writer( $self->write_handle, $head->[WQ_DATA], $self->{write_len} );
+   my $len = $self->$writer( $self->write_handle, $head->[WQ_DATA], $head->[WQ_WRITELEN] );
 
    if( !defined $len ) {
       my $errno = $!;
@@ -789,7 +795,7 @@ sub write
       };
    }
 
-   push @{ $self->{writequeue} }, [ $data, $on_write, $on_flush ];
+   push @{ $self->{writequeue} }, [ $data, $params{write_len} // $self->{write_len}, $on_write, $on_flush ];
 
    keys %params and croak "Unrecognised keys for ->write - " . join( ", ", keys %params );
 
