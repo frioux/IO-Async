@@ -215,7 +215,20 @@ subject to change and experimentation.
 
 In general, methods that support Futures return a new Future object to
 represent the outstanding operation. If callback functions are supplied as
-well, these will be fired in addition to the Future object becoming ready.
+well, these will be fired in addition to the Future object becoming ready. Any
+failures that are reported will, in general, use the same conventions for the
+Future's C<fail> arguments to relate it to the legacy C<on_error>-style
+callbacks.
+
+ $on_NAME_error->( $message, @argmuents )
+
+ $f->fail( $message, NAME, @arguments )
+
+where C<$message> is a message intended for humans to read (so that this is
+the message displayed by C<< $f->get >> if the failure is not otherwise
+caught), C<NAME> is the name of the failing operation. If the failure is due
+to a failed system call, the value of C<$!> will be the final argument. The
+message should not end with a linefeed.
 
 =head2 Networking
 

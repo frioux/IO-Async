@@ -908,7 +908,7 @@ sub _do_read
             or $self->close_now;
 
          foreach ( @{ $self->{readqueue} } ) {
-            $_->[RQ_FUTURE]->fail( $errno ) if $_->[RQ_FUTURE];
+            $_->[RQ_FUTURE]->fail( "read failed: $errno", sysread => $errno ) if $_->[RQ_FUTURE];
          }
          undef @{ $self->{readqueue} };
 
@@ -1021,6 +1021,8 @@ If a read EOF or error condition happens while there are read C<Future>s
 pending, they are all completed. In the case of a read EOF, they are done with
 C<undef>; in the case of a read error they are failed using the C<$!> error
 value as the failure.
+
+ $f->fail( $message, sysread => $! )
 
 If a read EOF condition happens to the currently-processing read C<Future>, it
 will return a partial result. The calling code can detect this by the fact

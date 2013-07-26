@@ -330,7 +330,7 @@ sub getaddrinfo
           # fallthrough to async case
        }
        else {
-          my $future = $self->loop->new_future->fail( "$err\n" );
+          my $future = $self->loop->new_future->fail( $err, resolve => getaddrinfo => $err+0 );
           $future->on_fail( $args{on_error} ) if $args{on_error};
           return $future;
        }
@@ -434,7 +434,7 @@ sub getnameinfo
       my ( $err, $host, $service ) = _getnameinfo( $args{addr}, $flags );
 
       if( $err ) {
-         my $future = $self->loop->new_future->fail( "$err\n" );
+         my $future = $self->loop->new_future->fail( $err, resolve => getnameinfo => $err+0 );
          $future->on_fail( $args{on_error} ) if $args{on_error};
          return $future;
       }

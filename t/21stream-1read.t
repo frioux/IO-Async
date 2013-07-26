@@ -586,7 +586,7 @@ my @sub_lines;
    my $f = $stream->read_atmost( 256 );
 
    wait_for { $f->is_ready };
-   cmp_ok( $f->failure, "==", ECONNRESET, 'failure from ->read_atmost after failed read' );
+   cmp_ok( ( $f->failure )[-1], "==", ECONNRESET, 'failure from ->read_atmost after failed read' );
 
    $loop->remove( $stream );
 }
