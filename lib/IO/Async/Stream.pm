@@ -27,8 +27,9 @@ our $WRITELEN = 8192;
 
 # Indicies in writequeue elements
 use constant WQ_DATA     => 0;
-use constant WQ_ON_FLUSH => 1;
-use constant WQ_WATCHING => 2;
+use constant WQ_ON_WRITE => 1;
+use constant WQ_ON_FLUSH => 2;
+use constant WQ_WATCHING => 3;
 # Indicies into readqueue elements
 use constant RQ_ONREAD => 0;
 use constant RQ_FUTURE => 1;
@@ -184,7 +185,7 @@ sub _init
 {
    my $self = shift;
 
-   $self->{writequeue} = []; # Queue of ARRAYs of [ $data, $on_flushed ]
+   $self->{writequeue} = []; # Queue of ARRAYs of [ $data, $on_write, $on_flush ]
    $self->{readqueue} = []; # Queue of ARRAYs of [ CODE, $readfuture ]
    $self->{readbuff} = "";
 
@@ -624,6 +625,16 @@ Takes the following optional named parameters in C<%params>:
 
 =over 8
 
+=item on_write => CODE
+
+A CODE reference which will be invoked after every successful C<syswrite>
+operation on the underlying filehandle. It will be passed the number of bytes
+that were written by this call, which may not be the entire length of the
+buffer - if it takes more than one C<syscall> operation to empty the buffer
+then this callback will be invoked multiple times.
+
+ $on_write->( $stream, $len )
+
 =item on_flush => CODE
 
 A CODE reference which will be invoked once the data queued by this C<write>
@@ -704,11 +715,14 @@ sub _flush_one_write
       }
    }
 
-   while( !$head->[WQ_ON_FLUSH] and
-          $writequeue->[1] and
-          !ref $writequeue->[1][WQ_DATA] ) {
-      $head->[WQ_DATA] .= $writequeue->[1][WQ_DATA];
-      $head->[WQ_ON_FLUSH] = $writequeue->[1][WQ_ON_FLUSH];
+   my $second;
+   while( !$head->[WQ_ON_WRITE] and !$head->[WQ_ON_FLUSH] and
+          $second = $writequeue->[1] and
+          !$second->[WQ_ON_WRITE] and
+          !ref $second->[WQ_DATA] ) {
+      $head->[WQ_DATA] .= $second->[WQ_DATA];
+      $head->[WQ_ON_WRITE] = $second->[WQ_ON_WRITE];
+      $head->[WQ_ON_FLUSH] = $second->[WQ_ON_FLUSH];
       splice @$writequeue, 1, 1, ();
    }
 
@@ -731,6 +745,10 @@ sub _flush_one_write
          or $self->close_now;
 
       return 0;
+   }
+
+   if( my $on_write = $head->[WQ_ON_WRITE] ) {
+      $on_write->( $self, $len );
    }
 
    if( !length $head->[WQ_DATA] ) {
@@ -758,6 +776,7 @@ sub write
       $data = $encoding->encode( $data );
    }
 
+   my $on_write = delete $params{on_write};
    my $on_flush = delete $params{on_flush};
 
    my $f;
@@ -770,7 +789,7 @@ sub write
       };
    }
 
-   push @{ $self->{writequeue} }, [ $data, $on_flush ];
+   push @{ $self->{writequeue} }, [ $data, $on_write, $on_flush ];
 
    keys %params and croak "Unrecognised keys for ->write - " . join( ", ", keys %params );
 

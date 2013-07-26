@@ -75,18 +75,26 @@ sub read_data
 
    is( read_data( $rd ), "message\n", 'data after writing buffer' );
 
+   my $written = 0;
    my $flushed;
 
-   my $f = $stream->write( "hello again\n", on_flush => sub {
-      is( $_[0], $stream, 'on_flush $_[0] is $stream' );
-      $flushed++
-   } );
+   my $f = $stream->write( "hello again\n",
+      on_write => sub {
+         is( $_[0], $stream, 'on_write $_[0] is $stream' );
+         $written += $_[1];
+      },
+      on_flush => sub {
+         is( $_[0], $stream, 'on_flush $_[0] is $stream' );
+         $flushed++
+      },
+   );
 
    ok( !$f->is_ready, '->write future not yet ready' );
 
    wait_for { $flushed };
 
    ok( $f->is_ready, '->write future is ready after flush' );
+   is( $written, 12, 'on_write given total write length after flush' );
    is( read_data( $rd ), "hello again\n", 'flushed data does get flushed' );
 
    $flushed = 0;
