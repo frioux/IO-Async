@@ -176,6 +176,42 @@ sub read_data
    $loop->remove( $stream );
 }
 
+# on_writeable_{start,stop}
+{
+   my ( $rd, $wr ) = mkhandles;
+   my $buffer;
+
+   my $writeable;
+   my $unwriteable;
+   my $emulate_writeable = 0;
+   my $stream = IO::Async::Stream->new(
+      write_handle => $wr,
+      writer => sub {
+         my $self = shift;
+         $! = EAGAIN, return undef unless $emulate_writeable;
+
+         $buffer .= substr( $_[1], 0, $_[2], "" );
+         return $_[2];
+      },
+      on_writeable_start => sub { $writeable++ },
+      on_writeable_stop  => sub { $unwriteable++ },
+   );
+
+   $loop->add( $stream );
+
+   $stream->write( "Something" );
+
+   wait_for { $unwriteable };
+
+   $emulate_writeable = 1;
+
+   wait_for { $writeable };
+
+   is( $buffer, "Something", '$buffer after emulated EAGAIN' );
+
+   $loop->remove( $stream );
+}
+
 {
    my ( $rd, $wr ) = mkhandles;
 

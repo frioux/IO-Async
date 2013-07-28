@@ -180,6 +180,19 @@ this behaviour if required, by using
 
 Optional. Invoked when the writing data buffer becomes empty.
 
+=head2 on_writeable_start
+
+=head2 on_writeable_stop
+
+Optional. These two events inform when the filehandle becomes writeable, and
+when it stops being writeable. C<on_writeable_start> is invoked by the
+C<on_write_ready> event if previously it was known to be not writeable.
+C<on_writeable_stop> is invoked after a C<syswrite> operation fails with
+C<EAGAIN> or C<EWOULDBLOCK>. These two events track the writeability state,
+and ensure that only state change cause events to be invoked. A stream starts
+off being presumed writeable, so the first of these events to be observed will
+be C<on_writeable_stop>.
+
 =cut
 
 sub _init
@@ -188,6 +201,7 @@ sub _init
 
    $self->{writequeue} = []; # Queue of ARRAYs of [ $data, $on_write, $on_flush ]
    $self->{readqueue} = []; # Queue of ARRAYs of [ CODE, $readfuture ]
+   $self->{writeable} = 1; # "innocent until proven guilty" (by means of EAGAIN)
    $self->{readbuff} = "";
 
    $self->{reader} = "_sysread";
@@ -226,6 +240,10 @@ Shortcut to specifying the same IO handle for both of the above.
 =item on_outgoing_empty => CODE
 
 =item on_write_error => CODE
+
+=item on_writeable_start => CODE
+
+=item on_writeable_stop => CODE
 
 CODE references for event handlers.
 
@@ -365,9 +383,9 @@ sub configure
    my %params = @_;
 
    for (qw( on_read on_outgoing_empty on_read_eof on_write_eof on_read_error
-            on_write_error autoflush read_len read_all write_len write_all
-            on_read_high_watermark on_read_low_watermark reader writer
-            close_on_read_eof )) {
+            on_write_error on_writeable_start on_writeable_stop autoflush
+            read_len read_all write_len write_all on_read_high_watermark
+            on_read_low_watermark reader writer close_on_read_eof )) {
       $self->{$_} = delete $params{$_} if exists $params{$_};
    }
 
@@ -740,6 +758,11 @@ sub _flush_one_write
    if( !defined $len ) {
       my $errno = $!;
 
+      if( $errno == EAGAIN or $errno == EWOULDBLOCK ) {
+         $self->maybe_invoke_event( on_writeable_stop => ) if $self->{writeable};
+         $self->{writeable} = 0;
+      }
+
       return 0 if _nonfatal_error( $errno );
 
       if( $errno == EPIPE ) {
@@ -817,6 +840,11 @@ sub write
 sub on_write_ready
 {
    my $self = shift;
+
+   if( !$self->{writeable} ) {
+      $self->maybe_invoke_event( on_writeable_start => );
+      $self->{writeable} = 1;
+   }
 
    $self->_do_write if $self->{want} & WANT_WRITE_FOR_WRITE;
    $self->_do_read  if $self->{want} & WANT_WRITE_FOR_READ;
