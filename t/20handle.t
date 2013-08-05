@@ -15,6 +15,8 @@ use IO::Async::Handle;
 
 use IO::Async::OS;
 
+use Socket qw( AF_INET SOCK_STREAM SO_TYPE );
+
 my $loop = IO::Async::Loop->new;
 
 testing_loop( $loop );
@@ -350,6 +352,18 @@ my $sub_writeready = 0;
    is_oneref( $handle, '$handle latebount has refcount 1 after set_handle' );
 
    is( $handle->notifier_name, "rw=$fd1", '$handle->notifier_name for late bind after handles' );
+}
+
+# ->socket
+{
+   my $handle = IO::Async::Handle->new( on_read_ready => sub {}, on_write_ready => sub {} );
+
+   $handle->socket( [ 'inet', 'stream', 0 ] );
+
+   ok( defined $handle->read_handle, '->socket sets handle' );
+
+   is( $handle->read_handle->sockdomain,       AF_INET,     'handle->sockdomain is AF_INET' );
+   is( $handle->read_handle->sockopt(SO_TYPE), SOCK_STREAM, 'handle->socktype is SOCK_STREAM' );
 }
 
 done_testing;

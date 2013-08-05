@@ -17,6 +17,8 @@ use IO::Handle; # give methods to bare IO handles
 
 use Future;
 
+use IO::Async::OS;
+
 =head1 NAME
 
 C<IO::Async::Handle> - event callbacks for a non-blocking file descriptor
@@ -551,6 +553,32 @@ sub want_writeready
    else {
       return $self->{want_writeready};
    }
+}
+
+=head2 $handle->socket( $ai )
+
+Convenient shortcut to creating a socket handle, as given by an addrinfo
+structure, and setting it as the read and write handle for the object.
+
+C<$ai> may be either a C<HASH> or C<ARRAY> reference of the same form as given
+to L<IO::Async::OS>'s C<extract_addrinfo> method.
+
+This method returns nothing if it succeeds, or throws an exception if it
+fails.
+
+=cut
+
+sub socket
+{
+   my $self = shift;
+   my ( $ai ) = @_;
+
+   # TODO: Something about closing the old one?
+
+   my ( $family, $socktype, $protocol ) = IO::Async::OS->extract_addrinfo( $ai );
+
+   my $sock = IO::Async::OS->socket( $family, $socktype, $protocol );
+   $self->set_handle( $sock );
 }
 
 =head1 SEE ALSO
