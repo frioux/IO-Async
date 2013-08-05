@@ -27,7 +27,6 @@ use_ok( "IO::Async::Test" );
 
 use_ok( "IO::Async::Function" );
 use_ok( "IO::Async::Resolver" );
-use_ok( "IO::Async::Connector" );
 
 use_ok( "IO::Async::Protocol" );
 use_ok( "IO::Async::Protocol::Stream" );

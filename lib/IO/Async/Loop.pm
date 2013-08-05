@@ -1035,12 +1035,193 @@ sub resolve
 
 =head2 $loop->connect( %params )
 
-This method performs a non-blocking connect operation. It uses an
-internally-stored C<IO::Async::Connector> object. For more detail, see the
-C<connect> method on the L<IO::Async::Connector> class.
+This method performs a non-blocking connection to a given address or set of
+addresses, and invokes a continuation when the socket is connected.
+
+There are two modes of operation. Firstly, a list of addresses can be provided
+which will be tried in turn. Alternatively as a convenience, if a host and
+service name are provided instead of a list of addresses, these will be
+resolved using the underlying loop's C<resolve> method into the list of
+addresses.
+
+When attempting to connect to any among a list of addresses, there may be
+failures among the first attempts, before a valid connection is made. For
+example, the resolver may have returned some IPv6 addresses, but only IPv4
+routes are valid on the system. In this case, the first C<connect(2)> syscall
+will fail. This isn't yet a fatal error, if there are more addresses to try,
+perhaps some IPv4 ones.
+
+For this reason, it is possible that the operation eventually succeeds even
+though some system calls initially fail. To be aware of individual failures,
+the optional C<on_fail> callback can be used. This will be invoked on each
+individual C<socket(2)> or C<connect(2)> failure, which may be useful for
+debugging or logging.
+
+Because this module simply uses the C<getaddrinfo> resolver, it will be fully
+IPv6-aware if the underlying platform's resolver is. This allows programs to
+be fully IPv6-capable.
+
+In plain address mode, the C<%params> hash takes the following keys:
+
+=over 8
+
+=item addrs => ARRAY
+
+Reference to an array of (possibly-multiple) address structures to attempt to
+connect to. Each should be in the layout described for C<addr>. Such a layout
+is returned by the C<getaddrinfo> named resolver.
+
+=item addr => HASH or ARRAY
+
+Shortcut for passing a single address to connect to; it may be passed directly
+with this key, instead of in another array on its own. This should be in a
+format recognised by L<IO::Async::OS>'s C<extract_addrinfo> method.
+
+This example shows how to use the C<Socket> functions to construct one for TCP
+port 8001 on address 10.0.0.1:
+
+ $loop->connect(
+    addr => {
+       family   => "inet",
+       socktype => "stream",
+       port     => 8001,
+       ip       => "10.0.0.1",
+    },
+    ...
+ );
+
+This example shows another way to connect to a UNIX socket at F<echo.sock>.
+
+ $loop->connect(
+    addr => {
+       family   => "unix",
+       socktype => "stream",
+       path     => "echo.sock",
+    },
+    ...
+ );
+
+=item local_addrs => ARRAY
+
+=item local_addr => HASH or ARRAY
+
+Optional. Similar to the C<addrs> or C<addr> parameters, these specify a local
+address or set of addresses to C<bind(2)> the socket to before
+C<connect(2)>ing it.
+
+=item on_connected => CODE
+
+A continuation that is invoked on a successful C<connect(22)> call to a valid
+socket. It will be passed the connected socket handle, as an C<IO::Socket>
+object.
+
+ $on_connected->( $handle )
+
+=item on_stream => CODE
+
+An alternative to C<on_connected>, a continuation that is passed an instance
+of L<IO::Async::Stream> when the socket is connected. This is provided as a
+convenience for the common case that a Stream object is required as the
+transport for a Protocol object.
+
+ $on_stream->( $stream )
+
+=item on_socket => CODE
+
+Similar to C<on_stream>, but constructs an instance of L<IO::Async::Socket>.
+This is most useful for C<SOCK_DGRAM> or C<SOCK_RAW> sockets.
+
+ $on_socket->( $socket )
+
+=item on_connect_error => CODE
+
+A continuation that is invoked after all of the addresses have been tried, and
+none of them succeeded. It will be passed the most significant error that
+occurred, and the name of the operation it occurred in. Errors from the
+C<connect(2)> syscall are considered most significant, then C<bind(2)>, then
+finally C<socket(2)>.
+
+ $on_connect_error->( $syscall, $! )
+
+=item on_fail => CODE
+
+Optional. After an individual C<socket(2)> or C<connect(2)> syscall has failed,
+this callback is invoked to inform of the error. It is passed the name of the
+syscall that failed, the arguments that were passed to it, and the error it
+generated. I.e.
+
+ $on_fail->( "socket", $family, $socktype, $protocol, $! );
+
+ $on_fail->( "bind", $sock, $address, $! );
+
+ $on_fail->( "connect", $sock, $address, $! );
+
+Because of the "try all" nature when given a list of multiple addresses, this
+callback may be invoked multiple times, even before an eventual success.
+
+=back
+
+When performing the resolution step too, the C<addrs> or C<addr> keys are
+ignored, and instead the following keys are taken:
+
+=over 8
+
+=item host => STRING
+
+=item service => STRING
+
+The hostname and service name to connect to.
+
+=item local_host => STRING
+
+=item local_service => STRING
+
+Optional. The hostname and/or service name to C<bind(2)> the socket to locally
+before connecting to the peer.
+
+=item family => INT
+
+=item socktype => INT
+
+=item protocol => INT
+
+=item flags => INT
+
+Optional. Other arguments to pass along with C<host> and C<service> to the
+C<getaddrinfo> call.
+
+=item socktype => STRING
+
+Optionally may instead be one of the values C<'stream'>, C<'dgram'> or
+C<'raw'> to stand for C<SOCK_STREAM>, C<SOCK_DGRAM> or C<SOCK_RAW>. This
+utility is provided to allow the caller to avoid a separate C<use Socket> only
+for importing these constants.
+
+=item on_resolve_error => CODE
+
+A continuation that is invoked when the name resolution attempt fails. This is
+invoked in the same way as the C<on_error> continuation for the C<resolve>
+method.
+
+=back
+
+It is necessary to pass the C<socktype> hint to the resolver when resolving
+the host/service names into an address, as some OS's C<getaddrinfo> functions
+require this hint. A warning is emitted if neither C<socktype> nor C<protocol>
+hint is defined when performing a C<getaddrinfo> lookup. To avoid this warning
+while still specifying no particular C<socktype> hint (perhaps to invoke some
+OS-specific behaviour), pass C<0> as the C<socktype> value.
 
 This method accepts an C<extensions> parameter; see the C<EXTENSIONS> section
 below.
+
+=head2 $future = $loop->connect( %params )
+
+When returning a future, the C<on_connected>, C<on_stream>, C<on_socket> and
+various C<on_*_error> continuations are optional. When the socket is
+connected, the future will be given the connected socket handle. No direct
+support for automatically constructing a C<IO::Async::Stream> or
+C<IO::Async::Socket> object is provided.
 
 =cut
 
@@ -1065,7 +1246,7 @@ sub connect
       return;
    }
 
-   my $connector = $self->{connector} ||= $self->__new_feature( "IO::Async::Connector" );
+   my $connector = $self->{connector} ||= $self->__new_feature( "IO::Async::Internals::Connector" );
 
    $connector->connect( %params );
 }
