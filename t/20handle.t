@@ -15,7 +15,7 @@ use IO::Async::Handle;
 
 use IO::Async::OS;
 
-use Socket qw( AF_INET SOCK_STREAM SO_TYPE );
+use Socket qw( AF_INET SOCK_STREAM SOCK_DGRAM SO_TYPE unpack_sockaddr_in );
 
 my $loop = IO::Async::Loop->new;
 
@@ -354,7 +354,7 @@ my $sub_writeready = 0;
    is( $handle->notifier_name, "rw=$fd1", '$handle->notifier_name for late bind after handles' );
 }
 
-# ->socket
+# ->socket and ->bind
 {
    my $handle = IO::Async::Handle->new( on_read_ready => sub {}, on_write_ready => sub {} );
 
@@ -364,6 +364,12 @@ my $sub_writeready = 0;
 
    is( $handle->read_handle->sockdomain,       AF_INET,     'handle->sockdomain is AF_INET' );
    is( $handle->read_handle->sockopt(SO_TYPE), SOCK_STREAM, 'handle->socktype is SOCK_STREAM' );
+
+   $handle->bind( { family => "inet", socktype => "dgram" } );
+
+   is( $handle->read_handle->sockopt(SO_TYPE), SOCK_DGRAM, 'handle->socktype is SOCK_DGRAM' );
+   # Not sure what port number but it should be nonzero
+   ok( ( unpack_sockaddr_in( $handle->read_handle->sockname ) )[0], 'handle->sockname has nonzero port' );
 }
 
 done_testing;

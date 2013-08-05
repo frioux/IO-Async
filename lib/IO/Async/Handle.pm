@@ -581,6 +581,31 @@ sub socket
    $self->set_handle( $sock );
 }
 
+=head2 $handle->bind( $ai )
+
+Convenient shortcut to creating a socket handle and C<bind()>ing it to the
+address as given by an addrinfo structure, and setting it as the read and
+write handle for the object.
+
+C<$ai> may be either a C<HASH> or C<ARRAY> reference of the same form as given
+to L<IO::Async::OS>'s C<extract_addrinfo> method.
+
+This method returns nothing if it succeeds, or throws an exception if it
+fails.
+
+=cut
+
+sub bind
+{
+   my $self = shift;
+   my ( $ai ) = @_;
+
+   $self->socket( $ai );
+   my $addr = ( IO::Async::OS->extract_addrinfo( $ai ) )[3];
+
+   $self->read_handle->bind( $addr ) or croak "Cannot bind - $!";
+}
+
 =head1 SEE ALSO
 
 =over 4
