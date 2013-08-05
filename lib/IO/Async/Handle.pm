@@ -606,6 +606,28 @@ sub bind
    $self->read_handle->bind( $addr ) or croak "Cannot bind - $!";
 }
 
+=head2 $future = $handle->connect( %args )
+
+A convenient wrapper for calling the C<connect> method on the underlying
+L<IO::Async::Loop> object. Takes the same arguments and returns the same
+Future, but additionally will set the object's read and write handle when the
+operation completes.
+
+=cut
+
+sub connect
+{
+   my $self = shift;
+   my %args = @_;
+
+   my $loop = $self->loop or croak "Cannot ->connect a Handle that is not in a Loop";
+
+   return $self->loop->connect( %args )->on_done( sub {
+      my ( $sock ) = @_;
+      $self->set_handle( $sock );
+   });
+}
+
 =head1 SEE ALSO
 
 =over 4
