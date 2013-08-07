@@ -17,16 +17,19 @@ testing_loop( $loop );
 # connect
 {
    my %connectargs;
+   my $connect_future;
    sub IO::Async::Loop::FOO_connect
    {
       my $self = shift;
       %connectargs = @_;
 
       identical( $self, $loop, 'FOO_connect invocant is $loop' );
+
+      return $connect_future = $loop->new_future;
    }
 
    my $sock;
-   $loop->connect(
+   my $f = $loop->connect(
       extensions => [qw( FOO )],
       some_param => "here",
       on_connected => sub { $sock = shift },
@@ -36,6 +39,8 @@ testing_loop( $loop );
    is_deeply( \%connectargs,
               { some_param => "here" },
               'FOO_connect received some_param and no others' );
+
+   identical( $f, $connect_future, 'FOO_connect returns Future object' );
 
    $loop->connect(
       extensions => [qw( FOO BAR )],

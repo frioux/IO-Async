@@ -158,40 +158,6 @@ sub connect
 
    my $loop = $self->{loop};
 
-   my $on_done;
-
-   # Callbacks
-   if( my $on_connected = delete $params{on_connected} ) {
-      $on_done = $on_connected;
-   }
-   elsif( my $on_stream = delete $params{on_stream} ) {
-      require IO::Async::Stream;
-      # TODO: It doesn't make sense to put a SOCK_DGRAM in an
-      # IO::Async::Stream but currently we don't detect this
-      $on_done = sub {
-         my ( $handle ) = @_;
-         $on_stream->( IO::Async::Stream->new( handle => $handle ) );
-      };
-   }
-   elsif( my $on_socket = delete $params{on_socket} ) {
-      require IO::Async::Socket;
-      $on_done = sub {
-         my ( $handle ) = @_;
-         $on_socket->( IO::Async::Socket->new( handle => $handle ) );
-      };
-   }
-   elsif( !defined wantarray ) {
-      croak "Expected 'on_connected' or 'on_stream' callback or to return a Future";
-   }
-
-   my $on_connect_error;
-   if( $on_connect_error = $params{on_connect_error} ) {
-      # OK
-   }
-   elsif( !defined wantarray ) {
-      croak "Expected 'on_connect_error' callback";
-   }
-
    my $on_fail = $params{on_fail};
 
    my %gai_hints;
@@ -203,19 +169,8 @@ sub connect
          carp "Attempting to ->connect without either 'socktype' or 'protocol' hint is not portable";
    }
 
-   my $have_fail_resolve = 1;
-   my $on_resolve_error;
-   if( $on_resolve_error = $params{on_resolve_error} ) {
-      # OK
-   }
-   elsif( !defined wantarray ) {
-      undef $have_fail_resolve;
-   }
-
    my $peeraddrfuture;
    if( exists $params{host} and exists $params{service} ) {
-      $have_fail_resolve or croak "Expected 'on_resolve_error' callback or to return a Future";
-
       my $host    = $params{host}    or croak "Expected 'host'";
       my $service = $params{service} or croak "Expected 'service'";
 
@@ -234,8 +189,6 @@ sub connect
 
    my $localaddrfuture;
    if( defined $params{local_host} or defined $params{local_service} ) {
-      $have_fail_resolve or croak "Expected 'on_resolve_error' callback or to return a Future";
-
       # Empty is fine on either of these
       my $host    = $params{local_host};
       my $service = $params{local_service};
@@ -253,7 +206,7 @@ sub connect
       $localaddrfuture = $loop->new_future->done( {} );
    }
 
-   my $future = Future->needs_all( $peeraddrfuture, $localaddrfuture )
+   return Future->needs_all( $peeraddrfuture, $localaddrfuture )
       ->or_else( sub {
          my $f = shift;
          my ( $failure, @args ) = $f->failure;
@@ -288,14 +241,6 @@ sub connect
 
          return $self->_connect_addresses( \@addrs, $on_fail );
       } );
-
-   $future->on_done( $on_done ) if $on_done;
-   $future->on_fail( sub {
-      $on_connect_error->( @_[2,3] ) if $on_connect_error and $_[1] eq "connect";
-      $on_resolve_error->( $_[2] )   if $on_resolve_error and $_[1] eq "resolve";
-   } );
-
-   return $future;
 }
 
 0x55AA;
