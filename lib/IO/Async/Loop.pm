@@ -1033,10 +1033,12 @@ sub resolve
    $self->resolver->resolve( %params );
 }
 
-=head2 $loop->connect( %params )
+=head2 $future = $loop->connect( %params )
 
 This method performs a non-blocking connection to a given address or set of
-addresses, and invokes a continuation when the socket is connected.
+addresses, returning a L<IO::Async::Future> which represents the operation. On
+completion, the future will yield the connected socket handle, or the given
+L<IO::Async::Handle> object.
 
 There are two modes of operation. Firstly, a list of addresses can be provided
 which will be tried in turn. Alternatively as a convenience, if a host and
@@ -1109,56 +1111,6 @@ Optional. Similar to the C<addrs> or C<addr> parameters, these specify a local
 address or set of addresses to C<bind(2)> the socket to before
 C<connect(2)>ing it.
 
-=item on_connected => CODE
-
-A continuation that is invoked on a successful C<connect(22)> call to a valid
-socket. It will be passed the connected socket handle, as an C<IO::Socket>
-object.
-
- $on_connected->( $handle )
-
-=item on_stream => CODE
-
-An alternative to C<on_connected>, a continuation that is passed an instance
-of L<IO::Async::Stream> when the socket is connected. This is provided as a
-convenience for the common case that a Stream object is required as the
-transport for a Protocol object.
-
- $on_stream->( $stream )
-
-=item on_socket => CODE
-
-Similar to C<on_stream>, but constructs an instance of L<IO::Async::Socket>.
-This is most useful for C<SOCK_DGRAM> or C<SOCK_RAW> sockets.
-
- $on_socket->( $socket )
-
-=item on_connect_error => CODE
-
-A continuation that is invoked after all of the addresses have been tried, and
-none of them succeeded. It will be passed the most significant error that
-occurred, and the name of the operation it occurred in. Errors from the
-C<connect(2)> syscall are considered most significant, then C<bind(2)>, then
-finally C<socket(2)>.
-
- $on_connect_error->( $syscall, $! )
-
-=item on_fail => CODE
-
-Optional. After an individual C<socket(2)> or C<connect(2)> syscall has failed,
-this callback is invoked to inform of the error. It is passed the name of the
-syscall that failed, the arguments that were passed to it, and the error it
-generated. I.e.
-
- $on_fail->( "socket", $family, $socktype, $protocol, $! );
-
- $on_fail->( "bind", $sock, $address, $! );
-
- $on_fail->( "connect", $sock, $address, $! );
-
-Because of the "try all" nature when given a list of multiple addresses, this
-callback may be invoked multiple times, even before an eventual success.
-
 =back
 
 When performing the resolution step too, the C<addrs> or C<addr> keys are
@@ -1197,12 +1149,6 @@ C<'raw'> to stand for C<SOCK_STREAM>, C<SOCK_DGRAM> or C<SOCK_RAW>. This
 utility is provided to allow the caller to avoid a separate C<use Socket> only
 for importing these constants.
 
-=item on_resolve_error => CODE
-
-A continuation that is invoked when the name resolution attempt fails. This is
-invoked in the same way as the C<on_error> continuation for the C<resolve>
-method.
-
 =back
 
 It is necessary to pass the C<socktype> hint to the resolver when resolving
@@ -1212,16 +1158,86 @@ hint is defined when performing a C<getaddrinfo> lookup. To avoid this warning
 while still specifying no particular C<socktype> hint (perhaps to invoke some
 OS-specific behaviour), pass C<0> as the C<socktype> value.
 
+In either case, it also accepts the following arguments:
+
+=over 8
+
+=item handle => IO::Async::Handle
+
+Optional. If given a L<IO::Async::Handle> object or a subclass (such as
+L<IO::Async::Stream> or L<IO::Async::Socket> its handle will be set to the
+newly-connected socket on success, and that handle used as the result of the
+future instead.
+
+=item on_fail => CODE
+
+Optional. After an individual C<socket(2)> or C<connect(2)> syscall has failed,
+this callback is invoked to inform of the error. It is passed the name of the
+syscall that failed, the arguments that were passed to it, and the error it
+generated. I.e.
+
+ $on_fail->( "socket", $family, $socktype, $protocol, $! );
+
+ $on_fail->( "bind", $sock, $address, $! );
+
+ $on_fail->( "connect", $sock, $address, $! );
+
+Because of the "try all" nature when given a list of multiple addresses, this
+callback may be invoked multiple times, even before an eventual success.
+
+=back
+
 This method accepts an C<extensions> parameter; see the C<EXTENSIONS> section
 below.
 
-=head2 $future = $loop->connect( %params )
+=head2 $loop->connect( %params )
 
-When returning a future, the C<on_connected>, C<on_stream>, C<on_socket> and
-various C<on_*_error> continuations are optional. When the socket is
-connected, the future will be given the connected socket handle. No direct
-support for automatically constructing a C<IO::Async::Stream> or
-C<IO::Async::Socket> object is provided.
+When not returning a future, additional parameters can be given containing the
+continuations to invoke on success or failure.
+
+=over 8
+
+=item on_connected => CODE
+
+A continuation that is invoked on a successful C<connect(2)> call to a valid
+socket. It will be passed the connected socket handle, as an C<IO::Socket>
+object.
+
+ $on_connected->( $handle )
+
+=item on_stream => CODE
+
+An alternative to C<on_connected>, a continuation that is passed an instance
+of L<IO::Async::Stream> when the socket is connected. This is provided as a
+convenience for the common case that a Stream object is required as the
+transport for a Protocol object.
+
+ $on_stream->( $stream )
+
+=item on_socket => CODE
+
+Similar to C<on_stream>, but constructs an instance of L<IO::Async::Socket>.
+This is most useful for C<SOCK_DGRAM> or C<SOCK_RAW> sockets.
+
+ $on_socket->( $socket )
+
+=item on_connect_error => CODE
+
+A continuation that is invoked after all of the addresses have been tried, and
+none of them succeeded. It will be passed the most significant error that
+occurred, and the name of the operation it occurred in. Errors from the
+C<connect(2)> syscall are considered most significant, then C<bind(2)>, then
+finally C<socket(2)>.
+
+ $on_connect_error->( $syscall, $! )
+
+=item on_resolve_error => CODE
+
+A continuation that is invoked when the name resolution attempt fails. This is
+invoked in the same way as the C<on_error> continuation for the C<resolve>
+method.
+
+=back
 
 =cut
 
@@ -1245,27 +1261,28 @@ sub connect
       );
    }
 
-   my $on_done;
+   my $handle = $params{handle};
 
-   # Callbacks
+   my $on_done;
+   # Legacy callbacks
    if( my $on_connected = delete $params{on_connected} ) {
       $on_done = $on_connected;
    }
    elsif( my $on_stream = delete $params{on_stream} ) {
+      defined $handle and croak "Cannot pass 'on_stream' with a handle object as well";
+
       require IO::Async::Stream;
       # TODO: It doesn't make sense to put a SOCK_DGRAM in an
       # IO::Async::Stream but currently we don't detect this
-      $on_done = sub {
-         my ( $handle ) = @_;
-         $on_stream->( IO::Async::Stream->new( handle => $handle ) );
-      };
+      $handle = IO::Async::Stream->new;
+      $on_done = $on_stream;
    }
    elsif( my $on_socket = delete $params{on_socket} ) {
+      defined $handle and croak "Cannot pass 'on_socket' with a handle object as well";
+
       require IO::Async::Socket;
-      $on_done = sub {
-         my ( $handle ) = @_;
-         $on_socket->( IO::Async::Socket->new( handle => $handle ) );
-      };
+      $handle = IO::Async::Socket->new;
+      $on_done = $on_socket;
    }
    elsif( !defined wantarray ) {
       croak "Expected 'on_connected' or 'on_stream' callback or to return a Future";
@@ -1290,6 +1307,11 @@ sub connect
    my $connector = $self->{connector} ||= $self->__new_feature( "IO::Async::Internals::Connector" );
 
    my $future = $connector->connect( %params );
+
+   $future = $future->then( sub {
+      $handle->set_handle( shift );
+      return Future->new->done( $handle )
+   }) if $handle;
 
    $future->on_done( $on_done ) if $on_done;
    $future->on_fail( sub {
