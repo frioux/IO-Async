@@ -609,9 +609,7 @@ sub bind
 =head2 $future = $handle->connect( %args )
 
 A convenient wrapper for calling the C<connect> method on the underlying
-L<IO::Async::Loop> object. Takes the same arguments and returns the same
-Future, but additionally will set the object's read and write handle when the
-operation completes.
+L<IO::Async::Loop> object.
 
 =cut
 
@@ -622,10 +620,7 @@ sub connect
 
    my $loop = $self->loop or croak "Cannot ->connect a Handle that is not in a Loop";
 
-   return $self->loop->connect( %args )->on_done( sub {
-      my ( $sock ) = @_;
-      $self->set_handle( $sock );
-   });
+   return $self->loop->connect( %args, handle => $self );
 }
 
 =head1 SEE ALSO
