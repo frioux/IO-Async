@@ -28,6 +28,25 @@ my $listensock = IO::Socket::INET->new(
 my $addr = $listensock->sockname;
 
 {
+   my $future = $loop->connect(
+      addr => { family => "inet", socktype => "stream", addr => $addr },
+   );
+
+   isa_ok( $future, "Future", '$future' );
+
+   $loop->await( $future );
+
+   my ( $sock ) = $future->get;
+
+   can_ok( $sock, qw( peerhost peerport ) );
+   is_deeply( [ unpack_sockaddr_in $sock->peername ],
+              [ unpack_sockaddr_in $addr ], 'by addr: $sock->getpeername is $addr from future' );
+
+   $listensock->accept; # Throw it away
+}
+
+# legacy callbacks
+{
    my $sock;
 
    $loop->connect(
@@ -46,9 +65,12 @@ my $addr = $listensock->sockname;
    $listensock->accept; # Throw it away
 }
 
+# Now try by name
 {
    my $future = $loop->connect(
-      addr => { family => "inet", socktype => "stream", addr => $addr },
+      host     => $listensock->sockhost,
+      service  => $listensock->sockport,
+      socktype => $listensock->socktype,
    );
 
    isa_ok( $future, "Future", '$future' );
@@ -59,12 +81,14 @@ my $addr = $listensock->sockname;
 
    can_ok( $sock, qw( peerhost peerport ) );
    is_deeply( [ unpack_sockaddr_in $sock->peername ],
-              [ unpack_sockaddr_in $addr ], 'by addr: $sock->getpeername is $addr from future' );
+              [ unpack_sockaddr_in $addr ], 'by host/service: $sock->getpeername is $addr from future' );
+
+   is( $sock->sockhost, "127.0.0.1", '$sock->sockhost is 127.0.0.1 from future' );
 
    $listensock->accept; # Throw it away
 }
 
-# Now try by name
+# legacy callbacks
 {
    my $sock;
 
@@ -84,28 +108,6 @@ my $addr = $listensock->sockname;
               [ unpack_sockaddr_in $addr ], 'by host/service: $sock->getpeername is $addr' );
 
    is( $sock->sockhost, "127.0.0.1", '$sock->sockhost is 127.0.0.1' );
-
-   $listensock->accept; # Throw it away
-}
-
-{
-   my $future = $loop->connect(
-      host     => $listensock->sockhost,
-      service  => $listensock->sockport,
-      socktype => $listensock->socktype,
-   );
-
-   isa_ok( $future, "Future", '$future' );
-
-   $loop->await( $future );
-
-   my ( $sock ) = $future->get;
-
-   can_ok( $sock, qw( peerhost peerport ) );
-   is_deeply( [ unpack_sockaddr_in $sock->peername ],
-              [ unpack_sockaddr_in $addr ], 'by host/service: $sock->getpeername is $addr from future' );
-
-   is( $sock->sockhost, "127.0.0.1", '$sock->sockhost is 127.0.0.1 from future' );
 
    $listensock->accept; # Throw it away
 }
