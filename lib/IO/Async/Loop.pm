@@ -1244,61 +1244,60 @@ sub connect
          ( @others ? ( extensions => \@others ) : () ),
       );
    }
-   else {
-      my $on_done;
 
-      # Callbacks
-      if( my $on_connected = delete $params{on_connected} ) {
-         $on_done = $on_connected;
-      }
-      elsif( my $on_stream = delete $params{on_stream} ) {
-         require IO::Async::Stream;
-         # TODO: It doesn't make sense to put a SOCK_DGRAM in an
-         # IO::Async::Stream but currently we don't detect this
-         $on_done = sub {
-            my ( $handle ) = @_;
-            $on_stream->( IO::Async::Stream->new( handle => $handle ) );
-         };
-      }
-      elsif( my $on_socket = delete $params{on_socket} ) {
-         require IO::Async::Socket;
-         $on_done = sub {
-            my ( $handle ) = @_;
-            $on_socket->( IO::Async::Socket->new( handle => $handle ) );
-         };
-      }
-      elsif( !defined wantarray ) {
-         croak "Expected 'on_connected' or 'on_stream' callback or to return a Future";
-      }
+   my $on_done;
 
-      my $on_connect_error;
-      if( $on_connect_error = $params{on_connect_error} ) {
-         # OK
-      }
-      elsif( !defined wantarray ) {
-         croak "Expected 'on_connect_error' callback";
-      }
-
-      my $on_resolve_error;
-      if( $on_resolve_error = $params{on_resolve_error} ) {
-         # OK
-      }
-      elsif( !defined wantarray and exists $params{host} || exists $params{local_host} ) {
-         croak "Expected 'on_resolve_error' callback or to return a Future";
-      }
-
-      my $connector = $self->{connector} ||= $self->__new_feature( "IO::Async::Internals::Connector" );
-
-      my $future = $connector->connect( %params );
-
-      $future->on_done( $on_done ) if $on_done;
-      $future->on_fail( sub {
-         $on_connect_error->( @_[2,3] ) if $on_connect_error and $_[1] eq "connect";
-         $on_resolve_error->( $_[2] )   if $on_resolve_error and $_[1] eq "resolve";
-      } );
-
-      return $future;
+   # Callbacks
+   if( my $on_connected = delete $params{on_connected} ) {
+      $on_done = $on_connected;
    }
+   elsif( my $on_stream = delete $params{on_stream} ) {
+      require IO::Async::Stream;
+      # TODO: It doesn't make sense to put a SOCK_DGRAM in an
+      # IO::Async::Stream but currently we don't detect this
+      $on_done = sub {
+         my ( $handle ) = @_;
+         $on_stream->( IO::Async::Stream->new( handle => $handle ) );
+      };
+   }
+   elsif( my $on_socket = delete $params{on_socket} ) {
+      require IO::Async::Socket;
+      $on_done = sub {
+         my ( $handle ) = @_;
+         $on_socket->( IO::Async::Socket->new( handle => $handle ) );
+      };
+   }
+   elsif( !defined wantarray ) {
+      croak "Expected 'on_connected' or 'on_stream' callback or to return a Future";
+   }
+
+   my $on_connect_error;
+   if( $on_connect_error = $params{on_connect_error} ) {
+      # OK
+   }
+   elsif( !defined wantarray ) {
+      croak "Expected 'on_connect_error' callback";
+   }
+
+   my $on_resolve_error;
+   if( $on_resolve_error = $params{on_resolve_error} ) {
+      # OK
+   }
+   elsif( !defined wantarray and exists $params{host} || exists $params{local_host} ) {
+      croak "Expected 'on_resolve_error' callback or to return a Future";
+   }
+
+   my $connector = $self->{connector} ||= $self->__new_feature( "IO::Async::Internals::Connector" );
+
+   my $future = $connector->connect( %params );
+
+   $future->on_done( $on_done ) if $on_done;
+   $future->on_fail( sub {
+      $on_connect_error->( @_[2,3] ) if $on_connect_error and $_[1] eq "connect";
+      $on_resolve_error->( $_[2] )   if $on_resolve_error and $_[1] eq "resolve";
+   } );
+
+   return $future;
 }
 
 =head2 $loop->listen( %params )
