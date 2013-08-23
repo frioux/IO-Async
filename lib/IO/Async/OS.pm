@@ -52,6 +52,9 @@ use constant HAVE_RENAME_OPEN_FILES => 1;
 # Do we have IO::Socket::IP available?
 use constant HAVE_IO_SOCKET_IP => defined eval { require IO::Socket::IP };
 
+# Preferred trial order for built-in Loop classes
+use constant LOOP_BUILTIN_CLASSES => qw( Poll Select );
+
 =head1 NAME
 
 C<IO::Async::OS> - operating system abstractions for C<IO::Async>

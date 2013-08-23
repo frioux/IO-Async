@@ -12,9 +12,11 @@ delete $ENV{IO_ASYNC_LOOP}; # Just in case it was already set
 
 my $loop;
 
+my $LOOPCLASS = "IO::Async::Loop::" . ( IO::Async::OS->LOOP_BUILTIN_CLASSES )[0];
+
 $loop = IO::Async::Loop->new;
 
-isa_ok( $loop, "IO::Async::Loop::Poll", 'Magic constructor in default mode' );
+isa_ok( $loop, $LOOPCLASS, 'Magic constructor in default mode' );
 
 is( IO::Async::Loop->new, $loop, 'IO::Async::Loop->new again yields same loop' );
 

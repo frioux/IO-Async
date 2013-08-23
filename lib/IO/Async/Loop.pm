@@ -297,8 +297,9 @@ sub really_new
 
    $self = __try_new( "IO::Async::Loop::$^O" ) and return $self unless $LOOP_NO_OS;
 
-   $self = __try_new( "IO::Async::Loop::Poll" )   and return $self;
-   $self = __try_new( "IO::Async::Loop::Select" ) and return $self;
+   foreach my $class ( IO::Async::OS->LOOP_BUILTIN_CLASSES ) {
+      $self = __try_new( "IO::Async::Loop::$class" ) and return $self;
+   }
 
    croak "Cannot find a suitable candidate class";
 }

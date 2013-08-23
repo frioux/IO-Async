@@ -27,6 +27,10 @@ use constant HAVE_CONNECT_EWOULDBLOCK => 1;
 
 use constant HAVE_RENAME_OPEN_FILES => 0;
 
+# poll(2) on Windows is emulated by wrapping select(2) anyway, so we might as
+# well try the Select loop first
+use constant LOOP_BUILTIN_CLASSES => qw( Select Poll );
+
 =head1 NAME
 
 C<IO::Async::OS::MSWin32> - operating system abstractions on C<MSWin32> for C<IO::Async>
