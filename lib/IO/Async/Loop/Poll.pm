@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2007-2012 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2007-2013 -- leonerd@leonerd.org.uk
 
 package IO::Async::Loop::Poll;
 
@@ -15,7 +15,7 @@ use base qw( IO::Async::Loop );
 
 use Carp;
 
-use IO::Poll qw( POLLIN POLLOUT POLLHUP POLLERR );
+use IO::Poll qw( POLLIN POLLOUT POLLPRI POLLHUP POLLERR );
 
 use Errno qw( EINTR );
 use Fcntl qw( S_ISREG );
@@ -34,6 +34,9 @@ use constant _CAN_ON_HANGUP =>
 # poll() on most platforms claims that ISREG files are always read- and
 # write-ready, but not on MSWin32. We need to fake this
 use constant FAKE_ISREG_READY => IO::Async::OS->HAVE_FAKE_ISREG_READY;
+# poll() on most platforms indicates POLLOUT when connect() fails, but not on
+# MSWin32. Have to poll also for POLLPRI in that case
+use constant POLL_CONNECT_POLLPRI => IO::Async::OS->HAVE_POLL_CONNECT_POLLPRI;
 
 use constant _CAN_WATCHDOG => 1;
 use constant WATCHDOG_ENABLE => IO::Async::Loop->WATCHDOG_ENABLE;
@@ -160,7 +163,7 @@ sub post_poll
          $count++, $watch->[1]->() if defined $watch->[1];
       }
 
-      if( $events & (POLLOUT|POLLHUP|POLLERR) ) {
+      if( $events & (POLLOUT|POLLPRI|POLLHUP|POLLERR) ) {
          $count++, $watch->[2]->() if defined $watch->[2];
       }
 
@@ -253,7 +256,7 @@ sub watch_io
 
    my $mask = $curmask;
    $params{on_read_ready}  and $mask |= POLLIN;
-   $params{on_write_ready} and $mask |= POLLOUT;
+   $params{on_write_ready} and $mask |= POLLOUT | (POLL_CONNECT_POLLPRI ? POLLPRI : 0);
    $params{on_hangup}      and $mask |= POLLHUP;
 
    if( FAKE_ISREG_READY and S_ISREG +(stat $handle)[2] ) {
@@ -279,7 +282,7 @@ sub unwatch_io
 
    my $mask = $curmask;
    $params{on_read_ready}  and $mask &= ~POLLIN;
-   $params{on_write_ready} and $mask &= ~POLLOUT;
+   $params{on_write_ready} and $mask &= ~(POLLOUT | (POLL_CONNECT_POLLPRI ? POLLPRI : 0));
    $params{on_hangup}      and $mask &= ~POLLHUP;
 
    if( FAKE_ISREG_READY and S_ISREG +(stat $handle)[2] ) {

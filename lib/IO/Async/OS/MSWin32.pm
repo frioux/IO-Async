@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2012 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2012-2013 -- leonerd@leonerd.org.uk
 
 package IO::Async::OS::MSWin32;
 
@@ -21,6 +21,7 @@ use IO::Socket (); # empty import
 use constant HAVE_FAKE_ISREG_READY => 1;
 
 use constant HAVE_SELECT_CONNECT_EVEC => 1;
+use constant HAVE_POLL_CONNECT_POLLPRI => 1;
 
 use constant HAVE_CONNECT_EWOULDBLOCK => 1;
 
