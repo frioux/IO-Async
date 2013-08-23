@@ -143,10 +143,13 @@ SKIP: {
    ) };
 
    # Some can bind(2) but then cannot connect() to 127.0.0.1 from it
-   skip "Cannot connect to 127.0.0.1 from 127.0.0.2", 1 unless eval { IO::Socket::INET->new(
-      LocalHost => "127.0.0.2", LocalPort => 0,
-      PeerHost  => $listensock->sockhost, PeerPort => $listensock->sockport,
-   ) };
+   chomp($@), skip "Cannot connect to 127.0.0.1 from 127.0.0.2 - $@", 1 unless eval {
+      my $s = IO::Socket::INET->new(
+         LocalHost => "127.0.0.2", LocalPort => 0,
+         PeerHost  => $listensock->sockhost, PeerPort => $listensock->sockport,
+      ) or die $@;
+      $listensock->accept; # Throw it away
+      $s->sockhost eq "127.0.0.2" or die "sockhost is not 127.0.0.2\n"; };
 
    my $sock;
 
