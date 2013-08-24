@@ -17,7 +17,7 @@ use IO::Async::OS;
 
 use IO::Async::Stream;
 
-my $loop = IO::Async::Loop->new;
+my $loop = IO::Async::Loop->new_builtin;
 
 testing_loop( $loop );
 

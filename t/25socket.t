@@ -19,7 +19,7 @@ use IO::Async::OS;
 
 use IO::Async::Socket;
 
-my $loop = IO::Async::Loop->new;
+my $loop = IO::Async::Loop->new_builtin;
 
 testing_loop( $loop );
 

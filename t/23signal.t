@@ -15,7 +15,7 @@ use IO::Async::Signal;
 
 use IO::Async::Loop;
 
-my $loop = IO::Async::Loop->new;
+my $loop = IO::Async::Loop->new_builtin;
 
 testing_loop( $loop );
 

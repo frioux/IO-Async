@@ -14,11 +14,11 @@ use Time::HiRes qw( time );
 
 use IO::Async::Timer::Countdown;
 
-use IO::Async::Loop::Poll;
+use IO::Async::Loop;
 
 use constant AUT => $ENV{TEST_QUICK_TIMERS} ? 0.1 : 1;
 
-my $loop = IO::Async::Loop::Poll->new;
+my $loop = IO::Async::Loop->new_builtin;
 
 testing_loop( $loop );
 

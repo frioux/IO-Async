@@ -17,7 +17,7 @@ use IO::Async::OS;
 
 use Socket qw( AF_INET SOCK_STREAM SOCK_DGRAM SO_TYPE unpack_sockaddr_in );
 
-my $loop = IO::Async::Loop->new;
+my $loop = IO::Async::Loop->new_builtin;
 
 testing_loop( $loop );
 

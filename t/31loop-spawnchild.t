@@ -12,13 +12,13 @@ use POSIX qw( WIFEXITED WEXITSTATUS ENOENT EBADF );
 
 use IO::Async::OS;
 
-use IO::Async::Loop::Poll;
+use IO::Async::Loop;
 
 # Need to look this up, so we don't hardcode the message in the test script
 # This might cause locale issues
 use constant ENOENT_MESSAGE => do { local $! = ENOENT; "$!" };
 
-my $loop = IO::Async::Loop::Poll->new;
+my $loop = IO::Async::Loop->new_builtin;
 
 testing_loop( $loop );
 

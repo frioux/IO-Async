@@ -11,7 +11,7 @@ use IO::Async::OS;
 
 use IO::Async::Loop;
 
-my $loop = IO::Async::Loop->new;
+my $loop = IO::Async::Loop->new_builtin;
 
 is_refcount( $loop, 2, '$loop has refcount 2 initially' );
 

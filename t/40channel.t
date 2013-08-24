@@ -12,10 +12,10 @@ use IO::Async::Channel;
 
 use IO::Async::OS;
 
-use IO::Async::Loop::Poll;
+use IO::Async::Loop;
 use Storable qw( freeze );
 
-my $loop = IO::Async::Loop::Poll->new;
+my $loop = IO::Async::Loop->new_builtin;
 
 testing_loop( $loop );
 

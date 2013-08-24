@@ -7,6 +7,8 @@ use IO::Async::Test;
 
 use Test::More;
 
+use IO::Async::Loop;
+
 use POSIX qw( WEXITSTATUS );
 
 # These tests check the parts of Loop->spawn_child that need to be root to
@@ -18,9 +20,7 @@ unless( $< == 0 ) {
 
 is( $>, 0, 'am root');
 
-require IO::Async::Loop::Poll;
-
-my $loop = IO::Async::Loop::Poll->new;
+my $loop = IO::Async::Loop->new_builtin;
 
 testing_loop( $loop );
 

@@ -278,7 +278,6 @@ sub new
 sub really_new
 {
    shift;  # We're going to ignore the class name actually given
-
    my $self;
 
    my @candidates;
@@ -296,6 +295,14 @@ sub really_new
    }
 
    $self = __try_new( "IO::Async::Loop::$^O" ) and return $self unless $LOOP_NO_OS;
+
+   return IO::Async::Loop->new_builtin;
+}
+
+sub new_builtin
+{
+   shift;
+   my $self;
 
    foreach my $class ( IO::Async::OS->LOOP_BUILTIN_CLASSES ) {
       $self = __try_new( "IO::Async::Loop::$class" ) and return $self;

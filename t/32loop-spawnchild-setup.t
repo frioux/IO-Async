@@ -13,9 +13,9 @@ use POSIX qw( WIFEXITED WEXITSTATUS ENOENT EBADF getcwd );
 
 use IO::Async::OS;
 
-use IO::Async::Loop::Poll;
+use IO::Async::Loop;
 
-my $loop = IO::Async::Loop::Poll->new;
+my $loop = IO::Async::Loop->new_builtin;
 
 testing_loop( $loop );
 

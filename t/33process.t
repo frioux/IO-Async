@@ -13,9 +13,9 @@ use constant ENOENT_MESSAGE => do { local $! = ENOENT; "$!" };
 
 use IO::Async::Process;
 
-use IO::Async::Loop::Poll;
+use IO::Async::Loop;
 
-my $loop = IO::Async::Loop::Poll->new;
+my $loop = IO::Async::Loop->new_builtin;
 
 testing_loop( $loop );
 

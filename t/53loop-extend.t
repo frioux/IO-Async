@@ -8,9 +8,9 @@ use IO::Async::Test;
 use Test::More;
 use Test::Identity;
 
-use IO::Async::Loop::Poll;
+use IO::Async::Loop;
 
-my $loop = IO::Async::Loop::Poll->new;
+my $loop = IO::Async::Loop->new_builtin;
 
 testing_loop( $loop );
 

@@ -12,12 +12,12 @@ use IO::Socket::INET;
 use POSIX qw( ENOENT );
 use Socket qw( AF_UNIX );
 
-use IO::Async::Loop::Poll;
+use IO::Async::Loop;
 
 use IO::Async::Stream;
 use IO::Async::Socket;
 
-my $loop = IO::Async::Loop::Poll->new;
+my $loop = IO::Async::Loop->new_builtin;
 
 testing_loop( $loop );
 

@@ -19,7 +19,7 @@ use IO::Async::File;
 
 use constant AUT => $ENV{TEST_QUICK_TIMERS} ? 0.1 : 1;
 
-my $loop = IO::Async::Loop->new;
+my $loop = IO::Async::Loop->new_builtin;
 
 testing_loop( $loop );
 

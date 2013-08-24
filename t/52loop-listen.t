@@ -11,9 +11,9 @@ use IO::Socket::INET;
 
 use Socket qw( unpack_sockaddr_in );
 
-use IO::Async::Loop::Poll;
+use IO::Async::Loop;
 
-my $loop = IO::Async::Loop::Poll->new;
+my $loop = IO::Async::Loop->new_builtin;
 
 testing_loop( $loop );
 

@@ -12,9 +12,9 @@ use Socket 1.93 qw(
    pack_sockaddr_in getaddrinfo getnameinfo
 );
 
-use IO::Async::Loop::Poll;
+use IO::Async::Loop;
 
-my $loop = IO::Async::Loop::Poll->new;
+my $loop = IO::Async::Loop->new_builtin;
 
 testing_loop( $loop );
 

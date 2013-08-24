@@ -9,13 +9,13 @@ use Test::More;
 use Test::Identity;
 use Test::Refcount;
 
-use IO::Async::Loop::Poll;
+use IO::Async::Loop;
 
 use IO::Socket::INET;
 
 use IO::Async::Listener;
 
-my $loop = IO::Async::Loop::Poll->new;
+my $loop = IO::Async::Loop->new_builtin;
 
 testing_loop( $loop );
 
