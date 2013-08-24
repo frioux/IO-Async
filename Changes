@@ -1,5 +1,21 @@
 Revision history for IO-Async
 
+0.59    CHANGES:
+         * Allow IO::Async::Stream to define custom reader/writer methods
+         * Support writeready-for-read and readready-for-write in Stream
+         * Allow Stream->write() on_write and write_len args
+         * Neatened and documented Future ->fail arguments and conventions
+         * Added Stream on_writeable_{start,stop} events
+         * Added Handle->socket, ->bind and ->connect methods
+         * Revamp of Loop->connect logic; allow passing through an
+           IO::Async::Handle instance
+
+        BUGFIXES:
+         * Ensure that stream read EOF state is visible during queued on_read
+           events that caused it
+         * Fix 'return ... or die' precendence bug in Resolver (RT87051)
+         * Need to poll() for POLLPRI on MSWin32 and Cygwin
+
 0.58    CHANGES:
          * Added Stream read watermarks
 
