@@ -49,6 +49,8 @@ my $addr = $listensock->sockname;
    ok( defined $handle->read_handle, '$handle->read_handle defined after ->connect addr' );
    is( $handle->read_handle->peerport, $listensock->sockport, '$handle->read_handle->peerport after ->connect addr' );
 
+   $listensock->accept; # drop it
+
    $loop->remove( $handle );
 }
 
@@ -73,6 +75,8 @@ my $addr = $listensock->sockname;
 
    ok( defined $handle->read_handle, '$handle->read_handle defined after ->connect host/service' );
    is( $handle->read_handle->peerport, $listensock->sockport, '$handle->read_handle->peerport after ->connect host/service' );
+
+   $listensock->accept; # drop it
 
    $loop->remove( $handle );
 }
