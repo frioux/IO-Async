@@ -3,7 +3,8 @@
 #
 #  (C) Paul Evans, 2008-2013 -- leonerd@leonerd.org.uk
 
-package IO::Async::Internals::Connector;
+package # hide from CPAN
+   IO::Async::Internals::Connector;
 
 use strict;
 use warnings;
@@ -14,7 +15,7 @@ use POSIX qw( EINPROGRESS );
 use Socket qw( SOL_SOCKET SO_ERROR );
 
 use Future;
-use Future::Utils qw( repeat_until_success );
+use Future::Utils 0.16 qw( repeat_until_success );
 
 use IO::Async::OS;
 
@@ -137,7 +138,7 @@ sub _connect_addresses
          sub { $loop->unwatch_io( handle => $sock, on_write_ready => 1 ); }
       );
       return $f;
-   } foreach => $addrlist, return => $loop->new_future;
+   } foreach => $addrlist;
 
    return $future->or_else( sub {
       return $future->new->fail( "connect: $connecterr", connect => connect => $connecterr )
