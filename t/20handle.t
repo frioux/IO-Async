@@ -337,9 +337,13 @@ my $sub_writeready = 0;
    ok( !defined $handle->read_handle,  '->read_handle not defined' );
    ok( !defined $handle->write_handle, '->write_handle not defined' );
 
-   is_oneref( $handle, '$handle latebount has refcount 1 initially' );
+   is_oneref( $handle, '$handle latebound has refcount 1 initially' );
 
    is( $handle->notifier_name, "no", '$handle->notifier_name for late bind before handles' );
+
+   $loop->add( $handle );
+
+   is_refcount( $handle, 2, '$handle latebound has refcount 2 after $loop->add' );
 
    my ( $S1, $S2 ) = mkhandles;
    my $fd1 = $S1->fileno;
@@ -349,9 +353,16 @@ my $sub_writeready = 0;
    is( $handle->read_handle,  $S1, '->read_handle now S1' );
    is( $handle->write_handle, $S1, '->write_handle now S1' );
 
-   is_oneref( $handle, '$handle latebount has refcount 1 after set_handle' );
+   is_refcount( $handle, 2, '$handle latebound still has refcount 2 after set_handle' );
 
    is( $handle->notifier_name, "rw=$fd1", '$handle->notifier_name for late bind after handles' );
+
+   $S2->syswrite( "readable" );
+
+   wait_for { $readready };
+   pass( '$handle latebound still invokes on_read_ready' );
+
+   $loop->remove( $handle );
 }
 
 # ->socket and ->bind
