@@ -1192,6 +1192,20 @@ sub new_for_stdout { shift->new( write_handle => \*STDOUT, @_ ) }
 
 sub new_for_stdio { shift->new( read_handle => \*STDIN, write_handle => \*STDOUT, @_ ) }
 
+=head2 $future = $stream->connect( %args )
+
+A convenient wrapper for calling the C<connect> method on the underlying
+L<IO::Async::Loop> object, passing the C<socktype> hint as C<stream> if not
+otherwise supplied.
+
+=cut
+
+sub connect
+{
+   my $self = shift;
+   return $self->SUPER::connect( socktype => "stream", @_ );
+}
+
 =head1 EXAMPLES
 
 =head2 A line-based C<on_read> method
