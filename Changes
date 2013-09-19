@@ -1,5 +1,18 @@
 Revision history for IO-Async
 
+0.60    2013/09/19 14:26:22
+        [CHANGES]
+         * Updated for Future 0.16 - no longer needs 'return' argument for
+           Future::Utils functions
+         * $stream->connect() ought to default socktype => "stream"
+
+        [BUGFIXES]
+         * Fix unit tests to better handle INADDR_LOOPBACK not being 127.0.0.1
+         * Skip-guard ->socket("inet6") unit tests on machines unable to
+           socket(AF_INET6)
+         * Remmeber to ->accept connections to testing socket in
+           t/63handle-connect.t
+
 0.59    CHANGES:
          * Allow IO::Async::Stream to define custom reader/writer methods
          * Support writeready-for-read and readready-for-write in Stream
