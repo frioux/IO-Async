@@ -19,10 +19,14 @@ SKIP: {
    skip "No IO::Socket::IP", 2 unless eval { require IO::Socket::IP };
 
    my $S_inet = IO::Async::OS->socket( "inet", "stream" );
-   isa_ok( $S_inet, "IO::Socket::IP" );
+   isa_ok( $S_inet, "IO::Socket::IP", 'IO::Async::OS->socket("inet")' );
 
-   my $S_inet6 = IO::Async::OS->socket( "inet6", "stream" );
-   isa_ok( $S_inet6, "IO::Socket::IP" );
+   SKIP: {
+      skip "No AF_INET6", 1 unless eval { socket( my $fh, AF_INET6, SOCK_STREAM, 0 ) };
+
+      my $S_inet6 = IO::Async::OS->socket( "inet6", "stream" );
+      isa_ok( $S_inet6, "IO::Socket::IP", 'IO::Async::OS->socket("inet6")' );
+   }
 }
 
 foreach my $family ( undef, "inet" ) {
