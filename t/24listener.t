@@ -15,6 +15,17 @@ use IO::Socket::INET;
 
 use IO::Async::Listener;
 
+# Some odd locations like BSD jails might not like INADDR_ANY. We'll establish
+# a baseline first to test against
+my $INADDR_ANY = do {
+   my $anysock = IO::Socket::INET->new( LocalPort => 0, Listen => 1 );
+   $anysock->sockaddr;
+};
+my $INADDR_ANY_HOST = inet_ntoa( $INADDR_ANY );
+if( $INADDR_ANY ne INADDR_ANY ) {
+   diag( "Testing with INADDR_ANY=$INADDR_ANY_HOST; this may be because of odd networking" );
+}
+
 my $loop = IO::Async::Loop->new_builtin;
 
 testing_loop( $loop );
@@ -146,16 +157,6 @@ undef $listener;
 undef $listener;
 undef $listensock;
 
-# Some odd locations like BSD jails might not like INADDR_ANY. We'll establish
-# a baseline first to test against
-my $INADDR_ANY = do {
-   my $anysock = IO::Socket::INET->new( LocalPort => 0, Listen => 1 );
-   $anysock->sockaddr;
-};
-if( $INADDR_ANY ne INADDR_ANY ) {
-   diag( sprintf "Testing with INADDR_ANY=%vd; this may be because of odd networking", $INADDR_ANY );
-}
-
 $listener = IO::Async::Listener->new(
    on_accept => sub { ( undef, $newclient ) = @_ },
 );
@@ -180,9 +181,7 @@ ok( defined $sockname, 'defined $sockname' );
 my ( $port, $sinaddr ) = unpack_sockaddr_in( $sockname );
 
 ok( $port > 0, 'socket listens on some defined port number' );
-is( sprintf("%vd",$sinaddr),
-    sprintf("%vd",$INADDR_ANY),
-    'socket listens on INADDR_ANY' );
+is( inet_ntoa( $sinaddr ), $INADDR_ANY_HOST, 'socket listens on INADDR_ANY' );
 
 is( $listener->family,   AF_INET,     '$listener->family' );
 is( $listener->socktype, SOCK_STREAM, '$listener->sockname' );

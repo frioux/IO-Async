@@ -10,12 +10,23 @@ use Test::Identity;
 
 use IO::Socket::INET;
 use POSIX qw( ENOENT );
-use Socket qw( AF_UNIX );
+use Socket qw( AF_UNIX inet_ntoa );
 
 use IO::Async::Loop;
 
 use IO::Async::Stream;
 use IO::Async::Socket;
+
+# Some odd locations like BSD jails might not like INADDR_LOOPBACK. We'll
+# establish a baseline first to test against
+my $INADDR_LOOPBACK = do {
+   my $localsock = IO::Socket::INET->new( LocalAddr => "localhost", Listen => 1 );
+   $localsock->sockaddr;
+};
+my $INADDR_LOOPBACK_HOST = inet_ntoa( $INADDR_LOOPBACK );
+if( $INADDR_LOOPBACK ne INADDR_LOOPBACK ) {
+   diag( "Testing with INADDR_LOOPBACK=$INADDR_LOOPBACK_HOST; this may be because of odd networking" );
+}
 
 my $loop = IO::Async::Loop->new_builtin;
 
@@ -107,7 +118,7 @@ my $addr = $listensock->sockname;
    is_deeply( [ unpack_sockaddr_in $sock->peername ],
               [ unpack_sockaddr_in $addr ], 'by host/service: $sock->getpeername is $addr from future' );
 
-   is( $sock->sockhost, "127.0.0.1", '$sock->sockhost is 127.0.0.1 from future' );
+   is( $sock->sockhost, $INADDR_LOOPBACK_HOST, '$sock->sockhost is INADDR_LOOPBACK_HOST from future' );
 
    $listensock->accept; # Throw it away
 }
@@ -131,7 +142,7 @@ my $addr = $listensock->sockname;
    is_deeply( [ unpack_sockaddr_in $sock->peername ],
               [ unpack_sockaddr_in $addr ], 'by host/service: $sock->getpeername is $addr' );
 
-   is( $sock->sockhost, "127.0.0.1", '$sock->sockhost is 127.0.0.1' );
+   is( $sock->sockhost, $INADDR_LOOPBACK_HOST, '$sock->sockhost is INADDR_LOOPBACK_HOST' );
 
    $listensock->accept; # Throw it away
 }
