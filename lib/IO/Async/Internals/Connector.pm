@@ -15,7 +15,7 @@ use POSIX qw( EINPROGRESS );
 use Socket qw( SOL_SOCKET SO_ERROR );
 
 use Future;
-use Future::Utils 0.16 qw( repeat_until_success );
+use Future::Utils 0.18 qw( try_repeat_until_success );
 
 use IO::Async::OS;
 
@@ -84,7 +84,7 @@ sub _connect_addresses
 
    my ( $connecterr, $binderr, $socketerr );
 
-   my $future = repeat_until_success {
+   my $future = try_repeat_until_success {
       my $addr = shift;
       my ( $family, $socktype, $protocol, $localaddr, $peeraddr ) =
          @{$addr}{qw( family socktype protocol localaddr peeraddr )};
