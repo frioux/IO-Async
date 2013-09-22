@@ -205,7 +205,9 @@ testing_loop( $loop );
    is( $process->exitstatus, 0, '$process->exitstatus after %ENV test' );
 }
 
-{
+SKIP: {
+   skip "This OS does not have signals", 2 unless IO::Async::OS->HAVE_SIGNALS;
+
    my $child_ready;
    $loop->watch_signal( USR1 => sub { $child_ready++ } );
 

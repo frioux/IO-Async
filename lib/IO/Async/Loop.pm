@@ -37,6 +37,8 @@ use Scalar::Util qw( refaddr );
 
 use IO::Async::OS;
 
+use constant HAVE_SIGNALS => IO::Async::OS->HAVE_SIGNALS;
+
 # Never sleep for more than 1 second if a signal proxy is registered, to avoid
 # a borderline race condition.
 # There is a race condition in perl involving signals interacting with XS code
@@ -693,6 +695,8 @@ sub attach_signal
    my $self = shift;
    my ( $signal, $code ) = @_;
 
+   HAVE_SIGNALS or croak "This OS cannot ->attach_signal";
+
    if( $signal eq "CHLD" ) {
       # We make special exception to allow $self->watch_child to do this
       caller eq "IO::Async::Loop" or
@@ -737,6 +741,8 @@ sub detach_signal
 {
    my $self = shift;
    my ( $signal, $id ) = @_;
+
+   HAVE_SIGNALS or croak "This OS cannot ->detach_signal";
 
    # Can't use grep because we have to preserve the addresses
    my $attaches = $self->{sigattaches}->{$signal} or return;
@@ -1722,6 +1728,8 @@ sub watch_signal
    my $self = shift;
    my ( $signal, $code ) = @_;
 
+   HAVE_SIGNALS or croak "This OS cannot ->watch_signal";
+
    IO::Async::OS->loop_watch_signal( $self, $signal, $code );
 }
 
@@ -1743,6 +1751,8 @@ sub unwatch_signal
 {
    my $self = shift;
    my ( $signal ) = @_;
+
+   HAVE_SIGNALS or croak "This OS cannot ->unwatch_signal";
 
    IO::Async::OS->loop_unwatch_signal( $self, $signal );
 }
@@ -2095,7 +2105,7 @@ sub watch_child
 
    croak "Already have a handler for $pid" if exists $childwatches->{$pid};
 
-   if( !$self->{childwatch_sigid} ) {
+   if( HAVE_SIGNALS and !$self->{childwatch_sigid} ) {
       $self->{childwatch_sigid} = $self->attach_signal(
          CHLD => sub { _reap_children( $childwatches ) }
       );
@@ -2127,7 +2137,7 @@ sub unwatch_child
 
    delete $childwatches->{$pid};
 
-   if( !keys %$childwatches ) {
+   if( HAVE_SIGNALS and !keys %$childwatches ) {
       $self->detach_signal( CHLD => delete $self->{childwatch_sigid} );
    }
 }
@@ -2200,6 +2210,11 @@ sub _manage_queues
    foreach my $code ( @$deferrals ) {
       $code->();
       $count++;
+   }
+
+   my $childwatches = $self->{childwatches};
+   if( !HAVE_SIGNALS and keys %$childwatches ) {
+      _reap_children( $childwatches );
    }
 
    return $count;

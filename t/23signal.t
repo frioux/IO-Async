@@ -14,6 +14,9 @@ use POSIX qw( SIGTERM );
 use IO::Async::Signal;
 
 use IO::Async::Loop;
+use IO::Async::OS;
+
+plan skip_all => "This OS does not have signals" unless IO::Async::OS->HAVE_SIGNALS;
 
 my $loop = IO::Async::Loop->new_builtin;
 

@@ -31,6 +31,9 @@ use constant HAVE_RENAME_OPEN_FILES => 0;
 # well try the Select loop first
 use constant LOOP_BUILTIN_CLASSES => qw( Select Poll );
 
+# Windows does not have signals, and SIGCHLD is not available
+use constant HAVE_SIGNALS => 0;
+
 =head1 NAME
 
 C<IO::Async::OS::MSWin32> - operating system abstractions on C<MSWin32> for C<IO::Async>
