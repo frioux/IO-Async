@@ -2028,6 +2028,28 @@ sub unwatch_idle
    splice @$deferrals, $idx, 1, () if defined $idx;
 }
 
+sub _reap_children
+{
+   my ( $childwatches ) = @_;
+
+   while( 1 ) {
+      my $zid = waitpid( -1, WNOHANG );
+
+      last if !defined $zid or $zid < 1;
+      my $status = $?;
+
+      if( defined $childwatches->{$zid} ) {
+         $childwatches->{$zid}->( $zid, $status );
+         delete $childwatches->{$zid};
+      }
+
+      if( defined $childwatches->{0} ) {
+         $childwatches->{0}->( $zid, $status );
+         # Don't delete it
+      }
+   }
+}
+
 =head2 $loop->watch_child( $pid, $code )
 
 This method adds a new handler for the termination of the given child process
@@ -2074,24 +2096,9 @@ sub watch_child
    croak "Already have a handler for $pid" if exists $childwatches->{$pid};
 
    if( !$self->{childwatch_sigid} ) {
-      $self->{childwatch_sigid} = $self->attach_signal( CHLD => sub {
-         while( 1 ) {
-            my $zid = waitpid( -1, WNOHANG );
-
-            last if !defined $zid or $zid < 1;
-            my $status = $?;
-
-            if( defined $childwatches->{$zid} ) {
-               $childwatches->{$zid}->( $zid, $status );
-               delete $childwatches->{$zid};
-            }
-
-            if( defined $childwatches->{0} ) {
-               $childwatches->{0}->( $zid, $status );
-               # Don't delete it
-            }
-         }
-      } );
+      $self->{childwatch_sigid} = $self->attach_signal(
+         CHLD => sub { _reap_children( $childwatches ) }
+      );
 
       # There's a chance the child has already exited
       my $zid = waitpid( $pid, WNOHANG );
