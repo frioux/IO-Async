@@ -655,7 +655,7 @@ sub make_event_cb
    return $self->_capture_weakself( 
       !$DEBUG ? $code : sub {
          my $self = $_[0];
-         $self->debug_printf_event( $caller, $event_name );
+         $self->_debug_printf_event( $caller, $event_name );
          goto &$code;
       }
    );
@@ -681,7 +681,7 @@ sub maybe_make_event_cb
    return $self->_capture_weakself(
       !$DEBUG ? $code : sub {
          my $self = $_[0];
-         $self->debug_printf_event( $caller, $event_name );
+         $self->_debug_printf_event( $caller, $event_name );
          goto &$code;
       }
    );
@@ -704,7 +704,7 @@ sub invoke_event
    my $code = $self->can_event( $event_name )
       or croak "$self cannot handle $event_name event";
 
-   $self->debug_printf_event( scalar caller, $event_name ) if $DEBUG;
+   $self->_debug_printf_event( scalar caller, $event_name ) if $DEBUG;
    return $code->( $self, @args );
 }
 
@@ -726,7 +726,7 @@ sub maybe_invoke_event
    my $code = $self->can_event( $event_name )
       or return undef;
 
-   $self->debug_printf_event( scalar caller, $event_name ) if $DEBUG;
+   $self->_debug_printf_event( scalar caller, $event_name ) if $DEBUG;
    return [ $code->( $self, @args ) ];
 }
 
@@ -799,7 +799,7 @@ sub debug_printf
       join("<-", @id), @args;
 }
 
-sub debug_printf_event
+sub _debug_printf_event
 {
    my $self = shift;
    my ( $caller, $event_name ) = @_;
