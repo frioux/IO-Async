@@ -1349,29 +1349,10 @@ it creates an instance of L<IO::Async::Listener> and adds it to the Loop if
 not given one in the arguments.
 
 Addresses may be given directly, or they may be looked up using the system's
-name resolver.
+name resolver, or a socket handle may be given directly.
 
 If multiple addresses are given, or resolved from the service and hostname,
 then each will be attempted in turn until one succeeds.
-
-In plain address mode, the C<%params> hash takes the following keys:
-
-=over 8
-
-=item addrs => ARRAY
-
-Reference to an array of (possibly-multiple) address structures to attempt to
-listen on. Each should be in the layout described for C<addr>. Such a layout
-is returned by the C<getaddrinfo> named resolver.
-
-=item addr => ARRAY
-
-Shortcut for passing a single address to listen on; it may be passed directly
-with this key, instead of in another array of its own. This should be in a
-format recognised by L<IO::Async::OS>'s C<extract_addrinfo> method. See also
-the C<EXAMPLES> section.
-
-=back
 
 In named resolver mode, the C<%params> hash takes the following keys:
 
@@ -1418,6 +1399,35 @@ require this hint. A warning is emitted if neither C<socktype> nor C<protocol>
 hint is defined when performing a C<getaddrinfo> lookup. To avoid this warning
 while still specifying no particular C<socktype> hint (perhaps to invoke some
 OS-specific behaviour), pass C<0> as the C<socktype> value.
+
+In plain address mode, the C<%params> hash takes the following keys:
+
+=over 8
+
+=item addrs => ARRAY
+
+Reference to an array of (possibly-multiple) address structures to attempt to
+listen on. Each should be in the layout described for C<addr>. Such a layout
+is returned by the C<getaddrinfo> named resolver.
+
+=item addr => ARRAY
+
+Shortcut for passing a single address to listen on; it may be passed directly
+with this key, instead of in another array of its own. This should be in a
+format recognised by L<IO::Async::OS>'s C<extract_addrinfo> method. See also
+the C<EXAMPLES> section.
+
+=back
+
+In direct socket handle mode, the following keys are taken:
+
+=over 8
+
+=item handle => IO
+
+The listening socket handle.
+
+=back
 
 In either case, the following keys are also taken:
 
@@ -1481,9 +1491,6 @@ accept connections from C<AF_INET> addresses. Not all operating systems allow
 this option to be disabled.
 
 =back
-
-As a convenience, it also supports a C<handle> argument, which is passed
-directly to C<configure>.
 
 An alternative which gives more control over the listener, is to create the
 C<IO::Async::Listener> object directly and add it explicitly to the Loop.
