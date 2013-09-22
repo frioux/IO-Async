@@ -1560,10 +1560,6 @@ sub listen
    else {
       croak "Expected either 'service' or 'addrs' or 'addr' arguments";
    }
-
-   # TODO: remove on error
-
-   return $listener;
 }
 
 sub _listen_handle

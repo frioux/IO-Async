@@ -145,8 +145,17 @@ SKIP: {
 
    my @error;
 
-   # Undocumented API, returning the Listener object
-   my $listener = $loop->listen(
+   # We need to capture the Listener object before failure, so we can assert
+   # it gets removed from the Loop again afterwards
+   my $listener;
+   no warnings 'redefine';
+   my $add = IO::Async::Loop->can( "add" );
+   local *IO::Async::Loop::add = sub {
+      $listener = $_[1];
+      $add->( @_ );
+   };
+
+   $loop->listen(
       family   => "inet",
       socktype => "stream",
       host     => "localhost",
@@ -161,6 +170,8 @@ SKIP: {
       on_fail => sub { $failop = shift; $failerr = pop; },
       on_listen_error => sub { @error = @_; },
    );
+
+   ok( defined $listener, 'Managed to capture listener being added to Loop' );
 
    wait_for { @error };
 
