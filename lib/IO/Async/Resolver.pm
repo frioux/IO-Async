@@ -40,29 +40,18 @@ This object is used indirectly via an C<IO::Async::Loop>:
  $loop->resolver->getaddrinfo(
     host    => "www.example.com",
     service => "http",
+ )->on_done( sub {
+    foreach my $addr ( @_ ) {
+       printf "http://www.example.com can be reached at " .
+          "socket(%d,%d,%d) + connect('%v02x')\n",
+          @{$addr}{qw( family socktype protocol addr )};
+    }
+ });
 
-    on_resolved => sub {
-       foreach my $addr ( @_ ) {
-          printf "http://www.example.com can be reached at " .
-             "socket(%d,%d,%d) + connect('%v02x')\n",
-             @{$addr}{qw( family socktype protocol addr )};
-       }
-    },
-
-    on_error => sub {
-       print "Cannot look up www.example.com - $_[-1]\n";
-    },
- );
-
- $loop->resolve( type => 'getpwuid', data => [ $< ],
-    on_resolved => sub {
-       print "My passwd ent: " . join( "|", @_ ) . "\n";
-    },
-
-    on_error => sub {
-       print "Cannot look up my passwd ent - $_[-1]\n";
-    },
- );
+ $loop->resolve( type => 'getpwuid', data => [ $< ] )
+    ->on_done( sub {
+    print "My passwd ent: " . join( "|", @_ ) . "\n";
+ });
 
  $loop->run;
 
@@ -122,7 +111,7 @@ sub _init
 
 =cut
 
-=head2 $loop->resolve( %params )
+=head2 $loop->resolve( %params ) ==> @result
 
 Performs a single name resolution operation, as given by the keys in the hash.
 
@@ -145,10 +134,21 @@ specific function chosen by the C<type>; see BUILT-IN RESOLVERS.
 Optional. Timeout in seconds, after which the resolver operation will abort
 with a timeout exception. If not supplied, a default of 10 seconds will apply.
 
+=back
+
+=head2 $resolver->resolve( %params )
+
+When not returning a future, additional parameters can be given containing the
+continuations to invoke on success or failure:
+
+=over 8
+
 =item on_resolved => CODE
 
 A continuation that is invoked when the resolver function returns a successful
 result. It will be passed the array returned by the resolver function.
+
+ $on_resolved->( @result )
 
 =item on_error => CODE
 
@@ -156,11 +156,6 @@ A continuation that is invoked when the resolver function fails. It will be
 passed the exception thrown by the function.
 
 =back
-
-=head2 $future = $resolver->resolve( %params )
-
-When returning a future, the C<on_resolved> and C<on_error> continuations are
-optional.
 
 =cut
 
@@ -208,7 +203,7 @@ sub resolve
    return $future;
 }
 
-=head2 $resolver->getaddrinfo( %args )
+=head2 $resolver->getaddrinfo( %args ) ==> @addrs
 
 A shortcut wrapper around the C<getaddrinfo> resolver, taking its arguments in
 a more convenient form.
@@ -244,12 +239,32 @@ C<Socket>.
 
 Time in seconds after which to abort the lookup with a C<Timed out> exception
 
+=back
+
+On success, the future will yield the result as a list of HASH references;
+each containing one result. Each result will contain fields called C<family>,
+C<socktype>, C<protocol> and C<addr>. If requested by C<AI_CANONNAME> then the
+C<canonname> field will also be present.
+
+As a specific optimisation, this method will try to perform a lookup of
+numeric values synchronously, rather than asynchronously, if it looks likely
+to succeed.
+
+Specifically, if the service name is entirely numeric, and the hostname looks
+like an IPv4 or IPv6 string, a synchronous lookup will first be performed
+using the C<AI_NUMERICHOST> flag. If this gives an C<EAI_NONAME> error, then
+the lookup is performed asynchronously instead.
+
+=head2 $resolver->getaddrinfo( %args )
+
+When not returning a future, additional parameters can be given containing the
+continuations to invoke on success or failure:
+
+=over 8
+
 =item on_resolved => CODE
 
-Callback which is invoked after a successful lookup. Will be passed a list of
-HASH references; each containing one result. Each result will contain fields
-called C<family>, C<socktype>, C<protocol> and C<addr>. If requested by
-C<AI_CANONNAME> then the C<canonname> field will also be valid.
+Callback which is invoked after a successful lookup.
 
  $on_resolved->( @addrs )
 
@@ -260,20 +275,6 @@ Callback which is invoked after a failed lookup, including for a timeout.
  $on_error->( $exception )
 
 =back
-
-As a specific optimsation, this method will try to perform a lookup of numeric
-values synchronously, rather than asynchronously, if it looks likely to
-succeed.
-
-Specifically, if the service name is entirely numeric, and the hostname looks
-like an IPv4 or IPv6 string, a synchronous lookup will first be performed
-using the C<AI_NUMERICHOST> flag. If this gives an C<EAI_NONAME> error, then
-the lookup is performed asynchronously instead.
-
-=head2 $future = $resolver->getaddrinfo( %args )
-
-When returning a future, the C<on_resolved> and C<on_error> continuations are
-optional.
 
 =cut
 
@@ -346,7 +347,7 @@ sub getaddrinfo
    return $future;
 }
 
-=head2 $resolver->getnameinfo( %args )
+=head2 $resolver->getnameinfo( %args ) ==> ( $host, $service )
 
 A shortcut wrapper around the C<getnameinfo> resolver, taking its arguments in
 a more convenient form.
@@ -378,9 +379,22 @@ If true, sets both C<NI_NUMERICHOST> and C<NI_NUMERICSERV> flags.
 
 Time in seconds after which to abort the lookup with a C<Timed out> exception
 
+=back
+
+As a specific optimisation, this method will try to perform a lookup of
+numeric values synchronously, rather than asynchronously, if both the
+C<NI_NUMERICHOST> and C<NI_NUMERICSERV> flags are given.
+
+=head2 $future = $resolver->getnameinfo( %args )
+
+When not returning a future, additional parameters can be given containing the
+continuations to invoke on success or failure:
+
+=over 8
+
 =item on_resolved => CODE
 
-Callback which is invoked after a successful lookup. 
+Callback which is invoked after a successful lookup.
 
  $on_resolved->( $host, $service )
 
@@ -391,15 +405,6 @@ Callback which is invoked after a failed lookup, including for a timeout.
  $on_error->( $exception )
 
 =back
-
-As a specific optimsation, this method will try to perform a lookup of numeric
-values synchronously, rather than asynchronously, if both the
-C<NI_NUMERICHOST> and C<NI_NUMERICSERV> flags are given.
-
-=head2 $future = $resolver->getnameinfo( %args )
-
-When returning a future, the C<on_resolved> and C<on_error> continuations are
-optional.
 
 =cut
 
