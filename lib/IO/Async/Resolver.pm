@@ -339,7 +339,10 @@ sub getaddrinfo
          map { exists $args{$_} ? ( $_ => $args{$_} ) : () } qw( family socktype protocol ),
       ],
       timeout => $args{timeout},
-   );
+   )->else( sub {
+      my $message = shift;
+      Future->new->fail( $message, resolve => getaddrinfo => @_ );
+   });
 
    $future->on_done( $args{on_resolved} ) if $args{on_resolved};
    $future->on_fail( $args{on_error}    ) if $args{on_error};
@@ -449,7 +452,10 @@ sub getnameinfo
       timeout => $args{timeout},
    )->transform(
       done => sub { @{ $_[0] } }, # unpack the ARRAY ref
-   );
+   )->else( sub {
+      my $message = shift;
+      Future->new->fail( $message, resolve => getnameinfo => @_ );
+   });
 
    $future->on_done( $args{on_resolved} ) if $args{on_resolved};
    $future->on_fail( $args{on_error}    ) if $args{on_error};
