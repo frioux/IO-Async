@@ -319,9 +319,11 @@ sub read_data
    );
    $loop->add( $stream );
 
+   my $written = 0;
    my $flushed;
    $stream->write(
       my $future = $loop->new_future,
+      on_write => sub { $written += $_[1] },
       on_flush => sub { $flushed++ },
    );
 
@@ -331,6 +333,8 @@ sub read_data
    $future->done( "some data to write" );
 
    wait_for { $flushed };
+
+   is( $written, 18, 'stream written by Future completion invokes on_write' );
 
    is( read_data( $rd ), "some data to write", 'stream written by Future completion' );
 
@@ -346,6 +350,7 @@ sub read_data
    $loop->add( $stream );
 
    my $done;
+   my $written = 0;
    my $flushed;
 
    $stream->write(
@@ -353,11 +358,14 @@ sub read_data
          is( $_[0], $stream, 'Writersub $_[0] is $stream' );
          return $done++ ? undef : "a lazy message\n";
       },
+      on_write => sub { $written += $_[1] },
       on_flush => sub { $flushed++ },
    );
 
    $flushed = 0;
    wait_for { $flushed };
+
+   is( $written, 15, 'stream written by generator CODE invokes on_write' );
 
    is( read_data( $rd ), "a lazy message\n", 'lazy data was written' );
 

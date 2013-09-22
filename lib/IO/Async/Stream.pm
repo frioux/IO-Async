@@ -715,7 +715,8 @@ sub _flush_one_write
          if( !ref $data and my $encoding = $self->{encoding} ) {
             $data = $encoding->encode( $data );
          }
-         unshift @$writequeue, [ $data ];
+         unshift @$writequeue, my $new = [ $data ];
+         $new->[$_] = $head->[$_] for WQ_WRITELEN, WQ_ON_WRITE; # not ON_FLUSH
          next;
       }
       elsif( blessed $head->[WQ_DATA] and $head->[WQ_DATA]->isa( "Future" ) ) {
