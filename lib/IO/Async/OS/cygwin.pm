@@ -22,7 +22,7 @@ C<IO::Async::OS::cygwin> - operating system abstractions on C<cygwin> for C<IO::
 
 =head1 DESCRIPTION
 
-This module contains OS support code for C<MSWin32>.
+This module contains OS support code for C<cygwin>.
 
 See instead L<IO::Async::OS>.
 
