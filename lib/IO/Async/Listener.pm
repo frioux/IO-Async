@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2008-2011 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2008-2013 -- leonerd@leonerd.org.uk
 
 package IO::Async::Listener;
 
@@ -16,11 +16,7 @@ use IO::Async::OS;
 
 use Errno qw( EAGAIN EWOULDBLOCK );
 
-use Socket qw(
-   sockaddr_family
-   SOL_SOCKET SO_ACCEPTCONN SO_REUSEADDR SO_TYPE
-   AF_INET6 IPPROTO_IPV6 IPV6_V6ONLY
-);
+use Socket qw( sockaddr_family SOL_SOCKET SO_ACCEPTCONN SO_TYPE );
 
 use Carp;
 
@@ -283,132 +279,24 @@ sub socktype
 
 =head2 $listener->listen( %params )
 
-This method sets up a listening socket using the addresses given, and will
-invoke the C<on_accept> callback each time a new connection is accepted on the
-socket. Addresses may be given directly, or they may be looked up using the
-system's name resolver.
+This method sets up a listening socket and arranges for the acceptor callback
+to be invoked each time a new connection is accepted on the socket.
 
-If multiple addresses are given, or resolved from the service and hostname,
-then each will be attempted in turn until one succeeds.
-
-In plain address mode, the C<%params> hash takes the following keys:
-
-=over 8
-
-=item addrs => ARRAY
-
-Reference to an array of (possibly-multiple) address structures to attempt to
-listen on. Each should be in the layout described for C<addr>. Such a layout
-is returned by the C<getaddrinfo> named resolver.
-
-=item addr => ARRAY
-
-Shortcut for passing a single address to listen on; it may be passed directly
-with this key, instead of in another array of its own. This should be in a
-format recognised by L<IO::Async::OS>'s C<extract_addrinfo> method. See also
-the C<EXAMPLES> section.
-
-=back
-
-In named resolver mode, the C<%params> hash takes the following keys:
-
-=over 8
-
-=item service => STRING
-
-The service name to listen on.
-
-=item host => STRING
-
-The hostname to listen on. Optional. Will listen on all addresses if not
-supplied.
-
-=item family => INT
-
-=item socktype => INT
-
-=item protocol => INT
-
-=item flags => INT
-
-Optional. Other arguments to pass along with C<host> and C<service> to the
-C<getaddrinfo> call.
-
-=item socktype => STRING
-
-Optionally may instead be one of the values C<'stream'>, C<'dgram'> or
-C<'raw'> to stand for C<SOCK_STREAM>, C<SOCK_DGRAM> or C<SOCK_RAW>. This
-utility is provided to allow the caller to avoid a separate C<use Socket> only
-for importing these constants.
-
-=item on_resolve_error => CODE
-
-A continuation that is invoked when the name resolution attempt fails. This is
-invoked in the same way as the C<on_error> continuation for the C<resolve>
-method.
-
-=back
-
-It is necessary to pass the C<socktype> hint to the resolver when resolving
-the host/service names into an address, as some OS's C<getaddrinfo> functions
-require this hint. A warning is emitted if neither C<socktype> nor C<protocol>
-hint is defined when performing a C<getaddrinfo> lookup. To avoid this warning
-while still specifying no particular C<socktype> hint (perhaps to invoke some
-OS-specific behaviour), pass C<0> as the C<socktype> value.
-
-In either case, the following keys are also taken:
+Most parameters given to this method are passed into the C<listen> method of
+the L<IO::Async::Loop> object. In addition, the following arguments are also
+recognised directly:
 
 =over 8
 
 =item on_listen => CODE
 
 Optional. A callback that is invoked when the listening socket is ready.
+Similar to that on the underlying loop method, except it is passed the
+listener object itself.
 
  $on_listen->( $listener )
 
-=item on_listen_error => CODE
-
-A continuation this is invoked after all of the addresses have been tried, and
-none of them succeeded. It will be passed the most significant error that
-occurred, and the name of the operation it occurred in. Errors from the
-C<listen(2)> syscall are considered most significant, then C<bind(2)>, then
-C<sockopt(2)>, then finally C<socket(2)>.
-
-=item on_fail => CODE
-
-Optional. A callback that is invoked if a syscall fails while attempting to
-create a listening sockets. It is passed the name of the syscall that failed,
-the arguments that were passed to it, and the error generated. I.e.
-
- $on_fail->( "socket", $family, $socktype, $protocol, $! );
-
- $on_fail->( "sockopt", $sock, $optname, $optval, $! );
-
- $on_fail->( "bind", $sock, $address, $! );
-
- $on_fail->( "listen", $sock, $queuesize, $! );
-
-=item queuesize => INT
-
-Optional. The queue size to pass to the C<listen(2)> calls. If not supplied,
-then 3 will be given instead.
-
-=item reuseaddr => BOOL
-
-Optional. If true or not supplied then the C<SO_REUSEADDR> socket option will
-be set. To prevent this, pass a false value such as 0.
-
-=item v6only => BOOL
-
-Optional. If defined, sets or clears the C<IPV6_V6ONLY> socket option on
-C<PF_INET6> sockets. This option disables the ability of C<PF_INET6> socket to
-accept connections from C<AF_INET> addresses. Not all operating systems allow
-this option to be disabled.
-
 =back
-
-As a convenience, it also supports a C<handle> argument, which is passed
-directly to C<configure>.
 
 =cut
 
@@ -420,125 +308,11 @@ sub listen
    my $loop = $self->loop;
    defined $loop or croak "Cannot listen when not a member of a Loop"; # TODO: defer?
 
-   if( exists $params{handle} ) {
-      my $handle = $params{handle};
-      $self->configure( handle => $handle );
-      return;
+   if( my $on_listen = delete $params{on_listen} ) {
+      $params{on_listen} = sub { $on_listen->( $self ) };
    }
 
-   # Shortcut
-   if( $params{addr} and not $params{addrs} ) {
-      $params{addrs} = [ delete $params{addr} ];
-   }
-
-   my $on_listen = $params{on_listen}; # optional
-   !defined $on_listen or ref $on_listen or croak "Expected 'on_listen' to be a reference";
-
-   my $on_listen_error = $params{on_listen_error};
-   ref $on_listen_error or croak "Expected 'on_listen_error' as a reference";
-
-   my $on_fail = $params{on_fail};
-   !defined $on_fail or ref $on_fail or croak "Expected 'on_fail' to be a reference";
-
-   my $queuesize = $params{queuesize} || 3;
-
-   if( my $addrlist = $params{addrs} ) {
-      my $reuseaddr = 1;
-      $reuseaddr = 0 if defined $params{reuseaddr} and not $params{reuseaddr};
-
-      my $v6only = $params{v6only};
-
-      my ( $listenerr, $binderr, $sockopterr, $socketerr );
-
-      foreach my $addr ( @$addrlist ) {
-         my ( $family, $socktype, $proto, $address ) = IO::Async::OS->extract_addrinfo( $addr );
-
-         my $sock;
-
-         unless( $sock = IO::Async::OS->socket( $family, $socktype, $proto ) ) {
-            $socketerr = $!;
-            $on_fail->( socket => $family, $socktype, $proto, $! ) if $on_fail;
-            next;
-         }
-
-         if( $reuseaddr ) {
-            unless( $sock->sockopt( SO_REUSEADDR, 1 ) ) {
-               $sockopterr = $!;
-               $on_fail->( sockopt => $sock, SO_REUSEADDR, 1, $! ) if $on_fail;
-               next;
-            }
-         }
-
-         if( defined $v6only and $family == AF_INET6 ) {
-            unless( $sock->setsockopt( IPPROTO_IPV6, IPV6_V6ONLY, $v6only ) ) {
-               $sockopterr = $!;
-               $on_fail->( sockopt => $sock, IPV6_V6ONLY, $v6only, $! ) if $on_fail;
-               next;
-            }
-         }
-
-         unless( $sock->bind( $address ) ) {
-            $binderr = $!;
-            $on_fail->( bind => $sock, $address, $! ) if $on_fail;
-            next;
-         }
-
-         unless( $sock->listen( $queuesize ) ) {
-            $listenerr = $!;
-            $on_fail->( listen => $sock, $queuesize, $! ) if $on_fail;
-            next;
-         }
-
-         $self->SUPER::configure( read_handle => $sock );
-
-         $on_listen->( $self ) if defined $on_listen;
-
-         return;
-      }
-
-      # If we got this far, then none of the addresses succeeded
-      return $on_listen_error->( listen  => $listenerr  ) if $listenerr;
-      return $on_listen_error->( bind    => $binderr    ) if $binderr;
-      return $on_listen_error->( sockopt => $sockopterr ) if $sockopterr;
-      return $on_listen_error->( socket  => $socketerr  ) if $socketerr;
-      die 'Oops; $loop->listen failed but no error cause was found';
-   }
-
-   elsif( defined $params{service} ) {
-      my $on_resolve_error = delete $params{on_resolve_error};
-      ref $on_resolve_error or croak "Expected 'on_resolve_error' as a reference";
-
-      my $host = delete $params{host} || "";
-
-      my $service = delete $params{service};
-      defined $service or $service = ""; # might be 0
-
-      my %gai_hints;
-      exists $params{$_} and $gai_hints{$_} = $params{$_} for qw( family socktype protocol flags );
-
-      defined $gai_hints{socktype} or defined $gai_hints{protocol} or
-         carp "Attempting to ->listen without either 'socktype' or 'protocol' hint is not portable";
-
-      $loop->resolver->getaddrinfo(
-         host    => $host,
-         service => $service,
-         passive => 1,
-         %gai_hints,
-
-         on_resolved => sub {
-            $self->listen( 
-               %params,
-               addrs => [ @_ ],
-            );
-         },
-
-         on_error => $on_resolve_error,
-      );
-   }
-
-   else {
-      croak "Expected either 'service' or 'addrs' or 'addr' arguments";
-   }
+   $loop->listen( listener => $self, %params );
 }
 
 =head1 EXAMPLES
