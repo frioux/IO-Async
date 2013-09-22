@@ -208,11 +208,6 @@ sub connect
    }
 
    return Future->needs_all( $peeraddrfuture, $localaddrfuture )
-      ->or_else( sub {
-         my $f = shift;
-         my ( $failure, @args ) = $f->failure;
-         return $loop->new_future->fail( $failure, resolve => @args );
-      } )
       ->and_then( sub {
          my @peeraddrs  = $peeraddrfuture->get;
          my @localaddrs = $localaddrfuture->get;
