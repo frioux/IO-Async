@@ -743,6 +743,13 @@ When debugging is enabled, the C<make_event_cb> and C<invoke_event> methods
 a debugging line is printed, using the C<debug_printf> method. This identifes
 the name of the event.
 
+By default, the line is only printed if the caller of one of these methods is
+the same package as the object is blessed into, allowing it to print the
+events of the most-derived class, without the extra verbosity of the
+lower-level events of its parent class used to create it. All calls regardless
+of caller can be printed by setting a number greater than 1 as the value of
+C<IO_ASYNC_DEBUG>.
+
 =cut
 
 =head2 $notifier->debug_printf( $format, @args )
