@@ -49,6 +49,10 @@ use constant HAVE_SIGNALS => IO::Async::OS->HAVE_SIGNALS;
 # run when the XS function returns. 
 our $MAX_SIGWAIT_TIME = 1;
 
+# Also, never sleep for more than 1 second if the OS does not support signals
+# and we have child watches registered (so we must use waitpid() polling)
+our $MAX_CHILDWAIT_TIME = 1;
+
 # Maybe our calling program will have a suggested hint of a specific Loop
 # class or list of classes to use
 our $LOOP;
@@ -2166,7 +2170,10 @@ sub _adjust_timeout
    $$timeref = 0, return if @{ $self->{deferrals} };
 
    if( defined $self->{sigproxy} and !$params{no_sigwait} ) {
-      $$timeref = $MAX_SIGWAIT_TIME if( !defined $$timeref or $$timeref > $MAX_SIGWAIT_TIME );
+      $$timeref = $MAX_SIGWAIT_TIME if !defined $$timeref or $$timeref > $MAX_SIGWAIT_TIME;
+   }
+   if( !HAVE_SIGNALS and keys %{ $self->{childwatches} } ) {
+      $$timeref = $MAX_CHILDWAIT_TIME if !defined $$timeref or $$timeref > $MAX_CHILDWAIT_TIME;
    }
 
    my $timequeue = $self->{timequeue};
