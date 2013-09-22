@@ -1341,7 +1341,7 @@ sub connect
    return $future;
 }
 
-=head2 $loop->listen( %params )
+=head2 $loop->listen( %params ) ==> $listener
 
 This method sets up a listening socket and arranges for an acceptor callback
 to be invoked each time a new connection is accepted on the socket. Internally
@@ -1384,12 +1384,6 @@ Optionally may instead be one of the values C<'stream'>, C<'dgram'> or
 C<'raw'> to stand for C<SOCK_STREAM>, C<SOCK_DGRAM> or C<SOCK_RAW>. This
 utility is provided to allow the caller to avoid a separate C<use Socket> only
 for importing these constants.
-
-=item on_resolve_error => CODE
-
-A continuation that is invoked when the name resolution attempt fails. This is
-invoked in the same way as the C<on_error> continuation for the C<resolve>
-method.
 
 =back
 
@@ -1441,24 +1435,6 @@ the socket's sockname address, or otherwise inspect the filehandle.
 
  $on_listen->( $socket )
 
-=item on_notifier => CODE
-
-Optional. A callback that is invoked when the Listener object is ready to
-receive connections. The callback is passed the Listener object itself.
-
- $on_notifier->( $listener )
-
-If this callback is required, it may instead be better to construct the
-Listener object directly.
-
-=item on_listen_error => CODE
-
-A continuation this is invoked after all of the addresses have been tried, and
-none of them succeeded. It will be passed the most significant error that
-occurred, and the name of the operation it occurred in. Errors from the
-C<listen(2)> syscall are considered most significant, then C<bind(2)>, then
-C<sockopt(2)>, then finally C<socket(2)>.
-
 =item on_fail => CODE
 
 Optional. A callback that is invoked if a syscall fails while attempting to
@@ -1497,6 +1473,39 @@ C<IO::Async::Listener> object directly and add it explicitly to the Loop.
 
 This method accepts an C<extensions> parameter; see the C<EXTENSIONS> section
 below.
+
+=head2 $loop->listen( %params )
+
+When not returning a future, additional parameters can be given containing the
+continuations to invoke on success or failure.
+
+=over 8
+
+=item on_notifier => CODE
+
+Optional. A callback that is invoked when the Listener object is ready to
+receive connections. The callback is passed the Listener object itself.
+
+ $on_notifier->( $listener )
+
+If this callback is required, it may instead be better to construct the
+Listener object directly.
+
+=item on_listen_error => CODE
+
+A continuation this is invoked after all of the addresses have been tried, and
+none of them succeeded. It will be passed the most significant error that
+occurred, and the name of the operation it occurred in. Errors from the
+C<listen(2)> syscall are considered most significant, then C<bind(2)>, then
+C<sockopt(2)>, then finally C<socket(2)>.
+
+=item on_resolve_error => CODE
+
+A continuation that is invoked when the name resolution attempt fails. This is
+invoked in the same way as the C<on_error> continuation for the C<resolve>
+method.
+
+=back
 
 =cut
 
@@ -1543,23 +1552,44 @@ sub listen
       $listener
    };
 
+   my $on_notifier = delete $params{on_notifier}; # optional
+
+   my $on_listen_error  = delete $params{on_listen_error};
+   my $on_resolve_error = delete $params{on_resolve_error};
+
    # Shortcut
    if( $params{addr} and not $params{addrs} ) {
       $params{addrs} = [ delete $params{addr} ];
    }
 
+   my $f;
    if( my $handle = delete $params{handle} ) {
-      $self->_listen_handle( $listener, $handle, %params );
+      $f = $self->_listen_handle( $listener, $handle, %params );
    }
    elsif( my $addrs = delete $params{addrs} ) {
-      $self->_listen_addrs( $listener, $addrs, %params );
+      $on_listen_error or defined wantarray or
+         croak "Expected 'on_listen_error' or to return a Future";
+      $f = $self->_listen_addrs( $listener, $addrs, %params );
    }
    elsif( defined $params{service} ) {
-      $self->_listen_hostservice( $listener, delete $params{host}, delete $params{service}, %params );
+      $on_listen_error or defined wantarray or
+         croak "Expected 'on_listen_error' or to return a Future";
+      $on_resolve_error or defined wantarray or
+         croak "Expected 'on_resolve_error' or to return a Future";
+      $f = $self->_listen_hostservice( $listener, delete $params{host}, delete $params{service}, %params );
    }
    else {
       croak "Expected either 'service' or 'addrs' or 'addr' arguments";
    }
+
+   $f->on_done( $on_notifier ) if $on_notifier;
+   $f->on_fail( sub {
+      my ( $message, $how, @rest ) = @_;
+      $on_listen_error->( @rest )  if $on_listen_error  and $how eq "listen";
+      $on_resolve_error->( @rest ) if $on_resolve_error and $how eq "resolve";
+   });
+
+   return $f;
 }
 
 sub _listen_handle
@@ -1568,9 +1598,7 @@ sub _listen_handle
    my ( $listener, $handle, %params ) = @_;
 
    $listener->configure( handle => $handle );
-
-   my $on_notifier = $params{on_notifier};
-   $on_notifier->( $listener ) if $on_notifier;
+   return $self->new_future->done( $listener );
 }
 
 sub _listen_addrs
@@ -1585,9 +1613,6 @@ sub _listen_addrs
 
    my $on_fail = $params{on_fail};
    !defined $on_fail or ref $on_fail or croak "Expected 'on_fail' to be a reference";
-
-   my $on_listen_error = $params{on_listen_error};
-   ref $on_listen_error or croak "Expected 'on_listen_error' as a reference";
 
    my $reuseaddr = 1;
    $reuseaddr = 0 if defined $params{reuseaddr} and not $params{reuseaddr};
@@ -1635,18 +1660,19 @@ sub _listen_addrs
          next;
       }
 
-      $self->_listen_handle( $listener, $sock, %params );
+      my $f = $self->_listen_handle( $listener, $sock, %params );
       $on_listen->( $sock ) if defined $on_listen;
-      return;
+      return $f;
    }
 
    # If we got this far, then none of the addresses succeeded
    $listener->remove_from_parent if $params{_remove_on_error};
 
-   return $on_listen_error->( listen  => $listenerr  ) if $listenerr;
-   return $on_listen_error->( bind    => $binderr    ) if $binderr;
-   return $on_listen_error->( sockopt => $sockopterr ) if $sockopterr;
-   return $on_listen_error->( socket  => $socketerr  ) if $socketerr;
+   my $f = $self->new_future;
+   return $f->fail( "Cannot listen() - $listenerr",      listen => listen  => $listenerr  ) if $listenerr;
+   return $f->fail( "Cannot bind() - $binderr",          listen => bind    => $binderr    ) if $binderr;
+   return $f->fail( "Cannot setsockopt() - $sockopterr", listen => sockopt => $sockopterr ) if $sockopterr;
+   return $f->fail( "Cannot socket() - $socketerr",      listen => socket  => $socketerr  ) if $socketerr;
    die 'Oops; $loop->listen failed but no error cause was found';
 }
 
@@ -1654,9 +1680,6 @@ sub _listen_hostservice
 {
    my $self = shift;
    my ( $listener, $host, $service, %params ) = @_;
-
-   my $on_resolve_error = delete $params{on_resolve_error};
-   ref $on_resolve_error or croak "Expected 'on_resolve_error' as a reference";
 
    $host ||= "";
    defined $service or $service = ""; # might be 0
@@ -1672,13 +1695,10 @@ sub _listen_hostservice
       service => $service,
       passive => 1,
       %gai_hints,
-
-      on_resolved => sub {
-         $self->_listen_addrs( $listener, [ @_ ], %params );
-      },
-
-      on_error => $on_resolve_error,
-   );
+   )->then( sub {
+      my @addrs = @_;
+      $self->_listen_addrs( $listener, \@addrs, %params );
+   });
 }
 
 =head1 OS ABSTRACTIONS
