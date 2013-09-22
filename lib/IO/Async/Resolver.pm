@@ -17,13 +17,6 @@ use Socket 1.93 qw(
    EAI_NONAME
 );
 
-BEGIN {
-   # We're going to implement methods called getaddrinfo and getnameinfo. We
-   # therefore need import them with different names prefixed with underscores
-   *_getaddrinfo = \&Socket::getaddrinfo;
-   *_getnameinfo = \&Socket::getnameinfo;
-}
-
 use IO::Async::OS;
 
 use Time::HiRes qw( alarm );
@@ -317,7 +310,7 @@ sub getaddrinfo
    if( ( $host =~ m/^[\d.]+$/ or $host =~ m/^[[:xdigit:]:]$/ or $host eq "" ) and
        $service =~ m/^\d+$/ ) {
 
-       my ( $err, @results ) = _getaddrinfo( $host, $service,
+       my ( $err, @results ) = Socket::getaddrinfo( $host, $service,
           { %args, flags => $flags | AI_NUMERICHOST }
        );
 
@@ -431,7 +424,7 @@ sub getnameinfo
 
    if( $flags & (NI_NUMERICHOST|NI_NUMERICSERV) ) {
       # This is a numeric-only lookup that can be done synchronously
-      my ( $err, $host, $service ) = _getnameinfo( $args{addr}, $flags );
+      my ( $err, $host, $service ) = Socket::getnameinfo( $args{addr}, $flags );
 
       if( $err ) {
          my $future = $self->loop->new_future->fail( $err, resolve => getnameinfo => $err+0 );
@@ -585,7 +578,7 @@ register_resolver getaddrinfo_hash => sub {
    # Clear any other existing but undefined hints
    defined $args{$_} or delete $args{$_} for keys %args;
 
-   my ( $err, @addrs ) = _getaddrinfo( $host, $service, \%args );
+   my ( $err, @addrs ) = Socket::getaddrinfo( $host, $service, \%args );
 
    die "$err\n" if $err;
 
@@ -604,7 +597,7 @@ register_resolver getaddrinfo_array => sub {
    $hints{protocol} = $protocol if defined $protocol;
    $hints{flags}    = $flags    if defined $flags;
 
-   my ( $err, @addrs ) = _getaddrinfo( $host, $service, \%hints );
+   my ( $err, @addrs ) = Socket::getaddrinfo( $host, $service, \%hints );
 
    die "$err\n" if $err;
 
@@ -617,7 +610,7 @@ register_resolver getaddrinfo_array => sub {
 register_resolver getnameinfo => sub {
    my ( $addr, $flags ) = @_;
 
-   my ( $err, $host, $service ) = _getnameinfo( $addr, $flags || 0 );
+   my ( $err, $host, $service ) = Socket::getnameinfo( $addr, $flags || 0 );
 
    die "$err\n" if $err;
 
