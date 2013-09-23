@@ -1427,14 +1427,6 @@ In either case, the following keys are also taken:
 
 =over 8
 
-=item on_listen => CODE
-
-Optional. A callback that is invoked when the listening socket is ready.
-Typically this would be used in the name resolver case, in order to inspect
-the socket's sockname address, or otherwise inspect the filehandle.
-
- $on_listen->( $socket )
-
 =item on_fail => CODE
 
 Optional. A callback that is invoked if a syscall fails while attempting to
@@ -1490,6 +1482,14 @@ receive connections. The callback is passed the Listener object itself.
 
 If this callback is required, it may instead be better to construct the
 Listener object directly.
+
+=item on_listen => CODE
+
+Optional. A callback that is invoked when the listening socket is ready.
+Typically this would be used in the name resolver case, in order to inspect
+the socket's sockname address, or otherwise inspect the filehandle.
+
+ $on_listen->( $socket )
 
 =item on_listen_error => CODE
 
@@ -1583,6 +1583,9 @@ sub listen
    }
 
    $f->on_done( $on_notifier ) if $on_notifier;
+   if( my $on_listen = $params{on_listen} ) {
+      $f->on_done( sub { $on_listen->( shift->read_handle ) } );
+   }
    $f->on_fail( sub {
       my ( $message, $how, @rest ) = @_;
       $on_listen_error->( @rest )  if $on_listen_error  and $how eq "listen";
@@ -1607,9 +1610,6 @@ sub _listen_addrs
    my ( $listener, $addrs, %params ) = @_;
 
    my $queuesize = $params{queuesize} || 3;
-
-   my $on_listen = $params{on_listen}; # optional
-   !defined $on_listen or ref $on_listen or croak "Expected 'on_listen' to be a reference";
 
    my $on_fail = $params{on_fail};
    !defined $on_fail or ref $on_fail or croak "Expected 'on_fail' to be a reference";
@@ -1660,9 +1660,7 @@ sub _listen_addrs
          next;
       }
 
-      my $f = $self->_listen_handle( $listener, $sock, %params );
-      $on_listen->( $sock ) if defined $on_listen;
-      return $f;
+      return $self->_listen_handle( $listener, $sock, %params );
    }
 
    # If we got this far, then none of the addresses succeeded
