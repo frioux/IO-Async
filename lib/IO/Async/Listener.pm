@@ -217,27 +217,31 @@ sub on_read_ready
 
    my $socket = $self->read_handle;
 
-   my $acceptor = $self->{acceptor};
-   $self->$acceptor( $socket )->on_done( sub {
-      my ( $handle ) = @_ or return; # false-alarm
+   my $on_done;
+   my %acceptor_params;
 
-      if( $self->can_event( "on_stream" ) ) {
-         # TODO: It doesn't make sense to put a SOCK_DGRAM in an
-         # IO::Async::Stream but currently we don't detect this
-         require IO::Async::Stream;
-         $self->invoke_event( on_stream => IO::Async::Stream->new( handle => $handle ) );
-      }
-      elsif( $self->can_event( "on_socket" ) ) {
-         require IO::Async::Socket;
-         $self->invoke_event( on_socket => IO::Async::Socket->new( handle => $handle ) );
-      }
-      # on_accept needs to be last in case of multiple layers of subclassing
-      elsif( $self->can_event( "on_accept" ) ) {
-         $self->invoke_event( on_accept => $handle );
-      }
-      else {
-         die "ARG! Missing on_accept,on_stream,on_socket!";
-      }
+   if( $on_done = $self->can_event( "on_stream" ) ) {
+      # TODO: It doesn't make sense to put a SOCK_DGRAM in an
+      # IO::Async::Stream but currently we don't detect this
+      require IO::Async::Stream;
+      $acceptor_params{handle} = IO::Async::Stream->new;
+   }
+   elsif( $on_done = $self->can_event( "on_socket" ) ) {
+      require IO::Async::Socket;
+      $acceptor_params{handle} = IO::Async::Socket->new;
+   }
+   # on_accept needs to be last in case of multiple layers of subclassing
+   elsif( $on_done = $self->can_event( "on_accept" ) ) {
+      # OK
+   }
+   else {
+      die "ARG! Missing on_accept,on_stream,on_socket!";
+   }
+
+   my $acceptor = $self->{acceptor};
+   $self->$acceptor( $socket, %acceptor_params )->on_done( sub {
+      my ( $result ) = @_ or return; # false-alarm
+      $on_done->( $self, $result );
    })->on_fail( sub {
       my ( $message, undef, $socket, $dollarbang ) = @_;
       $self->maybe_invoke_event( on_accept_error => $socket, $dollarbang );
@@ -247,19 +251,25 @@ sub on_read_ready
 sub _accept
 {
    my $self = shift;
-   my ( $socket ) = @_;
+   my ( $listen_sock, %params ) = @_;
 
-   my $handle = $socket->accept;
+   my $accepted = $listen_sock->accept;
 
-   if( defined $handle ) {
-      $handle->blocking( 0 );
-      return Future->new->done( $handle );
+   if( defined $accepted ) {
+      $accepted->blocking( 0 );
+      if( my $handle = $params{handle} ) {
+         $handle->set_handle( $accepted );
+         return Future->new->done( $handle );
+      }
+      else {
+         return Future->new->done( $accepted );
+      }
    }
    elsif( $! == EAGAIN or $! == EWOULDBLOCK ) {
       return Future->new->done;
    }
    else {
-      return Future->new->fail( "Cannot accept() - $!", accept => $socket, $! );
+      return Future->new->fail( "Cannot accept() - $!", accept => $listen_sock, $! );
    }
 }
 
