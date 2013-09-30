@@ -6,6 +6,7 @@ use warnings;
 use IO::Async::Test;
 
 use Test::More;
+use Test::Identity;
 
 use IO::Socket::INET;
 
@@ -47,6 +48,8 @@ testing_loop( $loop );
    my $notifier = $f->get;
    isa_ok( $notifier, "IO::Async::Notifier", 'synchronous on_notifier given a Notifier' );
 
+   identical( $notifier->loop, $loop, 'synchronous $notifier->loop is $loop' );
+
    my $clientsock = IO::Socket::INET->new( Type => SOCK_STREAM )
       or die "Cannot socket() - $!";
 
@@ -82,6 +85,8 @@ testing_loop( $loop );
    can_ok( $listensock, qw( peerhost peerport ) );
 
    isa_ok( $notifier, "IO::Async::Notifier", 'asynchronous on_notifier given a Notifier' );
+
+   identical( $notifier->loop, $loop, 'asynchronous $notifier->loop is $loop' );
 
    my $listenaddr = $listensock->sockname;
 

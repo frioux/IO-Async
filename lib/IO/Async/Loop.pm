@@ -1545,10 +1545,11 @@ sub listen
       };
    }
 
+   my $remove_on_error;
    my $listener = delete $params{listener} || do {
+      $remove_on_error++;
       my $listener = IO::Async::Listener->new( %listenerparams );
       $self->add( $listener );
-      $params{_remove_on_error} = 1;
       $listener
    };
 
@@ -1591,6 +1592,7 @@ sub listen
       $on_listen_error->( @rest )  if $on_listen_error  and $how eq "listen";
       $on_resolve_error->( @rest ) if $on_resolve_error and $how eq "resolve";
    });
+   $f->on_fail( sub { $self->remove( $listener ) } ) if $remove_on_error;
 
    return $f;
 }
@@ -1662,9 +1664,6 @@ sub _listen_addrs
 
       return $self->_listen_handle( $listener, $sock, %params );
    }
-
-   # If we got this far, then none of the addresses succeeded
-   $listener->remove_from_parent if $params{_remove_on_error};
 
    my $f = $self->new_future;
    return $f->fail( "Cannot listen() - $listenerr",      listen => listen  => $listenerr  ) if $listenerr;
