@@ -279,7 +279,7 @@ sub on_read_ready
       die "ARG! Missing on_accept,on_stream,on_socket!";
    }
 
-   my $acceptor = $self->{acceptor};
+   my $acceptor = $self->acceptor;
    $self->$acceptor( $socket, %acceptor_params )->on_done( sub {
       my ( $result ) = @_ or return; # false-alarm
       $on_done->( $self, $result );
@@ -317,6 +317,20 @@ sub _accept
 =head1 METHODS
 
 =cut
+
+=head2 $acceptor = $listener->acceptor
+
+Returns the currently-set C<acceptor> method name or code reference. This may
+be of interest to Loop C<listen> extension methods that wish to extend or wrap
+it.
+
+=cut
+
+sub acceptor
+{
+   my $self = shift;
+   return $self->{acceptor};
+}
 
 sub is_listening
 {
