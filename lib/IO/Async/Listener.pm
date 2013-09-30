@@ -176,9 +176,12 @@ implement the actual accept behaviour. This will be invoked as:
 
  $listener->acceptor( $socket ) ==> $accepted
 
-It is invoked with the listening socket as its only argument, and is expected
-to return a C<Future> that will eventually yield the newly-accepted socket
-handle.
+ $listener->acceptor( $socket, handle => $handle ) ==> $handle
+
+It is invoked with the listening socket as its its argument, and optionally
+an C<IO::Async::Handle> instance as a named parameter, and is expected to
+return a C<Future> that will eventually yield the newly-accepted socket or
+handle instance, if such was provided.
 
 =back
 
