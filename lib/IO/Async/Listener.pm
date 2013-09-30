@@ -141,9 +141,28 @@ will remove the other two.
 
 The IO handle containing an existing listen-mode socket.
 
+=item acceptor => STRING|CODE
+
+Optional. If defined, gives the name of a method or a CODE reference to use to
+implement the actual accept behaviour. This will be invoked as:
+
+ $listener->acceptor( $socket ) ==> $accepted
+
+It is invoked with the listening socket as its only argument, and is expected
+to return a C<Future> that will eventually yield the newly-accepted socket
+handle.
+
 =back
 
 =cut
+
+sub _init
+{
+   my $self = shift;
+   $self->SUPER::_init( @_ );
+
+   $self->{acceptor} = "_accept";
+}
 
 my @acceptor_events  = qw( on_accept on_stream on_socket );
 
@@ -183,6 +202,10 @@ sub configure
       croak "Expected to be able to 'on_accept', 'on_stream' or 'on_socket'";
    }
 
+   foreach (qw( acceptor )) {
+      $self->{$_} = delete $params{$_} if exists $params{$_};
+   }
+
    if( keys %params ) {
       croak "Cannot pass though configuration keys to underlying Handle - " . join( ", ", keys %params );
    }
@@ -193,10 +216,10 @@ sub on_read_ready
    my $self = shift;
 
    my $socket = $self->read_handle;
-   my $handle = $socket->accept;
 
-   if( defined $handle ) {
-      $handle->blocking( 0 );
+   my $acceptor = $self->{acceptor};
+   $self->$acceptor( $socket )->on_done( sub {
+      my ( $handle ) = @_ or return; # false-alarm
 
       if( $self->can_event( "on_stream" ) ) {
          # TODO: It doesn't make sense to put a SOCK_DGRAM in an
@@ -215,12 +238,28 @@ sub on_read_ready
       else {
          die "ARG! Missing on_accept,on_stream,on_socket!";
       }
+   })->on_fail( sub {
+      my ( $message, undef, $socket, $dollarbang ) = @_;
+      $self->maybe_invoke_event( on_accept_error => $socket, $dollarbang );
+   });
+}
+
+sub _accept
+{
+   my $self = shift;
+   my ( $socket ) = @_;
+
+   my $handle = $socket->accept;
+
+   if( defined $handle ) {
+      $handle->blocking( 0 );
+      return Future->new->done( $handle );
    }
    elsif( $! == EAGAIN or $! == EWOULDBLOCK ) {
-      # ignore
+      return Future->new->done;
    }
    else {
-      $self->maybe_invoke_event( on_accept_error => $socket, $! );
+      return Future->new->fail( "Cannot accept() - $!", accept => $socket, $! );
    }
 }
 
