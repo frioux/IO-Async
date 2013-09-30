@@ -82,6 +82,53 @@ $listensock = IO::Socket::INET->new(
    is_oneref( $listener, '$listener has refcount 1 after removing from Loop' );
 }
 
+# on_accept handle constructors
+{
+   my $accepted;
+   my $listener = IO::Async::Listener->new(
+      handle => $listensock,
+      on_accept => sub { ( undef, $accepted ) = @_ },
+   );
+
+   $loop->add( $listener );
+
+   require IO::Async::Stream;
+
+   # handle_constructor
+   {
+      $listener->configure( handle_constructor => sub {
+         return IO::Async::Stream->new;
+      } );
+
+      my $clientsock = IO::Socket::INET->new( Type => SOCK_STREAM )
+         or die "Cannot socket() - $!";
+
+      $clientsock->connect( $listensock->sockname ) or die "Cannot connect() - $!";
+
+      wait_for { defined $accepted };
+
+      isa_ok( $accepted, "IO::Async::Stream", '$accepted with handle_constructor' );
+      undef $accepted;
+   }
+
+   # handle_class
+   {
+      $listener->configure( handle_class => "IO::Async::Stream" );
+
+      my $clientsock = IO::Socket::INET->new( Type => SOCK_STREAM )
+         or die "Cannot socket() - $!";
+
+      $clientsock->connect( $listensock->sockname ) or die "Cannot connect() - $!";
+
+      wait_for { defined $accepted };
+
+      isa_ok( $accepted, "IO::Async::Stream", '$accepted with handle_constructor' );
+      undef $accepted;
+   }
+
+   $loop->remove( $listener );
+}
+
 # on_stream
 {
    my $newstream;

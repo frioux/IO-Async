@@ -98,9 +98,14 @@ looked up using the underlying loop's C<resolve> method.
 The following events are invoked, either using subclass methods or CODE
 references in parameters:
 
-=head2 on_accept $clientsocket
+=head2 on_accept $clientsocket | $handle
 
 Invoked whenever a new client connects to the socket.
+
+If neither C<handle_constructor> nor C<handle_class> parameters are set, this
+will be invoked with the new client socket directly. If a handle constructor
+or class are set, this will be invoked with the newly-constructed handle,
+having the new socket already configured onto it.
 
 =head2 on_stream $stream
 
@@ -108,10 +113,16 @@ An alternative to C<on_accept>, this an instance of L<IO::Async::Stream> when
 a new client connects. This is provided as a convenience for the common case
 that a Stream object is required as the transport for a Protocol object.
 
+This is now vaguely deprecated in favour of using C<on_accept> with a handle
+constructor or class.
+
 =head2 on_socket $socket
 
 Similar to C<on_stream>, but constructs an instance of L<IO::Async::Socket>.
 This is most useful for C<SOCK_DGRAM> or C<SOCK_RAW> sockets.
+
+This is now vaguely deprecated in favour of using C<on_accept> with a handle
+constructor or class.
 
 =head2 on_accept_error $socket, $errno
 
@@ -140,6 +151,23 @@ will remove the other two.
 =item handle => IO
 
 The IO handle containing an existing listen-mode socket.
+
+=item handle_constructor => CODE
+
+Optional. If defined, gives a CODE reference to be invoked every time a new
+client socket is accepted from the listening socket. It is passed the listener
+object itself, and is expected to return a new instance of
+C<IO::Async::Handle> or a subclass, used to wrap the new client socket.
+
+ $handle = $handle_constructor->( $listener )
+
+=item handle_class => STRING
+
+Optional. If defined and C<handle_constructor> isn't, then new wrapper handles
+are constructed by invoking the C<new> method on the given class name, passing
+in no additional parameters.
+
+ $handle = $handle_class->new()
 
 =item acceptor => STRING|CODE
 
@@ -202,9 +230,18 @@ sub configure
       croak "Expected to be able to 'on_accept', 'on_stream' or 'on_socket'";
    }
 
-   foreach (qw( acceptor )) {
+   foreach (qw( acceptor handle_constructor handle_class )) {
       $self->{$_} = delete $params{$_} if exists $params{$_};
    }
+
+   my $new_handle;
+   if( my $constructor = $self->{handle_constructor} ) {
+      $new_handle = $self->{handle_constructor};
+   }
+   elsif( my $class = $self->{handle_class} ) {
+      $new_handle = sub { $class->new };
+   }
+   $self->{new_handle} = $new_handle;
 
    if( keys %params ) {
       croak "Cannot pass though configuration keys to underlying Handle - " . join( ", ", keys %params );
@@ -232,7 +269,8 @@ sub on_read_ready
    }
    # on_accept needs to be last in case of multiple layers of subclassing
    elsif( $on_done = $self->can_event( "on_accept" ) ) {
-      # OK
+      my $new_handle = $self->{new_handle};
+      $acceptor_params{handle} = $new_handle->( $self ) if $new_handle;
    }
    else {
       die "ARG! Missing on_accept,on_stream,on_socket!";
