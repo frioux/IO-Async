@@ -1514,6 +1514,30 @@ sub listen
    my $self = shift;
    my ( %params ) = @_;
 
+   my $remove_on_error;
+   my $listener = $params{listener} ||= do {
+      $remove_on_error++;
+
+      require IO::Async::Listener;
+
+      # Our wrappings of these don't want $listener
+      my %listenerparams;
+      for (qw( on_accept on_stream on_socket )) {
+         next unless exists $params{$_};
+         croak "Cannot ->listen with '$_' and 'listener'" if $params{listener};
+
+         my $code = delete $params{$_};
+         $listenerparams{$_} = sub {
+            shift;
+            goto &$code;
+         };
+      }
+
+      my $listener = IO::Async::Listener->new( %listenerparams );
+      $self->add( $listener );
+      $listener
+   };
+
    my $extensions;
    if( $extensions = delete $params{extensions} and @$extensions ) {
       my ( $ext, @others ) = @$extensions;
@@ -1523,35 +1547,14 @@ sub listen
 
       $self->can( $method ) or croak "Extension method '$method' is not available";
 
-      $self->$method(
+      my $f = $self->$method(
          %params,
          ( @others ? ( extensions => \@others ) : () ),
       );
-      return;
+      $f->on_fail( sub { $self->remove( $listener ) } ) if $remove_on_error;
+
+      return $f;
    }
-
-   require IO::Async::Listener;
-
-   # Our wrappings of these don't want $listener
-   my %listenerparams;
-   for (qw( on_accept on_stream on_socket )) {
-      next unless exists $params{$_};
-      croak "Cannot ->listen with '$_' and 'listener'" if $params{listener};
-
-      my $code = delete $params{$_};
-      $listenerparams{$_} = sub {
-         shift;
-         goto &$code;
-      };
-   }
-
-   my $remove_on_error;
-   my $listener = delete $params{listener} || do {
-      $remove_on_error++;
-      my $listener = IO::Async::Listener->new( %listenerparams );
-      $self->add( $listener );
-      $listener
-   };
 
    my $on_notifier = delete $params{on_notifier}; # optional
 
@@ -2511,6 +2514,11 @@ The following methods take an C<extensions> parameter:
 
  $loop->connect
  $loop->listen
+
+If an extension C<listen> method is invoked, it will be passed a C<listener>
+parameter even if one was not provided to the original C<< $loop->listen >>
+call, and it will not receive any of the C<on_*> event callbacks. It should
+use the C<acceptor> parameter on the C<listener> object.
 
 =cut
 

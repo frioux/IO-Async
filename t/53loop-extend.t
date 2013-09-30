@@ -60,25 +60,30 @@ testing_loop( $loop );
 # listen
 {
    my %listenargs;
+   my $listen_future;
    sub IO::Async::Loop::FOO_listen
    {
       my $self = shift;
       %listenargs = @_;
 
       identical( $self, $loop, 'FOO_listen invocant is $loop' );
+
+      return $listen_future = $loop->new_future;
    }
 
    my $sock;
-   $loop->listen(
+   my $f = $loop->listen(
       extensions => [qw( FOO )],
       some_param => "here",
       on_accept => sub { $sock = shift },
    );
 
-   is( ref delete $listenargs{on_accept}, "CODE", 'FOO_listen received on_accept continuation' );
+   isa_ok( delete $listenargs{listener}, "IO::Async::Listener", '$listenargs{listener}' );
    is_deeply( \%listenargs,
               { some_param => "here" },
               'FOO_listen received some_param and no others' );
+
+   identical( $f, $listen_future, 'FOO_listen returns Future object' );
 
    $loop->listen(
       extensions => [qw( FOO BAR )],
@@ -87,7 +92,7 @@ testing_loop( $loop );
       on_accept => sub { $sock = shift },
    );
 
-   delete $listenargs{on_accept};
+   delete $listenargs{listener};
    is_deeply( \%listenargs,
               { extensions => [qw( BAR )],
                 param1 => "one",
