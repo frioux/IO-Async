@@ -8,7 +8,7 @@ package IO::Async::Routine;
 use strict;
 use warnings;
 
-our $VERSION = '0.60';
+our $VERSION = '0.60_001';
 
 use base qw( IO::Async::Process );
 

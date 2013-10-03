@@ -1,5 +1,21 @@
 Revision history for IO-Async
 
+0.60_001  2013/10/03 19:45:05
+        [CHANGES]
+         * Some OSes lack signals; forbid the ->*_signal methods, and use
+           waitpid() polling for child processes if so
+         * Rearrangement of $loop->listen and IO::Async::Listener logic to
+           allow Listener subclasses to use listen extensions (e.g. SSL)
+         * Allow ->listen to construct new Stream or Socket handles
+         * Updated documentation and tests to emphasise futures with resolver
+           and ->listen
+
+         Note: These changes break IO::Async::SSL versions 0.12 or older.
+
+        [BUGFIXES]
+         * Ensure that $stream->write( CODE, on_write/write_len ) works
+           correctly
+
 0.60    2013/09/19 14:26:22
         [CHANGES]
          * Updated for Future 0.16 - no longer needs 'return' argument for
