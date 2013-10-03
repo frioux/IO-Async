@@ -1542,6 +1542,11 @@ sub listen
    if( $extensions = delete $params{extensions} and @$extensions ) {
       my ( $ext, @others ) = @$extensions;
 
+      # We happen to know we break older IO::Async::SSL
+      if( $ext eq "SSL" and $IO::Async::SSL::VERSION < '0.12001' ) {
+         croak "IO::Async::SSL version too old; need at least 0.12_001; found $IO::Async::SSL::VERSION";
+      }
+
       my $method = "${ext}_listen";
       # TODO: Try to 'require IO::Async::$ext'
 
