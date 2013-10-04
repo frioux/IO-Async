@@ -8,7 +8,7 @@ use IO::Async::Test;
 use Test::More;
 use Test::Refcount;
 
-use POSIX qw( SIGTERM WIFEXITED WEXITSTATUS WIFSIGNALED WTERMSIG );
+use POSIX qw( SIGTERM );
 
 use IO::Async::PID;
 
@@ -49,8 +49,8 @@ is_refcount( $pid, 2, '$pid has refcount 2 after adding to Loop' );
 # reap zombie
 wait_for { defined $exitcode };
 
-ok( WIFEXITED($exitcode),      'WIFEXITED($exitcode) after process exit' );
-is( WEXITSTATUS($exitcode), 3, 'WEXITSTATUS($exitcode) after process exit' );
+ok( ($exitcode & 0x7f) == 0, 'WIFEXITED($exitcode) after process exit' );
+is( ($exitcode >> 8), 3,     'WEXITSTATUS($exitcode) after process exit' );
 
 # We require that SIGTERM perform its default action; i.e. terminate the
 # process. Ensure this definitely happens, in case the test harness has it
@@ -78,7 +78,6 @@ $pid->kill( SIGTERM );
 undef $exitcode;
 wait_for { defined $exitcode };
 
-ok( WIFSIGNALED($exitcode),          'WIFSIGNALED($exitcode) after SIGTERM' );
-is( WTERMSIG($exitcode),    SIGTERM, 'WTERMSIG($exitcode) after SIGTERM' );
+is( ($exitcode & 0x7f), SIGTERM, 'WTERMSIG($exitcode) after SIGTERM' );
 
 done_testing;

@@ -834,8 +834,7 @@ way:
 
  $on_finish->( $pid, $exitcode )
 
-The second argument is passed the plain perl C<$?> value. To use that
-usefully, see C<WEXITSTATUS> and others from C<POSIX>.
+The second argument is passed the plain perl C<$?> value.
 
 =item on_error => CODE
 
@@ -946,8 +945,7 @@ and STDERR streams. It will be invoked in the following way:
 
  $on_finish->( $pid, $exitcode, $stdout, $stderr )
 
-The second argument is passed the plain perl C<$?> value. To use that
-usefully, see C<WEXITSTATUS> and others from C<POSIX>.
+The second argument is passed the plain perl C<$?> value.
 
 =item stdin => STRING
 
@@ -1758,8 +1756,7 @@ be invoked in the following way:
 
  $on_exit->( $pid, $exitcode )
 
-The second argument is passed the plain perl C<$?> value. To use that
-usefully, see C<WEXITSTATUS> and others from C<POSIX>.
+The second argument is passed the plain perl C<$?> value.
 
 This key is optional; if not supplied, the calling code should install a
 handler using the C<watch_child> method.
@@ -2337,8 +2334,7 @@ A CODE reference to the exit handler. It will be invoked as
 
  $code->( $pid, $? )
 
-The second argument is passed the plain perl C<$?> value. To use that
-usefully, see C<WEXITSTATUS> and others from C<POSIX>.
+The second argument is passed the plain perl C<$?> value.
 
 =back
 

@@ -13,10 +13,6 @@ our $VERSION = '0.60_001';
 
 use Carp;
 
-use POSIX qw(
-   WIFEXITED WEXITSTATUS
-);
-
 use Socket qw( SOCK_STREAM );
 
 use Future;
@@ -587,7 +583,7 @@ C<exit(2)>.
 sub is_exited
 {
    my $self = shift;
-   return defined $self->{exitcode} ? WIFEXITED( $self->{exitcode} ) : undef;
+   return defined $self->{exitcode} ? ( $self->{exitcode} & 0x7f ) == 0 : undef;
 }
 
 =head2 $status = $process->exitstatus
@@ -600,7 +596,7 @@ passed to C<exit(2)>. Otherwise, returns C<undef>.
 sub exitstatus
 {
    my $self = shift;
-   return defined $self->{exitcode} ? WEXITSTATUS( $self->{exitcode} ) : undef;
+   return defined $self->{exitcode} ? ( $self->{exitcode} >> 8 ) : undef;
 }
 
 =head2 $exception = $process->exception

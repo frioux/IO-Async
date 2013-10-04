@@ -36,7 +36,6 @@ C<IO::Async::ChildManager> - facilitates the execution of child processes
 This object is used indirectly via an C<IO::Async::Loop>:
 
  use IO::Async::Loop;
- use POSIX qw( WEXITSTATUS );
 
  my $loop = IO::Async::Loop->new;
 
@@ -47,7 +46,7 @@ This object is used indirectly via an C<IO::Async::Loop>:
 
     on_finish => sub {
        my ( $pid, $exitcode, $stdout, $stderr ) = @_;
-       my $status = WEXITSTATUS( $exitcode );
+       my $status = ( $exitcode >> 8 );
        print "ps [PID $pid] exited with status $status\n";
     },
  );
@@ -67,7 +66,7 @@ This object is used indirectly via an C<IO::Async::Loop>:
 
     on_finish => sub {
        my ( $pid, $exitcode ) = @_;
-       my $status = WEXITSTATUS( $exitcode );
+       my $status = ( $exitcode >> 8 );
        ...
     },
  );
@@ -85,7 +84,7 @@ This object is used indirectly via an C<IO::Async::Loop>:
 
     on_exit => sub {
        my ( $pid, $exitcode ) = @_;
-       my $status = WEXITSTATUS( $exitcode );
+       my $status = ( $exitcode >> 8 );
        print "Command exited with status $status\n";
     },
  );
@@ -98,7 +97,7 @@ This object is used indirectly via an C<IO::Async::Loop>:
 
     on_exit => sub {
        my ( $pid, $exitcode, $dollarbang, $dollarat ) = @_;
-       my $status = WEXITSTATUS( $exitcode );
+       my $status = ( $exitcode >> 8 );
        print "Child process exited with status $status\n";
        print " OS error was $dollarbang, exception was $dollarat\n";
     },
@@ -217,8 +216,7 @@ in the following way:
 
  $on_exit->( $pid, $exitcode, $dollarbang, $dollarat )
 
-The second argument is passed the plain perl C<$?> value. To use that
-usefully, see C<WEXITSTATUS> and others from C<POSIX>.
+The second argument is passed the plain perl C<$?> value.
 
 =back
 
@@ -231,7 +229,7 @@ If the C<code> key is used, the return value will be used as the C<exit(2)>
 code from the child if it returns (or 255 if it returned C<undef> or thows an
 exception).
 
- Case          | WEXITSTATUS($exitcode) | $dollarbang | $dollarat
+ Case          | ($exitcode >> 8)       | $dollarbang | $dollarat
  --------------+------------------------+-------------+----------
  exec succeeds | exit code from program |     0       |    ""
  exec fails    |         255            |     $!      |    ""

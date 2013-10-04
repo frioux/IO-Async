@@ -9,7 +9,7 @@ use Test::More;
 use Test::Fatal;
 
 use File::Temp qw( tmpnam );
-use POSIX qw( WIFEXITED WEXITSTATUS ENOENT EBADF getcwd );
+use POSIX qw( ENOENT EBADF getcwd );
 
 use IO::Async::OS;
 
@@ -47,8 +47,8 @@ sub TEST
    wait_for { defined $exitcode };
 
    if( exists $attr{exitstatus} ) {
-      ok( WIFEXITED($exitcode), "WIFEXITED(\$exitcode) after $name" );
-      is( WEXITSTATUS($exitcode), $attr{exitstatus}, "WEXITSTATUS(\$exitcode) after $name" );
+      ok( ($exitcode & 0x7f) == 0, "WIFEXITED(\$exitcode) after $name" );
+      is( ($exitcode >> 8), $attr{exitstatus}, "WEXITSTATUS(\$exitcode) after $name" );
    }
 
    if( exists $attr{dollarbang} ) {

@@ -23,7 +23,7 @@ use IO::Async::OS;
 
 use IO::File;
 use Fcntl qw( SEEK_SET );
-use POSIX qw( SIGTERM WIFEXITED WEXITSTATUS WIFSIGNALED WTERMSIG );
+use POSIX qw( SIGTERM );
 use Socket qw( sockaddr_family AF_UNIX );
 use Time::HiRes qw( time );
 
@@ -692,7 +692,7 @@ sub run_in_child(&)
    die "Fell out of run_in_child!\n";
 }
 
-use constant count_tests_child => 8;
+use constant count_tests_child => 7;
 sub run_tests_child
 {
    my $kid = run_in_child {
@@ -709,11 +709,11 @@ sub run_tests_child
    undef $exitcode;
    wait_for { defined $exitcode };
 
-   ok( WIFEXITED($exitcode),      'WIFEXITED($exitcode) after child exit' );
-   is( WEXITSTATUS($exitcode), 3, 'WEXITSTATUS($exitcode) after child exit' );
+   ok( ($exitcode & 0x7f) == 0, 'WIFEXITED($exitcode) after child exit' );
+   is( ($exitcode >> 8), 3,     'WEXITSTATUS($exitcode) after child exit' );
 
    SKIP: {
-      skip "This OS does not have signals", 2 unless IO::Async::OS->HAVE_SIGNALS;
+      skip "This OS does not have signals", 1 unless IO::Async::OS->HAVE_SIGNALS;
 
       # We require that SIGTERM perform its default action; i.e. terminate the
       # process. Ensure this definitely happens, in case the test harness has it
@@ -733,8 +733,7 @@ sub run_tests_child
       undef $exitcode;
       wait_for { defined $exitcode };
 
-      ok( WIFSIGNALED($exitcode),          'WIFSIGNALED($exitcode) after SIGTERM' );
-      is( WTERMSIG($exitcode),    SIGTERM, 'WTERMSIG($exitcode) after SIGTERM' );
+      is( ($exitcode & 0x7f), SIGTERM, 'WTERMSIG($exitcode) after SIGTERM' );
    }
 
    my %kids;

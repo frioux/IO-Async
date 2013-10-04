@@ -8,8 +8,6 @@ use IO::Async::Test;
 use Test::More;
 use Test::Fatal;
 
-use POSIX qw( WIFEXITED WEXITSTATUS );
-
 use IO::Async::Loop;
 
 my $loop = IO::Async::Loop->new_builtin;
@@ -26,8 +24,8 @@ $loop->open_child(
 undef $exitcode;
 wait_for { defined $exitcode };
 
-ok( WIFEXITED($exitcode),      'WIFEXITED($exitcode) after sub { 0 }' );
-is( WEXITSTATUS($exitcode), 0, 'WEXITSTATUS($exitcode) after sub { 0 }' );
+ok( ($exitcode & 0x7f) == 0, 'WIFEXITED($exitcode) after sub { 0 }' );
+is( ($exitcode >> 8), 0,     'WEXITSTATUS($exitcode) after sub { 0 }' );
 
 $loop->open_child(
    command => [ $^X, "-e", 'exit 5' ],
@@ -37,8 +35,8 @@ $loop->open_child(
 undef $exitcode;
 wait_for { defined $exitcode };
 
-ok( WIFEXITED($exitcode),      'WIFEXITED($exitcode) after perl -e exit 5' );
-is( WEXITSTATUS($exitcode), 5, 'WEXITSTATUS($exitcode) after perl -e exit 5' );
+ok( ($exitcode & 0x7f) == 0, 'WIFEXITED($exitcode) after perl -e exit 5' );
+is( ($exitcode >> 8), 5,     'WEXITSTATUS($exitcode) after perl -e exit 5' );
 
 ok( exception { $loop->open_child(
          command => [ $^X, "-e", 1 ]
