@@ -39,7 +39,9 @@ testing_loop( $loop );
    is( WEXITSTATUS($exitcode), 255, 'WEXITSTATUS($exitcode) after child die' );
 }
 
-{
+SKIP: {
+   skip "This OS does not have signals", 2 unless IO::Async::OS->HAVE_SIGNALS;
+
    local $SIG{INT} = sub { exit( 22 ) };
 
    my $exitcode;
@@ -54,7 +56,9 @@ testing_loop( $loop );
    is( WTERMSIG($exitcode), SIGINT, 'WTERMSIG($exitcode) after child SIGINT' );
 }
 
-{
+SKIP: {
+   skip "This OS does not have signals", 2 unless IO::Async::OS->HAVE_SIGNALS;
+
    local $SIG{INT} = sub { exit( 22 ) };
 
    my $exitcode;

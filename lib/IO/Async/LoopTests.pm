@@ -712,26 +712,30 @@ sub run_tests_child
    ok( WIFEXITED($exitcode),      'WIFEXITED($exitcode) after child exit' );
    is( WEXITSTATUS($exitcode), 3, 'WEXITSTATUS($exitcode) after child exit' );
 
-   # We require that SIGTERM perform its default action; i.e. terminate the
-   # process. Ensure this definitely happens, in case the test harness has it
-   # ignored or handled elsewhere.
-   local $SIG{TERM} = "DEFAULT";
+   SKIP: {
+      skip "This OS does not have signals", 2 unless IO::Async::OS->HAVE_SIGNALS;
 
-   $kid = run_in_child {
-      sleep( 10 );
-      # Just in case the parent died already and didn't kill us
-      exit( 0 );
-   };
+      # We require that SIGTERM perform its default action; i.e. terminate the
+      # process. Ensure this definitely happens, in case the test harness has it
+      # ignored or handled elsewhere.
+      local $SIG{TERM} = "DEFAULT";
 
-   $loop->watch_child( $kid => sub { ( undef, $exitcode ) = @_; } );
+      $kid = run_in_child {
+         sleep( 10 );
+         # Just in case the parent died already and didn't kill us
+         exit( 0 );
+      };
 
-   kill SIGTERM, $kid;
+      $loop->watch_child( $kid => sub { ( undef, $exitcode ) = @_; } );
 
-   undef $exitcode;
-   wait_for { defined $exitcode };
+      kill SIGTERM, $kid;
 
-   ok( WIFSIGNALED($exitcode),          'WIFSIGNALED($exitcode) after SIGTERM' );
-   is( WTERMSIG($exitcode),    SIGTERM, 'WTERMSIG($exitcode) after SIGTERM' );
+      undef $exitcode;
+      wait_for { defined $exitcode };
+
+      ok( WIFSIGNALED($exitcode),          'WIFSIGNALED($exitcode) after SIGTERM' );
+      is( WTERMSIG($exitcode),    SIGTERM, 'WTERMSIG($exitcode) after SIGTERM' );
+   }
 
    my %kids;
 
