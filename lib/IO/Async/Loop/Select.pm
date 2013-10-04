@@ -17,8 +17,6 @@ use IO::Async::OS;
 
 use Carp;
 
-use Fcntl qw( S_ISREG );
-
 # select() on most platforms claims that ISREG files are always read- and
 # write-ready, but not on MSWin32. We need to fake this
 use constant FAKE_ISREG_READY => IO::Async::OS->HAVE_FAKE_ISREG_READY;
@@ -253,7 +251,7 @@ sub watch_io
    # but it does indicate exceptional
    vec( $self->{evec}, $fileno, 1 ) = 1 if SELECT_CONNECT_EVEC and $params{on_write_ready};
 
-   vec( $self->{avec}, $fileno, 1 ) = 1 if FAKE_ISREG_READY and S_ISREG +(stat $params{handle})[2];
+   vec( $self->{avec}, $fileno, 1 ) = 1 if FAKE_ISREG_READY and stat( $params{handle} ) and -f _;
 }
 
 sub unwatch_io
@@ -270,7 +268,7 @@ sub unwatch_io
 
    vec( $self->{evec}, $fileno, 1 ) = 0 if SELECT_CONNECT_EVEC and $params{on_write_ready};
 
-   vec( $self->{avec}, $fileno, 1 ) = 0 if FAKE_ISREG_READY and S_ISREG +(stat $params{handle})[2];
+   vec( $self->{avec}, $fileno, 1 ) = 0 if FAKE_ISREG_READY and stat( $params{handle} ) and -f _;
 
    # vec will grow a bit vector as needed, but never shrink it. We'll trim
    # trailing null bytes
