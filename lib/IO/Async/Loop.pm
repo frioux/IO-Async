@@ -2304,7 +2304,8 @@ sub _reap_children
    while( 1 ) {
       my $zid = waitpid( -1, WNOHANG );
 
-      last if !defined $zid or $zid < 1;
+      # PIDs on MSWin32 can be negative
+      last if !defined $zid or $zid == 0 or $zid == -1;
       my $status = $?;
 
       if( defined $childwatches->{$zid} ) {
