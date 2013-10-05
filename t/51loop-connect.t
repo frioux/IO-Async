@@ -49,7 +49,7 @@ my $addr = $listensock->sockname;
 
    isa_ok( $future, "Future", '$future' );
 
-   $loop->await( $future );
+   wait_for { $future->is_ready };
 
    my ( $sock ) = $future->get;
 
@@ -69,7 +69,7 @@ my $addr = $listensock->sockname;
 
    isa_ok( $future, "Future", '$future for ->connect( handle )' );
 
-   $loop->await( $future );
+   wait_for { $future->is_ready };
 
    my $stream = $future->get;
    identical( $stream, $given_stream, '$future->get returns given Stream' );
@@ -110,7 +110,7 @@ my $addr = $listensock->sockname;
 
    isa_ok( $future, "Future", '$future' );
 
-   $loop->await( $future );
+   wait_for { $future->is_ready };
 
    my ( $sock ) = $future->get;
 
@@ -216,7 +216,7 @@ my $udpsock = IO::Socket::INET->new( LocalAddr => 'localhost', Protocol => 'udp'
 
    isa_ok( $future, "Future", '$future for ->connect( handle socket )' );
 
-   $loop->await( $future );
+   wait_for { $future->is_ready };
 
    my $socket = $future->get;
    identical( $socket, $given_socket, '$future->get returns given Socket' );
@@ -277,7 +277,7 @@ SKIP: {
       on_fail => sub { $failop = shift @_; $failerr = pop @_; },
    );
 
-   $loop->await( $future );
+   wait_for { $future->is_ready };
 
    is( $failop, "connect", '$failop is connect' );
    is( $failerr+0, ENOENT, '$failerr is ENOENT' );

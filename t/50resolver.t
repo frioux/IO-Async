@@ -34,7 +34,7 @@ SKIP: {
 
       isa_ok( $future, "Future", '$future' );
 
-      $loop->await( $future );
+      wait_for { $future->is_ready };
 
       my @result = $future->get;
 
@@ -223,7 +223,7 @@ my ( $localhost_err, @localhost_addrs ) = getaddrinfo( "localhost", "www", { fam
 
    isa_ok( $future, "Future", '$future for $resolver->getaddrinfo' );
 
-   $loop->await( $future );
+   wait_for { $future->is_ready };
 
    if( $localhost_err ) {
       is( $future->failure, "$localhost_err\n", '$resolver->getaddrinfo - error message' );
@@ -293,7 +293,7 @@ my ( $localhost_err, @localhost_addrs ) = getaddrinfo( "localhost", "www", { fam
 
    isa_ok( $future, "Future", '$future for $resolver->getaddrinfo numerical' );
 
-   $loop->await( $future );
+   wait_for { $future->is_ready };
 
    my @got = $future->get;
 
@@ -329,7 +329,7 @@ my ( $testerr, $testhost, $testserv ) = getnameinfo( $testaddr );
       addr => $testaddr,
    );
 
-   $loop->await( $future );
+   wait_for { $future->is_ready };
 
    if( $testerr ) {
       is( $future->failure, "$testerr\n", '$resolver->getnameinfo - error message from future' );
