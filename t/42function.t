@@ -56,7 +56,7 @@ testing_loop( $loop );
    is( $function->workers_busy, 1, '$function has 1 worker busy after ->call' );
    is( $function->workers_idle, 0, '$function has 0 worker idle after ->call' );
 
-   $loop->await( $future );
+   wait_for { $future->is_ready };
 
    my ( $result ) = $future->get;
 
