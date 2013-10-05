@@ -32,13 +32,15 @@ use Carp;
 
 use IO::Socket (); # empty import
 use Time::HiRes qw(); # empty import
-use POSIX qw( _exit WNOHANG );
+use POSIX qw( WNOHANG );
 use Scalar::Util qw( refaddr );
 use Socket qw( SO_REUSEADDR AF_INET6 IPPROTO_IPV6 IPV6_V6ONLY );
 
 use IO::Async::OS;
 
 use constant HAVE_SIGNALS => IO::Async::OS->HAVE_SIGNALS;
+use constant HAVE_POSIX__EXIT => IO::Async::OS->HAVE_POSIX__EXIT;
+use constant HAVE_THREADS_EXIT => IO::Async::OS->HAVE_THREADS_EXIT;
 
 # Never sleep for more than 1 second if a signal proxy is registered, to avoid
 # a borderline race condition.
@@ -1792,7 +1794,16 @@ sub fork
       my $exitvalue = eval { $code->() };
 
       defined $exitvalue or $exitvalue = -1;
-      _exit( $exitvalue );
+
+      if( HAVE_POSIX__EXIT ) {
+         POSIX::_exit( $exitvalue );
+      }
+      elsif( HAVE_THREADS_EXIT ) {
+         require threads; threads->exit( $exitvalue );
+      }
+      else {
+         die "No known-safe way to exit() this process";
+      }
    }
 
    if( defined $params{on_exit} ) {

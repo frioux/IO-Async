@@ -56,6 +56,11 @@ use constant HAVE_IO_SOCKET_IP => defined eval { require IO::Socket::IP };
 # inform us that a fork()ed child has exit()ed?
 use constant HAVE_SIGNALS => 1;
 
+# Does POSIX::_exit cleanly shut down just this process?
+use constant HAVE_POSIX__EXIT => 1;
+# Do we have to use threads->exit to shut down just this process?
+use constant HAVE_THREADS_EXIT => 0;
+
 # Preferred trial order for built-in Loop classes
 use constant LOOP_BUILTIN_CLASSES => qw( Poll Select );
 
