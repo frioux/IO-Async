@@ -22,22 +22,6 @@ my $loop = IO::Async::Loop->new_builtin;
 
 testing_loop( $loop );
 
-my $exited_pid;
-my $exitcode;
-my $dollarbang;
-my $dollarat;
-
-sub on_exit
-{
-   ( $exited_pid, $exitcode, $dollarbang, $dollarat ) = @_;
-}
-
-sub wait_for_exit
-{
-   undef $exitcode;
-   return wait_for { defined $exitcode };
-}
-
 ok( exception { $loop->spawn_child( badoption => 1 ); }, 'Bad option to spawn fails' );
 
 ok( exception { $loop->spawn_child( code => sub { 1 }, command => "hello" ); },
@@ -45,50 +29,57 @@ ok( exception { $loop->spawn_child( code => sub { 1 }, command => "hello" ); },
 
 ok( exception { $loop->spawn_child( on_exit => sub { 1 } ); }, 'Bad option to spawn fails' );
 
-my $spawned_pid;
+{
+   my ( $exited_pid, $exitcode, $dollarbang, $dollarat );
+   my $spawned_pid = $loop->spawn_child(
+      code => sub { return 42; },
+      on_exit => sub { ( $exited_pid, $exitcode, $dollarbang, $dollarat ) = @_; }
+   );
 
-$spawned_pid = $loop->spawn_child(
-   code => sub { return 42; },
-   on_exit => \&on_exit,
-);
+   wait_for { defined $exited_pid };
 
-wait_for_exit;
-
-is( $exited_pid, $spawned_pid,  '$exited_pid == $spawned_pid after spawn CODE' );
-ok( ($exitcode & 0x7f) == 0,    'WIFEXITED($exitcode) after spawn CODE' );
-is( ($exitcode >> 8), 42,       'WEXITSTATUS($exitcode) after spawn CODE' );
-# dollarbang isn't interesting here
-is( $dollarat,              '', '$dollarat after spawn CODE' );
+   is( $exited_pid, $spawned_pid,  '$exited_pid == $spawned_pid after spawn CODE' );
+   ok( ($exitcode & 0x7f) == 0,    'WIFEXITED($exitcode) after spawn CODE' );
+   is( ($exitcode >> 8), 42,       'WEXITSTATUS($exitcode) after spawn CODE' );
+   # dollarbang isn't interesting here
+   is( $dollarat,              '', '$dollarat after spawn CODE' );
+}
 
 my $ENDEXIT = 10;
 END { exit $ENDEXIT if defined $ENDEXIT; }
 
-$spawned_pid = $loop->spawn_child(
-   code => sub { return 0; },
-   on_exit => \&on_exit,
-);
+{
+   my ( $exited_pid, $exitcode, $dollarbang, $dollarat );
+   my $spawned_pid = $loop->spawn_child(
+      code => sub { return 0; },
+      on_exit => sub { ( $exited_pid, $exitcode, $dollarbang, $dollarat ) = @_; }
+   );
 
-wait_for_exit;
+   wait_for { defined $exited_pid };
 
-is( $exited_pid, $spawned_pid, '$exited_pid == $spawned_pid after spawn CODE with END' );
-ok( ($exitcode & 0x7f) == 0,   'WIFEXITED($exitcode) after spawn CODE with END' );
-# If this comes out as 10 then the END block ran and we fail.
-is( ($exitcode >> 8), 0,       'WEXITSTATUS($exitcode) after spawn CODE with END' );
-# dollarbang isn't interesting here
-is( $dollarat,             '', '$dollarat after spawn CODE with END' );
+   is( $exited_pid, $spawned_pid, '$exited_pid == $spawned_pid after spawn CODE with END' );
+   ok( ($exitcode & 0x7f) == 0,   'WIFEXITED($exitcode) after spawn CODE with END' );
+   # If this comes out as 10 then the END block ran and we fail.
+   is( ($exitcode >> 8), 0,       'WEXITSTATUS($exitcode) after spawn CODE with END' );
+   # dollarbang isn't interesting here
+   is( $dollarat,             '', '$dollarat after spawn CODE with END' );
+}
 
-$spawned_pid = $loop->spawn_child(
-   code => sub { die "An exception here\n"; },
-   on_exit => \&on_exit,
-);
+{
+   my ( $exited_pid, $exitcode, $dollarbang, $dollarat );
+   my $spawned_pid = $loop->spawn_child(
+      code => sub { die "An exception here\n"; },
+      on_exit => sub { ( $exited_pid, $exitcode, $dollarbang, $dollarat ) = @_; }
+   );
 
-wait_for_exit;
+   wait_for { defined $exited_pid };
 
-is( $exited_pid, $spawned_pid,   '$exited_pid == $spawned_pid after spawn CODE with die with END' );
-ok( ($exitcode & 0x7f) == 0,     'WIFEXITED($exitcode) after spawn CODE with die with END' );
-is( ($exitcode >> 8), 255,       'WEXITSTATUS($exitcode) after spawn CODE with die with END' );
-# dollarbang isn't interesting here
-is( $dollarat, "An exception here\n", '$dollarat after spawn CODE with die with END' );
+   is( $exited_pid, $spawned_pid,   '$exited_pid == $spawned_pid after spawn CODE with die with END' );
+   ok( ($exitcode & 0x7f) == 0,     'WIFEXITED($exitcode) after spawn CODE with die with END' );
+   is( ($exitcode >> 8), 255,       'WEXITSTATUS($exitcode) after spawn CODE with die with END' );
+   # dollarbang isn't interesting here
+   is( $dollarat, "An exception here\n", '$dollarat after spawn CODE with die with END' );
+}
 
 undef $ENDEXIT;
 
@@ -101,59 +92,69 @@ foreach (qw( /bin/true /usr/bin/true )) {
 # Didn't find a likely-looking candidate. We'll fake one using perl itself
 $true = "$^X -e 1" if !defined $true;
 
-$spawned_pid = $loop->spawn_child(
-   command => $true,
-   on_exit => \&on_exit,
-);
+{
+   my ( $exited_pid, $exitcode, $dollarbang, $dollarat );
+   my $spawned_pid = $loop->spawn_child(
+      command => $true,
+      on_exit => sub { ( $exited_pid, $exitcode, $dollarbang, $dollarat ) = @_; }
+   );
 
-wait_for_exit;
+   wait_for { defined $exited_pid };
 
-is( $exited_pid, $spawned_pid, '$exited_pid == $spawned_pid after spawn '.$true );
-ok( ($exitcode & 0x7f) == 0,   'WIFEXITED($exitcode) after spawn '.$true );
-is( ($exitcode >> 8), 0,       'WEXITSTATUS($exitcode) after spawn '.$true );
-is( $dollarbang+0,          0, '$dollarbang after spawn '.$true );
-is( $dollarat,             '', '$dollarat after spawn '.$true );
+   is( $exited_pid, $spawned_pid, '$exited_pid == $spawned_pid after spawn '.$true );
+   ok( ($exitcode & 0x7f) == 0,   'WIFEXITED($exitcode) after spawn '.$true );
+   is( ($exitcode >> 8), 0,       'WEXITSTATUS($exitcode) after spawn '.$true );
+   is( $dollarbang+0,          0, '$dollarbang after spawn '.$true );
+   is( $dollarat,             '', '$dollarat after spawn '.$true );
+}
 
 # Just be paranoid in case anyone actually has this
 my $donotexist = "/bin/donotexist";
 $donotexist .= "X" while -e $donotexist;
 
-$spawned_pid = $loop->spawn_child(
-   command => $donotexist,
-   on_exit => \&on_exit,
-);
+{
+   my ( $exited_pid, $exitcode, $dollarbang, $dollarat );
+   my $spawned_pid = $loop->spawn_child(
+      command => $donotexist,
+      on_exit => sub { ( $exited_pid, $exitcode, $dollarbang, $dollarat ) = @_; }
+   );
 
-wait_for_exit;
+   wait_for { defined $exited_pid };
 
-is( $exited_pid, $spawned_pid,   '$exited_pid == $spawned_pid after spawn donotexist' );
-ok( ($exitcode & 0x7f) == 0,     'WIFEXITED($exitcode) after spawn donotexist' );
-is( ($exitcode >> 8), 255,       'WEXITSTATUS($exitcode) after spawn donotexist' );
-is( $dollarbang+0, ENOENT,         '$dollarbang numerically after spawn donotexist' ); 
-is( "$dollarbang", ENOENT_MESSAGE, '$dollarbang string after spawn donotexist' );
-is( $dollarat,             '', '$dollarat after spawn donotexist' );
+   is( $exited_pid, $spawned_pid,   '$exited_pid == $spawned_pid after spawn donotexist' );
+   ok( ($exitcode & 0x7f) == 0,     'WIFEXITED($exitcode) after spawn donotexist' );
+   is( ($exitcode >> 8), 255,       'WEXITSTATUS($exitcode) after spawn donotexist' );
+   is( $dollarbang+0, ENOENT,         '$dollarbang numerically after spawn donotexist' ); 
+   is( "$dollarbang", ENOENT_MESSAGE, '$dollarbang string after spawn donotexist' );
+   is( $dollarat,             '', '$dollarat after spawn donotexist' );
+}
 
-$spawned_pid = $loop->spawn_child(
-   command => [ $^X, "-e", "exit 14" ],
-   on_exit => \&on_exit,
-);
+{
+   my ( $exited_pid, $exitcode, $dollarbang, $dollarat );
+   my $spawned_pid = $loop->spawn_child(
+      command => [ $^X, "-e", "exit 14" ],
+      on_exit => sub { ( $exited_pid, $exitcode, $dollarbang, $dollarat ) = @_; }
+   );
 
-wait_for_exit;
+   wait_for { defined $exited_pid };
 
-is( $exited_pid, $spawned_pid,  '$exited_pid == $spawned_pid after spawn ARRAY' );
-ok( ($exitcode & 0x7f) == 0,    'WIFEXITED($exitcode) after spawn ARRAY' );
-is( ($exitcode >> 8), 14,       'WEXITSTATUS($exitcode) after spawn ARRAY' );
-is( $dollarbang+0,           0, '$dollarbang after spawn ARRAY' );
-is( $dollarat,              '', '$dollarat after spawn ARRAY' );
+   is( $exited_pid, $spawned_pid,  '$exited_pid == $spawned_pid after spawn ARRAY' );
+   ok( ($exitcode & 0x7f) == 0,    'WIFEXITED($exitcode) after spawn ARRAY' );
+   is( ($exitcode >> 8), 14,       'WEXITSTATUS($exitcode) after spawn ARRAY' );
+   is( $dollarbang+0,           0, '$dollarbang after spawn ARRAY' );
+   is( $dollarat,              '', '$dollarat after spawn ARRAY' );
+}
 
 {
    my( $pipe_r, $pipe_w ) = IO::Async::OS->pipepair or die "Cannot pipepair - $!";
 
-   $spawned_pid = $loop->spawn_child(
+   my ( $exited_pid, $exitcode, $dollarbang, $dollarat );
+   my $spawned_pid = $loop->spawn_child(
       code => sub { return $pipe_w->syswrite( "test" ); },
-      on_exit => \&on_exit,
+      on_exit => sub { ( $exited_pid, $exitcode, $dollarbang, $dollarat ) = @_; }
    );
 
-   wait_for_exit;
+   wait_for { defined $exited_pid };
 
    is( $exited_pid, $spawned_pid,   '$exited_pid == $spawned_pid after pipe close test' );
    ok( ($exitcode & 0x7f) == 0,     'WIFEXITED($exitcode) after pipe close test' );
