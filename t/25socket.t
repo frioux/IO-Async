@@ -105,7 +105,10 @@ ok( !exception { IO::Async::Socket->new( write_handle => \*STDOUT ) }, 'Send-onl
    is_oneref( $socket, 'receiving $socket refcount 1 finally' );
 }
 
-{
+SKIP: {
+   # Don't bother with an OS constant for this as it's only used by this unit-test
+   skip "This OS cannot safely ->recv with truncation", 3 if $^O eq "MSWin32";
+
    my ( $S1, $S2 ) = IO::Async::OS->socketpair( "inet", "dgram" ) or die "Cannot socketpair - $!";
 
    # Need sockets in nonblocking mode
