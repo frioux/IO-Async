@@ -18,46 +18,76 @@ my $loop = IO::Async::Loop->new_builtin;
 
 testing_loop( $loop );
 
-{
-   my $calls   = IO::Async::Channel->new;
-   my $returns = IO::Async::Channel->new;
+foreach my $model (qw( spawn thread )) {
+   SKIP: {
+      skip "This Perl does not support threads", 6
+         if $model eq "thread" and not eval { require threads };
 
-   my $routine = IO::Async::Routine->new(
-      channels_in  => [ $calls ],
-      channels_out => [ $returns ],
-      code => sub {
-         while( my $args = $calls->recv ) {
-            my $ret = 0;
-            $ret += $_ for @$args;
-            $returns->send( \$ret );
-         }
-      },
-      on_finish => sub { },
-   );
+      my $calls   = IO::Async::Channel->new;
+      my $returns = IO::Async::Channel->new;
 
-   isa_ok( $routine, "IO::Async::Routine", '$routine' );
-   is_oneref( $routine, '$routine has refcount 1 initially' );
+      my @finishargs;
+      my $routine = IO::Async::Routine->new(
+         model => $model,
+         channels_in  => [ $calls ],
+         channels_out => [ $returns ],
+         code => sub {
+            while( my $args = $calls->recv ) {
+               last if ref $args eq "SCALAR";
 
-   $loop->add( $routine );
+               my $ret = 0;
+               $ret += $_ for @$args;
+               $returns->send( \$ret );
+            }
 
-   is_refcount( $routine, 2, '$routine has refcount 2 after $loop->add' );
+            return 23;
+         },
+         on_finish => sub {
+            @finishargs = @_;
+         },
+      );
 
-   $calls->send( [ 1, 2, 3 ] );
+      isa_ok( $routine, "IO::Async::Routine", "\$routine for $model model" );
+      is_oneref( $routine, "\$routine has refcount 1 initially for $model model" );
 
-   my $result;
-   $returns->recv(
-      on_recv => sub { $result = $_[1]; }
-   );
+      $loop->add( $routine );
 
-   wait_for { defined $result };
+      is_refcount( $routine, 2, "\$routine has refcount 2 after \$loop->add for $model model" );
 
-   is( ${$result}, 6, 'Result' );
+      $calls->send( [ 1, 2, 3 ] );
 
-   is_refcount( $routine, 2, '$routine has refcount 2 before $loop->remove' );
+      my $result;
+      $returns->recv(
+         on_recv => sub { $result = $_[1]; }
+      );
 
-   $loop->remove( $routine );
+      wait_for { defined $result };
 
-   is_oneref( $routine, '$routine has refcount 1 before EOF' );
+      is( ${$result}, 6, "Result for $model model" );
+
+      $calls->send( \"QUIT" );
+
+      wait_for { @finishargs };
+
+      identical( $finishargs[0], $routine, "on_finish passed self for $model model" );
+
+      if( $model eq "spawn" ) {
+         is( ($finishargs[1] >> 8), 23, "on_finish passed exit code for $model model" );
+      }
+      elsif( $model eq "thread" ) {
+         is_deeply( [ @finishargs[1..$#finishargs] ],
+                    [ return => 23 ],
+                    "on_finish passed return value for $model model" );
+      }
+
+      undef @finishargs;
+
+      is_refcount( $routine, 2, '$routine has refcount 2 before $loop->remove' );
+
+      $loop->remove( $routine );
+
+      is_oneref( $routine, '$routine has refcount 1 before EOF' );
+   }
 }
 
 # multiple channels in and out
@@ -107,30 +137,6 @@ testing_loop( $loop );
    $loop->remove( $routine );
 }
 
-# on_finish arguments
-{
-   my $in = IO::Async::Channel->new;
-
-   my @finishargs;
-   my $routine = IO::Async::Routine->new(
-      channels_in => [ $in ],
-      code => sub {
-         $in->recv;
-         return 0;
-      },
-      on_finish => sub { @finishargs = @_; },
-   );
-
-   $loop->add( $routine );
-
-   $in->send( \"QUIT" );
-
-   wait_for { @finishargs };
-
-   identical( $finishargs[0], $routine, 'on_finish passed self' );
-   is( $finishargs[1], 0, 'on_finish passed exit code' );
-}
-
 # sharing a Channel between Routines
 {
    my $channel = IO::Async::Channel->new;
@@ -169,6 +175,7 @@ testing_loop( $loop );
    my $channel = IO::Async::Channel->new;
 
    my $routine = IO::Async::Routine->new(
+      model => "spawn",
       setup => [
          env => { FOO => "Here is a random string" },
       ],
