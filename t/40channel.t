@@ -144,4 +144,33 @@ testing_loop( $loop );
    is( $recv_eof, 1, 'Async mode channel can ->recv on_eof' );
 }
 
+# sync->async write once then close
+{
+   my ( $pipe_rd, $pipe_wr ) = IO::Async::OS->pipepair;
+
+   my $channel_rd = IO::Async::Channel->new;
+   $channel_rd->setup_async_mode( read_handle => $pipe_rd );
+
+   $loop->add( $channel_rd );
+
+   my $channel_wr = IO::Async::Channel->new;
+   $channel_wr->setup_sync_mode( $pipe_wr );
+
+   $channel_wr->send( [ "One value here" ] );
+   $channel_wr->close;
+   undef $channel_wr;
+
+   my $recved;
+   $channel_rd->recv(
+      on_recv => sub {
+         $recved = $_[1];
+      },
+      on_eof => sub { die "Test failed early" },
+   );
+
+   wait_for { $recved };
+
+   is( $recved->[0], "One value here", 'Async mode channel can ->recv buffer at EOF' );
+}
+
 done_testing;
