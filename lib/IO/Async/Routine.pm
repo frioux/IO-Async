@@ -10,9 +10,10 @@ use warnings;
 
 our $VERSION = '0.60_001';
 
-use base qw( IO::Async::Process );
+use base qw( IO::Async::Notifier );
 
 use IO::Async::OS;
+use IO::Async::Process;
 
 =head1 NAME
 
@@ -62,10 +63,10 @@ C<IO::Async::Routine> - execute code in an independent sub-process
 
 =head1 DESCRIPTION
 
-This subclass of L<IO::Async::Process> contains a body of code and executes it
-in a sub-process, allowing it to act independently of the main program. Once
-set up, all communication with the code happens by values passed into or out
-of the Routine via L<IO::Async::Channel> objects.
+This L<IO::Async::Notifier> contains a body of code and executes it in a
+sub-process, allowing it to act independently of the main program. Once set
+up, all communication with the code happens by values passed into or out of
+the Routine via L<IO::Async::Channel> objects.
 
 Because the code running inside the Routine runs within its own process, it
 is isolated from the rest of the program, in terms of memory, CPU time, and
@@ -79,6 +80,14 @@ their arguments, and do not generally maintain state within the process it may
 be more convenient to use an L<IO::Async::Function> instead, which uses an
 C<IO::Async::Routine> to contain the body of the function and manages the
 Channels itself.
+
+=cut
+
+=head1 EVENTS
+
+=head2 on_finish $exitcode
+
+Invoked after the process has exited
 
 =cut
 
@@ -103,6 +112,11 @@ out of the Routine.
 CODE reference to the body of the Routine, to execute once the channels are
 set up.
 
+=item setup => ARRAY
+
+Optional reference to an array ot pass to the underlying C<Loop>
+C<spawn_child> method.
+
 =back
 
 =cut
@@ -113,7 +127,7 @@ sub configure
    my %params = @_;
 
    # TODO: Can only reconfigure when not running
-   foreach (qw( channels_in channels_out )) {
+   foreach (qw( channels_in channels_out code setup on_finish )) {
       $self->{$_} = delete $params{$_} if exists $params{$_};
    }
 
@@ -147,13 +161,12 @@ sub _add_to_loop
       push @channels_out, [ $ch, $rd, $wr ];
    }
 
-   # TODO: This breaks encap.
-   my $code  = delete $self->{code};
-   my $setup = delete $self->{setup};
+   my $code  = $self->{code};
 
+   my $setup = $self->{setup};
    push @setup, @$setup if $setup;
 
-   $self->configure(
+   my $process = IO::Async::Process->new(
       setup => \@setup,
       code => sub {
          foreach ( @channels_in ) {
@@ -174,6 +187,10 @@ sub _add_to_loop
 
          return $ret;
       },
+      on_finish => $self->_replace_weakself( sub {
+         my $self = shift;
+         $self->maybe_invoke_event( on_finish => @_ );
+      }),
    );
 
    foreach ( @channels_in ) {
@@ -193,6 +210,7 @@ sub _add_to_loop
    }
 
    $self->SUPER::_add_to_loop( $loop );
+   $self->add_child( $self->{process} = $process );
 
    foreach ( @channels_in, @channels_out ) {
       my ( undef, undef, $other ) = @$_;
@@ -202,10 +220,19 @@ sub _add_to_loop
 
 =head1 METHODS
 
-This class provides no additional methods, other than those provided by
-L<IO::Async::Process>.
+=cut
+
+=head2 $pid = $routine->pid
+
+Returns the Process ID of the underlying process implementing the Routine.
 
 =cut
+
+sub pid
+{
+   my $self = shift;
+   return $self->{process}->pid;
+}
 
 =head1 AUTHOR
 
