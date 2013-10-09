@@ -171,7 +171,7 @@ foreach my $model (qw( spawn thread )) {
          my @data = @{ $channel->recv };
          return ( $data[0] eq "some" and $data[1] eq "data" ) ? 0 : 1;
       },
-      on_finish => sub { $sink_result = $_[1] },
+      on_return => sub { $sink_result = $_[1] },
    );
 
    $loop->add( $sink_routine );
@@ -197,9 +197,7 @@ foreach my $model (qw( spawn thread )) {
          $channel->close;
          return 0;
       },
-      on_finish => sub {
-         print STDERR "Routine finished\n";
-      },
+      on_finish => sub {},
    );
 
    $loop->add( $routine );
