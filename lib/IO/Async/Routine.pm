@@ -293,6 +293,7 @@ sub _setup_spawn
    }
 
    $self->add_child( $self->{process} = $process );
+   $self->{id} = "P" . $process->pid;
 
    foreach ( @channels_in, @channels_out ) {
       my ( undef, undef, $other ) = @$_;
@@ -360,6 +361,7 @@ sub _setup_thread
    );
 
    $self->{tid} = $tid;
+   $self->{id} = "T" . $tid;
 
    foreach ( @channels_in ) {
       my ( $ch, $wr ) = @$_;
@@ -382,16 +384,18 @@ sub _setup_thread
 
 =cut
 
-=head2 $pid = $routine->pid
+=head2 $id = $routine->id
 
-Returns the Process ID of the underlying process implementing the Routine.
+Returns an ID string that uniquely identifies the Routine out of all the
+currently-running ones. (The ID of already-exited Routines may be reused,
+however.)
 
 =cut
 
-sub pid
+sub id
 {
    my $self = shift;
-   return $self->{process}->pid;
+   return $self->{id};
 }
 
 =head1 AUTHOR

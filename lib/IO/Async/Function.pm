@@ -156,7 +156,7 @@ sub _init
    $self->{min_workers} = 1;
    $self->{max_workers} = 8;
 
-   $self->{workers} = {};
+   $self->{workers} = {}; # {$id} => IaFunction:Worker
 
    $self->{pending_queue} = [];
 }
@@ -193,13 +193,13 @@ sub configure
                my $workers = $self->{workers};
 
                # Shut down atmost one idle worker, starting from the highest
-               # PID. Since we search from lowest to assign work, this tries
+               # ID. Since we search from lowest to assign work, this tries
                # to ensure we'll shut down the least useful ones first,
                # keeping more useful ones in memory (page/cache warmth, etc..)
-               foreach my $pid ( reverse sort keys %$workers ) {
-                  next if $workers->{$pid}{busy};
+               foreach my $id ( reverse sort keys %$workers ) {
+                  next if $workers->{$id}{busy};
 
-                  $workers->{$pid}->stop;
+                  $workers->{$id}->stop;
                   last;
                }
 
@@ -465,7 +465,7 @@ sub _new_worker
 
    $self->add_child( $worker );
 
-   return $self->{workers}{$worker->pid} = $worker;
+   return $self->{workers}{$worker->id} = $worker;
 }
 
 sub _get_worker
@@ -566,7 +566,7 @@ sub stop
    $worker->{arg_channel}->close;
 
    if( my $function = $worker->parent ) {
-      delete $function->{workers}{$worker->pid};
+      delete $function->{workers}{$worker->id};
    }
 }
 
