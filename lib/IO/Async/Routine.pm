@@ -101,6 +101,19 @@ passed the raw exitcode status.
 For thread-based Routines, this is invoked after the thread has returned from
 its code block and is passed the C<on_joined> result.
 
+As the behaviour of these events differs per model, it may be more convenient
+to use C<on_return> and C<on_die> instead.
+
+=head2 on_return $result
+
+Invoked if the code block returns normally. Note that spawn-based Routines can
+only transport an integer result between 0 and 255, as this is the actual
+C<exit()> value.
+
+=head2 on_die $exception
+
+Invoked if the code block fails with an exception.
+
 =cut
 
 =head1 PARAMETERS
@@ -154,7 +167,7 @@ sub configure
    my %params = @_;
 
    # TODO: Can only reconfigure when not running
-   foreach (qw( channels_in channels_out code setup on_finish )) {
+   foreach (qw( channels_in channels_out code setup on_finish on_return on_die )) {
       $self->{$_} = delete $params{$_} if exists $params{$_};
    }
 
@@ -237,8 +250,17 @@ sub _setup_spawn
          return $ret;
       },
       on_finish => $self->_replace_weakself( sub {
-         my $self = shift;
-         $self->maybe_invoke_event( on_finish => @_ );
+         my $self = shift or return;
+         my ( $exitcode ) = @_;
+         $self->maybe_invoke_event( on_finish => $exitcode );
+
+         $self->maybe_invoke_event( on_return => ($exitcode >> 8) ) unless $exitcode & 0x7f;
+      }),
+      on_exception => $self->_replace_weakself( sub {
+         my $self = shift or return;
+         my ( $exception, $errno, $exitcode ) = @_;
+
+         $self->maybe_invoke_event( on_die => $exception );
       }),
    );
 
@@ -313,7 +335,11 @@ sub _setup_thread
       },
       on_joined => $self->_capture_weakself( sub {
          my $self = shift or return;
+         my ( $ev, @result ) = @_;
          $self->maybe_invoke_event( on_finish => @_ );
+
+         $self->maybe_invoke_event( on_return => @result ) if $ev eq "return";
+         $self->maybe_invoke_event( on_die => $result[0] ) if $ev eq "died";
       }),
    );
 

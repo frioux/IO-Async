@@ -14,6 +14,8 @@ use IO::Async::Routine;
 use IO::Async::Channel;
 use IO::Async::Loop;
 
+use constant HAVE_THREADS => eval { require threads };
+
 my $loop = IO::Async::Loop->new_builtin;
 
 testing_loop( $loop );
@@ -21,12 +23,11 @@ testing_loop( $loop );
 foreach my $model (qw( spawn thread )) {
    SKIP: {
       skip "This Perl does not support threads", 6
-         if $model eq "thread" and not eval { require threads };
+         if $model eq "thread" and not HAVE_THREADS;
 
       my $calls   = IO::Async::Channel->new;
       my $returns = IO::Async::Channel->new;
 
-      my @finishargs;
       my $routine = IO::Async::Routine->new(
          model => $model,
          channels_in  => [ $calls ],
@@ -39,12 +40,8 @@ foreach my $model (qw( spawn thread )) {
                $ret += $_ for @$args;
                $returns->send( \$ret );
             }
-
-            return 23;
          },
-         on_finish => sub {
-            @finishargs = @_;
-         },
+         on_finish => sub {},
       );
 
       isa_ok( $routine, "IO::Async::Routine", "\$routine for $model model" );
@@ -65,28 +62,42 @@ foreach my $model (qw( spawn thread )) {
 
       is( ${$result}, 6, "Result for $model model" );
 
-      $calls->send( \"QUIT" );
-
-      wait_for { @finishargs };
-
-      identical( $finishargs[0], $routine, "on_finish passed self for $model model" );
-
-      if( $model eq "spawn" ) {
-         is( ($finishargs[1] >> 8), 23, "on_finish passed exit code for $model model" );
-      }
-      elsif( $model eq "thread" ) {
-         is_deeply( [ @finishargs[1..$#finishargs] ],
-                    [ return => 23 ],
-                    "on_finish passed return value for $model model" );
-      }
-
-      undef @finishargs;
-
       is_refcount( $routine, 2, '$routine has refcount 2 before $loop->remove' );
 
       $loop->remove( $routine );
 
       is_oneref( $routine, '$routine has refcount 1 before EOF' );
+   }
+
+   SKIP: {
+      skip "This perl does not support threads", 2
+         if $model eq "thread" and not HAVE_THREADS;
+
+      my $returned;
+      my $return_routine = IO::Async::Routine->new(
+         model => $model,
+         code => sub { return 23 },
+         on_return => sub { $returned = $_[1]; },
+      );
+
+      $loop->add( $return_routine );
+
+      wait_for { defined $returned };
+
+      is( $returned, 23, "on_return for $model model" );
+
+      my $died;
+      my $die_routine = IO::Async::Routine->new(
+         model => $model,
+         code => sub { die "ARGH!\n" },
+         on_die => sub { $died = $_[1]; },
+      );
+
+      $loop->add( $die_routine );
+
+      wait_for { defined $died };
+
+      is( $died, "ARGH!\n", "on_die for $model model" );
    }
 }
 
