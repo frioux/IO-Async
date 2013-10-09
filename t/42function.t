@@ -334,35 +334,6 @@ testing_loop( $loop );
    $loop->remove( $function );
 }
 
-# Test that 'setup' works
-{
-   my $function = IO::Async::Function->new(
-      code => sub {
-         return $ENV{$_[0]};
-      },
-
-      setup => [
-         env => { FOO => "Here is a random string" },
-      ],
-   );
-
-   $loop->add( $function );
-
-   my $result;
-
-   $function->call(
-      args => [ "FOO" ],
-      on_return => sub { $result = shift },
-      on_error  => sub { die "Test failed early - @_" },
-   );
-
-   wait_for { defined $result };
-
-   is( $result, "Here is a random string", '$result after call with modified ENV' );
-
-   $loop->remove( $function );
-}
-
 # Test for idle timeout
 {
    my $function = IO::Async::Function->new(

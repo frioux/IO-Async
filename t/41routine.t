@@ -60,6 +60,7 @@ testing_loop( $loop );
    is_oneref( $routine, '$routine has refcount 1 before EOF' );
 }
 
+# multiple channels in and out
 {
    my $in1 = IO::Async::Channel->new;
    my $in2 = IO::Async::Channel->new;
@@ -106,6 +107,7 @@ testing_loop( $loop );
    $loop->remove( $routine );
 }
 
+# on_finish arguments
 {
    my $in = IO::Async::Channel->new;
 
@@ -129,6 +131,7 @@ testing_loop( $loop );
    is( $finishargs[1], 0, 'on_finish passed exit code' );
 }
 
+# sharing a Channel between Routines
 {
    my $channel = IO::Async::Channel->new;
 
@@ -159,6 +162,38 @@ testing_loop( $loop );
    wait_for { $src_finished and defined $sink_result };
 
    is( $sink_result, 0, 'synchronous src->sink can share a channel' );
+}
+
+# Test that 'setup' works
+{
+   my $channel = IO::Async::Channel->new;
+
+   my $routine = IO::Async::Routine->new(
+      setup => [
+         env => { FOO => "Here is a random string" },
+      ],
+
+      channels_out => [ $channel ],
+      code => sub {
+         $channel->send( [ $ENV{FOO} ] );
+         $channel->close;
+         return 0;
+      },
+      on_finish => sub {
+         print STDERR "Routine finished\n";
+      },
+   );
+
+   $loop->add( $routine );
+
+   my $result;
+   $channel->recv( on_recv => sub { $result = $_[1] } );
+
+   wait_for { defined $result };
+
+   is( $result->[0], "Here is a random string", '$result from Routine with modified ENV' );
+
+   $loop->remove( $routine );
 }
 
 done_testing;
