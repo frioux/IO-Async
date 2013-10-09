@@ -151,14 +151,15 @@ sub __new
       warn "$class cannot implement IO_ASYNC_WATCHDOG\n";
 
    my $self = bless {
-      notifiers    => {}, # {nkey} = notifier
-      iowatches    => {}, # {fd} = [ $on_read_ready, $on_write_ready, $on_hangup ]
-      sigattaches  => {}, # {sig} => \@callbacks
-      childmanager => undef,
-      childwatches => {}, # {pid} => $code
-      timequeue    => undef,
-      deferrals    => [],
-      os           => {}, # A generic scratchpad for IO::Async::OS to store whatever it wants
+      notifiers     => {}, # {nkey} = notifier
+      iowatches     => {}, # {fd} = [ $on_read_ready, $on_write_ready, $on_hangup ]
+      sigattaches   => {}, # {sig} => \@callbacks
+      childmanager  => undef,
+      childwatches  => {}, # {pid} => $code
+      threadwatches => {}, # {tid} => $code
+      timequeue     => undef,
+      deferrals     => [],
+      os            => {}, # A generic scratchpad for IO::Async::OS to store whatever it wants
    }, $class;
 
    # It's possible this is a specific subclass constructor. We still want the
@@ -1811,6 +1812,102 @@ sub fork
    }
 
    return $kid;
+}
+
+=head2 $tid = $loop->create_thread( %params )
+
+This method creates a new (non-detached) thread to run the given code block,
+returning its thread ID.
+
+=over 8
+
+=item code => CODE
+
+A block of code to execute in the thread. It is called in the context given by
+the C<context> argument, and its return value will be available to the
+C<on_joined> callback. It is called inside an C<eval> block; if it fails the
+exception will be caught.
+
+=item context => "scalar" | "list" | "void"
+
+Optional. Gives the calling context that C<code> is invoked in. Defaults to
+C<scalar> if not supplied.
+
+=item on_joined => CODE
+
+Callback to invoke when the thread function returns or throws an exception.
+If it returned, this callback will be invoked with its result
+
+ $on_joined->( return => @result )
+
+If it threw an exception the callback is invoked with the value of C<$@>
+
+ $on_joined->( died => $! )
+
+=back
+
+=cut
+
+sub create_thread
+{
+   my $self = shift;
+   my %params = @_;
+
+   eval { require threads } or croak "This Perl does not support threads";
+
+   my $code = $params{code} or croak "Expected 'code' as a CODE reference";
+   my $on_joined = $params{on_joined} or croak "Expected 'on_joined' as a CODE reference";
+
+   my $threadwatches = $self->{threadwatches};
+
+   unless( $self->{thread_join_pipe} ) {
+      ( my $rd, $self->{thread_join_pipe} ) = IO::Async::OS->pipepair or
+         croak "Cannot pipepair - $!";
+
+      $self->watch_io(
+         handle => $rd,
+         on_read_ready => sub {
+            sysread $rd, my $buffer, 8192 or return;
+
+            # There's a race condition here in that we might have read from
+            # the pipe after the returning thread has written to it but before
+            # it has returned. We'll grab the actual $thread object and
+            # forcibly ->join it here to ensure we wait for its result.
+
+            foreach my $tid ( unpack "N*", $buffer ) {
+               my $thr = threads->object( $tid );
+               if( my $on_joined = delete $threadwatches->{$tid} ) {
+                  $on_joined->( $thr->join );
+               }
+            }
+         }
+      );
+   }
+
+   my $wr = $self->{thread_join_pipe};
+
+   my $context = $params{context} || "scalar";
+
+   my ( $thread ) = threads->create(
+      sub {
+         my ( @ret, $died );
+         eval {
+            $context eq "list"   ? ( @ret    = $code->() ) :
+            $context eq "scalar" ? ( $ret[0] = $code->() ) :
+                                               $code->();
+            1;
+         } or $died = $@;
+
+         $wr->syswrite( pack "N", threads->tid );
+
+         return died => $died if $died;
+         return return => @ret;
+      }
+   );
+
+   $threadwatches->{$thread->tid} = $on_joined;
+
+   return $thread->tid;
 }
 
 =head1 LOW-LEVEL METHODS
