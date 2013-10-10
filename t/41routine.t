@@ -99,6 +99,28 @@ foreach my $model (qw( spawn thread )) {
 
       is( $died, "ARGH!\n", "on_die for $model model" );
    }
+
+   SKIP: {
+      skip "This perl does not support threads", 1
+         if $model eq "thread" and not HAVE_THREADS;
+
+      my $channel = IO::Async::Channel->new;
+
+      my $finished;
+      my $routine = IO::Async::Routine->new(
+         model => $model,
+         channels_in => [ $channel ],
+         code => sub { while( $channel->recv ) { 1 } },
+         on_finish => sub { $finished++ },
+      );
+
+      $loop->add( $routine );
+
+      $channel->close;
+
+      wait_for { $finished };
+      pass( "Recv on closed channel for $model model" );
+   }
 }
 
 # multiple channels in and out
@@ -160,6 +182,7 @@ foreach my $model (qw( spawn thread )) {
          return 0;
       },
       on_finish => sub { $src_finished++ },
+      on_die => sub { die "source routine failed - $_[1]" },
    );
 
    $loop->add( $src_routine );
@@ -172,6 +195,7 @@ foreach my $model (qw( spawn thread )) {
          return ( $data[0] eq "some" and $data[1] eq "data" ) ? 0 : 1;
       },
       on_return => sub { $sink_result = $_[1] },
+      on_die => sub { die "sink routine failed - $_[1]" },
    );
 
    $loop->add( $sink_routine );

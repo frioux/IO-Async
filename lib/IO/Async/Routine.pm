@@ -331,12 +331,14 @@ sub _setup_thread
          $SIG{KILL} = sub { threads->exit };
 
          foreach ( @channels_in ) {
-            my ( $ch, undef, $rd ) = @$_;
+            my ( $ch, $wr, $rd ) = @$_;
             $ch->setup_sync_mode( $rd );
+            $wr->close if $wr;
          }
          foreach ( @channels_out ) {
-            my ( $ch, undef, $wr ) = @$_;
+            my ( $ch, $rd, $wr ) = @$_;
             $ch->setup_sync_mode( $wr );
+            $rd->close if $rd;
          }
 
          my $ret = $code->();
@@ -364,17 +366,19 @@ sub _setup_thread
    $self->{id} = "T" . $tid;
 
    foreach ( @channels_in ) {
-      my ( $ch, $wr ) = @$_;
+      my ( $ch, $wr, $rd ) = @$_;
 
       $ch->setup_async_mode( write_handle => $wr );
+      $rd->close;
 
       $self->add_child( $ch ) unless $ch->parent;
    }
 
    foreach ( @channels_out ) {
-      my ( $ch, $rd ) = @$_;
+      my ( $ch, $rd, $wr ) = @$_;
 
       $ch->setup_async_mode( read_handle => $rd );
+      $wr->close;
 
       $self->add_child( $ch ) unless $ch->parent;
    }
