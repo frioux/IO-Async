@@ -244,7 +244,9 @@ sub read_data
 }
 
 # EOF
-{
+SKIP: {
+   skip "This loop cannot detect hangup condition", 5 unless $loop->_CAN_ON_HANGUP;
+
    my ( $rd, $wr ) = mkhandles;
 
    local $SIG{PIPE} = "IGNORE";
