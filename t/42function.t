@@ -243,7 +243,7 @@ testing_loop( $loop );
 # restart after exit
 {
    my $function = IO::Async::Function->new(
-      model => "spawn",
+      model => "fork",
       min_workers => 0,
       max_workers => 1,
       code => sub { $_[0] ? exit shift : return 0 },

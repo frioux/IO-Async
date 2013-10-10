@@ -20,7 +20,7 @@ my $loop = IO::Async::Loop->new_builtin;
 
 testing_loop( $loop );
 
-foreach my $model (qw( spawn thread )) {
+foreach my $model (qw( fork thread )) {
    SKIP: {
       skip "This Perl does not support threads", 6
          if $model eq "thread" and not HAVE_THREADS;
@@ -210,7 +210,7 @@ foreach my $model (qw( spawn thread )) {
    my $channel = IO::Async::Channel->new;
 
    my $routine = IO::Async::Routine->new(
-      model => "spawn",
+      model => "fork",
       setup => [
          env => { FOO => "Here is a random string" },
       ],
@@ -249,7 +249,7 @@ foreach my $model (qw( spawn thread )) {
       POSIX::dup2( $pipe_wr->fileno, STDERR->fileno );
 
       $routine = IO::Async::Routine->new(
-         model => "spawn",
+         model => "fork",
          code => sub {
             STDOUT->autoflush(1);
             print STDOUT "A line to STDOUT\n";
