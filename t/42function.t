@@ -288,18 +288,29 @@ SKIP: {
 
 ## Now test that parallel runs really are parallel
 {
+   # touch $dir/$n in each worker, touch $dir/done to finish it
+   sub touch
+   {
+      my ( $file ) = @_;
+
+      open( my $fh, ">", $file ) or die "Cannot write $file - $!";
+      close( $fh );
+   }
+
    my $function = IO::Async::Function->new(
       min_workers => 3,
       code => sub {
-         my ( $file, $ret ) = @_;
+         my ( $dir, $n ) = @_;
+         my $file = "$dir/$n";
 
-         open( my $fh, ">", $file ) or die "Cannot write $file - $!";
-         close( $fh );
+         touch( $file );
 
          # Wait for synchronisation
-         sleep 0.1 while -e $file;
+         sleep 0.1 while ! -e "$dir/done";
 
-         return $ret;
+         unlink( $file );
+
+         return $n;
       },
    );
 
@@ -313,7 +324,7 @@ SKIP: {
 
    foreach my $id ( 1, 2, 3 ) {
       $function->call(
-         args => [ "$dir/$id", $id ],
+         args => [ $dir, $id ],
          on_return => sub { $ret{$id} = shift },
          on_error  => sub { die "Test failed early - @_" },
       );
@@ -324,12 +335,12 @@ SKIP: {
    ok( 1, 'synchronise files created' );
 
    # Synchronize deleting them;
-   for my $f ( "$dir/1", "$dir/2", "$dir/3" ) {
-      unlink $f or die "Cannot unlink $f - $!";
-   }
+   touch( "$dir/done" );
 
    undef %ret;
    wait_for { keys %ret == 3 };
+
+   unlink( "$dir/done" );
 
    is_deeply( \%ret, { 1 => 1, 2 => 2, 3 => 3 }, 'ret keys after parallel run' );
 
