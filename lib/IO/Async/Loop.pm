@@ -1868,6 +1868,7 @@ sub create_thread
    unless( $self->{thread_join_pipe} ) {
       ( my $rd, $self->{thread_join_pipe} ) = IO::Async::OS->pipepair or
          croak "Cannot pipepair - $!";
+      $self->{thread_join_pipe}->autoflush(1);
 
       $self->watch_io(
          handle => $rd,
@@ -1880,10 +1881,9 @@ sub create_thread
             # forcibly ->join it here to ensure we wait for its result.
 
             foreach my $tid ( unpack "N*", $buffer ) {
-               my $thr = threads->object( $tid );
-               if( my $on_joined = delete $threadwatches->{$tid} ) {
-                  $on_joined->( $thr->join );
-               }
+               my ( $thread, $on_joined ) = @{ delete $threadwatches->{$tid} }
+                  or die "ARGH: Can't find threadwatch for tid $tid\n";
+               $on_joined->( $thread->join );
             }
          }
       );
@@ -1910,7 +1910,7 @@ sub create_thread
       }
    );
 
-   $threadwatches->{$thread->tid} = $on_joined;
+   $threadwatches->{$thread->tid} = [ $thread, $on_joined ];
 
    return $thread->tid;
 }
