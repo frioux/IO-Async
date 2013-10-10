@@ -39,8 +39,6 @@ use Socket qw( SO_REUSEADDR AF_INET6 IPPROTO_IPV6 IPV6_V6ONLY );
 use IO::Async::OS;
 
 use constant HAVE_SIGNALS => IO::Async::OS->HAVE_SIGNALS;
-use constant HAVE_POSIX__EXIT => IO::Async::OS->HAVE_POSIX__EXIT;
-use constant HAVE_THREADS_EXIT => IO::Async::OS->HAVE_THREADS_EXIT;
 use constant HAVE_POSIX_FORK => IO::Async::OS->HAVE_POSIX_FORK;
 use constant HAVE_THREADS => IO::Async::OS->HAVE_THREADS;
 
@@ -1805,15 +1803,7 @@ sub fork
 
       defined $exitvalue or $exitvalue = -1;
 
-      if( HAVE_POSIX__EXIT ) {
-         POSIX::_exit( $exitvalue );
-      }
-      elsif( HAVE_THREADS_EXIT ) {
-         require threads; threads->exit( $exitvalue );
-      }
-      else {
-         die "No known-safe way to exit() this process";
-      }
+      POSIX::_exit( $exitvalue );
    }
 
    if( defined $params{on_exit} ) {
