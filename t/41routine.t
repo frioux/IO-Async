@@ -236,4 +236,46 @@ foreach my $model (qw( spawn thread )) {
    $loop->remove( $routine );
 }
 
+# Test that STDOUT/STDERR are unaffected
+{
+   my ( $pipe_rd, $pipe_wr ) = IO::Async::OS->pipepair;
+
+   my $routine;
+   {
+      open my $stdoutsave, ">&", \*STDOUT;
+      POSIX::dup2( $pipe_wr->fileno, STDOUT->fileno );
+
+      open my $stderrsave, ">&", \*STDERR;
+      POSIX::dup2( $pipe_wr->fileno, STDERR->fileno );
+
+      $routine = IO::Async::Routine->new(
+         model => "spawn",
+         code => sub {
+            STDOUT->autoflush(1);
+            print STDOUT "A line to STDOUT\n";
+            print STDERR "A line to STDERR\n";
+            return 0;
+         }
+      );
+
+      $loop->add( $routine );
+
+      POSIX::dup2( $stdoutsave->fileno, STDOUT->fileno );
+      POSIX::dup2( $stderrsave->fileno, STDERR->fileno );
+   }
+
+   my $buffer = "";
+   $loop->watch_io(
+      handle => $pipe_rd,
+      on_read_ready => sub { sysread $pipe_rd, $buffer, 8192, length $buffer or die "Cannot read - $!" },
+   );
+
+   wait_for { $buffer =~ m/\n.*\n/ };
+
+   is( $buffer, "A line to STDOUT\nA line to STDERR\n", 'Write-to-STD{OUT+ERR} wrote to pipe' );
+
+   $loop->unwatch_io( handle => $pipe_rd, on_read_ready => 1 );
+   $loop->remove( $routine );
+}
+
 done_testing;

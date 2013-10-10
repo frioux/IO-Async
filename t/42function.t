@@ -381,56 +381,6 @@ testing_loop( $loop );
    $loop->remove( $function );
 }
 
-# Test that STDOUT/STDERR are unaffected
-{
-   my ( $pipe_rd, $pipe_wr ) = IO::Async::OS->pipepair;
-
-   my $function;
-   {
-      open my $stdoutsave, ">&", \*STDOUT;
-      POSIX::dup2( $pipe_wr->fileno, STDOUT->fileno );
-
-      open my $stderrsave, ">&", \*STDERR;
-      POSIX::dup2( $pipe_wr->fileno, STDERR->fileno );
-
-      $function = IO::Async::Function->new(
-         min_workers => 1,
-         max_workers => 1,
-         code => sub {
-            STDOUT->autoflush(1);
-            print STDOUT "A line to STDOUT\n";
-            print STDERR "A line to STDERR\n";
-            return 0;
-         }
-      );
-
-      $loop->add( $function );
-
-      POSIX::dup2( $stdoutsave->fileno, STDOUT->fileno );
-      POSIX::dup2( $stderrsave->fileno, STDERR->fileno );
-   }
-
-   my $buffer = "";
-   $loop->watch_io(
-      handle => $pipe_rd,
-      on_read_ready => sub { sysread $pipe_rd, $buffer, 8192, length $buffer or die "Cannot read - $!" },
-   );
-
-   my $result;
-   $function->call(
-      args => [],
-      on_result => sub { $result = shift; },
-   );
-
-   wait_for { defined $result and $buffer =~ m/\n.*\n/ };
-
-   is( $result, "return", 'Write-to-STD{OUT+ERR} function returned' );
-   is( $buffer, "A line to STDOUT\nA line to STDERR\n", 'Write-to-STD{OUT+ERR} wrote to pipe' );
-
-   $loop->unwatch_io( handle => $pipe_rd, on_read_ready => 1 );
-   $loop->remove( $function );
-}
-
 # Restart
 {
    my $value = 1;
