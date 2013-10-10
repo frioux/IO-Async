@@ -426,6 +426,9 @@ testing_loop( $loop );
 
    is( $result, "return", 'Write-to-STD{OUT+ERR} function returned' );
    is( $buffer, "A line to STDOUT\nA line to STDERR\n", 'Write-to-STD{OUT+ERR} wrote to pipe' );
+
+   $loop->unwatch_io( handle => $pipe_rd, on_read_ready => 1 );
+   $loop->remove( $function );
 }
 
 # Restart
