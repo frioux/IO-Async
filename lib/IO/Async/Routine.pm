@@ -128,6 +128,10 @@ Optional. Defines how the routine will detach itself from the main process.
 C<spawn> uses a child process detached using an L<IO::Async::Process>.
 C<thread> uses a thread, and is only available on threaded Perls.
 
+If the model is not specified, the environment variable
+C<IO_ASYNC_ROUTINE_MODEL> is used to pick a default, or C<spawn> if this
+variable is not defined.
+
 =item channels_in => ARRAY of IO::Async::Channel
 
 ARRAY reference of C<IO::Async::Channel> objects to set up for passing values
@@ -158,7 +162,7 @@ sub _init
    my $self = shift;
    $self->SUPER::_init( @_ );
 
-   $self->{model} = "spawn"; # TODO: Get OS to tell us what to prefer
+   $self->{model} = $ENV{IO_ASYNC_ROUTINE_MODEL} || "spawn"; # TODO: Get OS to tell us what to prefer
 }
 
 sub configure
