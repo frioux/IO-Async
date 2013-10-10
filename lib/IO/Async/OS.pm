@@ -61,6 +61,11 @@ use constant HAVE_POSIX__EXIT => 1;
 # Do we have to use threads->exit to shut down just this process?
 use constant HAVE_THREADS_EXIT => 0;
 
+# Do we support POSIX-style true fork()ed processes at all?
+use constant HAVE_POSIX_FORK => 1;
+# Can we potentially support threads? (would still need to 'require threads')
+use constant HAVE_THREADS => eval { require Config && $Config::Config{useithreads} };
+
 # Preferred trial order for built-in Loop classes
 use constant LOOP_BUILTIN_CLASSES => qw( Poll Select );
 

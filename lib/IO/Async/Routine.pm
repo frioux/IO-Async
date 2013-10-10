@@ -160,9 +160,11 @@ Routines.
 sub _init
 {
    my $self = shift;
-   $self->SUPER::_init( @_ );
+   my ( $params ) = @_;
 
-   $self->{model} = $ENV{IO_ASYNC_ROUTINE_MODEL} || "fork"; # TODO: Get OS to tell us what to prefer
+   $params->{model} ||= $ENV{IO_ASYNC_ROUTINE_MODEL} || "fork"; # TODO: Get OS to tell us what to prefer
+
+   $self->SUPER::_init( @_ );
 }
 
 sub configure
@@ -179,9 +181,10 @@ sub configure
       $model eq "fork" or $model eq "thread" or
          croak "Expected 'model' to be either 'fork' or 'thread'";
 
-      if( $model eq "thread" ) {
-         eval { require threads } or croak "Cannot use 'thread' model as threads are not available";
-      }
+      $model eq "fork" and !IO::Async::OS->HAVE_POSIX_FORK and
+         croak "Cannot use 'fork' model as fork() is not available";
+      $model eq "thread" and !IO::Async::OS->HAVE_THREADS and
+         croak "Cannot use 'thread' model as threads are not available";
 
       $self->{model} = $model;
    }
