@@ -129,8 +129,8 @@ C<fork> uses a child process detached using an L<IO::Async::Process>.
 C<thread> uses a thread, and is only available on threaded Perls.
 
 If the model is not specified, the environment variable
-C<IO_ASYNC_ROUTINE_MODEL> is used to pick a default, or C<fork> if this
-variable is not defined.
+C<IO_ASYNC_ROUTINE_MODEL> is used to pick a default. If that isn't defined,
+C<fork> is preferred if it is available, otherwise C<thread>.
 
 =item channels_in => ARRAY of IO::Async::Channel
 
@@ -157,12 +157,17 @@ Routines.
 
 =cut
 
+use constant PREFERRED_MODEL =>
+   IO::Async::OS->HAVE_POSIX_FORK ? "fork" :
+   IO::Async::OS->HAVE_THREADS    ? "thread" :
+      die "No viable Routine models";
+
 sub _init
 {
    my $self = shift;
    my ( $params ) = @_;
 
-   $params->{model} ||= $ENV{IO_ASYNC_ROUTINE_MODEL} || "fork"; # TODO: Get OS to tell us what to prefer
+   $params->{model} ||= $ENV{IO_ASYNC_ROUTINE_MODEL} || PREFERRED_MODEL;
 
    $self->SUPER::_init( @_ );
 }
