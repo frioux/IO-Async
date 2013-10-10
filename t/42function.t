@@ -294,7 +294,7 @@ SKIP: {
          my ( $file, $ret ) = @_;
 
          open( my $fh, ">", $file ) or die "Cannot write $file - $!";
-         close( $file );
+         close( $fh );
 
          # Wait for synchronisation
          sleep 0.1 while -e $file;
