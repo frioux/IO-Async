@@ -6,9 +6,11 @@ use warnings;
 use IO::Async::Test;
 
 use Test::More;
-eval { require threads } or plan skip_all => "This Perl does not support threads";
 
 use IO::Async::Loop;
+use IO::Async::OS;
+
+plan skip_all => "Threads are not available" unless IO::Async::OS->HAVE_THREADS;
 
 my $loop = IO::Async::Loop->new_builtin;
 
