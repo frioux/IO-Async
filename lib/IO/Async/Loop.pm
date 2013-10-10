@@ -33,7 +33,7 @@ use Carp;
 use IO::Socket (); # empty import
 use Time::HiRes qw(); # empty import
 use POSIX qw( WNOHANG );
-use Scalar::Util qw( refaddr );
+use Scalar::Util qw( refaddr weaken );
 use Socket qw( SO_REUSEADDR AF_INET6 IPPROTO_IPV6 IPV6_V6ONLY );
 
 use IO::Async::OS;
@@ -1853,6 +1853,15 @@ If it threw an exception the callback is invoked with the value of C<$@>
 
 =cut
 
+# It is basically impossible to have any semblance of order on global
+# destruction, and even harder again to rely on when threads are going to be
+# terminated and joined. Instead of ensuring we join them all, just detach any
+# we no longer care about at END time
+my %threads_to_detach; # {$tid} = $thread_weakly
+END {
+   $_ and $_->detach for values %threads_to_detach;
+}
+
 sub create_thread
 {
    my $self = shift;
@@ -1884,6 +1893,7 @@ sub create_thread
                my ( $thread, $on_joined ) = @{ delete $threadwatches->{$tid} }
                   or die "ARGH: Can't find threadwatch for tid $tid\n";
                $on_joined->( $thread->join );
+               delete $threads_to_detach{$tid};
             }
          }
       );
@@ -1911,6 +1921,7 @@ sub create_thread
    );
 
    $threadwatches->{$thread->tid} = [ $thread, $on_joined ];
+   weaken( $threads_to_detach{$thread->tid} = $thread );
 
    return $thread->tid;
 }

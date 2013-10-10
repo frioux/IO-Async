@@ -185,18 +185,6 @@ sub configure
    $self->SUPER::configure( %params );
 }
 
-sub DESTROY
-{
-   my $self = shift;
-
-   if( my $tid = $self->{tid} ) {
-      my $thread = threads->object( $tid ) or return;
-
-      $thread->kill( "KILL" );
-      $thread->detach;
-   }
-}
-
 sub _add_to_loop
 {
    my $self = shift;
@@ -328,8 +316,6 @@ sub _setup_thread
 
    my $tid = $self->loop->create_thread(
       code => sub {
-         $SIG{KILL} = sub { threads->exit };
-
          foreach ( @channels_in ) {
             my ( $ch, $wr, $rd ) = @$_;
             $ch->setup_sync_mode( $rd );
