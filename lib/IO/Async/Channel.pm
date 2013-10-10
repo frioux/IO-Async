@@ -341,7 +341,14 @@ sub _recv_async
 sub _close_async
 {
    my $self = shift;
-   $self->{stream}->close_when_empty if $self->{stream};
+   if( my $stream = $self->{stream} ) {
+      $stream->close_when_empty;
+   }
+   else {
+      $_ and $_->close for $self->{read_handle}, $self->{write_handle};
+   }
+
+   undef $_ for $self->{read_handle}, $self->{write_handle};
 }
 
 sub _on_stream_read
