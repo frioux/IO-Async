@@ -36,6 +36,9 @@ use constant HAVE_POSIX__EXIT => 0;
 # We have to use threads->exit to shut down just this process instead
 use constant HAVE_THREADS_EXIT => 1;
 
+# CORE::fork() does not provide full POSIX semantics
+use constant HAVE_POSIX_FORK => 0;
+
 # Windows does not have signals, and SIGCHLD is not available
 use constant HAVE_SIGNALS => 0;
 
