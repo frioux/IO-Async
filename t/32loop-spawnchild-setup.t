@@ -11,9 +11,10 @@ use Test::Fatal;
 use File::Temp qw( tmpnam );
 use POSIX qw( ENOENT EBADF getcwd );
 
+use IO::Async::Loop;
 use IO::Async::OS;
 
-use IO::Async::Loop;
+plan skip_all => "POSIX fork() is not available" unless IO::Async::OS->HAVE_POSIX_FORK;
 
 my $loop = IO::Async::Loop->new_builtin;
 

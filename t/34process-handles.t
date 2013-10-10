@@ -10,6 +10,9 @@ use Test::More;
 use IO::Async::Process;
 
 use IO::Async::Loop;
+use IO::Async::OS;
+
+plan skip_all => "POSIX fork() is not available" unless IO::Async::OS->HAVE_POSIX_FORK;
 
 use Socket qw( PF_INET sockaddr_family );
 

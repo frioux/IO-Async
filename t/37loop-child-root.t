@@ -8,6 +8,9 @@ use IO::Async::Test;
 use Test::More;
 
 use IO::Async::Loop;
+use IO::Async::OS;
+
+plan skip_all => "POSIX fork() is not available" unless IO::Async::OS->HAVE_POSIX_FORK;
 
 use POSIX qw( WEXITSTATUS );
 

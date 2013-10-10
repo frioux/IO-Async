@@ -14,17 +14,15 @@ use IO::Async::Routine;
 use IO::Async::Channel;
 use IO::Async::Loop;
 
-use constant HAVE_THREADS => eval { require threads };
-
 my $loop = IO::Async::Loop->new_builtin;
 
 testing_loop( $loop );
 
-foreach my $model (qw( fork thread )) {
-   SKIP: {
-      skip "This Perl does not support threads", 6
-         if $model eq "thread" and not HAVE_THREADS;
+sub test_with_model
+{
+   my ( $model ) = @_;
 
+   {
       my $calls   = IO::Async::Channel->new;
       my $returns = IO::Async::Channel->new;
 
@@ -69,10 +67,7 @@ foreach my $model (qw( fork thread )) {
       is_oneref( $routine, '$routine has refcount 1 before EOF' );
    }
 
-   SKIP: {
-      skip "This perl does not support threads", 2
-         if $model eq "thread" and not HAVE_THREADS;
-
+   {
       my $returned;
       my $return_routine = IO::Async::Routine->new(
          model => $model,
@@ -100,10 +95,7 @@ foreach my $model (qw( fork thread )) {
       is( $died, "ARGH!\n", "on_die for $model model" );
    }
 
-   SKIP: {
-      skip "This perl does not support threads", 1
-         if $model eq "thread" and not HAVE_THREADS;
-
+   {
       my $channel = IO::Async::Channel->new;
 
       my $finished;
@@ -120,6 +112,17 @@ foreach my $model (qw( fork thread )) {
 
       wait_for { $finished };
       pass( "Recv on closed channel for $model model" );
+   }
+}
+
+foreach my $model (qw( fork thread )) {
+   SKIP: {
+      skip "This Perl does not support threads", 9
+         if $model eq "thread" and not IO::Async::OS->HAVE_THREADS;
+      skip "This Perl does not support fork()", 9
+         if $model eq "fork" and not IO::Async::OS->HAVE_POSIX_FORK;
+
+      test_with_model( $model );
    }
 }
 
@@ -206,7 +209,10 @@ foreach my $model (qw( fork thread )) {
 }
 
 # Test that 'setup' works
-{
+SKIP: {
+   skip "This Perl does not support fork()", 1
+      if not IO::Async::OS->HAVE_POSIX_FORK;
+
    my $channel = IO::Async::Channel->new;
 
    my $routine = IO::Async::Routine->new(
@@ -237,7 +243,10 @@ foreach my $model (qw( fork thread )) {
 }
 
 # Test that STDOUT/STDERR are unaffected
-{
+SKIP: {
+   skip "This Perl does not support fork()", 1
+      if not IO::Async::OS->HAVE_POSIX_FORK;
+
    my ( $pipe_rd, $pipe_wr ) = IO::Async::OS->pipepair;
 
    my $routine;

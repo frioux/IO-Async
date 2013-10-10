@@ -14,6 +14,9 @@ use constant ENOENT_MESSAGE => do { local $! = ENOENT; "$!" };
 use IO::Async::Process;
 
 use IO::Async::Loop;
+use IO::Async::OS;
+
+plan skip_all => "POSIX fork() is not available" unless IO::Async::OS->HAVE_POSIX_FORK;
 
 my $loop = IO::Async::Loop->new_builtin;
 

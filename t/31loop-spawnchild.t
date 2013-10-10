@@ -12,6 +12,8 @@ use POSIX qw( ENOENT EBADF );
 
 use IO::Async::OS;
 
+plan skip_all => "POSIX fork() is not available" unless IO::Async::OS->HAVE_POSIX_FORK;
+
 use IO::Async::Loop;
 
 # Need to look this up, so we don't hardcode the message in the test script

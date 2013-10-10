@@ -241,7 +241,10 @@ testing_loop( $loop );
 }
 
 # restart after exit
-{
+SKIP: {
+   skip "This Perl does not support fork()", 4
+      if not IO::Async::OS->HAVE_POSIX_FORK;
+
    my $function = IO::Async::Function->new(
       model => "fork",
       min_workers => 0,
