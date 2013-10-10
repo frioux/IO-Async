@@ -8,7 +8,7 @@ package IO::Async::OS::cygwin;
 use strict;
 use warnings;
 
-our $VERSION = '0.60_003';
+our $VERSION = '0.60_004';
 
 our @ISA = qw( IO::Async::OS::_Base );
 

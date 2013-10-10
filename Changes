@@ -1,5 +1,10 @@
 Revision history for IO-Async
 
+0.60_004  2013/10/11 00:09:40
+        [BUGFIXES]
+         * Avoid open/close/unlink race in t/42function.t by having each
+           thread unlink its own touchfile
+
 0.60_003  2013/10/10 18:34:39
         [CHANGES]
          * Ensure that closing a Channel still leads to EOF on thread model
