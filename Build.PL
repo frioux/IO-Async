@@ -11,7 +11,7 @@ my $build = Module::Build->new(
       'Exporter' => '5.57',
       'File::stat' => 0,
       'IO::Poll' => 0,
-      'Socket' => '1.95',
+      'Socket' => '2.007',
       'Storable' => 0,
       'Time::HiRes' => 0,
 
