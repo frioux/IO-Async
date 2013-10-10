@@ -171,7 +171,7 @@ testing_loop( $loop );
 
    wait_for { defined $err };
 
-   like( $err, qr/^exception name at $0 line \d+\.$/, '$err after exception' );
+   like( $err, qr/^exception name at \Q$0\E line \d+\.$/, '$err after exception' );
 
    $loop->remove( $function );
 }
