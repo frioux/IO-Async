@@ -77,6 +77,7 @@ to wait for some content to be written through such a connected stream.
 =cut
 
 my $loop;
+END { undef $loop }
 
 =head1 FUNCTIONS
 

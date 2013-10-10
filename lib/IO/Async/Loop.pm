@@ -285,6 +285,11 @@ sub new
    return our $ONE_TRUE_LOOP ||= shift->really_new;
 }
 
+# Ensure that the loop is DESTROYed recursively at exit time, before GD happens
+END {
+   undef our $ONE_TRUE_LOOP;
+}
+
 sub really_new
 {
    shift;  # We're going to ignore the class name actually given
