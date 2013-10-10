@@ -274,6 +274,7 @@ sub stop
 {
    my $self = shift;
 
+   $self->{stopping} = 1;
    foreach my $worker ( $self->_worker_objects ) {
       $worker->stop;
    }
@@ -456,6 +457,8 @@ sub _new_worker
       on_finish => $self->_capture_weakself( sub {
          my $self = shift or return;
          my ( $worker ) = @_;
+
+         return if $self->{stopping};
 
          $self->_new_worker if $self->workers < $self->{min_workers};
 
