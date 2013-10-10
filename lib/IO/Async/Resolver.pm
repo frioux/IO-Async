@@ -19,7 +19,12 @@ use Socket 1.93 qw(
 
 use IO::Async::OS;
 
-use Time::HiRes qw( alarm );
+# Try to use HiRes alarm, but we don't strictly need it.
+# MSWin32 doesn't implement it
+BEGIN {
+   require Time::HiRes;
+   eval { Time::HiRes::alarm(0) } and Time::HiRes->import( qw( alarm ) );
+}
 
 use Carp;
 
