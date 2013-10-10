@@ -1,5 +1,11 @@
 Revision history for IO-Async
 
+0.60_002  2013/10/10 02:18:33
+        [CHANGES]
+         * Support spawning threads and watching for exit
+         * Support IO::Async::Routine based on threads
+         * Various MSWin32 improvements and fixes
+
 0.60_001  2013/10/03 19:45:05
         [CHANGES]
          * Some OSes lack signals; forbid the ->*_signal methods, and use
