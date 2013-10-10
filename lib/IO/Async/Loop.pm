@@ -41,6 +41,8 @@ use IO::Async::OS;
 use constant HAVE_SIGNALS => IO::Async::OS->HAVE_SIGNALS;
 use constant HAVE_POSIX__EXIT => IO::Async::OS->HAVE_POSIX__EXIT;
 use constant HAVE_THREADS_EXIT => IO::Async::OS->HAVE_THREADS_EXIT;
+use constant HAVE_POSIX_FORK => IO::Async::OS->HAVE_POSIX_FORK;
+use constant HAVE_THREADS => IO::Async::OS->HAVE_THREADS;
 
 # Never sleep for more than 1 second if a signal proxy is registered, to avoid
 # a borderline race condition.
@@ -1784,6 +1786,8 @@ sub fork
    my $self = shift;
    my %params = @_;
 
+   HAVE_POSIX_FORK or croak "POSIX fork() is not available";
+
    my $code = $params{code} or croak "Expected 'code' as a CODE reference";
 
    my $kid = fork;
@@ -1866,6 +1870,8 @@ sub create_thread
 {
    my $self = shift;
    my %params = @_;
+
+   HAVE_THREADS or croak "Threads are not available";
 
    eval { require threads } or croak "This Perl does not support threads";
 
