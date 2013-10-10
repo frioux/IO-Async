@@ -9,7 +9,7 @@ use strict;
 use warnings;
 use 5.010; # //
 
-our $VERSION = '0.60_002';
+our $VERSION = '0.60_003';
 
 use base qw( IO::Async::Handle );
 

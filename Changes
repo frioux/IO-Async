@@ -1,5 +1,17 @@
 Revision history for IO-Async
 
+0.60_003  2013/10/10 18:34:39
+        [CHANGES]
+         * Ensure that closing a Channel still leads to EOF on thread model
+           Routines
+         * More reliably thread termination at END time; avoid $thread->kill
+         * Renamed "spawn" model to "fork"
+         * Declare that MSWin32 does not support POSIX-like fork(); skip all
+           unit tests and functionallity based on it if so
+
+        [BUGFIXES]
+         * Numerous other small MSWin32 fixes - I believe it now passes \o/
+
 0.60_002  2013/10/10 02:18:33
         [CHANGES]
          * Support spawning threads and watching for exit
