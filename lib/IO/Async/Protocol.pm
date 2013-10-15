@@ -8,7 +8,7 @@ package IO::Async::Protocol;
 use strict;
 use warnings;
 
-our $VERSION = '0.60_004';
+our $VERSION = '0.61';
 
 use base qw( IO::Async::Notifier );
 

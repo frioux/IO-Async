@@ -1,29 +1,6 @@
 Revision history for IO-Async
 
-0.60_004  2013/10/11 00:09:40
-        [BUGFIXES]
-         * Avoid open/close/unlink race in t/42function.t by having each
-           thread unlink its own touchfile
-
-0.60_003  2013/10/10 18:34:39
-        [CHANGES]
-         * Ensure that closing a Channel still leads to EOF on thread model
-           Routines
-         * More reliably thread termination at END time; avoid $thread->kill
-         * Renamed "spawn" model to "fork"
-         * Declare that MSWin32 does not support POSIX-like fork(); skip all
-           unit tests and functionallity based on it if so
-
-        [BUGFIXES]
-         * Numerous other small MSWin32 fixes - I believe it now passes \o/
-
-0.60_002  2013/10/10 02:18:33
-        [CHANGES]
-         * Support spawning threads and watching for exit
-         * Support IO::Async::Routine based on threads
-         * Various MSWin32 improvements and fixes
-
-0.60_001  2013/10/03 19:45:05
+0.61    2013/10/15 01:10:51
         [CHANGES]
          * Some OSes lack signals; forbid the ->*_signal methods, and use
            waitpid() polling for child processes if so
@@ -32,12 +9,20 @@ Revision history for IO-Async
          * Allow ->listen to construct new Stream or Socket handles
          * Updated documentation and tests to emphasise futures with resolver
            and ->listen
+         * Support spawning threads and watching for exit
+         * Support IO::Async::Routine based on threads
+         * Various MSWin32 improvements and fixes - it now passes tests \o/
+         * Declare that MSWin32 does not support POSIX-like fork(); skip all
+           unit tests and functionallity based on it if so
 
          Note: These changes break IO::Async::SSL versions 0.12 or older.
 
         [BUGFIXES]
          * Ensure that $stream->write( CODE, on_write/write_len ) works
            correctly
+
+        With many thanks to Mithaldu for the use of his Windows smoker for
+        development and testing of the MSWin32 fixes
 
 0.60    2013/09/19 14:26:22
         [CHANGES]
