@@ -13,6 +13,8 @@ our $VERSION = '0.61';
 use base qw( Future );
 Future->VERSION( '0.05' ); # to respect subclassing
 
+use Carp;
+
 =head1 NAME
 
 C<IO::Async::Future> - use L<Future> with L<IO::Async>
@@ -95,6 +97,48 @@ sub await
 {
    my $self = shift;
    $self->{loop}->loop_once;
+}
+
+=head2 $future->done_later( @result )
+
+A shortcut to calling the C<done> method in a C<later> idle watch on the
+underlying Loop object. Ensures that a returned Future object is not ready
+immediately, but will wait for the next IO round.
+
+Like C<done>, returns C<$future> itself to allow easy chaining.
+
+=cut
+
+sub done_later
+{
+   my $self = shift;
+   my @result = @_;
+
+   $self->loop->later( sub { $self->done( @result ) } );
+
+   return $self;
+}
+
+=head2 $future->fail_later( $exception, @details )
+
+A shortcut to calling the C<fail> method in a C<later> idle watch on the
+underlying Loop object. Ensures that a returned Future object is not ready
+immediately, but will wait for the next IO round.
+
+Like C<fail>, returns C<$future> itself to allow easy chaining.
+
+=cut
+
+sub fail_later
+{
+   my $self = shift;
+   my ( $exception, @details ) = @_;
+
+   $exception or croak "Expected a true exception";
+
+   $self->loop->later( sub { $self->fail( $exception, @details ) } );
+
+   return $self;
 }
 
 =head1 AUTHOR

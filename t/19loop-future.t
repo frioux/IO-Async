@@ -56,6 +56,28 @@ my $loop = IO::Async::Loop->new_builtin;
    is_deeply( [ $future->get ], [ "result" ], '$future->get on IO::Async::Future from $loop->new_future' );
 }
 
+# done_later
+{
+   my $future = $loop->new_future;
+
+   identical( $future->done_later( "deferred result" ), $future, '->done_later returns $future' );
+   ok( !$future->is_ready, '$future not yet ready after ->done_later' );
+
+   is_deeply( [ $future->get ], [ "deferred result" ], '$future now ready after ->get' );
+}
+
+# fail_later
+{
+   my $future = $loop->new_future;
+
+   identical( $future->fail_later( "deferred exception\n" ), $future, '->fail_later returns $future' );
+   ok( !$future->is_ready, '$future not yet ready after ->fail_later' );
+
+   $loop->await( $future );
+
+   is_deeply( [ $future->failure ], [ "deferred exception\n" ], '$future now ready after $loop->await' );
+}
+
 # delay_future
 {
    my $future = $loop->delay_future( after => 1 * AUT );
