@@ -149,6 +149,17 @@ sub configure
    $self->SUPER::configure( %params );
 }
 
+sub _add_to_loop
+{
+   my $self = shift;
+
+   if( !defined $self->{filename} and !defined $self->{handle} ) {
+      croak "IO::Async::File needs either a filename or a handle";
+   }
+
+   return $self->SUPER::_add_to_loop( @_ );
+}
+
 sub _reopen_file
 {
    my $self = shift;
