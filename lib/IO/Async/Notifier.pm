@@ -17,6 +17,9 @@ use Scalar::Util qw( weaken );
 use constant HAS_BROKEN_TRAMPOLINES => ( $] == "5.008004" );
 
 our $DEBUG = $ENV{IO_ASYNC_DEBUG} || 0;
+our $DEBUG_FD   = $ENV{IO_ASYNC_DEBUG_FD};
+our $DEBUG_FILE = $ENV{IO_ASYNC_DEBUG_FILE};
+our $DEBUG_FH;
 
 =head1 NAME
 
@@ -750,6 +753,13 @@ lower-level events of its parent class used to create it. All calls regardless
 of caller can be printed by setting a number greater than 1 as the value of
 C<IO_ASYNC_DEBUG>.
 
+By default the debugging log goes to C<STDERR>, but two other environment
+variables can redirect it. If C<IO_ASYNC_DEBUG_FILE> is set, it names a file
+which will be opened for writing, and logging written into it. Otherwise, if
+C<IO_ASYNC_DEBUG_FD> is set, it gives a file descriptor number that logging
+should be written to. If opening the named file or file descriptor fails then
+the log will be written to C<STDERR> as normal.
+
 =cut
 
 =head2 $notifier->debug_printf( $format, @args )
@@ -802,7 +812,21 @@ sub debug_printf
    s/^IO::Async::/Ia:/,
    s/^Net::Async::/Na:/ for @id;
 
-   printf STDERR "[%s] $format\n",
+   $DEBUG_FH ||= do {
+      my $fh;
+      if( $DEBUG_FILE ) {
+         open $fh, ">", $DEBUG_FILE or undef $fh;
+      }
+      elsif( $DEBUG_FD ) {
+         $fh = IO::Handle->new;
+         $fh->fdopen( $DEBUG_FD, "w" ) or undef $fh;
+      }
+      $fh ||= \*STDERR;
+      $fh->autoflush;
+      $fh;
+   };
+
+   printf $DEBUG_FH "[%s] $format\n",
       join("<-", @id), @args;
 }
 
