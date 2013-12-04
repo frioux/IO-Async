@@ -394,7 +394,7 @@ As a specific optimisation, this method will try to perform a lookup of
 numeric values synchronously, rather than asynchronously, if both the
 C<NI_NUMERICHOST> and C<NI_NUMERICSERV> flags are given.
 
-=head2 $future = $resolver->getnameinfo( %args )
+=head2 $resolver->getnameinfo( %args )
 
 When not returning a future, additional parameters can be given containing the
 continuations to invoke on success or failure:
