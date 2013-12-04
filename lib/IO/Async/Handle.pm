@@ -421,7 +421,7 @@ sub close_write
    $self->_closed if !$self->{read_handle};
 }
 
-=head2 $future = $handle->new_close_future
+=head2 $handle->new_close_future ==> ()
 
 Returns a new L<IO::Async::Future> object which will become done when the
 handle is closed. Cancelling the C<$future> will remove this notification
@@ -606,7 +606,7 @@ sub bind
    $self->read_handle->bind( $addr ) or croak "Cannot bind - $!";
 }
 
-=head2 $future = $handle->connect( %args )
+=head2 $handle->connect( %args ) ==> ( $handle )
 
 A convenient wrapper for calling the C<connect> method on the underlying
 L<IO::Async::Loop> object.

@@ -677,7 +677,7 @@ C<on_flush> continuation will be invoked, if supplied. This can be used to
 obtain a marker, to invoke some code once the output queue has been flushed up
 to this point.
 
-=head2 $f = $stream->write( ... )
+=head2 $stream->write( ... ) ==> ()
 
 If called in non-void context, this method returns a L<Future> which will
 complete (with no value) when the write operation has been flushed. This may
@@ -1075,9 +1075,9 @@ sub _read_future
    return $f;
 }
 
-=head2 $f = $stream->read_atmost( $len )
+=head2 $stream->read_atmost( $len ) ==> ( $string, $eof )
 
-=head2 $f = $stream->read_exactly( $len )
+=head2 $stream->read_exactly( $len ) ==> ( $string, $eof )
 
 Completes the C<Future> when the read buffer contains C<$len> or more
 characters of input. C<read_atmost> will also complete after the first
@@ -1117,11 +1117,11 @@ sub read_exactly
    return $f;
 }
 
-=head2 $f = $stream->read_until( $end )
+=head2 $stream->read_until( $end ) ==> ( $string, $eof )
 
 Completes the C<Future> when the read buffer contains a match for C<$end>,
 which may either be a plain string or a compiled C<Regexp> reference. Yields
-the prefix of the buffer before and including this match.
+the prefix of the buffer up to and including this match.
 
 =cut
 
@@ -1151,7 +1151,7 @@ sub read_until
    return $f;
 }
 
-=head2 $f = $stream->read_until_eof
+=head2 $stream->read_until_eof ==> ( $string, $eof )
 
 Completes the C<Future> when the stream is eventually closed at EOF, and
 yields all of the data that was available.

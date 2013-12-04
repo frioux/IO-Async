@@ -590,7 +590,7 @@ sub await_all
    $self->loop_once until _all_ready @futures;
 }
 
-=head2 $future = $loop->delay_future( %args )
+=head2 $loop->delay_future( %args ) ==> ()
 
 Returns a new C<IO::Async::Future> instance which will become done at a given
 point in time. The C<%args> should contain an C<at> or C<after> key as per the
@@ -614,7 +614,7 @@ sub delay_future
    return $future;
 }
 
-=head2 $future = $loop->timeout_future( %args )
+=head2 $loop->timeout_future( %args ) ==> ()
 
 Returns a new C<IO::Async::Future> instance which will fail at a given point
 in time. The C<%args> should contain an C<at> or C<after> key as per the
@@ -1042,7 +1042,7 @@ sub resolver
    }
 }
 
-=head2 $loop->resolve( %params )
+=head2 $loop->resolve( %params ) ==> @result
 
 This method performs a single name resolution operation. It uses an
 internally-stored C<IO::Async::Resolver> object. For more detail, see the
@@ -1058,7 +1058,7 @@ sub resolve
    $self->resolver->resolve( %params );
 }
 
-=head2 $future = $loop->connect( %params )
+=head2 $loop->connect( %params ) ==> ( $handle|$socket )
 
 This method performs a non-blocking connection to a given address or set of
 addresses, returning a L<IO::Async::Future> which represents the operation. On
