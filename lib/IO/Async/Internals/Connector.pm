@@ -141,7 +141,7 @@ sub _connect_addresses
       return $f;
    } foreach => $addrlist;
 
-   return $future->or_else( sub {
+   return $future->else( sub {
       return $future->new->fail( "connect: $connecterr", connect => connect => $connecterr )
          if $connecterr;
       return $future->new->fail( "bind: $binderr",       connect => bind    => $binderr    )
@@ -209,7 +209,7 @@ sub connect
    }
 
    return Future->needs_all( $peeraddrfuture, $localaddrfuture )
-      ->and_then( sub {
+      ->then( sub {
          my @peeraddrs  = $peeraddrfuture->get;
          my @localaddrs = $localaddrfuture->get;
 
