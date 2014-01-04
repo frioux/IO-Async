@@ -49,6 +49,8 @@ sub test_with_model
 
       is_refcount( $routine, 2, "\$routine has refcount 2 after \$loop->add for $model model" );
 
+      is( $routine->model, $model, "\$routine->model for $model model" );
+
       $calls->send( [ 1, 2, 3 ] );
 
       my $result;

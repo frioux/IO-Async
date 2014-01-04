@@ -400,6 +400,18 @@ sub id
    return $self->{id};
 }
 
+=head2 $model = $routine->model
+
+Returns the detachment model in use by the Routine.
+
+=cut
+
+sub model
+{
+   my $self = shift;
+   return $self->{model};
+}
+
 =head1 AUTHOR
 
 Paul Evans <leonerd@leonerd.org.uk>
