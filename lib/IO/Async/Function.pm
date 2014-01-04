@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2011-2013 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2011-2014 -- leonerd@leonerd.org.uk
 
 package IO::Async::Function;
 
@@ -39,16 +39,12 @@ C<IO::Async::Function> - call a function asynchronously
 
  $function->call(
     args => [ 123454321 ],
-    on_return => sub {
-       my $isprime = shift;
-       print "123454321 " . ( $isprime ? "is" : "is not" ) . " a prime number\n";
-    },
-    on_error => sub {
-       print STDERR "Cannot determine if it's prime - $_[0]\n";
-    },
- );
-
- $loop->run;
+ )->then( sub {
+    my $isprime = shift;
+    print "123454321 " . ( $isprime ? "is" : "is not" ) . " a prime number\n";
+ })->else(
+    print STDERR "Cannot determine if it's prime - $_[0]\n";
+ })->get;
 
 =head1 DESCRIPTION
 
@@ -299,7 +295,7 @@ sub restart
    $self->start;
 }
 
-=head2 $function->call( %params )
+=head2 $function->call( %params ) ==> @result
 
 Schedules an invocation of the contained function to be executed on one of the
 worker processes. If a non-busy worker is available now, it will be called
@@ -317,6 +313,15 @@ The C<%params> hash takes the following keys:
 =item args => ARRAY
 
 A reference to the array of arguments to pass to the code.
+
+=back
+
+=head2 $function->call( %params )
+
+When not returning a future, the C<on_result>, C<on_return> and C<on_error>
+arguments give continuations to handle successful results or failure.
+
+=over 8
 
 =item on_result => CODE
 
@@ -337,11 +342,6 @@ circumstances given above. They will be called directly, without the leading
 'return' or 'error' value.
 
 =back
-
-=head2 $future = $function->call( %params )
-
-When returning a future, the C<on_result>, C<on_return> and C<on_error>
-continuations are optional.
 
 =cut
 
