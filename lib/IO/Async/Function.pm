@@ -387,9 +387,8 @@ sub call
       } ) );
       $future->on_fail( $self->_capture_weakself( sub {
          my $self = shift or return;
-         my ( $err, @values ) = @_;
          $self->debug_printf( "CONT on_error" );
-         $on_error->( @values );
+         $on_error->( @_ );
       } ) );
    }
    elsif( !defined wantarray ) {
@@ -541,7 +540,8 @@ sub new
             $ret_channel->send( [ r => @ret ] );
          }
          else {
-            $ret_channel->send( [ e => "$@" ] );
+            chomp( my $e = "$@" );
+            $ret_channel->send( [ e => $e, error => ] );
          }
       }
    };
@@ -606,7 +606,7 @@ sub call
             $future->done( @values );
          }
          elsif( $type eq "e" ) {
-            $future->fail( $values[0], @values );
+            $future->fail( @values );
             $worker->stop if $worker->{exit_on_die};
          }
          else {

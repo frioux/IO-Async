@@ -155,6 +155,7 @@ testing_loop( $loop );
 
 # Exception throwing
 {
+   my $line = __LINE__ + 2;
    my $function = IO::Async::Function->new(
       code => sub { die shift },
    );
@@ -163,7 +164,7 @@ testing_loop( $loop );
 
    my $err;
 
-   $function->call(
+   my $f = $function->call(
       args => [ "exception name" ],
       on_return => sub { },
       on_error  => sub { $err = shift },
@@ -172,6 +173,10 @@ testing_loop( $loop );
    wait_for { defined $err };
 
    like( $err, qr/^exception name at \Q$0\E line \d+\.$/, '$err after exception' );
+
+   is_deeply( [ $f->failure ],
+              [ "exception name at $0 line $line.", error => ],
+              '$f->failure after exception' );
 
    $loop->remove( $function );
 }
@@ -203,7 +208,7 @@ testing_loop( $loop );
    undef @errs;
    wait_for { scalar @errs == 2 };
 
-   is_deeply( \@errs, [ "1\n", "2\n" ], 'Closed variables preserved when exit_on_die => 0' );
+   is_deeply( \@errs, [ "1", "2" ], 'Closed variables preserved when exit_on_die => 0' );
 
    $loop->remove( $function );
 }
@@ -235,7 +240,7 @@ testing_loop( $loop );
    undef @errs;
    wait_for { scalar @errs == 2 };
 
-   is_deeply( \@errs, [ "1\n", "1\n" ], 'Closed variables preserved when exit_on_die => 1' );
+   is_deeply( \@errs, [ "1", "1" ], 'Closed variables preserved when exit_on_die => 1' );
 
    $loop->remove( $function );
 }
