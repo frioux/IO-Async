@@ -105,7 +105,36 @@ testing_loop( $loop );
    is( $recv_eof, 1, 'Async mode channel can on_eof' );
 }
 
-# sync->async oneshot ->recv
+# sync->async oneshot ->recv with future
+{
+   my ( $pipe_rd, $pipe_wr ) = IO::Async::OS->pipepair;
+
+   my $channel_rd = IO::Async::Channel->new;
+   $channel_rd->setup_async_mode( read_handle => $pipe_rd );
+
+   $loop->add( $channel_rd );
+
+   my $channel_wr = IO::Async::Channel->new;
+   $channel_wr->setup_sync_mode( $pipe_wr );
+
+   $channel_wr->send( [ data => "by sync" ] );
+
+   my $recv_f = $channel_rd->recv;
+
+   wait_for { $recv_f->is_ready };
+
+   is_deeply( scalar $recv_f->get, [ data => "by sync" ], 'Async mode future can receive data' );
+
+   $channel_wr->close;
+
+   my $eof_f = $channel_rd->recv;
+
+   wait_for { $eof_f->is_ready };
+
+   is( ( $eof_f->failure )[1], "eof", 'Async mode future can receive EOF' );
+}
+
+# sync->async oneshot ->recv with callbacks
 {
    my ( $pipe_rd, $pipe_wr ) = IO::Async::OS->pipepair;
 

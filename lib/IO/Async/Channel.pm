@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2011-2013 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2011-2014 -- leonerd@leonerd.org.uk
 
 package IO::Async::Channel;
 
@@ -31,8 +31,8 @@ A Channel object is shared between the main process of the program and the
 process running within the Routine. In the main process it will be used in
 asynchronous mode, and in the Routine process it will be used in synchronous
 mode. In asynchronous mode all methods return immediately and use
-C<IO::Async>-style callback functions. In synchronous within the Routine
-process the methods block until they are ready and may be used for
+C<IO::Async>-style futures or callback functions. In synchronous within the
+Routine process the methods block until they are ready and may be used for
 flow-control within the routine. Alternatively, a Channel may be shared
 between two different Routine objects, and not used directly by the
 controlling program.
@@ -170,11 +170,16 @@ be passed and all Perl references are true the truth of the result of this
 method can be used to detect that the channel is still open and has not yet
 been closed.
 
+=head2 $channel->recv ==> $data
+
+When called on an asynchronous mode Channel this method returns a future which
+will eventually yield the next Perl reference value that becomes available
+from the other end. If the Channel is closed, the future will fail with an
+C<eof> failure.
+
 =head2 $channel->recv( %args )
 
-When called on an asynchronous mode Channel this method appends a callback
-function to the receiver queue to handle the next Perl reference value that
-becomes available from the other end. Takes the following named arguments:
+When not returning a future, takes the following named arguments:
 
 =over 8
 
@@ -322,20 +327,28 @@ sub _recv_async
 {
    my $self = shift;
    my %args = @_;
-   my $on_recv = $args{on_recv};
-   my $on_eof  = $args{on_eof};
 
-   $self->_build_stream;
+   my $on_recv = $args{on_recv};
+   my $on_eof = $args{on_eof};
+
+   my $stream = $self->_build_stream;
+
+   my $f;
+   $f = $stream->loop->new_future unless !defined wantarray;
 
    push @{ $self->{on_result_queue} }, sub {
       my ( $self, $type, $result ) = @_;
       if( $type eq "recv" ) {
-         $on_recv->( $self, $result );
+         $f->done( $result ) if $f;
+         $on_recv->( $self, $result ) if $on_recv;
       }
       else {
-         $on_eof->( $self );
+         $f->fail( "EOF waiting for Channel recv", eof => ) if $f;
+         $on_eof->( $self ) if $on_eof;
       }
-   }
+   };
+
+   return $f;
 }
 
 sub _close_async
