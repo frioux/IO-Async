@@ -53,13 +53,11 @@ sub test_with_model
 
       $calls->send( [ 1, 2, 3 ] );
 
-      my $result;
-      $returns->recv(
-         on_recv => sub { $result = $_[1]; }
-      );
+      my $f = $returns->recv;
 
-      wait_for { defined $result };
+      wait_for { $f->is_ready };
 
+      my $result = $f->get;
       is( ${$result}, 6, "Result for $model model" );
 
       is_refcount( $routine, 2, '$routine has refcount 2 before $loop->remove' );
@@ -157,20 +155,18 @@ foreach my $model (qw( fork thread )) {
 
    $in1->send( \"+" );
 
-   my $status;
-   $out1->recv( on_recv => sub { $status = ${$_[1]} } );
+   my $status_f = $out1->recv;
 
-   wait_for { defined $status };
-   is( $status, "Ready +", '$status midway through Routine' );
+   wait_for { $status_f->is_ready };
+   is( ${ $status_f->get }, "Ready +", '$status_f result midway through Routine' );
 
    $in2->send( [ 10, 20 ] );
 
-   my $result;
-   $out2->recv( on_recv => sub { $result = ${$_[1]} } );
+   my $result_f = $out2->recv;
 
-   wait_for { defined $result };
+   wait_for { $result_f->is_ready };
 
-   is( $result, 30, '$result at end of Routine' );
+   is( ${ $result_f->get }, 30, '$result_f result at end of Routine' );
 
    $loop->remove( $routine );
 }
@@ -234,11 +230,11 @@ SKIP: {
 
    $loop->add( $routine );
 
-   my $result;
-   $channel->recv( on_recv => sub { $result = $_[1] } );
+   my $f = $channel->recv;
 
-   wait_for { defined $result };
+   wait_for { $f->is_ready };
 
+   my $result = $f->get;
    is( $result->[0], "Here is a random string", '$result from Routine with modified ENV' );
 
    $loop->remove( $routine );
