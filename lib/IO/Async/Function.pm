@@ -517,12 +517,17 @@ sub _dispatch_pending
 {
    my $self = shift;
 
-   if( my $next = shift @{ $self->{pending_queue} } ) {
+   while( my $next = shift @{ $self->{pending_queue} } ) {
       my $worker = $self->_get_worker or return;
+
+      next if $next->is_cancelled;
+
       $self->debug_printf( "UNQUEUE" );
       $next->done( $self, $worker );
+      return;
    }
-   elsif( $self->workers_idle > $self->{min_workers} ) {
+
+   if( $self->workers_idle > $self->{min_workers} ) {
       $self->{idle_timer}->start if $self->{idle_timer} and !$self->{idle_timer}->is_running;
    }
 }
@@ -606,12 +611,8 @@ sub call
          my ( $worker, $result ) = @_;
          my ( $type, @values ) = @$result;
 
-         $worker->{busy} = 0;
          $worker->stop if !$worker->{max_calls} or
                           $worker->{exit_on_die} && $type eq "e";
-
-         my $function = $worker->parent;
-         $function->_dispatch_pending if $function;
 
          if( $type eq "r" ) {
             return Future->new->done( @values );
@@ -627,15 +628,17 @@ sub call
       $worker->_capture_weakself( sub {
          my ( $worker ) = @_;
 
-         $worker->{busy} = 0;
          $worker->stop;
-
-         my $function = $worker->parent;
-         $function->_dispatch_pending if $function;
 
          return Future->new->fail( "closed", "closed" );
       } )
-   );
+   )->on_ready( $worker->_capture_weakself( sub {
+      my ( $worker, $f ) = @_;
+      $worker->{busy} = 0;
+
+      my $function = $worker->parent;
+      $function->_dispatch_pending if $function;
+   }));
 }
 
 =head1 NOTES

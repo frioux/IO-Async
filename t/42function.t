@@ -493,4 +493,55 @@ SKIP: {
    $loop->remove( $function );
 }
 
+# Cancellation of sent calls
+{
+   my $function = IO::Async::Function->new(
+      max_workers => 1,
+      code => sub {
+         return 123;
+      },
+   );
+
+   $loop->add( $function );
+
+   my $f1 = $function->call( args => [] );
+   $f1->cancel;
+
+   my $f2 = $function->call( args => [] );
+
+   wait_for { $f2->is_ready };
+
+   is( scalar $f2->get, 123, 'Result of function call after cancelled call' );
+
+   $loop->remove( $function );
+}
+
+# Cancellation of pending calls
+{
+   my $function = IO::Async::Function->new(
+      max_workers => 1,
+      code => do { my $state; sub {
+         my $oldstate = $state;
+         $state = shift;
+         return $oldstate;
+      } },
+   );
+
+   $loop->add( $function );
+
+   # Queue 3 calls but immediately cancel the middle one
+   my ( $f1, $f2, $f3 ) = map {
+      $function->call( args => [ $_ ] )
+   } 1 .. 3;
+
+   $f2->cancel;
+
+   wait_for { $f1->is_ready and $f3->is_ready };
+
+   is( scalar $f1->get, undef, '$f1 result is undef' );
+   is( scalar $f3->get, 1, '$f3 result is 1' );
+
+   $loop->remove( $function );
+}
+
 done_testing;
