@@ -599,35 +599,32 @@ sub call
          my ( $type, @values ) = @$result;
 
          $worker->{busy} = 0;
+         $worker->stop if !$worker->{max_calls} or
+                          $worker->{exit_on_die} && $type eq "e";
 
          my $function = $worker->parent;
+         $function->_dispatch_pending if $function;
 
          if( $type eq "r" ) {
             $future->done( @values );
          }
          elsif( $type eq "e" ) {
             $future->fail( @values );
-            $worker->stop if $worker->{exit_on_die};
          }
          else {
             die "Unrecognised type from worker - $type\n";
          }
-
-         $worker->stop if !$worker->{max_calls};
-
-         $function->_dispatch_pending if $function;
       } ),
       on_eof => $worker->_capture_weakself( sub {
          my ( $worker, $channel ) = @_;
 
          $worker->{busy} = 0;
-
-         my $function = $worker->parent;
-
-         $future->fail( "closed", "closed" );
          $worker->stop;
 
+         my $function = $worker->parent;
          $function->_dispatch_pending if $function;
+
+         $future->fail( "closed", "closed" );
       } ),
    );
 
