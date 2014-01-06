@@ -356,23 +356,22 @@ sub call
    my $args = delete $params{args};
    ref $args eq "ARRAY" or croak "Expected 'args' to be an array";
 
-   my $future = $self->loop->new_future;
-
+   my ( $on_done, $on_fail );
    if( defined $params{on_result} ) {
       my $on_result = delete $params{on_result};
       ref $on_result or croak "Expected 'on_result' to be a reference";
 
-      $future->on_done( $self->_capture_weakself( sub {
+      $on_done = $self->_capture_weakself( sub {
          my $self = shift or return;
          $self->debug_printf( "CONT on_return" );
          $on_result->( return => @_ );
-      } ) );
-      $future->on_fail( $self->_capture_weakself( sub {
+      } );
+      $on_fail = $self->_capture_weakself( sub {
          my $self = shift or return;
          my ( $err, @values ) = @_;
          $self->debug_printf( "CONT on_error" );
          $on_result->( error => @values );
-      } ) );
+      } );
    }
    elsif( defined $params{on_return} and defined $params{on_error} ) {
       my $on_return = delete $params{on_return};
@@ -380,30 +379,38 @@ sub call
       my $on_error  = delete $params{on_error};
       ref $on_error or croak "Expected 'on_error' to be a reference";
 
-      $future->on_done( $self->_capture_weakself( sub {
+      $on_done = $self->_capture_weakself( sub {
          my $self = shift or return;
          $self->debug_printf( "CONT on_return" );
          $on_return->( @_ );
-      } ) );
-      $future->on_fail( $self->_capture_weakself( sub {
+      } );
+      $on_fail = $self->_capture_weakself( sub {
          my $self = shift or return;
          $self->debug_printf( "CONT on_error" );
          $on_error->( @_ );
-      } ) );
+      } );
    }
    elsif( !defined wantarray ) {
       croak "Expected either 'on_result' or 'on_return' and 'on_error' keys, or to return a Future";
    }
 
-   my $worker = $self->_get_worker;
+   my $request = freeze( $args );
 
-   if( !$worker ) {
-      my $request = freeze( $args );
-      push @{ $self->{pending_queue} }, [ $request, $future ];
-      return $future;
+   my $future;
+   if( my $worker = $self->_get_worker ) {
+      $future = $self->_call_worker( $worker, $request );
+   }
+   else {
+      push @{ $self->{pending_queue} }, my $wait_f = $self->loop->new_future;
+
+      $future = $wait_f->then( sub {
+         my ( $self, $worker ) = @_;
+         $self->_call_worker( $worker, $request );
+      });
    }
 
-   $self->_call_worker( $worker, args => $args, $future );
+   $future->on_done( $on_done ) if $on_done;
+   $future->on_fail( $on_fail ) if $on_fail;
 
    return $future;
 }
@@ -493,13 +500,15 @@ sub _get_worker
 sub _call_worker
 {
    my $self = shift;
-   my ( $worker, $type, $args, $future ) = @_;
+   my ( $worker, $type, $args ) = @_;
 
-   $worker->call( $type, $args, $future );
+   my $future = $worker->call( $type, $args );
 
    if( $self->workers_idle == 0 ) {
       $self->{idle_timer}->stop if $self->{idle_timer};
    }
+
+   return $future;
 }
 
 sub _dispatch_pending
@@ -508,7 +517,7 @@ sub _dispatch_pending
 
    if( my $next = shift @{ $self->{pending_queue} } ) {
       my $worker = $self->_get_worker or return;
-      $self->_call_worker( $worker, frozen => @$next );
+      $next->done( $self, $worker );
    }
    elsif( $self->workers_idle > $self->{min_workers} ) {
       $self->{idle_timer}->start if $self->{idle_timer} and !$self->{idle_timer}->is_running;
@@ -581,21 +590,17 @@ sub stop
 sub call
 {
    my $worker = shift;
-   my ( $type, $args, $future ) = @_;
+   my ( $args ) = @_;
 
-   if( $type eq "args" ) {
-      $worker->{arg_channel}->send( $args );
-   }
-   elsif( $type eq "frozen" ) {
-      $worker->{arg_channel}->send_frozen( $args );
-   }
-   else {
-      die "TODO: unsure $type\n";
-   }
+   $worker->{arg_channel}->send_frozen( $args );
 
-   $worker->{ret_channel}->recv(
-      on_recv => $worker->_capture_weakself( sub {
-         my ( $worker, $channel, $result ) = @_;
+   $worker->{busy} = 1;
+   $worker->{max_calls}--;
+
+   return $worker->{ret_channel}->recv->then(
+      # on recv
+      $worker->_capture_weakself( sub {
+         my ( $worker, $result ) = @_;
          my ( $type, @values ) = @$result;
 
          $worker->{busy} = 0;
@@ -606,17 +611,18 @@ sub call
          $function->_dispatch_pending if $function;
 
          if( $type eq "r" ) {
-            $future->done( @values );
+            return Future->new->done( @values );
          }
          elsif( $type eq "e" ) {
-            $future->fail( @values );
+            return Future->new->fail( @values );
          }
          else {
             die "Unrecognised type from worker - $type\n";
          }
       } ),
-      on_eof => $worker->_capture_weakself( sub {
-         my ( $worker, $channel ) = @_;
+      # on EOF
+      $worker->_capture_weakself( sub {
+         my ( $worker ) = @_;
 
          $worker->{busy} = 0;
          $worker->stop;
@@ -624,12 +630,9 @@ sub call
          my $function = $worker->parent;
          $function->_dispatch_pending if $function;
 
-         $future->fail( "closed", "closed" );
-      } ),
+         return Future->new->fail( "closed", "closed" );
+      } )
    );
-
-   $worker->{busy} = 1;
-   $worker->{max_calls}--;
 }
 
 =head1 NOTES
