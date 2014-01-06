@@ -200,6 +200,35 @@ testing_loop( $loop );
    wait_for { $recved };
 
    is( $recved->[0], "One value here", 'Async mode channel can ->recv buffer at EOF' );
+
+   $loop->remove( $channel_rd );
+}
+
+# Async ->recv cancellation
+{
+   my ( $pipe_rd, $pipe_wr ) = IO::Async::OS->pipepair;
+
+   my $channel_rd = IO::Async::Channel->new;
+   $channel_rd->setup_async_mode( read_handle => $pipe_rd );
+
+   $loop->add( $channel_rd );
+
+   my $channel_wr = IO::Async::Channel->new;
+   $channel_wr->setup_sync_mode( $pipe_wr );
+
+   $channel_wr->send( [ "first" ] );
+   $channel_wr->send( [ "second" ] );
+
+   my $r1_f = $channel_rd->recv;
+   my $r2_f = $channel_rd->recv;
+
+   $r1_f->cancel;
+
+   wait_for { $r2_f->is_ready };
+
+   is_deeply( scalar $r2_f->get, [ "second" ], 'Async recv result after cancellation' );
+
+   $loop->remove( $channel_rd );
 }
 
 done_testing;

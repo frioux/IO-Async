@@ -339,11 +339,11 @@ sub _recv_async
    push @{ $self->{on_result_queue} }, sub {
       my ( $self, $type, $result ) = @_;
       if( $type eq "recv" ) {
-         $f->done( $result ) if $f;
+         $f->done( $result ) if $f and !$f->is_cancelled;
          $on_recv->( $self, $result ) if $on_recv;
       }
       else {
-         $f->fail( "EOF waiting for Channel recv", eof => ) if $f;
+         $f->fail( "EOF waiting for Channel recv", eof => ) if $f and !$f->is_cancelled;
          $on_eof->( $self ) if $on_eof;
       }
    };
