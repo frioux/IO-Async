@@ -113,6 +113,40 @@ sub test_with_model
       wait_for { $finished };
       pass( "Recv on closed channel for $model model" );
    }
+
+   {
+      my $channel = IO::Async::Channel->new;
+
+      my $routine = IO::Async::Routine->new(
+         model => $model,
+         channels_out => [ $channel ],
+         code => sub {
+            $SIG{INT} = sub { $channel->send( \"SIGINT" ); die "SIGINT" };
+            $channel->send( \"READY" );
+
+            # Busy-wait so thread kill still works
+            my $until = time() + 5;
+            1 while time() < $until;
+         },
+      );
+
+      $loop->add( $routine );
+
+      my $f;
+      $f = $channel->recv;
+
+      wait_for { $f->is_ready };
+
+      is( ${ $f->get }, "READY", 'Routine is ready for SIGINT' );
+
+      $routine->kill( "INT" );
+
+      $f = $channel->recv;
+
+      wait_for { $f->is_ready };
+
+      is( ${ $f->get }, "SIGINT", 'Routine caught SIGINT' );
+   }
 }
 
 foreach my $model (qw( fork thread )) {
