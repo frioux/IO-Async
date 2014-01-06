@@ -363,13 +363,13 @@ sub call
 
       $on_done = $self->_capture_weakself( sub {
          my $self = shift or return;
-         $self->debug_printf( "CONT on_return" );
+         $self->debug_printf( "CONT on_result return" );
          $on_result->( return => @_ );
       } );
       $on_fail = $self->_capture_weakself( sub {
          my $self = shift or return;
          my ( $err, @values ) = @_;
-         $self->debug_printf( "CONT on_error" );
+         $self->debug_printf( "CONT on_result error" );
          $on_result->( error => @values );
       } );
    }
@@ -398,9 +398,11 @@ sub call
 
    my $future;
    if( my $worker = $self->_get_worker ) {
+      $self->debug_printf( "CALL" );
       $future = $self->_call_worker( $worker, $request );
    }
    else {
+      $self->debug_printf( "QUEUE" );
       push @{ $self->{pending_queue} }, my $wait_f = $self->loop->new_future;
 
       $future = $wait_f->then( sub {
@@ -517,6 +519,7 @@ sub _dispatch_pending
 
    if( my $next = shift @{ $self->{pending_queue} } ) {
       my $worker = $self->_get_worker or return;
+      $self->debug_printf( "UNQUEUE" );
       $next->done( $self, $worker );
    }
    elsif( $self->workers_idle > $self->{min_workers} ) {
