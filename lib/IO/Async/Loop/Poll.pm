@@ -1,7 +1,7 @@
 #  You may distribute under the terms of either the GNU General Public License
 #  or the Artistic License (the same terms as Perl itself)
 #
-#  (C) Paul Evans, 2007-2013 -- leonerd@leonerd.org.uk
+#  (C) Paul Evans, 2007-2014 -- leonerd@leonerd.org.uk
 
 package IO::Async::Loop::Poll;
 
@@ -19,11 +19,6 @@ use IO::Poll qw( POLLIN POLLOUT POLLPRI POLLHUP POLLERR );
 
 use Errno qw( EINTR );
 use Fcntl qw( S_ISREG );
-
-# IO::Poll version 0.05 contain a bug whereby the ->remove method doesn't
-# properly clean up all the references to the handles. If the version we're
-# using is in this range, we have to clean it up ourselves.
-use constant IO_POLL_REMOVE_BUG => ( $IO::Poll::VERSION == '0.05' );
 
 # Only Linux, or FreeBSD 8.0 and above, are known always to be able to report
 # EOF conditions on filehandles using POLLHUP
