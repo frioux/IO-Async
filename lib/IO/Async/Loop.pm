@@ -8,6 +8,8 @@ package IO::Async::Loop;
 use strict;
 use warnings;
 
+use Module::Runtime 'use_module';
+
 our $VERSION = '0.61';
 
 # When editing this value don't forget to update the docs below
@@ -1035,9 +1037,15 @@ sub resolver
    my $self = shift;
 
    return $self->{resolver} ||= do {
-      require IO::Async::Resolver;
-      my $resolver = IO::Async::Resolver->new;
-      $self->add( $resolver );
+      my $resolver;
+      if (my $r = $ENV{IO_ASYNC_RESOLVER}) {
+         $resolver = use_module($r)->new
+      } else {
+         require IO::Async::Resolver;
+         $resolver = IO::Async::Resolver->new;
+      }
+      $self->add( $resolver )
+         if $resolver->can('__set_loop');;
       $resolver;
    }
 }
